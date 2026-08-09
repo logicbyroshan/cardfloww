@@ -127,8 +127,43 @@ label {
 .action-bar-light input::placeholder {
   color: #94a3b8 !important;
 }
-.action-bar-light svg {
+.action-bar-light .notif-search-box svg,
+.action-bar-light .search-box svg {
   color: #64748b !important;
+}
+
+/* Button & control themes inside light action bar */
+.action-bar-light .btn-primary,
+.action-bar-light button.btn-primary {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border: 1px solid #2563eb !important;
+}
+.action-bar-light .btn-danger,
+.action-bar-light button.btn-danger {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 1px solid #ef4444 !important;
+}
+.action-bar-light .btn-neutral,
+.action-bar-light .btn-secondary,
+.action-bar-light button.btn-neutral,
+.action-bar-light button.btn-secondary {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.action-bar-light select,
+.action-bar-light input[type="date"],
+.action-bar-light .form-select,
+.action-bar-light .form-input {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.action-bar-light .btn svg,
+.action-bar-light button svg {
+  color: inherit !important;
 }
 
 .action-bar-left,
@@ -1363,16 +1398,21 @@ textarea {
 
 .panel-tab:hover,
 .sub-nav-tab:hover {
-  color: rgba(255,255,255,0.90) !important;
-  background: rgba(255,255,255,0.07) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .panel-tab.active,
 .sub-nav-tab.active {
   color: #ffffff !important;
-  background: rgba(255,255,255,0.10) !important;
-  border-bottom: 2px solid #60a5fa !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 2px solid #3b82f6 !important;
   font-weight: 700 !important;
+}
+
+.panel-tab svg,
+.sub-nav-tab svg {
+  color: inherit !important;
 }
 
 /* ============================================================
