@@ -7,11 +7,10 @@ export default function OldVersionWarningModal({ isOpen, warningData, onClose, o
   const { incoming_version, current_version, root_token } = warningData.data || {};
 
   return (
-    <div className="drawer-overlay" style={{ alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+    <div className="center-modal-overlay">
       <div
-        className="data-card"
-        style={{ width: '460px', maxWidth: '92vw', padding: '1.75rem', position: 'relative' }}
-        onClick={(e) => e.stopPropagation()}
+        className="center-modal-panel"
+        style={{ width: '480px', height: 'auto', maxHeight: '90vh', padding: '1.75rem', position: 'relative' }}
       >
         <button onClick={onClose} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
           <X size={20} />

@@ -33,6 +33,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
   const [selected, setSelected]   = useState(null);
   const [page, setPage]           = useState(1);
   const [pageSize, setPageSize]   = useState(25);
+  const [total, setTotal]         = useState(0);
 
   /* Dispatch footer data count */
   useEffect(() => {
@@ -406,15 +407,6 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
               <button
                 className="btn"
                 disabled={!selected}
-                onClick={() => onNavigate?.('schema')}
-                title="Manage Table Settings"
-                style={{ background: selected ? '#3b82f6' : 'rgba(255, 255, 255, 0.08)', color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)', border: selected ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.15)', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: selected ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
-              >
-                <Settings size={13} /> <span>Table Setting</span>
-              </button>
-              <button
-                className="btn"
-                disabled={!selected}
                 onClick={() => onNavigate?.('cards')}
                 title="View Table Groups"
                 style={{ background: selected ? '#3b82f6' : 'rgba(255, 255, 255, 0.08)', color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)', border: selected ? '1px solid #3b82f6' : '1px solid rgba(255, 255, 255, 0.15)', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: selected ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
@@ -447,21 +439,21 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
       {/* ── TABLE CONTAINER ── */}
       <div className="table-wrapper" style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
         <WatermarkLogo />
-        <table className="data-table" id="clientsTable" style={{ flexShrink: 0 }}>
+        <table className="data-table" id="clientsTable" style={{ flexShrink: 0, fontSize: '13px' }}>
           <thead>
-            <tr>
-              <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
-              <th style={{ width: 'auto', textAlign: 'left' }}>Name</th>
-              <th style={{ width: '180px', textAlign: 'left' }}>Email</th>
-              <th style={{ width: '130px', textAlign: 'left' }}>Username</th>
-              <th style={{ width: '110px', textAlign: 'center' }}>Mobile</th>
-              <th style={{ width: '80px', textAlign: 'center' }}>Status</th>
-              <th style={{ width: '80px', textAlign: 'center' }}>Managers</th>
-              <th style={{ width: '80px', textAlign: 'center' }}>Assistants</th>
-              <th style={{ width: '75px', textAlign: 'center' }}>Tables</th>
-              <th style={{ width: '120px', textAlign: 'center' }}>Created At</th>
-              <th style={{ width: '120px', textAlign: 'center' }}>Updated At</th>
-              <th style={{ width: '45px', textAlign: 'center' }} title="Log">Log</th>
+            <tr style={{ fontSize: '12px' }}>
+              <th style={{ width: '45px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>S. No.</th>
+              <th style={{ width: 'auto', textAlign: 'left', fontSize: '12px', padding: '9px 12px' }}>Name</th>
+              <th style={{ width: '180px', textAlign: 'left', fontSize: '12px', padding: '9px 12px' }}>Email</th>
+              <th style={{ width: '130px', textAlign: 'left', fontSize: '12px', padding: '9px 12px' }}>Username</th>
+              <th style={{ width: '110px', textAlign: 'center', fontSize: '12px', padding: '9px 12px' }}>Mobile</th>
+              <th style={{ width: '80px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Status</th>
+              <th style={{ width: '80px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Managers</th>
+              <th style={{ width: '80px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Assistants</th>
+              <th style={{ width: '75px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Tables</th>
+              <th style={{ width: '120px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Created At</th>
+              <th style={{ width: '120px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }}>Updated At</th>
+              <th style={{ width: '45px', textAlign: 'center', fontSize: '12px', padding: '9px 8px' }} title="Log">Log</th>
             </tr>
           </thead>
           <tbody id="client-table-body">
@@ -491,57 +483,60 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                   key={c.id}
                   className={isSel ? 'selected' : ''}
                   onClick={() => setSelected(isSel ? null : c.id)}
+                  onDoubleClick={() => onNavigate?.('cards', { clientId: c.id })}
                   data-client-id={c.id}
+                  style={{ fontSize: '13px', cursor: 'pointer' }}
+                  title="Single-click to select | Double-click to open Table Group"
                 >
-                  <td className="text-center" style={{ width: '45px', textAlign: 'center', fontWeight: 600, color: '#64748b', fontSize: '11px' }}>
+                  <td className="text-center" style={{ width: '45px', textAlign: 'center', fontWeight: 600, color: '#475569', fontSize: '12px', padding: '9px 8px' }}>
                     {(page - 1) * pageSize + idx + 1}
                   </td>
-                  <td style={{ width: 'auto', textAlign: 'left' }}>
+                  <td style={{ width: 'auto', textAlign: 'left', padding: '9px 12px' }}>
                     <div className="client-name-cell">
-                      <span style={{ fontWeight: 600, color: '#0f172a' }}>
+                      <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
                         {c.name || c.school_name || '—'}
                       </span>
                     </div>
                   </td>
-                  <td style={{ width: '180px', color: '#6b7280', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
+                  <td style={{ width: '180px', color: '#334155', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left', padding: '9px 12px' }}>
                     {c.email || c.user?.email || '—'}
                   </td>
-                  <td style={{ width: '130px', color: '#475569', fontSize: '11px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
+                  <td style={{ width: '130px', color: '#334155', fontSize: '12px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left', padding: '9px 12px' }}>
                     {c.username || c.user?.username || c.user_code || (c.email ? c.email.split('@')[0] : '') || (c.name ? c.name.toLowerCase().replace(/[^a-z0-9]/g, '') : '—')}
                   </td>
-                  <td className="text-center" style={{ width: '110px', color: '#6b7280', fontSize: '11px', textAlign: 'center' }}>
+                  <td className="text-center" style={{ width: '110px', color: '#334155', fontSize: '12px', textAlign: 'center', padding: '9px 12px' }}>
                     {c.phone || c.user?.phone || '—'}
                   </td>
-                  <td className="text-center" style={{ width: '80px', textAlign: 'center' }}>
-                    <span className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}>
+                  <td className="text-center" style={{ width: '80px', textAlign: 'center', padding: '9px 8px' }}>
+                    <span className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`} style={{ fontSize: '11px', padding: '3px 8px' }}>
                       {isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="text-center" style={{ width: '80px', textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#f3e8ff', color: '#6b21a8', fontSize: '11px', fontWeight: 600, border: '1px solid #d8b4fe' }}>
-                      <Users size={10} /> {getManagerCount(c)}
+                  <td className="text-center" style={{ width: '80px', textAlign: 'center', padding: '9px 8px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: '#f3e8ff', color: '#6b21a8', fontSize: '12px', fontWeight: 600, border: '1px solid #d8b4fe' }}>
+                      <Users size={12} /> {getManagerCount(c)}
                     </span>
                   </td>
-                  <td className="text-center" style={{ width: '80px', textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: 600, border: '1px solid #86efac' }}>
-                      <UsersRound size={10} /> {getAssistantCount(c)}
+                  <td className="text-center" style={{ width: '80px', textAlign: 'center', padding: '9px 8px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontSize: '12px', fontWeight: 600, border: '1px solid #86efac' }}>
+                      <UsersRound size={12} /> {getAssistantCount(c)}
                     </span>
                   </td>
-                  <td className="text-center" style={{ width: '75px', textAlign: 'center' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#dbeafe', color: '#1e40af', fontSize: '11px', fontWeight: 600, border: '1px solid #93c5fd' }}>
-                      <CreditCard size={10} /> {c.table_count || c.tables_count || 0}
+                  <td className="text-center" style={{ width: '75px', textAlign: 'center', padding: '9px 8px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: '#dbeafe', color: '#1e40af', fontSize: '12px', fontWeight: 600, border: '1px solid #93c5fd' }}>
+                      <CreditCard size={12} /> {c.table_count || c.tables_count || 0}
                     </span>
                   </td>
-                  <td className="text-center" style={{ width: '120px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>{formatDT(c.created_at)}</td>
-                  <td className="text-center" style={{ width: '120px', fontSize: '11px', color: '#64748b', textAlign: 'center' }}>{formatDT(c.updated_at)}</td>
-                  <td className="text-center" style={{ width: '45px', textAlign: 'center' }}>
+                  <td className="text-center" style={{ width: '120px', fontSize: '12px', color: '#475569', textAlign: 'center', padding: '9px 8px' }}>{formatDT(c.created_at)}</td>
+                  <td className="text-center" style={{ width: '120px', fontSize: '12px', color: '#475569', textAlign: 'center', padding: '9px 8px' }}>{formatDT(c.updated_at)}</td>
+                  <td className="text-center" style={{ width: '45px', textAlign: 'center', padding: '9px 8px' }}>
                     <button
                       className="client-history-trigger"
                       onClick={(e) => { e.stopPropagation(); addToast?.(`Log: ${c.name || idx + 1}`, 'info'); }}
                       title="View log"
-                      style={{ width: '22px', height: '22px', border: 'none', borderRadius: '3px', background: 'rgba(37,99,235,0.1)', color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      style={{ width: '24px', height: '24px', border: 'none', borderRadius: '4px', background: 'rgba(37,99,235,0.1)', color: '#2563eb', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      <Info size={12} />
+                      <Info size={13} />
                     </button>
                   </td>
                 </tr>

@@ -62,7 +62,6 @@ const NAV_CONFIG = {
     {
       section: 'ID Card Management',
       items: [
-        { id: 'schema',   label: 'Table Setting', Icon: SlidersHorizontal },
         { id: 'cards',    label: 'Table Group',   Icon: ShieldCheck        },
         { id: 'settings', label: 'Settings',      Icon: UserCog           },
       ],

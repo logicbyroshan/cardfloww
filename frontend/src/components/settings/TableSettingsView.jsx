@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
+import CreateXlsxModal from '../common/CreateXlsxModal';
 import { schemaApi, clientApi } from '../../services/api';
 
 const STATUS_TABS = ['All', 'Active', 'Inactive'];
@@ -554,13 +555,12 @@ export default function TableSettingsView({ addToast, onNavigate }) {
         />
       )}
 
-      {/* ── CREATE WITH XLSX DRAWER ── */}
+      {/* ── CREATE WITH XLSX MODAL ── */}
       {showExcelDrawer && (
-        <CreateWithXlsxDrawer
+        <CreateXlsxModal
           groupId={groupId}
-          orgName={clientOrg}
           onClose={() => setShowExcelDrawer(false)}
-          onSave={() => { setShowExcelDrawer(false); load(); }}
+          onSuccess={() => { setShowExcelDrawer(false); load(); }}
           addToast={addToast}
         />
       )}

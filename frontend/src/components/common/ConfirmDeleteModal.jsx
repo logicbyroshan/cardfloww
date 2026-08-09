@@ -18,11 +18,10 @@ export default function ConfirmDeleteModal({ isOpen, onClose, onConfirm, title =
   };
 
   return (
-    <div className="drawer-overlay" onClick={onClose}>
+    <div className="center-modal-overlay">
       <div
         className="center-modal-panel"
-        style={{ width: '600px', height: '500px', padding: '0', display: 'flex', flexDirection: 'column' }}
-        onClick={(e) => e.stopPropagation()}
+        style={{ width: '540px', height: 'auto', maxHeight: '90vh', padding: '0', display: 'flex', flexDirection: 'column' }}
       >
         <div style={{ background: '#1e293b', color: '#fff', height: '46px', minHeight: '46px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>

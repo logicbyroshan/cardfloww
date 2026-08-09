@@ -1,15 +1,74 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Clock, CheckCircle, ThumbsUp, Download, Layers, Settings,
-  Upload, Trash2, ArrowUp, RefreshCw, Search, X, Loader2,
-  SlidersHorizontal, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  ArrowLeft, FileSpreadsheet, Eye, Edit2, Undo2, Redo2, Layers3, ShieldCheck, Printer, Send, Check
+  Upload, Trash2, ArrowUp, RefreshCw, X, Loader2,
+  SlidersHorizontal, FileSpreadsheet, Plus, ToggleRight, School,
+  BookOpen, Briefcase, Settings2, FolderKanban, CheckCircle2, Pencil, Save
 } from "lucide-react";
-import CardEditDrawer from "./CardEditDrawer";
 import WatermarkLogo from "../common/WatermarkLogo";
+import CreateXlsxModal from "../common/CreateXlsxModal";
+import CustomSelect from "../common/CustomSelect";
 import { cardApi, schemaApi, clientApi } from "../../services/api";
 
 const STATUS_TABS = ["All", "Active", "Inactive"];
+
+/* ── Table Type metadata ── */
+const TABLE_TYPES = [
+  { value: 'school_student',  label: 'School Student',  icon: School,   color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  { value: 'college_student', label: 'College Student', icon: BookOpen, color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+  { value: 'staff',           label: 'Staff',           icon: Briefcase,color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+  { value: 'custom',          label: 'Custom',          icon: Settings2, color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+];
+
+function getTableTypeMeta(value) {
+  return TABLE_TYPES.find(t => t.value === value) || TABLE_TYPES[3];
+}
+
+function inferTableType(tableName = '', orgName = '') {
+  const name = (tableName || '').toLowerCase().trim();
+  const org  = (orgName || '').toLowerCase().trim();
+  const staffRe   = /\b(staff|teacher|teachers|employee|employees|emp|faculty|personnel|hr|driver|workers|management)\b/;
+  const collegeRe = /\b(college|university|institute|polytechnic|degree|btech|mtech|bca|mca|mba|bsc|msc|ba|ma|bcom|mcom|semester|sem|branch|dept|department)\b/;
+  const schoolRe  = /\b(school|vidyalaya|academy|convent|class|std|standard|grade|section|sec)\b/;
+
+  if (staffRe.test(name)) return 'staff';
+  if (collegeRe.test(name)) return 'college_student';
+  if (schoolRe.test(name)) return 'school_student';
+  if (collegeRe.test(org)) return 'college_student';
+  return 'school_student';
+}
+
+function inferFieldType(name = '') {
+  const n = name.toLowerCase().trim();
+  if (/\b(photo|pic|picture|image)\b/.test(n)) return 'photo';
+  if (/\b(rel(?:ation)?[\s_-]*(?:photo|pic|image|1|2|one|two))\b/.test(n)) return 'rel_photo';
+  if (/\b(mother|father)[\s_-]*(photo|pic|image)\b/.test(n)) return 'rel_photo';
+  if (/\bsignature?\b/.test(n)) return 'signature';
+  if (/\bbarcode\b/.test(n)) return 'barcode';
+  if (/\bqr[\s_-]?code?\b/.test(n)) return 'qr_code';
+  if (/\b(class|std|standard|grade)\b/.test(n)) return 'class';
+  if (/\b(section|sec|div|division)\b/.test(n)) return 'section';
+  if (/\b(email|e-mail|mail)\b/.test(n)) return 'email';
+  if (/\b(no|number|no\.)\b/.test(n)) return 'number';
+  if (/\b(date|dob|born)\b/.test(n)) return 'date';
+  return 'text';
+}
+
+const FIELD_TYPES = [
+  { value: 'text',       label: 'Text' },
+  { value: 'number',     label: 'Number' },
+  { value: 'email',      label: 'Email' },
+  { value: 'date',       label: 'Date' },
+  { value: 'photo',      label: 'Photo' },
+  { value: 'rel_photo',  label: 'Relation Photo' },
+  { value: 'signature',  label: 'Signature' },
+  { value: 'barcode',    label: 'Barcode' },
+  { value: 'qr_code',    label: 'QR Code' },
+  { value: 'class',      label: 'Class' },
+  { value: 'section',    label: 'Section' },
+  { value: 'select',     label: 'Select / Dropdown' },
+  { value: 'textarea',   label: 'Textarea' },
+];
 
 function getTableCounts(t) {
   if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, rpCnt: 0, reqCnt: 0, confCnt: 0 };
@@ -29,65 +88,49 @@ function getTableCounts(t) {
     const allCustomCards = JSON.parse(localStorage.getItem('cf_custom_cards') || '[]');
     const filteredGlobalCards = allCustomCards.filter(c => String(c.table_id || c.table) === String(t.id) || String(c.table_name) === String(t.name));
 
-    const combinedLocal = [...listByTableId, ...listByTableName, ...filteredGlobalCards];
-    
-    if (combinedLocal.length > 0) {
-      let lp = 0, lv = 0, la = 0, ld = 0, lpool = 0, lrp = 0, lreq = 0, lconf = 0;
-      const seenIds = new Set();
-      combinedLocal.forEach(c => {
-        if (!c) return;
-        const cid = c.id || c.card_id || JSON.stringify(c.field_data || c);
-        if (seenIds.has(cid)) return;
-        seenIds.add(cid);
+    const allCards = [...listByTableId, ...listByTableName, ...filteredGlobalCards];
 
-        const st = (c.status || 'pending').toLowerCase();
-        if (st === 'pending') lp++;
-        else if (st === 'verified') lv++;
-        else if (st === 'approved') la++;
-        else if (st === 'download' || st === 'downloaded' || st === 'printed') ld++;
-        else if (st === 'pool' || st === 'deleted') lpool++;
-        else if (st === 'reprint' || st === 'reprinting') lrp++;
-        else if (st === 'request' || st === 'requested') lreq++;
-        else if (st === 'confirmed') lconf++;
-      });
-      pending = Math.max(pending, lp);
-      verified = Math.max(verified, lv);
-      approved = Math.max(approved, la);
-      download = Math.max(download, ld);
-      pool = Math.max(pool, lpool);
-      rpCnt = Math.max(rpCnt, lrp);
-      reqCnt = Math.max(reqCnt, lreq);
-      confCnt = Math.max(confCnt, lconf);
+    if (allCards.length > 0) {
+      pending += allCards.filter(c => !c.status || c.status === 'pending').length;
+      verified += allCards.filter(c => c.status === 'verified').length;
+      approved += allCards.filter(c => c.status === 'approved').length;
+      download += allCards.filter(c => c.status === 'download' || c.status === 'printed').length;
+      pool += allCards.filter(c => c.status === 'pool' || c.status === 'deleted').length;
     }
-  } catch (_) {}
+  } catch { /* ignore */ }
 
   return { pending, verified, approved, download, pool, rpCnt, reqCnt, confCnt };
+}
+
+function getDisplayOrgName(clientName, activeOrg) {
+  const ignoreList = ['—', 'Primary Org', 'Default Organisation', 'Default Organization', 'null', 'undefined'];
+  if (clientName && !ignoreList.includes(String(clientName).trim())) {
+    return String(clientName).trim();
+  }
+  if (activeOrg && !ignoreList.includes(String(activeOrg).trim())) {
+    return String(activeOrg).trim();
+  }
+  return '';
 }
 
 export default function CardTableView({ addToast, onNavigate }) {
   const [tables, setTables]               = useState([]);
   const [loading, setLoading]             = useState(true);
-  const [search, setSearch]               = useState("");
   const [statusTab, setStatusTab]         = useState("All");
   const [clientOrg, setClientOrg]         = useState("");
+  const [showCreateXlsxModal, setShowCreateXlsxModal] = useState(false);
 
-  /* Table selection in main view */
+  /* Table selection in main view (Default to NULL so buttons are only active when selected!) */
   const [selectedTableId, setSelectedTableId] = useState(null);
 
-  /* Drill-down state for viewing cards inside a specific table */
-  const [viewingTable, setViewingTable]   = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState("pending");
-
-  /* Cards list state inside drill-down mode */
-  const [cards, setCards]                 = useState([]);
-  const [cardsLoading, setCardsLoading]   = useState(false);
-  const [editingCard, setEditingCard]     = useState(null);
-  const [cardSearch, setCardSearch]       = useState("");
-  const [page, setPage]                   = useState(1);
-  const [total, setTotal]                 = useState(0);
+  /* Table Setting Drawers & Modals */
+  const [showAddEditDrawer, setShowAddEditDrawer] = useState(false);
+  const [editingTable, setEditingTable]           = useState(null);
+  const [settingModalTable, setSettingModalTable] = useState(null);
+  const [groupId, setGroupId]                     = useState(1);
 
   /* Modal states for bulk actions */
-  const [activeModal, setActiveModal]     = useState(null); // 'reupload' | 'download-all' | 'delete-all' | 'upgrade'
+  const [activeModal, setActiveModal]     = useState(null);
   const [deleteCodeInput, setDeleteCodeInput] = useState("");
 
   /* Fetch client org name */
@@ -98,12 +141,15 @@ export default function CardTableView({ addToast, onNavigate }) {
         const clients = data?.results || data?.clients || (Array.isArray(data) ? data : []);
         if (clients.length > 0) {
           setClientOrg(clients[0].name || clients[0].client_name || '');
+          if (clients[0].group_id || clients[0].id) {
+            setGroupId(clients[0].group_id || clients[0].id);
+          }
         }
       } catch { /* fallback */ }
     })();
   }, []);
 
-  /* ── Load tables list (merging API data + localStorage) ── */
+  /* Load tables list */
   const loadTables = useCallback(async () => {
     setLoading(true);
     let local = [];
@@ -123,77 +169,103 @@ export default function CardTableView({ addToast, onNavigate }) {
         }
       });
       setTables(merged);
-      if (merged.length > 0 && !selectedTableId) {
-        setSelectedTableId(merged[0].id);
-      }
     } catch {
       setTables(local);
-      if (local.length > 0 && !selectedTableId) {
-        setSelectedTableId(local[0].id);
-      }
     } finally {
       setLoading(false);
     }
-  }, [selectedTableId]);
+  }, []);
 
   useEffect(() => { loadTables(); }, [loadTables]);
 
-  /* ── Load cards for a selected table (drill-down view) ── */
-  const loadCards = useCallback(async () => {
-    if (!viewingTable) return;
-    setCardsLoading(true);
+  const selectedTable = useMemo(() => tables.find(t => String(t.id) === String(selectedTableId)), [tables, selectedTableId]);
+
+  /* Toggle Row Selection */
+  const handleSelectRow = (tableId) => {
+    setSelectedTableId(prev => (String(prev) === String(tableId) ? null : tableId));
+  };
+
+  /* Toggle Table Status */
+  const handleToggleStatus = async (tableToToggle) => {
+    const target = tableToToggle || selectedTable;
+    if (!target) return;
     try {
-      if (selectedStatus === 'reprint_request' || selectedStatus === 'reprint_confirm') {
-        const reqStatus = selectedStatus === 'reprint_request' ? 'requested' : 'confirmed';
-        const data = await reprintApi.getQueue?.({ table_id: viewingTable.id, status: reqStatus, page }) || {};
-        const list = data?.requests || data?.results || (Array.isArray(data) ? data : []);
-        setCards(list.map(r => ({
-          id: r.card_id || r.id,
-          photo: r.photo || r.card?.photo,
-          name: r.card_name || r.card?.name || r.name || '—',
-          class_name: r.class_name || r.card?.class_name || '—',
-          status: reqStatus,
-        })));
-        setTotal(data?.total || data?.count || list.length);
-      } else {
-        const queryParams = {
-          page,
-          search: cardSearch,
-          page_size: 25,
-        };
-        if (selectedStatus !== 'all') {
-          queryParams.status = selectedStatus;
+      try {
+        await schemaApi.toggleTableStatus(target.id);
+      } catch { /* fallback local */ }
+
+      const local = JSON.parse(localStorage.getItem("cf_custom_tables") || "[]");
+      const updated = local.map(t => {
+        if (String(t.id) === String(target.id)) {
+          const nextActive = t.is_active === false;
+          return { ...t, is_active: nextActive, status: nextActive ? 'active' : 'inactive' };
         }
-        const data = await cardApi.getCards(viewingTable.id, queryParams);
-        setCards(data?.cards || data?.results || (Array.isArray(data) ? data : []));
-        setTotal(data?.total || data?.count || (Array.isArray(data) ? data.length : 0));
-      }
+        return t;
+      });
+      localStorage.setItem("cf_custom_tables", JSON.stringify(updated));
+
+      setTables(prev => prev.map(t => {
+        if (String(t.id) === String(target.id)) {
+          const nextActive = t.is_active === false;
+          return { ...t, is_active: nextActive, status: nextActive ? 'active' : 'inactive' };
+        }
+        return t;
+      }));
+
+      addToast?.(`Status updated for "${target.name}"`, 'success');
     } catch {
-      setCards([]);
-      setTotal(0);
-    } finally {
-      setCardsLoading(false);
+      addToast?.('Error updating table status', 'error');
     }
-  }, [viewingTable, page, cardSearch, selectedStatus]);
+  };
 
-  useEffect(() => {
-    if (viewingTable) loadCards();
-  }, [viewingTable, loadCards]);
+  /* Delete Table */
+  const handleDeleteTable = async (tableToDelete) => {
+    const target = tableToDelete || selectedTable;
+    if (!target) return;
+    if (!window.confirm(`Delete table "${target.name}"? This action cannot be undone.`)) return;
 
-  /* ── Table filtering ── */
-  const filteredTables = tables.filter(t => {
-    if (!t) return false;
-    const q = search.toLowerCase();
-    const matchSearch = !q || (t.name || "").toLowerCase().includes(q);
-    const isActive = t.is_active !== false;
-    const matchStatus = statusTab === "All" || (statusTab === "Active" ? isActive : !isActive);
-    return matchSearch && matchStatus;
-  });
+    try {
+      try {
+        await schemaApi.deleteTable(target.id);
+      } catch { /* fallback local */ }
 
-  const selectedTable = filteredTables.find(t => t.id === selectedTableId) || filteredTables[0];
+      const local = JSON.parse(localStorage.getItem("cf_custom_tables") || "[]");
+      const updated = local.filter(t => String(t.id) !== String(target.id));
+      localStorage.setItem("cf_custom_tables", JSON.stringify(updated));
 
-  /* ── Bulk Actions Handlers ── */
+      addToast?.(`Table "${target.name}" deleted`, 'success');
+      if (selectedTableId === target.id) setSelectedTableId(null);
+      loadTables();
+    } catch {
+      addToast?.('Error deleting table', 'error');
+    }
+  };
+
+  /* Download Blank Template */
+  const handleDownloadBlankTemplate = () => {
+    addToast?.('Downloading Blank Excel Template (.xlsx)…', 'info');
+  };
+
+  const filteredTables = useMemo(() => {
+    return tables.filter(t => {
+      if (!t) return false;
+      const isActive = t.is_active !== false;
+      if (statusTab === 'Active') return isActive;
+      if (statusTab === 'Inactive') return !isActive;
+      return true;
+    });
+  }, [tables, statusTab]);
+
+  /* Open IDCardActionsView */
+  const openIDCardActions = (table, status = 'pending') => {
+    if (onNavigate) {
+      onNavigate('idcard-actions', { tableId: table.id, status });
+    }
+  };
+
+  /* Confirm Delete All */
   const confirmDeleteAll = async () => {
+    if (!deleteCodeInput) { addToast?.('Please enter confirmation code', 'warning'); return; }
     if (!selectedTable) return;
     try {
       await cardApi.deleteAllCards(selectedTable.id, { code: deleteCodeInput });
@@ -205,526 +277,757 @@ export default function CardTableView({ addToast, onNavigate }) {
     }
   };
 
-  /* ═══════════════════════════════════════════════════════════════════════════
-     VIEW 1: TABLE GROUP OVERVIEW (Classic Django idcard_group template UI)
-     ═══════════════════════════════════════════════════════════════════════════ */
-  if (!viewingTable) {
-    return (
-      <div className="view-container" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        
-        {/* ── ACTION BAR / TOPBAR ── */}
-        <div className="action-bar" id="idcard-group-action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxSizing: 'border-box' }}>
-          <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="status-tabs" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '2px', gap: '2px', height: '28px', boxSizing: 'border-box' }}>
-              {STATUS_TABS.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setStatusTab(t)}
-                  className={`status-tab${statusTab === t ? ' active' : ''}`}
-                  style={{
-                    padding: '0 10px', height: '22px', fontSize: '11px', lineHeight: '22px', borderRadius: '3px',
-                    border: 'none', cursor: 'pointer', background: statusTab === t ? '#2563eb' : 'transparent',
-                    color: statusTab === t ? '#ffffff' : '#cbd5e1', fontWeight: statusTab === t ? 700 : 600,
-                    fontFamily: 'var(--font-family)', transition: 'all 0.15s',
-                    boxShadow: statusTab === t ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
-                    display: 'inline-flex', alignItems: 'center'
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            <div className="action-divider" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
-
-            <div className="notif-search-box" style={{ width: '200px', height: '28px', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '0 8px', display: 'flex', alignItems: 'center', boxSizing: 'border-box' }}>
-              <Search size={12} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tables..."
-                style={{ background: 'transparent', border: 'none', color: '#ffffff', outline: 'none', fontSize: '12px', width: '100%' }}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', padding: '0 2px' }} title="Clear search">
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              
-              {/* Bulk Action Buttons Group in Navbar (Vibrant Color Buttons) */}
-              <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('reupload')}
-                  style={bulkBtnStyle('reupload', !selectedTable)}
-                  disabled={!selectedTable}
-                  title={!selectedTable ? "Select a table" : `Reupload Images for ${selectedTable.name}`}
-                >
-                  <Upload size={12} /> Reupload Image
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('download-all')}
-                  style={bulkBtnStyle('downloadAll', !selectedTable)}
-                  disabled={!selectedTable}
-                  title={!selectedTable ? "Select a table" : `Download All ID Cards for ${selectedTable.name}`}
-                >
-                  <Download size={12} /> Download All ID Card
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setDeleteCodeInput(''); setActiveModal('delete-all'); }}
-                  style={bulkBtnStyle('deleteAll', !selectedTable)}
-                  disabled={!selectedTable}
-                  title={!selectedTable ? "Select a table" : `Delete All ID Cards for ${selectedTable.name}`}
-                >
-                  <Trash2 size={12} /> Delete All ID Cards
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveModal('upgrade')}
-                  style={bulkBtnStyle('upgradeClass', !selectedTable)}
-                  disabled={!selectedTable}
-                  title={!selectedTable ? "Select a table" : `Upgrade All Class for ${selectedTable.name}`}
-                >
-                  <ArrowUp size={12} /> Upgrade All Class
-                </button>
-              </div>
-
-              <div className="btn-separator" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
-
-              <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  className="btn"
-                  onClick={() => onNavigate ? onNavigate('schema') : (window.location.href = '/panel/idcard-table/setting/')}
-                  title="Create table directly from an XLSX file"
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.18)', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
-                >
-                  <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
-                </button>
-              </div>
-
-              <div className="btn-separator" style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
-
-              {/* Page Switch Buttons Pair */}
-              <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  className="btn"
-                  title="Table Group"
-                  style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
-                >
-                  <ShieldCheck size={13} /> <span>Table Group</span>
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => onNavigate ? onNavigate('schema') : (window.location.href = '/panel/idcard-table/setting/')}
-                  title="Table Setting"
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.18)', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
-                >
-                  <Settings size={13} /> <span>Table Setting</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── MAIN CLASSIC TABLE GROUP LIST ── */}
-        <div id="gs-table-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div className="table-wrapper" style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-            <WatermarkLogo />
-            {loading ? (
-              <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
-                <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
-                <span>Loading Table Group data…</span>
-              </div>
-            ) : filteredTables.length === 0 ? (
-              <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{
-                  width: '64px', height: '64px', borderRadius: '50%', background: '#eff6ff',
-                  color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px'
-                }}>
-                  <ShieldCheck size={32} />
-                </div>
-                <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>No Table Groups Found</h4>
-                <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                  {search ? `No tables match "${search}"` : 'Create your first table setting to populate table group.'}
-                </p>
-                <button
-                  onClick={() => onNavigate ? onNavigate('schema') : (window.location.href = '/panel/idcard-table/setting/')}
-                  className="btn btn-primary btn-sm"
-                  style={{ marginTop: '16px', padding: '7px 18px', borderRadius: '6px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <SlidersHorizontal size={14} /> Go to Table Setting
-                </button>
-              </div>
-            ) : (
-              <table className="gs-group-table" style={{ width: '100%', minWidth: '1200px', tableLayout: 'auto', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)' }}>
-                    <th style={{ width: '50px', textAlign: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '9px 8px', textTransform: 'uppercase', letterSpacing: '0.05em', borderRight: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>S. NO.</th>
-                    <th style={{ textAlign: 'left', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '9px 12px', textTransform: 'uppercase', letterSpacing: '0.05em', borderRight: '1px solid rgba(255,255,255,0.1)' }}>NAME</th>
-                    <th style={{ textAlign: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '9px 8px', textTransform: 'uppercase', letterSpacing: '0.05em', borderRight: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>ID CARD LISTS</th>
-                    <th style={{ textAlign: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, padding: '9px 8px', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>REPRINT CARD LISTS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTables.map((t, idx) => {
-                    const counts = getTableCounts(t);
-                    const pCnt = counts.pending;
-                    const vCnt = counts.verified;
-                    const aCnt = counts.approved;
-                    const dCnt = counts.download;
-                    const lCnt = counts.pool;
-
-                    const rpCnt   = counts.rpCnt;
-                    const reqCnt  = counts.reqCnt;
-                    const confCnt = counts.confCnt;
-
-                    const isSelected = selectedTableId === t.id;
-                    const rawOrg = t.client_name || t.client?.name || '';
-                    const orgDisplay = (rawOrg && !['Default Organisation', 'Organisation', 'Primary Organisation', '—'].includes(rawOrg.trim()))
-                      ? rawOrg.trim()
-                      : (clientOrg || 'Mathura Das School of Execellence');
-
-                    return (
-                      <tr
-                        key={t.id || idx}
-                        onClick={() => setSelectedTableId(t.id)}
-                        style={{ cursor: 'pointer', transition: 'background 0.15s' }}
-                      >
-                        {/* Column 0: S. NO. */}
-                        <td style={{ width: '50px', textAlign: 'center', fontWeight: 600, color: '#64748b', fontSize: '12px', verticalAlign: 'middle', padding: '10px 4px', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', borderLeft: isSelected ? '4px solid #2563eb' : '4px solid transparent', background: isSelected ? '#eff6ff' : undefined }}>
-                          {idx + 1}
-                        </td>
-
-                        {/* Column 1: Table Name — gets all remaining space */}
-                        <td style={{ fontWeight: 700, color: '#0f172a', textAlign: 'left', overflow: 'hidden', verticalAlign: 'middle', padding: '10px 12px', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', background: isSelected ? '#eff6ff' : undefined }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                            <span style={{ fontSize: '13px', color: isSelected ? '#1d4ed8' : '#1e293b', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.name}>{t.name}</span>
-                            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={orgDisplay}>
-                              {orgDisplay}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Column 2: ID CARD LISTS — auto-sized to fit all 5 buttons in one row */}
-                        <td style={{ textAlign: 'center', verticalAlign: 'middle', padding: '10px 12px', borderBottom: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb', background: isSelected ? '#eff6ff' : undefined }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'pending' }); }}
-                              style={statusBtnStyle('pending').btn}
-                              title="View Pending List"
-                            >
-                              <span>Pending List</span>
-                              <span style={statusBtnStyle('pending').badge}>{pCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'verified' }); }}
-                              style={statusBtnStyle('verified').btn}
-                              title="View Verified List"
-                            >
-                              <span>Verified List</span>
-                              <span style={statusBtnStyle('verified').badge}>{vCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'approved' }); }}
-                              style={statusBtnStyle('approved').btn}
-                              title="View Approved List"
-                            >
-                              <span>Approved List</span>
-                              <span style={statusBtnStyle('approved').badge}>{aCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'download' }); }}
-                              style={statusBtnStyle('printed').btn}
-                              title="View Printed List"
-                            >
-                              <span>Printed List</span>
-                              <span style={statusBtnStyle('printed').badge}>{dCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'request' }); }}
-                              style={statusBtnStyle('request').btn}
-                              title="View Requested List"
-                            >
-                              <span>Requested List</span>
-                              <span style={statusBtnStyle('request').badge}>{t.request_count || t.request || 0}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); onNavigate('idcard-actions', { tableId: t.id, status: 'pool' }); }}
-                              style={statusBtnStyle('deleted').btn}
-                              title="View Deleted List"
-                            >
-                              <span>Deleted List</span>
-                              <span style={statusBtnStyle('deleted').badge}>{lCnt}</span>
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Column 3: REPRINT CARD LISTS — auto-sized to fit all 3 buttons in one row */}
-                        <td style={{ textAlign: 'center', verticalAlign: 'middle', padding: '10px 12px', borderBottom: '1px solid #e5e7eb', background: isSelected ? '#eff6ff' : undefined }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setViewingTable(t); setSelectedStatus('reprint'); setPage(1); }}
-                              style={reprintBtnStyle('reprint').btn}
-                              title="View Reprinting List"
-                            >
-                              <span>Reprinting List</span>
-                              <span style={reprintBtnStyle('reprint').badge}>{rpCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setViewingTable(t); setSelectedStatus('reprint_request'); setPage(1); }}
-                              style={reprintBtnStyle('request').btn}
-                              title="View Requested List"
-                            >
-                              <span>Requested List</span>
-                              <span style={reprintBtnStyle('request').badge}>{reqCnt}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setViewingTable(t); setSelectedStatus('reprint_confirm'); setPage(1); }}
-                              style={reprintBtnStyle('confirm').btn}
-                              title="View Confirmed List"
-                            >
-                              <span>Confirmed List</span>
-                              <span style={reprintBtnStyle('confirm').badge}>{confCnt}</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        {/* ── MODALS FOR BULK ACTIONS ── */}
-        {activeModal === 'delete-all' && selectedTable && (
-          <div style={modalBackdropStyle}>
-            <div style={modalBoxStyle}>
-              <h3 style={{ margin: '0 0 8px', color: '#dc2626', fontSize: '16px', fontWeight: 700 }}>
-                Delete All ID Cards
-              </h3>
-              <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 14px' }}>
-                Are you sure you want to permanently delete all cards in <strong>"{selectedTable.name}"</strong>? Enter the confirmation code below:
-              </p>
-              <input
-                value={deleteCodeInput}
-                onChange={e => setDeleteCodeInput(e.target.value)}
-                placeholder="Enter 10-digit delete code"
-                style={{ width: '100%', height: '36px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0 10px', fontSize: '13px', marginBottom: '14px' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button onClick={() => setActiveModal(null)} className="btn btn-neutral btn-sm">Cancel</button>
-                <button onClick={confirmDeleteAll} className="btn btn-danger btn-sm">Confirm Delete All</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-    );
-  }
-
-  /* ═══════════════════════════════════════════════════════════════════════════
-     VIEW 2: DRILL-DOWN CARD LIST VIEW FOR A SELECTED TABLE
-     ═══════════════════════════════════════════════════════════════════════════ */
   return (
     <div className="view-container" style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       
-      {/* Drill-down Header */}
-      <div className="action-bar" style={{ background: '#1e293b', color: '#fff', borderBottom: 'none' }}>
-        <div className="action-bar-left" style={{ gap: '12px' }}>
-          <button
-            onClick={() => setViewingTable(null)}
-            className="btn btn-sm btn-neutral"
-            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <ArrowLeft size={13} /> Back to Table Group
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{viewingTable.name}</span>
-            <span style={{ fontSize: '11px', background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>
-              {selectedStatus === 'all' ? 'ALL CARDS' : selectedStatus.toUpperCase()} ({total})
-            </span>
-          </div>
-
-          <button
-            onClick={() => {
-              if (onNavigate) {
-                onNavigate('panel', { tableId: viewingTable.id, status: selectedStatus });
-              } else {
-                window.location.href = `/panel/idcards/?table_id=${viewingTable.id}&status=${selectedStatus}`;
-              }
-            }}
-            className="btn btn-sm btn-primary"
-            style={{ fontSize: '11px', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-            title="Open Full Card Management View"
-          >
-            <Eye size={12} /> Full Card Manager
-          </button>
-        </div>
-
-        <div className="action-bar-right">
-          <div className="status-tabs" style={{ display: 'flex', gap: '4px' }}>
-            {['all', 'pending', 'verified', 'approved', 'download', 'pool', 'reprint', 'reprint_request', 'reprint_confirm'].map(st => (
+      {/* ── ACTION BAR / TOPBAR ── */}
+      <div className="action-bar" id="idcard-group-action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxSizing: 'border-box' }}>
+        
+        {/* Left Side: Status Filters | 4 Table Action Buttons | 2 XLSX Buttons */}
+        <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          
+          {/* Section 1: Status Filter Tabs */}
+          <div className="status-tabs" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '2px', gap: '2px', height: '28px', boxSizing: 'border-box' }}>
+            {STATUS_TABS.map((t) => (
               <button
-                key={st}
-                onClick={() => { setSelectedStatus(st); setPage(1); }}
+                key={t}
+                onClick={() => setStatusTab(t)}
+                className={`status-tab${statusTab === t ? ' active' : ''}`}
                 style={{
-                  padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 700,
-                  border: 'none', cursor: 'pointer', textTransform: 'capitalize',
-                  background: selectedStatus === st ? '#2563eb' : 'rgba(255,255,255,0.1)',
-                  color: '#fff'
+                  padding: '0 10px', height: '22px', fontSize: '11px', lineHeight: '22px', borderRadius: '3px',
+                  border: 'none', cursor: 'pointer', background: statusTab === t ? '#2563eb' : 'transparent',
+                  color: statusTab === t ? '#ffffff' : '#cbd5e1', fontWeight: statusTab === t ? 700 : 600,
+                  fontFamily: 'var(--font-family)', transition: 'all 0.15s',
+                  boxShadow: statusTab === t ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                  display: 'inline-flex', alignItems: 'center'
                 }}
               >
-                {st === 'all' ? 'All Cards' : st.replace('reprint_', '')}
+                {t}
               </button>
             ))}
           </div>
+
+          {/* | Divider */}
+          <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
+
+          {/* Section 2: 4 Table Buttons (Add always enabled; Edit, Delete, Active require row selection!) */}
+          <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            
+            {/* 1. Add Button (Always Enabled) */}
+            <button
+              className="btn"
+              onClick={() => { setEditingTable(null); setShowAddEditDrawer(true); }}
+              title="Add New Table Setting"
+              style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
+            >
+              <Plus size={13} /> <span>Add</span>
+            </button>
+
+            {/* 2. Edit Button (Requires Table Selection) */}
+            <button
+              className="btn"
+              disabled={!selectedTable}
+              onClick={() => { setEditingTable(selectedTable); setShowAddEditDrawer(true); }}
+              title={!selectedTable ? "Select a table row to edit" : `Edit ${selectedTable.name}`}
+              style={{
+                background: selectedTable ? '#2563eb' : 'rgba(255, 255, 255, 0.08)',
+                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                border: selectedTable ? '1px solid #2563eb' : '1px solid rgba(255, 255, 255, 0.15)',
+                height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px',
+                cursor: selectedTable ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box',
+                opacity: selectedTable ? 1 : 0.6
+              }}
+            >
+              <Pencil size={13} /> <span>Edit</span>
+            </button>
+
+            {/* 3. Delete Button (Requires Table Selection) */}
+            <button
+              className="btn"
+              disabled={!selectedTable}
+              onClick={() => handleDeleteTable(selectedTable)}
+              title={!selectedTable ? "Select a table row to delete" : `Delete ${selectedTable.name}`}
+              style={{
+                background: selectedTable ? '#ef4444' : 'rgba(255, 255, 255, 0.08)',
+                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                border: selectedTable ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px',
+                cursor: selectedTable ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box',
+                opacity: selectedTable ? 1 : 0.6
+              }}
+            >
+              <Trash2 size={13} /> <span>Delete</span>
+            </button>
+
+            {/* 4. Active Button (Requires Table Selection) */}
+            <button
+              className="btn"
+              disabled={!selectedTable}
+              onClick={() => handleToggleStatus(selectedTable)}
+              title={!selectedTable ? "Select a table row to toggle status" : `Toggle status for ${selectedTable.name}`}
+              style={{
+                background: selectedTable ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
+                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                border: selectedTable ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.15)',
+                height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px',
+                cursor: selectedTable ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box',
+                opacity: selectedTable ? 1 : 0.6
+              }}
+            >
+              <ToggleRight size={13} /> <span>Active</span>
+            </button>
+          </div>
+
+          {/* | Divider */}
+          <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
+
+          {/* Section 3: 2 XLSX Buttons Together (Download Template & Create with XLSX) */}
+          <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              className="btn"
+              onClick={handleDownloadBlankTemplate}
+              title="Download Blank XLSX Template"
+              style={{ background: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.18)', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
+            >
+              <Download size={13} /> <span>Download Template</span>
+            </button>
+
+            <button
+              className="btn"
+              onClick={() => setShowCreateXlsxModal(true)}
+              title="Create table directly from an XLSX file"
+              style={{ background: '#10b981', color: '#ffffff', border: '1px solid #10b981', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px', boxSizing: 'border-box' }}
+            >
+              <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Side: Bulk Actions for Selected Table */}
+        <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveModal('reupload')}
+                style={bulkBtnStyle('reupload', !selectedTable)}
+                disabled={!selectedTable}
+                title={!selectedTable ? "Select a table row first" : `Reupload Images for ${selectedTable.name}`}
+              >
+                <Upload size={12} /> Reupload Image
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveModal('download-all')}
+                style={bulkBtnStyle('downloadAll', !selectedTable)}
+                disabled={!selectedTable}
+                title={!selectedTable ? "Select a table row first" : `Download All ID Cards for ${selectedTable.name}`}
+              >
+                <Download size={12} /> Download All ID Card
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setDeleteCodeInput(''); setActiveModal('delete-all'); }}
+                style={bulkBtnStyle('deleteAll', !selectedTable)}
+                disabled={!selectedTable}
+                title={!selectedTable ? "Select a table row first" : `Delete All ID Cards for ${selectedTable.name}`}
+              >
+                <Trash2 size={12} /> Delete All ID Cards
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveModal('upgrade')}
+                style={bulkBtnStyle('upgradeClass', !selectedTable)}
+                disabled={!selectedTable}
+                title={!selectedTable ? "Select a table row first" : `Upgrade All Class for ${selectedTable.name}`}
+              >
+                <ArrowUp size={12} /> Upgrade All Class
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Cards Table */}
-      <div style={{ flex: 1, overflow: 'auto', background: '#f8fafc' }}>
-        {cardsLoading ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
-            <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
-            Loading cards…
-          </div>
-        ) : cards.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
-            <p>No cards found in status "{selectedStatus}".</p>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th style={{ width: '40px', textAlign: 'center' }}>#</th>
-                <th style={{ width: '70px', textAlign: 'center' }}>PHOTO</th>
-                <th style={{ textAlign: 'left' }}>NAME</th>
-                <th style={{ textAlign: 'left' }}>CLASS / DEPT</th>
-                <th style={{ textAlign: 'center' }}>STATUS</th>
-                <th style={{ width: '100px', textAlign: 'center' }}>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cards.map((c, i) => (
-                <tr key={c.id || i}>
-                  <td style={{ textAlign: 'center', fontSize: '11px', color: '#64748b' }}>{(page - 1) * 25 + i + 1}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {c.photo || c.image_url ? (
-                      <img src={c.photo || c.image_url} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#e2e8f0', margin: '0 auto' }} />
-                    )}
-                  </td>
-                  <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name || c.field_data?.NAME || '—'}</td>
-                  <td style={{ color: '#475569' }}>{c.class_name || c.field_data?.CLASS || c.field_data?.DEPARTMENT || '—'}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="badge badge-neutral" style={{ textTransform: 'capitalize' }}>{c.status || selectedStatus}</span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      onClick={() => setEditingCard(c)}
-                      className="btn btn-xs btn-neutral"
-                      style={{ padding: '3px 8px', fontSize: '11px' }}
-                    >
-                      <Edit2 size={11} /> Edit
-                    </button>
-                  </td>
+      {/* ── MAIN TABLE GROUP DATA TABLE ── */}
+      <div id="gs-table-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div className="table-wrapper" style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+          <WatermarkLogo />
+          {loading ? (
+            <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
+              <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
+              <span>Loading Table Group data…</span>
+            </div>
+          ) : filteredTables.length === 0 ? (
+            <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <FolderKanban size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
+              <h4 style={{ margin: '0 0 6px', color: '#334155', fontSize: '15px', fontWeight: 600 }}>No Table Settings Found</h4>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Click <strong>Add</strong> or <strong>Create with XLSX</strong> to create your first table setting.</p>
+            </div>
+          ) : (
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2d3748', borderTop: '1px solid rgba(255, 255, 255, 0.25)', borderBottom: '1px solid #1a202c' }}>
+                <tr>
+                  <th rowSpan="2" style={{ width: '50px', textAlign: 'center', padding: '10px 8px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: '1px solid #4a5568' }}>S. NO.</th>
+                  <th rowSpan="2" style={{ width: '220px', textAlign: 'left', padding: '10px 12px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: '1px solid #4a5568' }}>NAME</th>
+                  <th colSpan="5" style={{ textAlign: 'center', padding: '10px 12px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: '1px solid #4a5568' }}>ID CARD LISTS</th>
+                  <th colSpan="3" style={{ textAlign: 'center', padding: '10px 12px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: '1px solid #4a5568' }}>REPRINT CARD LISTS</th>
+                  <th rowSpan="2" style={{ width: '90px', textAlign: 'center', padding: '10px 8px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: '1px solid #4a5568' }}>STATUS</th>
+                  <th rowSpan="2" style={{ width: '90px', textAlign: 'center', padding: '10px 8px', color: '#ffffff', fontWeight: 700, fontSize: '11px', letterSpacing: '0.05em', background: '#2d3748', borderRight: 'none' }}>ACTION</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {filteredTables.map((t, idx) => {
+                  const isSel = String(t.id) === String(selectedTableId);
+                  const counts = getTableCounts(t);
+                  const isActive = t.is_active !== false;
+
+                  const displayOrg = getDisplayOrgName(t.client_name, clientOrg);
+
+                  return (
+                    <tr
+                      key={t.id}
+                      onClick={() => handleSelectRow(t.id)}
+                      style={{
+                        background: isSel ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                        borderBottom: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s'
+                      }}
+                      className={isSel ? 'selected' : ''}
+                    >
+                      {/* S. NO. Column */}
+                      <td style={{ padding: '8px', textAlign: 'center', fontWeight: 600, color: '#64748b' }}>
+                        {idx + 1}
+                      </td>
+
+                      {/* NAME Column (Clean formatting without underline or dash lines!) */}
+                      <td style={{ padding: '8px 12px', textAlign: 'left' }}>
+                        <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '13px' }}>
+                          {t.name}
+                        </span>
+                        {Boolean(displayOrg) && (
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                            {displayOrg}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* ID CARD LISTS (5 Badges) */}
+                      <td colSpan="5" style={{ padding: '8px' }}>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'pending'); }} style={statusBtnStyle('pending').btn} title="View Pending List">
+                            <span>Pending List</span><span style={statusBtnStyle('pending').badge}>{counts.pending}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'verified'); }} style={statusBtnStyle('verified').btn} title="View Verified List">
+                            <span>Verified List</span><span style={statusBtnStyle('verified').badge}>{counts.verified}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'approved'); }} style={statusBtnStyle('approved').btn} title="View Approved List">
+                            <span>Approved List</span><span style={statusBtnStyle('approved').badge}>{counts.approved}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'printed'); }} style={statusBtnStyle('printed').btn} title="View Printed List">
+                            <span>Printed List</span><span style={statusBtnStyle('printed').badge}>{counts.download}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'deleted'); }} style={statusBtnStyle('deleted').btn} title="View Deleted List">
+                            <span>Deleted List</span><span style={statusBtnStyle('deleted').badge}>{counts.pool}</span>
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* REPRINT CARD LISTS (3 Badges) */}
+                      <td colSpan="3" style={{ padding: '8px' }}>
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'reprint'); }} style={reprintBtnStyle('reprint').btn} title="View Reprinting List">
+                            <span>Reprinting List</span><span style={reprintBtnStyle('reprint').badge}>{counts.rpCnt}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'request'); }} style={reprintBtnStyle('request').btn} title="View Requested List">
+                            <span>Requested List</span><span style={reprintBtnStyle('request').badge}>{counts.reqCnt}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openIDCardActions(t, 'confirm'); }} style={reprintBtnStyle('confirm').btn} title="View Confirmed List">
+                            <span>Confirmed List</span><span style={reprintBtnStyle('confirm').badge}>{counts.confCnt}</span>
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* STATUS Column */}
+                      <td style={{ padding: '8px', textAlign: 'center' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleStatus(t); }}
+                          style={{
+                            padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700,
+                            background: isActive ? '#d1fae5' : '#fee2e2',
+                            color: isActive ? '#047857' : '#dc2626',
+                            border: isActive ? '1px solid #a7f3d0' : '1px solid #fca5a5',
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}
+                          title="Click to toggle Active/Inactive status"
+                        >
+                          <ToggleRight size={12} /> {isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      </td>
+
+                      {/* ACTION Column (Setting Button opens dedicated Table Setting Schema Modal!) */}
+                      <td style={{ padding: '8px', textAlign: 'center' }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSettingModalTable(t); }}
+                          style={{
+                            padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 600,
+                            background: '#f1f5f9', color: '#1e293b', border: '1px solid #cbd5e1',
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}
+                          title={`View table schema for ${t.name}`}
+                        >
+                          <Settings size={12} style={{ color: '#2563eb' }} /> Setting
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
 
-      {/* Drawer */}
-      {editingCard && (
-        <CardEditDrawer
-          card={editingCard}
-          table={viewingTable}
-          onClose={() => setEditingCard(null)}
-          onSave={() => { setEditingCard(null); loadCards(); addToast?.('Card updated!', 'success'); }}
+      {/* ── MODALS & DRAWERS ── */}
+
+      {/* 3-Step Create Table from XLSX Modal */}
+      {showCreateXlsxModal && (
+        <CreateXlsxModal
+          groupId={groupId}
+          onClose={() => setShowCreateXlsxModal(false)}
+          onSuccess={() => loadTables()}
+          addToast={addToast}
         />
       )}
+
+      {/* Add / Edit Table Drawer */}
+      {showAddEditDrawer && (
+        <TableDrawerForm
+          editingTable={editingTable}
+          groupId={groupId}
+          orgName={clientOrg}
+          onClose={() => setShowAddEditDrawer(false)}
+          onSave={() => { setShowAddEditDrawer(false); loadTables(); }}
+          addToast={addToast}
+        />
+      )}
+
+      {/* Dedicated Table Setting Details Center Modal (No redundant buttons/stats!) */}
+      {settingModalTable && (
+        <TableSettingSchemaModal
+          table={settingModalTable}
+          orgName={clientOrg}
+          onClose={() => setSettingModalTable(null)}
+        />
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {activeModal === 'delete-all' && selectedTable && (
+        <div className="center-modal-overlay">
+          <div className="center-modal-panel" style={{ width: '420px', height: 'auto', padding: '20px' }}>
+            <h3 style={{ margin: '0 0 8px', color: '#dc2626', fontSize: '16px', fontWeight: 700 }}>
+              Delete All ID Cards
+            </h3>
+            <p style={{ fontSize: '12px', color: '#475569', margin: '0 0 14px' }}>
+              Are you sure you want to permanently delete all cards in <strong>"{selectedTable.name}"</strong>? Enter the confirmation code below:
+            </p>
+            <input
+              value={deleteCodeInput}
+              onChange={e => setDeleteCodeInput(e.target.value)}
+              placeholder="Enter 10-digit delete code"
+              style={{ width: '100%', height: '36px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '0 10px', fontSize: '13px', marginBottom: '14px' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button onClick={() => setActiveModal(null)} className="btn btn-neutral btn-sm">Cancel</button>
+              <button onClick={confirmDeleteAll} className="btn btn-danger btn-sm">Confirm Delete All</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
 
-/* ── Inline Helper Styles ── */
-function statusBtnStyle(type) {
-  const styles = {
-    pending:  { bg: '#fef3c7', color: '#92400e', border: '#fde68a', badgeBg: '#f59e0b' },
-    verified: { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7', badgeBg: '#10b981' },
-    approved: { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd', badgeBg: '#2563eb' },
-    printed:  { bg: '#f3f4f6', color: '#374151', border: '#d1d5db', badgeBg: '#6b7280' },
-    download: { bg: '#f3f4f6', color: '#374151', border: '#d1d5db', badgeBg: '#6b7280' },
-    request:  { bg: '#f3e8ff', color: '#6b21a8', border: '#d8b4fe', badgeBg: '#8b5cf6' },
-    deleted:  { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', badgeBg: '#ef4444' },
-    pool:     { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5', badgeBg: '#ef4444' },
+/* ─── Dedicated Table Setting Schema Center Modal (No repeated buttons or stats!) ─── */
+function TableSettingSchemaModal({ table, orgName, onClose }) {
+  if (!table) return null;
+
+  const fields = table.fields || [
+    { name: 'PHOTO', type: 'photo', mandatory: true },
+    { name: 'NAME', type: 'text', mandatory: true },
+    { name: 'SERIAL NO', type: 'number', mandatory: true },
+    { name: 'CLASS', type: 'text', mandatory: false },
+    { name: 'SECTION', type: 'text', mandatory: false },
+  ];
+  const typeMeta = getTableTypeMeta(table.table_type || inferTableType(table.name, orgName));
+  const TypeIcon = typeMeta.icon;
+
+  const formatDate = (d) => {
+    if (!d) return '—';
+    try {
+      return new Date(d).toLocaleString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch { return String(d); }
   };
-  const cfg = styles[type] || styles.download;
+
+  return (
+    <div className="center-modal-overlay">
+      <div className="center-modal-panel" style={{ width: '560px', height: 'auto', maxHeight: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', borderRadius: '10px' }}>
+        
+        {/* Modal Header */}
+        <div style={{ padding: '16px 20px', background: '#1e293b', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff' }}>
+              <Settings size={18} style={{ color: '#38bdf8' }} /> Table Setting Details
+            </h3>
+            <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px', display: 'block' }}>
+              {table.name}
+            </span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Metadata Card */}
+          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Table Metadata</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '4px', background: typeMeta.bg, color: typeMeta.color, border: `1px solid ${typeMeta.border}`, fontSize: '11px', fontWeight: 600 }}>
+                  <TypeIcon size={12} /> {typeMeta.label}
+                </span>
+                <span style={{ padding: '3px 8px', borderRadius: '4px', background: table.is_active !== false ? '#d1fae5' : '#fee2e2', color: table.is_active !== false ? '#047857' : '#dc2626', fontSize: '11px', fontWeight: 700 }}>
+                  {table.is_active !== false ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '12px', color: '#334155', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+              <div><strong style={{ color: '#64748b' }}>Organisation:</strong> {getDisplayOrgName(table.client_name, orgName) || 'Standard'}</div>
+              <div><strong style={{ color: '#64748b' }}>Created By:</strong> {table.created_by || table.user || 'Admin'}</div>
+              <div><strong style={{ color: '#64748b' }}>Created At:</strong> {formatDate(table.created_at)}</div>
+              <div><strong style={{ color: '#64748b' }}>Last Updated:</strong> {formatDate(table.updated_at || table.created_at)}</div>
+            </div>
+          </div>
+
+          {/* Fields Schema List */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Table Fields Schema ({fields.length} Fields)</span>
+            </div>
+
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <tr>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '40px', color: '#475569' }}>#</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', color: '#475569' }}>Field Name</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: '130px', color: '#475569' }}>Data Type</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '80px', color: '#475569' }}>Mandatory</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map((f, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '7px 8px', textAlign: 'center', color: '#94a3b8', fontSize: '11px', fontWeight: 600 }}>{idx + 1}</td>
+                      <td style={{ padding: '7px 12px', fontWeight: 600, color: '#1e293b' }}>{f.name}</td>
+                      <td style={{ padding: '7px 12px', color: '#2563eb', textTransform: 'uppercase', fontSize: '11px', fontWeight: 700 }}>{f.type || 'text'}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center' }}>
+                        {f.mandatory ? (
+                          <span style={{ padding: '2px 6px', borderRadius: '3px', background: '#dcfce7', color: '#15803d', fontSize: '10px', fontWeight: 700 }}>Required</span>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '11px' }}>Optional</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div style={{ padding: '12px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '7px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Add / Edit Table Drawer Form Component ─── */
+function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSave, addToast }) {
+  const isEditing = Boolean(editingTable);
+  const [tableName, setTableName]   = useState(editingTable?.name || '');
+  const [tableType, setTableType]   = useState(editingTable?.table_type || 'custom');
+  const [fields, setFields]         = useState(
+    (editingTable?.fields || [
+      { id: 'f_1', name: 'PHOTO', type: 'photo', mandatory: true, show_path: true },
+      { id: 'f_2', name: 'NAME', type: 'text', mandatory: true, show_path: false },
+      { id: 'f_3', name: 'SERIAL NO', type: 'number', mandatory: true, show_path: false },
+    ]).map((f, i) => ({ ...f, id: f.id || `f_${i}`, type: (f.type || 'text').toLowerCase() }))
+  );
+  const [saving, setSaving]         = useState(false);
+
+  const [newName, setNewName]       = useState('');
+  const [newType, setNewType]       = useState('text');
+
+  const handleAddField = (e) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    const field = {
+      id: `f_${Date.now()}`,
+      name: newName.trim().toUpperCase(),
+      type: newType,
+      mandatory: false,
+      show_path: ['photo', 'rel_photo', 'signature'].includes(newType),
+    };
+    setFields(prev => [...prev, field]);
+    setNewName('');
+    setNewType('text');
+    addToast?.(`Field "${field.name}" added`, 'success');
+  };
+
+  const handleDeleteField = (id) => setFields(prev => prev.filter(f => f.id !== id));
+
+  const handleSubmit = async () => {
+    if (!tableName.trim()) { addToast?.('Table Name is required', 'warning'); return; }
+    if (fields.length === 0) { addToast?.('Add at least one field', 'warning'); return; }
+
+    const payload = {
+      name: tableName.trim().toUpperCase(),
+      table_type: tableType,
+      fields: fields.map((f, i) => ({
+        name: f.name,
+        type: f.type || 'text',
+        order: i,
+        mandatory: Boolean(f.mandatory),
+        show_path: Boolean(f.show_path),
+      })),
+    };
+
+    setSaving(true);
+    try {
+      if (isEditing) {
+        try {
+          await schemaApi.updateTable(editingTable.id, payload);
+        } catch { /* fallback local */ }
+
+        const stored = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
+        const updated = stored.map(t => String(t.id) === String(editingTable.id) ? {
+          ...t, ...payload, updated_at: new Date().toISOString()
+        } : t);
+        localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
+        addToast?.(`Table "${payload.name}" updated successfully!`, 'success');
+      } else {
+        try {
+          if (groupId) {
+            await schemaApi.createTable(groupId, payload);
+          } else {
+            await schemaApi.createSchema(payload);
+          }
+        } catch { /* fallback local */ }
+
+        const stored = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
+        const newTable = {
+          id: `tbl_${Date.now()}`,
+          ...payload,
+          client_name: orgName || 'Primary Org',
+          status: 'active',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        localStorage.setItem('cf_custom_tables', JSON.stringify([newTable, ...stored]));
+        addToast?.(`Table "${payload.name}" created successfully!`, 'success');
+      }
+      onSave();
+    } catch {
+      addToast?.('Error saving table setting', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999999, display: 'flex', justifyContent: 'flex-end', background: 'rgba(15, 23, 42, 0.45)' }}>
+      <div style={{ width: '520px', height: '100%', background: '#ffffff', boxShadow: '-10px 0 25px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', background: '#1e293b', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <SlidersHorizontal size={18} style={{ color: '#38bdf8' }} /> {isEditing ? `Edit Table: ${editingTable.name}` : 'Add New Table Setting'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Table Name *</label>
+            <input
+              type="text"
+              value={tableName}
+              onChange={e => setTableName(e.target.value)}
+              placeholder="e.g. CLASS 10TH DATA"
+              style={{ width: '100%', height: '36px', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0 10px', fontSize: '13px', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Table Type</label>
+            <CustomSelect
+              value={tableType}
+              onChange={setTableType}
+              options={TABLE_TYPES.map(t => ({ value: t.value, label: t.label }))}
+            />
+          </div>
+
+          {/* Add Field */}
+          <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>Add Schema Field</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="text"
+                value={newName}
+                onChange={e => {
+                  setNewName(e.target.value);
+                  setNewType(inferFieldType(e.target.value));
+                }}
+                placeholder="Field name (e.g. FATHER NAME)"
+                style={{ flex: 1, height: '34px', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0 10px', fontSize: '12px' }}
+              />
+              <div style={{ width: '140px' }}>
+                <CustomSelect
+                  value={newType}
+                  onChange={setNewType}
+                  options={FIELD_TYPES}
+                />
+              </div>
+              <button onClick={handleAddField} style={{ padding: '0 12px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>
+                Add
+              </button>
+            </div>
+          </div>
+
+          {/* Fields List */}
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>Defined Fields ({fields.length})</label>
+            <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <tr>
+                    <th style={{ padding: '8px', textAlign: 'left' }}>Field Name</th>
+                    <th style={{ padding: '8px', textAlign: 'left', width: '120px' }}>Type</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '60px' }}>Req.</th>
+                    <th style={{ padding: '8px', textAlign: 'center', width: '40px' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map((f, idx) => (
+                    <tr key={f.id || idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1e293b' }}>{f.name}</td>
+                      <td style={{ padding: '4px 8px' }}>
+                        <CustomSelect
+                          value={f.type || 'text'}
+                          onChange={val => {
+                            const copy = [...fields];
+                            copy[idx].type = val;
+                            setFields(copy);
+                          }}
+                          options={FIELD_TYPES}
+                        />
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(f.mandatory)}
+                          onChange={e => {
+                            const copy = [...fields];
+                            copy[idx].mandatory = e.target.checked;
+                            setFields(copy);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                        <button onClick={() => handleDeleteField(f.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#475569', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }} disabled={saving}>Cancel</button>
+          <button onClick={handleSubmit} disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Save size={14} /> {saving ? 'Saving...' : 'Save Table Setting'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function statusBtnStyle(type) {
+  const activeColors = {
+    pending:  { bg: '#f97316', color: '#ffffff', border: '#f97316', badgeBg: '#ea580c' },
+    verified: { bg: '#10b981', color: '#ffffff', border: '#10b981', badgeBg: '#059669' },
+    approved: { bg: '#3b82f6', color: '#ffffff', border: '#3b82f6', badgeBg: '#2563eb' },
+    printed:  { bg: '#64748b', color: '#ffffff', border: '#64748b', badgeBg: '#475569' },
+    request:  { bg: '#8b5cf6', color: '#ffffff', border: '#8b5cf6', badgeBg: '#7c3aed' },
+    deleted:  { bg: '#ef4444', color: '#ffffff', border: '#ef4444', badgeBg: '#dc2626' },
+  };
+  const cfg = activeColors[type] || activeColors.pending;
   return {
     btn: {
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-      padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+      padding: '3px 7px', borderRadius: '5px', fontSize: '11px', fontWeight: 600,
       background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
       cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
     },
     badge: {
-      background: cfg.badgeBg, color: '#ffffff', minWidth: '24px', height: '16px',
+      background: cfg.badgeBg, color: '#ffffff', minWidth: '20px', height: '16px',
       borderRadius: '8px', fontSize: '10px', fontWeight: 700, display: 'inline-flex',
-      alignItems: 'center', justifyContent: 'center', padding: '0 4px', marginLeft: '3px'
+      alignItems: 'center', justifyContent: 'center', padding: '0 4px', marginLeft: '2px'
     }
   };
 }
 
 function reprintBtnStyle(type) {
-  const styles = {
-    reprint: { bg: '#ecfeff', color: '#0e7490', border: '#a5f3fc', badgeBg: '#06b6d4' },
-    request: { bg: '#f3e8ff', color: '#6b21a8', border: '#d8b4fe', badgeBg: '#8b5cf6' },
-    confirm: { bg: '#f0fdf4', color: '#15803d', border: '#86efac', badgeBg: '#16a34a' },
+  const activeColors = {
+    reprint: { bg: '#06b6d4', color: '#ffffff', border: '#06b6d4', badgeBg: '#0891b2' },
+    request: { bg: '#a855f7', color: '#ffffff', border: '#a855f7', badgeBg: '#9333ea' },
+    confirm: { bg: '#10b981', color: '#ffffff', border: '#10b981', badgeBg: '#059669' },
   };
-  const cfg = styles[type] || styles.reprint;
+  const cfg = activeColors[type] || activeColors.reprint;
   return {
     btn: {
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-      padding: '4px 9px', borderRadius: '6px', fontSize: '11px', fontWeight: 600,
+      padding: '3px 7px', borderRadius: '5px', fontSize: '11px', fontWeight: 600,
       background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`,
       cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap'
     },
     badge: {
-      background: cfg.badgeBg, color: '#ffffff', minWidth: '24px', height: '16px',
+      background: cfg.badgeBg, color: '#ffffff', minWidth: '20px', height: '16px',
       borderRadius: '8px', fontSize: '10px', fontWeight: 700, display: 'inline-flex',
-      alignItems: 'center', justifyContent: 'center', padding: '0 4px', marginLeft: '3px'
+      alignItems: 'center', justifyContent: 'center', padding: '0 4px', marginLeft: '2px'
     }
   };
 }
@@ -746,17 +1049,7 @@ function bulkBtnStyle(type, disabled) {
     cursor: disabled ? 'not-allowed' : 'pointer',
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
+    opacity: disabled ? 0.6 : 1,
     fontFamily: 'var(--font-family)', transition: 'all 0.15s'
   };
 }
-
-const modalBackdropStyle = {
-  position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-  background: 'rgba(15,23,42,0.5)', zIndex: 10000,
-  display: 'flex', alignItems: 'center', justifyContent: 'center'
-};
-
-const modalBoxStyle = {
-  background: '#fff', borderRadius: '8px', width: '420px', maxWidth: '90vw',
-  padding: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
-};

@@ -181,17 +181,19 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {dataCountText ? (
           <span
+            className="footer-badge"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '2px 10px',
-              borderRadius: '12px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              padding: '3px 10px',
+              borderRadius: '4px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
               fontSize: '11px',
               fontWeight: 600,
               color: '#e2e8f0',
+              userSelect: 'none',
             }}
           >
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />

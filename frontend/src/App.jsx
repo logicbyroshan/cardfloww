@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PageTransition from './components/common/PageTransition';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import DashboardView from './components/dashboard/DashboardView';
@@ -215,6 +216,7 @@ export default function App() {
         {/* Page content — scrollable area */}
         <div className="page-content" style={activeTab === 'idcard-actions' ? { padding: 0, margin: 0, height: '100%', overflow: 'hidden' } : undefined}>
           <ErrorBoundary key={activeTab}>
+          <PageTransition pageKey={activeTab} fullHeight={activeTab === 'idcard-actions'}>
 
           {/* ── Dashboard ── */}
           {activeTab === 'dashboard' && (
@@ -329,9 +331,9 @@ export default function App() {
             />
           )}
 
-          {/* ── Table Settings ── */}
+          {/* ── Table Settings (Merged into CardTableView) ── */}
           {activeTab === 'schema' && (
-            <TableSettingsView addToast={addToast} onNavigate={setActiveTab} />
+            <CardTableView addToast={addToast} onNavigate={setActiveTab} />
           )}
 
           {/* ── System/Control Panel ── */}
@@ -354,6 +356,7 @@ export default function App() {
             <ManageFeaturesView addToast={addToast} />
           )}
 
+          </PageTransition>
           </ErrorBoundary>
         </div>
 

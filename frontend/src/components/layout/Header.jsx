@@ -17,7 +17,7 @@ const PAGE_LABELS = {
   staff:        'Manage Operator',
   assistants:   'Manage Assistant',
   photographers:'Manage Photographer',
-  schema:       'Table Setting',
+  schema:       'Tables',
   panel:        'Manage CardFlow',
 
   tutorial:     'Tutorial',

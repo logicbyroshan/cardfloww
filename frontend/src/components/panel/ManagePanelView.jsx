@@ -99,7 +99,7 @@ function NotificationsTab({ addToast }) {
 
   return (
     <div className="panel-tab-content active" id="tab-notifications" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div className="notif-actions-bar action-bar">
+      <div className="notif-actions-bar action-bar-light">
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
           <div className="notif-search-box" style={{ width: '220px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
@@ -325,7 +325,7 @@ function EmailLogsTab({ addToast }) {
 
   return (
     <div className="panel-tab-content active" id="tab-email-logs" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div className="notif-actions-bar action-bar">
+      <div className="notif-actions-bar action-bar-light">
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
           <div className="notif-search-box" style={{ width: '220px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
@@ -545,7 +545,7 @@ function LogHistoryTab({ addToast }) {
 
   return (
     <div className="panel-tab-content active" id="tab-log-history" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div className="notif-actions-bar action-bar">
+      <div className="notif-actions-bar action-bar-light">
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
           <div className="notif-search-box" style={{ width: '220px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
@@ -731,7 +731,7 @@ function BackupsTab({ addToast }) {
 
   return (
     <div className="panel-tab-content active" id="tab-backups" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div className="notif-actions-bar action-bar">
+      <div className="notif-actions-bar action-bar-light">
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
           <div className="notif-search-box" style={{ width: '220px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
@@ -925,7 +925,7 @@ function DownloadTemplatesTab({ addToast }) {
 
   return (
     <div className="panel-tab-content active" id="tab-download-templates" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div className="notif-actions-bar action-bar">
+      <div className="notif-actions-bar action-bar-light">
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
           <div className="notif-search-box" style={{ width: '280px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
@@ -1064,7 +1064,7 @@ function ServerInfoTab() {
 
   return (
     <div className="panel-tab-content server-panel-theme active" id="tab-server-info" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <div className="notif-actions-bar action-bar" style={{ borderBottom: '1px solid #d5def5', background: 'linear-gradient(180deg, #ffffff 0%, #f0f4ff 100%)' }}>
+      <div className="notif-actions-bar action-bar-light" style={{ borderBottom: '1px solid #d5def5', background: 'linear-gradient(180deg, #ffffff 0%, #f0f4ff 100%)' }}>
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="panel-title" style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Server size={16} style={{ color: '#4f46e5' }} />

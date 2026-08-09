@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Download, FileSpreadsheet, FileText, Archive, Printer, Image as ImageIcon } from 'lucide-react';
+import CustomSelect from '../common/CustomSelect';
 
 export default function CardDownloadsModal({ isOpen, onClose }) {
   const [format, setFormat] = useState('excel');
@@ -8,11 +9,10 @@ export default function CardDownloadsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="drawer-overlay" onClick={onClose}>
+    <div className="center-modal-overlay">
       <div
         className="center-modal-panel"
-        style={{ width: '600px', height: '500px', padding: '0', display: 'flex', flexDirection: 'column' }}
-        onClick={(e) => e.stopPropagation()}
+        style={{ width: '560px', height: 'auto', maxHeight: '90vh', padding: '0', display: 'flex', flexDirection: 'column' }}
       >
         <div style={{ background: '#1e293b', color: '#fff', height: '46px', minHeight: '46px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -68,14 +68,14 @@ export default function CardDownloadsModal({ isOpen, onClose }) {
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
               Select Photo Field Column
             </label>
-            <select
+            <CustomSelect
               value={photoColumn}
-              onChange={(e) => setPhotoColumn(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem 1rem', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#0f172a', outline: 'none', fontSize: '0.9rem' }}
-            >
-              <option value="PHOTO">PHOTO (Main Photo)</option>
-              <option value="FATHER_PHOTO">FATHER_PHOTO</option>
-            </select>
+              onChange={(val) => setPhotoColumn(val)}
+              options={[
+                { value: 'PHOTO', label: 'PHOTO (Main Photo)' },
+                { value: 'FATHER_PHOTO', label: 'FATHER_PHOTO' },
+              ]}
+            />
           </div>
         </div>
 

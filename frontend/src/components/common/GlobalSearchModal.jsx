@@ -67,11 +67,10 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="drawer-overlay" style={{ alignItems: 'flex-start', paddingTop: '10vh' }} onClick={onClose}>
+    <div className="center-modal-overlay" style={{ alignItems: 'flex-start', paddingTop: '10vh' }}>
       <div
-        className="data-card"
-        style={{ width: '580px', maxWidth: '92vw', padding: '1.25rem', backdropFilter: 'blur(16px)', background: '#ffffff', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
-        onClick={(e) => e.stopPropagation()}
+        className="center-modal-panel"
+        style={{ width: '580px', height: 'auto', maxHeight: '80vh', padding: '1.25rem', backdropFilter: 'blur(16px)', background: '#ffffff', borderRadius: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
           <Search size={20} color="#64748b" />

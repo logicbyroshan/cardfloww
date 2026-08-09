@@ -272,45 +272,46 @@ export default function ManageFeaturesView({ addToast }) {
       {activeTab === 'impersonate' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Action Bar */}
-          <div className="action-bar" id="impersonate-action-bar">
-            {/* Search Input Box */}
-            <div className="notif-search-box" style={{ width: '280px' }}>
-              <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, email, username, or role..."
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0 2px' }}
-                  title="Clear search"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {[
-                  { id: 'all', label: `All (${usersList.length})` },
-                  { id: 'client', label: `Organisation/Manager (${usersList.filter(u => u.rawRole === 'client').length})` },
-                  { id: 'client_staff', label: `Assistant (${usersList.filter(u => u.rawRole === 'client_staff').length})` },
-                  { id: 'guest_user', label: `Guest User (${usersList.filter(u => u.rawRole === 'guest_user').length})` },
-                ].map((pill) => (
+          <div className="action-bar-light" id="impersonate-action-bar">
+            <div className="action-bar-left">
+              {/* Search Input Box */}
+              <div className="notif-search-box" style={{ width: '260px' }}>
+                <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search by name, email or role..."
+                />
+                {search && (
                   <button
-                    key={pill.id}
-                    onClick={() => setRoleFilter(pill.id)}
-                    className={`btn btn-sm ${roleFilter === pill.id ? 'btn-primary' : 'btn-neutral'}`}
+                    onClick={() => setSearch('')}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0 2px' }}
+                    title="Clear search"
                   >
-                    {pill.label}
+                    <X size={13} />
                   </button>
-                ))}
+                )}
               </div>
+
+              {/* Separator */}
+              <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+
+              {/* Filter Pills */}
+              {[
+                { id: 'all', label: `All (${usersList.length})` },
+                { id: 'client', label: `Organisation/Manager (${usersList.filter(u => u.rawRole === 'client').length})` },
+                { id: 'client_staff', label: `Assistant (${usersList.filter(u => u.rawRole === 'client_staff').length})` },
+                { id: 'guest_user', label: `Guest User (${usersList.filter(u => u.rawRole === 'guest_user').length})` },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  onClick={() => setRoleFilter(pill.id)}
+                  className={`btn btn-sm ${roleFilter === pill.id ? 'btn-primary' : 'btn-neutral'}`}
+                >
+                  {pill.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -382,7 +383,7 @@ export default function ManageFeaturesView({ addToast }) {
       {activeTab === 'guests' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
-          <div className="action-bar">
+          <div className="action-bar-light">
             <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>Temporary Guest Pass Records</span>
             <button
               onClick={() => addToast?.('New guest pass generated', 'success')}
@@ -633,7 +634,7 @@ export default function ManageFeaturesView({ addToast }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           {/* Action Bar Header (Search, Filters, Refresh — NO Stat Cards & NO New Task button) */}
-          <div className="action-bar">
+          <div className="action-bar-light">
             <div className="action-bar-left">
               <div className="notif-search-box" style={{ width: '260px' }}>
                 <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />

@@ -749,4 +749,5 @@ export const reprintApi = {
   },
 };
 
+export { apiClient };
 export default apiClient;
