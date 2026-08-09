@@ -2972,9 +2972,9 @@ input[type="checkbox"] {
 .topbar,
 #topbar,
 header.topbar,
-.action-bar,
-.notif-actions-bar,
-.search-filter-bar {
+.action-bar:not(.action-bar-light),
+.notif-actions-bar:not(.action-bar-light),
+.search-filter-bar:not(.action-bar-light) {
   background: #1e1e2e !important;
   color: #ffffff !important;
   height: 50px !important;
@@ -3005,10 +3005,10 @@ header.topbar,
 }
 
 /* Master Action Bar Inputs & Search Bars on Dark Background */
-.action-bar input[type="text"],
-.action-bar input[type="search"],
-.action-bar .search-input,
-.notif-actions-bar input[type="text"] {
+.action-bar:not(.action-bar-light) input[type="text"],
+.action-bar:not(.action-bar-light) input[type="search"],
+.action-bar:not(.action-bar-light) .search-input,
+.notif-actions-bar:not(.action-bar-light) input[type="text"] {
   height: 28px !important;
   min-height: 28px !important;
   max-height: 28px !important;
@@ -3020,7 +3020,7 @@ header.topbar,
   box-sizing: border-box !important;
   outline: none !important;
 }
-.action-bar input::placeholder {
+.action-bar:not(.action-bar-light) input::placeholder {
   color: #94a3b8 !important;
 }
 
@@ -3035,9 +3035,9 @@ header.topbar,
   max-height: 28px !important;
   box-sizing: border-box !important;
 }
-.action-bar .status-tab-btn,
-.action-bar .filter-tab,
-.action-bar .tab-btn {
+.action-bar:not(.action-bar-light) .status-tab-btn,
+.action-bar:not(.action-bar-light) .filter-tab,
+.action-bar:not(.action-bar-light) .tab-btn {
   background: rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
