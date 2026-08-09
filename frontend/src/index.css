@@ -70,8 +70,8 @@ label {
 }
 
 /* ── Universal Action Bar & Control Heights ── */
-.action-bar,
-.notif-actions-bar {
+.action-bar:not(.action-bar-light),
+.notif-actions-bar:not(.action-bar-light) {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
@@ -88,7 +88,8 @@ label {
 }
 
 /* ── Light Action Bar — for panel pages where tab bar is already dark ── */
-.action-bar-light {
+.action-bar-light,
+.notif-actions-bar.action-bar-light {
   height: 46px !important;
   min-height: 46px !important;
   max-height: 46px !important;
@@ -97,7 +98,7 @@ label {
   align-items: center !important;
   justify-content: space-between !important;
   background: #ffffff !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   gap: 8px !important;
