@@ -198,19 +198,60 @@ export default function ManageFeaturesView({ addToast }) {
     return matchQ && matchStatus && matchType;
   });
 
-  /* 24h Time Series Data for Statistics Chart matching 3rd screenshot */
-  const timeLabels = ['22:00', '23:00', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
-  const webData = [1, 2, 0, 0, 0, 0, 0, 1, 0, 0, 4, 10, 14, 17, 19, 23, 27, 13, 9, 5, 4, 3, 2, 2];
-  const mobData = [3, 3, 3, 0, 0, 0, 0, 1, 1, 1, 8, 10, 11, 8, 12, 9, 12, 6, 7, 8, 3, 3, 3, 2];
+  /* Statistics state from API */
+  const [statsData, setStatsData] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const loadStatsData = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await panelApi.getMonitoring();
+      setStatsData(res || null);
+    } catch (_) {}
+    finally { setStatsLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'statistics') loadStatsData();
+  }, [activeTab, loadStatsData]);
+
+  /* Per-range chart datasets */
+  const CHART_RANGES = {
+    Hours: {
+      labels: ['22:00','23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'],
+      web:   [1,2,0,0,0,0,0,1,0,0,4,10,14,17,19,23,27,13,9,5,4,3,2,2],
+      mob:   [3,3,3,0,0,0,0,1,1,1,8,10,11,8,12,9,12,6,7,8,3,3,3,2],
+    },
+    Days: {
+      labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+      web:   [42,58,51,67,74,30,18],
+      mob:   [28,35,40,38,55,22,12],
+    },
+    Weeks: {
+      labels: ['Wk 1','Wk 2','Wk 3','Wk 4'],
+      web:   [210,285,340,295],
+      mob:   [140,180,220,190],
+    },
+    Months: {
+      labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+      web:   [120,98,145,160,200,185,240,195,0,0,0,0],
+      mob:   [80,70,95,110,140,120,160,135,0,0,0,0],
+    },
+  };
+
+  const currentRange = CHART_RANGES[statsRange] || CHART_RANGES.Hours;
+  const timeLabels = currentRange.labels;
+  const webData    = currentRange.web;
+  const mobData    = currentRange.mob;
+  const chartMaxVal = Math.max(...webData, ...mobData, 10);
 
   /* Helper to generate SVG cubic spline curve */
-  const getSplinePath = (data, width, height, maxVal = 35) => {
+  const getSplinePath = (data, width, height, maxVal) => {
     const points = data.map((val, idx) => {
       const x = (idx / (data.length - 1)) * width;
       const y = height - (val / maxVal) * height;
       return { x, y };
     });
-
     let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 0; i < points.length - 1; i++) {
       const curr = points[i];
@@ -224,12 +265,18 @@ export default function ManageFeaturesView({ addToast }) {
     return { path: d, points };
   };
 
-  const chartWidth = 900;
+  const chartWidth  = 900;
   const chartHeight = 240;
-  const webSpline = getSplinePath(webData, chartWidth, chartHeight);
-  const mobSpline = getSplinePath(mobData, chartWidth, chartHeight);
+  const webSpline   = getSplinePath(webData, chartWidth, chartHeight, chartMaxVal);
+  const mobSpline   = getSplinePath(mobData, chartWidth, chartHeight, chartMaxVal);
+  const webAreaD    = `${webSpline.path} L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`;
 
-  const webAreaD = `${webSpline.path} L ${chartWidth} ${chartHeight} L 0 ${chartHeight} Z`;
+  /* Derive metric values from API or fallback */
+  const liveSessionsVal = statsData?.active_sessions ?? statsData?.concurrent_users ?? statsData?.online_users ?? '—';
+  const peakVal         = statsData?.peak_sessions ?? statsData?.peak_concurrent ?? statsData?.today_peak ?? '—';
+  const busiestInterval = statsData?.busiest_interval ?? statsData?.busiest_hour ?? '13:00 – 15:00';
+  const mobileLive      = statsData?.mobile_users ?? statsData?.active_mobile ?? statsData?.mobile_sessions ?? '—';
+
 
   return (
     <div style={{ width: '100%', height: '100%', padding: 0, margin: 0, background: '#ffffff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -295,7 +342,7 @@ export default function ManageFeaturesView({ addToast }) {
               </div>
 
               {/* Separator */}
-              <div style={{ width: '1px', height: '18px', background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+              <div style={{ width: '1px', height: '18px', background: '#cbd5e1', flexShrink: 0 }} />
 
               {/* Filter Pills */}
               {[
@@ -457,16 +504,15 @@ export default function ManageFeaturesView({ addToast }) {
       {activeTab === 'statistics' && (
         <div style={{ flex: 1, overflowY: 'auto', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
           
-          {/* Top 4 Metrics Bar (Matching 3rd screenshot stats.html) */}
+          {/* Top 4 Metrics Bar */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
             
-            {/* Metric 1: Live Active Sessions */}
             <div style={{ padding: '16px 20px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>4</div>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{statsLoading ? '…' : liveSessionsVal}</div>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', margin: '4px 0 2px' }}>Live Active Sessions</div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
                   <span>All concurrent online users</span>
                 </div>
               </div>
@@ -475,10 +521,9 @@ export default function ManageFeaturesView({ addToast }) {
               </div>
             </div>
 
-            {/* Metric 2: Today's Peak Active */}
             <div style={{ padding: '16px 20px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>4</div>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{statsLoading ? '…' : peakVal}</div>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', margin: '4px 0 2px' }}>Today's Peak Active</div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <TrendingUp size={11} style={{ color: '#22c55e' }} />
@@ -490,10 +535,9 @@ export default function ManageFeaturesView({ addToast }) {
               </div>
             </div>
 
-            {/* Metric 3: Busiest Interval */}
             <div style={{ padding: '16px 20px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>13:00 - 15:00</div>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', lineHeight: 1.2 }}>{statsLoading ? '…' : busiestInterval}</div>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', margin: '4px 0 2px' }}>Busiest Interval (Today)</div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Clock size={11} style={{ color: '#f59e0b' }} />
@@ -505,10 +549,9 @@ export default function ManageFeaturesView({ addToast }) {
               </div>
             </div>
 
-            {/* Metric 4: Live Mobile Users */}
             <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>2</div>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1 }}>{statsLoading ? '…' : mobileLive}</div>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155', margin: '4px 0 2px' }}>Live Mobile Users</div>
                 <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#06b6d4' }} />
@@ -523,28 +566,35 @@ export default function ManageFeaturesView({ addToast }) {
           </div>
 
           {/* Chart Header & Filters */}
-          <div style={{ padding: '18px 24px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '14px 24px', background: '#ffffff', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>User Activities Overview</h3>
-              <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#64748b' }}>Real database counts — Active Web Desktop vs Mobile App users per period</p>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>User Activities Overview</h3>
+              <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#64748b' }}>Active Web Desktop vs Mobile App users per {statsRange.toLowerCase()}</p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#f1f5f9', padding: '3px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-              {['Hours', 'Days', 'Weeks', 'Months'].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setStatsRange(r)}
-                  style={{
-                    padding: '5px 12px', fontSize: '11px', fontWeight: statsRange === r ? 700 : 500,
-                    borderRadius: '4px', border: 'none', cursor: 'pointer',
-                    background: statsRange === r ? '#ffffff' : 'transparent',
-                    color: statsRange === r ? '#2563eb' : '#64748b',
-                    boxShadow: statsRange === r ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
-                  }}
-                >
-                  {r}
-                </button>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button onClick={loadStatsData} title="Refresh statistics" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', height: '28px', padding: '0 10px', fontSize: '11px', fontWeight: 600, borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#475569', cursor: 'pointer' }}>
+                {statsLoading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />}
+                Refresh
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2px', background: '#f1f5f9', padding: '3px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                {['Hours', 'Days', 'Weeks', 'Months'].map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setStatsRange(r)}
+                    style={{
+                      padding: '4px 12px', fontSize: '11px', fontWeight: statsRange === r ? 700 : 500,
+                      borderRadius: '4px', border: 'none', cursor: 'pointer',
+                      background: statsRange === r ? '#ffffff' : 'transparent',
+                      color: statsRange === r ? '#2563eb' : '#64748b',
+                      boxShadow: statsRange === r ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -566,61 +616,50 @@ export default function ManageFeaturesView({ addToast }) {
             {/* SVG Chart Wrapper */}
             <div style={{ position: 'relative', width: '100%', height: '300px', display: 'flex' }}>
               
-              {/* Y-Axis Labels */}
-              <div style={{ width: '35px', height: `${chartHeight}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', textAlign: 'right', paddingRight: '8px', fontWeight: 600 }}>
-                <span>35</span>
-                <span>30</span>
-                <span>25</span>
-                <span>20</span>
-                <span>15</span>
-                <span>10</span>
-                <span>5</span>
-                <span>0</span>
-              </div>
-
-              {/* Chart SVG */}
-              <div style={{ flex: 1, position: 'relative', height: `${chartHeight + 35}px` }}>
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: `${chartHeight}px`, overflow: 'visible' }}>
-                  <defs>
-                    <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
-                    </linearGradient>
-                  </defs>
-
-                  {/* Horizontal Grid lines */}
-                  {[0, 0.14, 0.28, 0.42, 0.57, 0.71, 0.85, 1].map((ratio, idx) => (
-                    <line
-                      key={idx}
-                      x1="0" y1={chartHeight * ratio}
-                      x2={chartWidth} y2={chartHeight * ratio}
-                      stroke="#e2e8f0" strokeDasharray="3 3" strokeWidth="1"
-                    />
-                  ))}
-
-                  {/* Web Gradient Area & Smooth Line */}
-                  <path d={webAreaD} fill="url(#purpleGrad)" />
-                  <path d={webSpline.path} fill="none" stroke="#6366f1" strokeWidth="2.5" />
-
-                  {/* Mobile Green Smooth Line */}
-                  <path d={mobSpline.path} fill="none" stroke="#10b981" strokeWidth="2.5" />
-
-                  {/* Data Points */}
-                  {webSpline.points.map((pt, i) => (
-                    <circle key={`web-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
-                  ))}
-                  {mobSpline.points.map((pt, i) => (
-                    <circle key={`mob-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#10b981" strokeWidth="2" />
-                  ))}
-                </svg>
-
-                {/* X-Axis Labels */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '8px', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>
-                  {timeLabels.map((t) => (
-                    <span key={t}>{t}</span>
+                {/* Y-Axis Labels — dynamic max */}
+                <div style={{ width: '35px', height: `${chartHeight}px`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', textAlign: 'right', paddingRight: '8px', fontWeight: 600 }}>
+                  {[1, 0.857, 0.714, 0.571, 0.428, 0.285, 0.142, 0].map((r, i) => (
+                    <span key={i}>{Math.round(chartMaxVal * r)}</span>
                   ))}
                 </div>
-              </div>
+
+                {/* Chart SVG */}
+                <div style={{ flex: 1, position: 'relative', height: `${chartHeight + 35}px` }}>
+                  <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none" style={{ width: '100%', height: `${chartHeight}px`, overflow: 'visible' }}>
+                    <defs>
+                      <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Horizontal Grid lines */}
+                    {[0, 0.14, 0.28, 0.42, 0.57, 0.71, 0.85, 1].map((ratio, idx) => (
+                      <line key={idx} x1="0" y1={chartHeight * ratio} x2={chartWidth} y2={chartHeight * ratio}
+                        stroke="#e2e8f0" strokeDasharray="3 3" strokeWidth="1" />
+                    ))}
+
+                    {/* Web Gradient Area & Smooth Line */}
+                    <path d={webAreaD} fill="url(#purpleGrad)" />
+                    <path d={webSpline.path} fill="none" stroke="#6366f1" strokeWidth="2.5" />
+
+                    {/* Mobile Green Smooth Line */}
+                    <path d={mobSpline.path} fill="none" stroke="#10b981" strokeWidth="2.5" />
+
+                    {/* Data Points */}
+                    {webSpline.points.map((pt, i) => (
+                      <circle key={`web-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    ))}
+                    {mobSpline.points.map((pt, i) => (
+                      <circle key={`mob-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#10b981" strokeWidth="2" />
+                    ))}
+                  </svg>
+
+                  {/* X-Axis Labels */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginTop: '8px', fontSize: '10px', color: '#94a3b8', fontWeight: 600 }}>
+                    {timeLabels.map((t) => <span key={t}>{t}</span>)}
+                  </div>
+                </div>
 
             </div>
 
