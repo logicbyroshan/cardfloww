@@ -178,7 +178,7 @@ class WorkflowService:
             # Check client-readonly exemption for backward transitions
             if is_client and card.status in cls.CLIENT_READONLY_STATUSES:
                 is_backward = False
-                if card.status == 'approved' and target in ('verified', 'pending', 'pool'):
+                if card.status == 'approved' and target in ('verified', 'pending', 'deleted', 'pool'):
                     is_backward = True
                 elif card.status == 'download' and target in ('approved', 'verified', 'pending'):
                     is_backward = True
@@ -194,8 +194,8 @@ class WorkflowService:
     @classmethod
     def _get_required_perm(cls, current_status: str, target_status: str) -> str:
         """Return the required permission key for a specific transition."""
-        # Special case: pool/download → pending requires perm_idcard_retrieve
-        if current_status in ('pool', 'download') and target_status == 'pending':
+        # Special case: deleted/pool/download → pending requires perm_idcard_retrieve
+        if current_status in ('deleted', 'pool', 'download') and target_status == 'pending':
             return 'perm_idcard_retrieve'
         return cls.TRANSITION_PERM_MAP.get(target_status, 'perm_idcard_verify')
 

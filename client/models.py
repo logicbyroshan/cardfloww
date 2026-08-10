@@ -137,6 +137,22 @@ class Client(models.Model):
     perm_idcard_delete_from_pool = models.BooleanField(default=False)
     perm_reupload_idcard_image = models.BooleanField(default=False)  # Single card reupload
     perm_idcard_retrieve = models.BooleanField(default=False)
+
+    @property
+    def perm_idcard_deleted_list(self):
+        return self.perm_idcard_pool_list
+
+    @perm_idcard_deleted_list.setter
+    def perm_idcard_deleted_list(self, value):
+        self.perm_idcard_pool_list = value
+
+    @property
+    def perm_idcard_delete_from_deleted(self):
+        return self.perm_idcard_delete_from_pool
+
+    @perm_idcard_delete_from_deleted.setter
+    def perm_idcard_delete_from_deleted(self, value):
+        self.perm_idcard_delete_from_pool = value
     
     # ID Card Bulk Action Permissions (work across all lists)
     perm_idcard_bulk_upload = models.BooleanField(default=False)

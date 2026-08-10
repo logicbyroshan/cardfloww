@@ -269,10 +269,12 @@ class ReprintWorkflowService:
         cls,
         table: IDCardTable,
         rr_ids: List[int],
+        move_card_to_deleted: bool = False,
         move_card_to_pool: bool = False,
         user=None,
     ) -> ServiceResult:
-        """Reject (delete) reprint requests and optionally move cards to IDCard pool."""
+        """Reject (delete) reprint requests and optionally move cards to IDCard deleted status."""
+        should_move = move_card_to_deleted or move_card_to_pool
         rr_ids = cls._normalize_positive_int_ids(rr_ids)
         if not rr_ids:
             return ServiceResult(success=False, message='No reprint IDs provided')
@@ -288,10 +290,10 @@ class ReprintWorkflowService:
             rejected_count = len(rejected_ids)
             card_ids = list(rr_qs.values_list('card_id', flat=True))
 
-            if move_card_to_pool and card_ids:
+            if should_move and card_ids:
                 now = timezone.now()
                 IDCard.objects.filter(id__in=card_ids).update(
-                    status='pool',
+                    status='deleted',
                     deleted_at=now,
                     status_changed_at=now,
                     updated_at=now,
@@ -305,20 +307,21 @@ class ReprintWorkflowService:
             user=user,
             count=rejected_count,
             table=table,
-            move_to_pool=bool(move_card_to_pool),
+            move_to_pool=bool(should_move),
         )
 
         return ServiceResult(
             success=True,
             message=(
-                f'{rejected_count} reprint(s) rejected and moved to pool'
-                if move_card_to_pool
+                f'{rejected_count} reprint(s) rejected and moved to deleted list'
+                if should_move
                 else f'{rejected_count} reprint(s) removed from request list'
             ),
             data={
                 'rejected_count': rejected_count,
                 'rejected_ids': rejected_ids,
-                'moved_to_pool': bool(move_card_to_pool),
+                'moved_to_deleted': bool(should_move),
+                'moved_to_pool': bool(should_move),
             },
         )
 

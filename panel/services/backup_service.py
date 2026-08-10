@@ -211,7 +211,7 @@ def _write_table_to_zip(zf: zipfile.ZipFile, client_folder: str, table) -> bool:
     text_fields = get_text_fields(table.fields or [])
     image_fields = get_image_fields(table.fields or [])
 
-    statuses = ['pending', 'verified', 'pool', 'approved', 'download', 'reprint']
+    statuses = ['pending', 'verified', 'deleted', 'pool', 'approved', 'download', 'reprint']
     wrote_any = False
     image_paths_written = set()
 

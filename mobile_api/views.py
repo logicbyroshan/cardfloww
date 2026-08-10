@@ -84,7 +84,7 @@ except ImportError:
 
 MAX_SEARCH_QUERY_LEN = 100
 MAX_GLOBAL_SEARCH_DB_SCAN = 100
-MOBILE_CLIENT_EDIT_LOCK_STATUSES = frozenset({'pool'})
+MOBILE_CLIENT_EDIT_LOCK_STATUSES = frozenset({'pool', 'deleted'})
 MOBILE_INSTALLATION_ID_RE = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,79}$')
 MOBILE_SORT_MODES = frozenset({'sr-asc', 'name-asc', 'name-desc'})
 
