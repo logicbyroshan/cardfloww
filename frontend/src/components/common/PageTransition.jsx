@@ -11,13 +11,13 @@ export default function PageTransition({ pageKey, children, fullHeight = false }
 
   useEffect(() => {
     if (pageKey !== prevKey.current) {
-      // Quick fade-out, then swap content and fade-in
+      // Quick swipe-up exit (100ms), then swap content and swipe-up enter (320ms)
       setVisible(false);
       const t = setTimeout(() => {
         prevKey.current = pageKey;
         setAnimKey(pageKey);
         setVisible(true);
-      }, 80); // 80ms out, then 280ms in via CSS
+      }, 100);
       return () => clearTimeout(t);
     }
   }, [pageKey]);
@@ -26,7 +26,7 @@ export default function PageTransition({ pageKey, children, fullHeight = false }
     <div
       key={animKey}
       className={visible ? 'page-transition-enter' : 'page-transition-exit'}
-      style={fullHeight ? { height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: 1, minHeight: 0 }}
+      style={fullHeight ? { height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: 1, minHeight: 0, width: '100%' }}
     >
       {children}
     </div>

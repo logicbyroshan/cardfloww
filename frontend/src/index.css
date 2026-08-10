@@ -3464,45 +3464,7 @@ html {
 @keyframes pageEnter {
   0% {
     opacity: 0;
-    transform: translateY(10px) scale(0.995);
-    filter: blur(0.5px);
-  }
-  60% {
-    filter: blur(0px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0px);
-  }
-}
-
-@keyframes pageExit {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.997);
-  }
-}
-
-@keyframes slideInLeft {
-  0% {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(45px);
   }
   100% {
     opacity: 1;
@@ -3510,15 +3472,26 @@ html {
   }
 }
 
+@keyframes pageExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-25px);
+  }
+}
+
 /* Page enter state — applied via PageTransition component */
 .page-transition-enter {
-  animation: pageEnter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both !important;
   will-change: opacity, transform;
 }
 
-/* Page exit state — quick fade before content swap */
+/* Page exit state — quick swipe-up exit before content swap */
 .page-transition-exit {
-  animation: pageExit 0.08s ease-in both;
+  animation: pageExit 0.1s cubic-bezier(0.4, 0, 1, 1) both !important;
   pointer-events: none;
   will-change: opacity, transform;
 }
