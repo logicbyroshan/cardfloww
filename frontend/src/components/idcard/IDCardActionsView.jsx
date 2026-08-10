@@ -2831,7 +2831,7 @@ export default function IDCardActionsView({
                               </>
                             )}
 
-                            {/* ── VERIFIED: Approve + Unverify ── */}
+                            {/* ── VERIFIED: Approve + Unverify + Delete ── */}
                             {status === 'verified' && (
                               <>
                                 <button onClick={() => applyStatusSingle(card, 'approved')}
@@ -2841,6 +2841,10 @@ export default function IDCardActionsView({
                                 <button onClick={() => applyStatusSingle(card, 'pending')}
                                   style={{ padding: '2px 6px', fontSize: '10px', height: '20px', border: 'none', borderRadius: '3px', background: '#f59e0b', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '3px', whiteSpace: 'nowrap', width: '100%' }}
                                   title="Unverify"><RotateCcw size={10} /> Unverify
+                                </button>
+                                <button onClick={() => deleteSingle(card)}
+                                  style={{ padding: '2px 6px', fontSize: '10px', height: '20px', border: 'none', borderRadius: '3px', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '3px', whiteSpace: 'nowrap', width: '100%' }}
+                                  title="Delete"><Trash2 size={10} /> Delete
                                 </button>
                               </>
                             )}

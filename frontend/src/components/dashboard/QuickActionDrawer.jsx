@@ -1818,30 +1818,51 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             gap: '4px'
           }}
         >
-          <Plus size={14} /> {saving ? 'Creatingâ€¦' : '+ Add Assistant'}
+          <Plus size={14} /> {saving ? 'Creating…' : '+ Add Assistant'}
         </button>
       </div>
     </form>
   );
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ─────────────────────────────────────────────────────────────────────────────
    3b. Assign Groups / Classes to Assistant Drawer ('assign-assistant')
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function AssignAssistantGroupsForm({ onClose, addToast }) {
+   ───────────────────────────────────────────────────────────────────────────── */
+function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
   const [search, setSearch] = useState('');
-  const [selectedGroups, setSelectedGroups] = useState(['1', '2']);
+  const [allGroups, setAllGroups] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState(initialData?.assigned_groups || initialData?.allowed_table_ids || ['1', '2']);
   const [saving, setSaving] = useState(false);
 
-  const groups = [
-    { id: '1', name: 'CLASS 1 - SEC A' },
-    { id: '2', name: 'CLASS 1 - SEC B' },
-    { id: '3', name: 'CLASS 2 - SEC A' },
-    { id: '4', name: 'CLASS 3 - SEC A' },
-    { id: '5', name: 'STAFF & TEACHERS' },
-  ];
+  useEffect(() => {
+    try {
+      const customGroups = JSON.parse(localStorage.getItem('cf_custom_table_groups') || '[]');
+      const defaultGroups = [
+        { id: '1', name: 'CLASS 1 - SEC A' },
+        { id: '2', name: 'CLASS 1 - SEC B' },
+        { id: '3', name: 'CLASS 2 - SEC A' },
+        { id: '4', name: 'CLASS 3 - SEC A' },
+        { id: '5', name: 'STAFF & TEACHERS' },
+      ];
+      const merged = [...defaultGroups];
+      customGroups.forEach(cg => {
+        if (!merged.some(g => String(g.id) === String(cg.id))) {
+          merged.push({ id: String(cg.id), name: cg.name || cg.group_name || `Group #${cg.id}` });
+        }
+      });
+      setAllGroups(merged);
+    } catch {
+      setAllGroups([
+        { id: '1', name: 'CLASS 1 - SEC A' },
+        { id: '2', name: 'CLASS 1 - SEC B' },
+        { id: '3', name: 'CLASS 2 - SEC A' },
+        { id: '4', name: 'CLASS 3 - SEC A' },
+        { id: '5', name: 'STAFF & TEACHERS' },
+      ]);
+    }
+  }, []);
 
-  const filteredGroups = groups.filter(g => g.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredGroups = allGroups.filter(g => (g.name || '').toLowerCase().includes(search.toLowerCase()));
 
   const toggleGroup = (id) => {
     setSelectedGroups(prev =>
@@ -1849,14 +1870,32 @@ function AssignAssistantGroupsForm({ onClose, addToast }) {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      addToast?.(`Assigned ${selectedGroups.length} group(s) to assistant successfully!`, 'success');
+    try {
+      if (initialData?.id) {
+        try {
+          await assistantApi.update(initialData.id, { assigned_groups: selectedGroups });
+        } catch (_) {}
+
+        const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
+        const updated = staffList.map(s => {
+          if (String(s.id) === String(initialData.id)) {
+            return { ...s, assigned_groups: selectedGroups, allowed_table_ids: selectedGroups };
+          }
+          return s;
+        });
+        localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
+      }
+      addToast?.(`Assigned ${selectedGroups.length} group(s) to ${initialData?.name || 'assistant'} successfully!`, 'success');
       onClose();
-    }, 600);
+      window.__reloadStaffList?.();
+    } catch {
+      addToast?.('Failed to save group assignments', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -1864,7 +1903,7 @@ function AssignAssistantGroupsForm({ onClose, addToast }) {
       <div style={{ background: '#2563eb', color: '#fff', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <Layers size={18} />
-          <span>Assign Groups & Classes to Assistant</span>
+          <span>Assign Groups & Classes to {initialData?.name ? `"${initialData.name}"` : 'Assistant'}</span>
         </div>
         <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}>
           <X size={18} />
@@ -1921,12 +1960,13 @@ function AssignAssistantGroupsForm({ onClose, addToast }) {
           <X size={14} /> Cancel
         </button>
         <button type="submit" disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Save size={14} /> {saving ? 'Savingâ€¦' : 'Save Group Assignments'}
+          <Save size={14} /> {saving ? 'Saving…' : 'Save Group Assignments'}
         </button>
       </div>
     </form>
   );
 }
+
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    4. Add New Photographer Drawer
