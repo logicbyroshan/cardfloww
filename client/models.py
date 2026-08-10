@@ -93,6 +93,8 @@ class Client(models.Model):
         help_text='Type of organisation: school, college, company, or other'
     )
     is_guest = models.BooleanField(default=False, db_index=True)
+    is_default = models.BooleanField(default=False, help_text='System default organisation')
+    client_type = models.CharField(max_length=50, default='organisation', help_text='primary, organisation, or manager')
     # Icon class for panel branding (FontAwesome class name)
     icon = models.CharField(max_length=100, default='fa-solid fa-building')
     
