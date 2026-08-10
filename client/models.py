@@ -359,3 +359,7 @@ class Client(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['status', 'created_at'], name='core_client_status_created_idx'),
         ]
+
+
+# Domain Name Alias for Organisation
+Organisation = Client

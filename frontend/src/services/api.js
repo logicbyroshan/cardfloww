@@ -749,5 +749,10 @@ export const reprintApi = {
   },
 };
 
+// ─── Domain Renaming Aliases ───────────────────────────────────────────────
+export const organisationApi = clientApi;
+export const managerApi = clientAccountApi;
+export const tableGroupApi = tableSchemaApi;
+
 export { apiClient };
 export default apiClient;
