@@ -50,6 +50,42 @@ export const authApi = {
   },
 };
 
+// ─── Group 1b: Impersonation ────────────────────────────────────────────────
+export const impersonateApi = {
+  /** GET list of users available for impersonation */
+  getUsers: async () => {
+    try {
+      const res = await apiClient.get('/api/auth/impersonate/users/');
+      return res.data;
+    } catch {
+      const res = await apiClient.get('/panel/api/auth/impersonate/users/');
+      return res.data;
+    }
+  },
+
+  /** POST start impersonating user_id */
+  start: async (userId) => {
+    try {
+      const res = await apiClient.post('/api/auth/impersonate/start/', { user_id: userId });
+      return res.data;
+    } catch {
+      const res = await apiClient.post('/panel/api/auth/impersonate/start/', { user_id: userId });
+      return res.data;
+    }
+  },
+
+  /** POST stop impersonation */
+  stop: async () => {
+    try {
+      const res = await apiClient.post('/api/auth/impersonate/stop/');
+      return res.data;
+    } catch {
+      const res = await apiClient.post('/panel/api/auth/impersonate/stop/');
+      return res.data;
+    }
+  },
+};
+
 // ─── Group 2: Dashboard Analytics ──────────────────────────────────────────
 export const dashboardApi = {
   /** GET /api/dashboard-card-stats/ — role-scoped card statistics */
