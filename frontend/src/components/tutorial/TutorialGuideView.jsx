@@ -95,14 +95,9 @@ export default function TutorialGuideView() {
         {/* ── LEFT COLUMN: Direct PDF Viewer (No Double Nested Apps) ── */}
         <div style={{ overflowY: 'hidden', display: 'flex', flexDirection: 'column', borderRight: '1px solid #e2e8f0' }}>
           
-          {/* Top Bar Navigation Tabs — matches Manage CardFlow (panel-tabs) UI standard */}
-          <div className="panel-tabs" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: '#f9fafb', borderBottom: '1px solid #e5e7eb',
-            flexShrink: 0, paddingRight: '16px'
-          }}>
-            {/* Tabs List */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+          {/* Top Bar Navigation Tabs — pill container UI standard */}
+          <div className="action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxSizing: 'border-box', flexShrink: 0 }}>
+            <div className="status-tabs">
               {[
                 { id: 'check-update', Icon: CheckSquare },
                 { id: 'reprint',      Icon: Printer },
@@ -114,18 +109,7 @@ export default function TutorialGuideView() {
                   <button
                     key={id}
                     onClick={() => setActiveTab(id)}
-                    className={`panel-tab${isActive ? ' active' : ''}`}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '6px',
-                      padding: '9px 16px', fontSize: '12px', fontWeight: isActive ? 600 : 500,
-                      border: 'none',
-                      borderBottom: `2px solid ${isActive ? 'rgb(0, 80, 210)' : 'transparent'}`,
-                      background: isActive ? 'rgba(0, 80, 210, 0.06)' : 'transparent',
-                      cursor: 'pointer', whiteSpace: 'nowrap',
-                      color: isActive ? 'rgb(0, 80, 210)' : '#6b7280',
-                      fontFamily: 'var(--font-family)',
-                      transition: 'all 0.15s'
-                    }}
+                    className={`status-tab${isActive ? ' active' : ''}`}
                   >
                     <Icon size={13} />
                     <span>{getTabLabel(id)}</span>
@@ -138,13 +122,13 @@ export default function TutorialGuideView() {
             <button
               onClick={() => setLang((prev) => (prev === 'hi' ? 'en' : 'hi'))}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px',
-                borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff',
-                color: '#334155', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0 12px', height: '28px',
+                borderRadius: '5px', border: '1px solid rgba(255, 255, 255, 0.18)', background: 'rgba(255, 255, 255, 0.08)',
+                color: '#ffffff', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
                 fontFamily: 'var(--font-family)'
               }}
             >
-              <Globe size={13} style={{ color: 'rgb(0, 80, 210)' }} />
+              <Globe size={13} style={{ color: '#38bdf8' }} />
               <span>{lang === 'hi' ? 'English' : 'Hindi'}</span>
             </button>
           </div>

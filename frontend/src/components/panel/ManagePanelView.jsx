@@ -28,12 +28,12 @@ function PaginationBar() {
 */
 
 const PANEL_TABS = [
-  { id: 'notifications',      label: 'Notifications', Icon: Bell     },
-  { id: 'email-logs',         label: 'Emails',        Icon: Mail     },
-  { id: 'log-history',        label: 'Logs',          Icon: Activity },
-  { id: 'backups',            label: 'Backups',       Icon: Database },
-  { id: 'download-templates', label: 'Templates',     Icon: FileDown },
-  { id: 'server-info',        label: 'Server',        Icon: Server   },
+  { id: 'notifications',      label: 'Notifications',      Icon: Bell     },
+  { id: 'email-logs',         label: 'Email Management',   Icon: Mail     },
+  { id: 'log-history',        label: 'Logs & Updates',     Icon: Activity },
+  { id: 'backups',            label: 'Backups',            Icon: Database },
+  { id: 'download-templates', label: 'Download Templates', Icon: FileDown },
+  { id: 'server-info',        label: 'System & Server',    Icon: Server   },
 ];
 function NotificationsTab({ addToast }) {
   const [notifs, setNotifs]   = useState([]);
@@ -1064,158 +1064,163 @@ function ServerInfoTab() {
 
   return (
     <div className="panel-tab-content server-panel-theme active" id="tab-server-info" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <div className="notif-actions-bar action-bar-light" style={{ borderBottom: '1px solid #d5def5', background: 'linear-gradient(180deg, #ffffff 0%, #f0f4ff 100%)' }}>
+      <div className="notif-actions-bar action-bar-light" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="panel-title" style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Server size={16} style={{ color: '#4f46e5' }} />
+          <span className="panel-title" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Server size={15} style={{ color: '#4f46e5' }} />
             Server Snapshot
           </span>
         </div>
         <div className="notif-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span style={{ fontSize: '11px', color: '#64748b' }}>Last fetched: {lastFetched}</span>
           <button
-            className="btn btn-sm btn-outline-primary"
             onClick={loadData}
             disabled={loading}
-            className="btn btn-md btn-neutral"
-            style={{ padding: '0 8px', height: '28px' }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', height: '28px',
+              borderRadius: '5px', border: '1px solid #2563eb', background: '#ffffff', color: '#2563eb',
+              fontSize: '11.5px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-family)'
+            }}
           >
             {loading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+            <span>Refresh Latest</span>
           </button>
         </div>
       </div>
 
-      <div className="server-info-content-shell" style={{ padding: '16px 20px 20px' }}>
+      <div className="server-info-content-shell" style={{ padding: 0 }}>
         {/* Top Section Grid: Donut + 4 Cards */}
         <div className="server-info-overview">
-          {/* Donut Chart */}
-          <div className="server-donut-wrap">
-            <div className="server-donut" style={{ '--pct': diskPct }}>
-              <div className="server-donut-inner">
-                <span>{diskPct}%</span>
-                <small>Disk Used</small>
+          {/* Donut Chart & Meta Box with Exact 16px Symmetrical Top/Bottom/Left/Right Spacing */}
+          <div className="server-donut-wrap" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', boxSizing: 'border-box', background: '#ffffff', borderRight: '1px solid #e2e8f0', width: '240px', flexShrink: 0 }}>
+            <div className="server-donut" style={{ background: `conic-gradient(#4f46e5 0% ${diskPct}%, #e2e8f0 ${diskPct}% 100%)`, width: '208px', height: '208px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="server-donut-inner" style={{ width: '160px', height: '160px', borderRadius: '12px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <span style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{diskPct}%</span>
+                <small style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, marginTop: '6px' }}>Disk Used</small>
               </div>
             </div>
-            <div className="server-donut-meta">
-              <div className="server-meta-row"><span>Total</span><strong>{diskTotal}</strong></div>
-              <div className="server-meta-row"><span>Used</span><strong>{diskUsed}</strong></div>
-              <div className="server-meta-row"><span>Free</span><strong>{diskFree}</strong></div>
-              <div className="server-meta-row"><span>Project Total</span><strong>{projectTotal}</strong></div>
-              <div className="server-meta-row"><span>Other System</span><strong>{otherUsed}</strong></div>
-              <div className="server-meta-row"><span>Tracked Folders</span><strong>{diskTracked}</strong></div>
+            <div className="server-donut-meta" style={{ width: '208px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTotal}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Used</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskUsed}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Free</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskFree}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Project Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{projectTotal}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Other System</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{otherUsed}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Tracked Folders</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTracked}</strong></div>
             </div>
           </div>
 
-          {/* System Cards Grid */}
-          <div className="server-system-grid">
+          {/* System Cards Grid: Flush 2x2 Grid with 0 Gap & Border Lines */}
+          <div className="server-system-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
             {/* CPU & Memory */}
-            <div className="system-card server-card server-card-cpu">
-              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }}>
+            <div className="system-card server-card server-card-cpu" style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Cpu size={14} style={{ color: '#4f46e5' }} /> CPU &amp; Memory
               </div>
-              <div className="system-card-body">
-                <div className="system-row"><span className="system-label">Logical Cores</span><span className="system-value server-kpi-value">{cpuCores}</span></div>
-                <div className="system-row"><span className="system-label">RAM Used</span><span className="system-value">{ramUsed}</span></div>
-                <div className="system-row"><span className="system-label">RAM Total</span><span className="system-value">{ramTotal}</span></div>
-                <div className="system-row"><span className="system-label">Usage</span><span className="system-value server-kpi-value">{ramPct}</span></div>
+              <div className="system-card-body" style={{ padding: '8px 16px' }}>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Logical Cores</span><span className="system-value server-kpi-value" style={{ fontWeight: 700, color: '#0f172a' }}>{cpuCores}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>RAM Used</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{ramUsed}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>RAM Total</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{ramTotal}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Usage</span><span className="system-value server-kpi-value" style={{ fontWeight: 700, color: '#4f46e5' }}>{ramPct}</span></div>
               </div>
             </div>
 
             {/* Database */}
-            <div className="system-card server-card server-card-db">
-              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }}>
+            <div className="system-card server-card server-card-db" style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Database size={14} style={{ color: '#4f46e5' }} /> Database
               </div>
-              <div className="system-card-body">
-                <div className="system-row"><span className="system-label">Backend</span><span className="system-value">{dbBackend}</span></div>
-                <div className="system-row"><span className="system-label">Name</span><span className="system-value">{dbName}</span></div>
-                <div className="system-row"><span className="system-label">Size</span><span className="system-value server-kpi-value">{dbSize}</span></div>
-                <div className="system-row"><span className="system-label">Status</span><span className="system-value">{dbStatus}</span></div>
+              <div className="system-card-body" style={{ padding: '8px 16px' }}>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Backend</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{dbBackend}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Name</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{dbName}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Size</span><span className="system-value server-kpi-value" style={{ fontWeight: 700, color: '#0f172a' }}>{dbSize}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Status</span><span className="system-value" style={{ fontWeight: 600, color: '#16a34a' }}>{dbStatus}</span></div>
               </div>
             </div>
 
             {/* Application */}
-            <div className="system-card server-card server-card-app">
-              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }}>
+            <div className="system-card server-card server-card-app" style={{ borderRight: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Info size={14} style={{ color: '#4f46e5' }} /> Application
               </div>
-              <div className="system-card-body">
-                <div className="system-row"><span className="system-label">Version</span><span className="system-value system-value-strong">{appVersion}</span></div>
-                <div className="system-row"><span className="system-label">Environment</span><span className="system-value system-pill system-pill-ok">{env}</span></div>
-                <div className="system-row"><span className="system-label">Django</span><span className="system-value">{djangoVer}</span></div>
-                <div className="system-row"><span className="system-label">Debug Mode</span><span className="system-value system-pill system-pill-ok">{debugMode}</span></div>
+              <div className="system-card-body" style={{ padding: '8px 16px' }}>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Version</span><span className="system-value system-value-strong" style={{ fontWeight: 700, color: '#0f172a' }}>{appVersion}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Environment</span><span className="system-value system-pill system-pill-ok" style={{ color: '#16a34a', fontWeight: 700 }}>{env}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Django</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{djangoVer}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Debug Mode</span><span className="system-value system-pill system-pill-ok" style={{ color: '#64748b', fontWeight: 600 }}>{debugMode}</span></div>
               </div>
             </div>
 
             {/* Team & Email */}
-            <div className="system-card server-card server-card-team">
-              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #e2e8f0', color: '#1e293b' }}>
+            <div className="system-card server-card server-card-team" style={{ background: '#ffffff' }}>
+              <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Mail size={14} style={{ color: '#4f46e5' }} /> Team &amp; Email
               </div>
-              <div className="system-card-body">
-                <div className="system-row"><span className="system-label">Operator</span><span className="system-value server-kpi-value">{totalOps}</span></div>
-                <div className="system-row"><span className="system-label">Assistant</span><span className="system-value server-kpi-value">{totalAsst}</span></div>
-                <div className="system-row"><span className="system-label">Email Backend</span><span className="system-value">{emailBackend}</span></div>
-                <div className="system-row"><span className="system-label">From Address</span><span className="system-value system-value-small">{fromAddr}</span></div>
+              <div className="system-card-body" style={{ padding: '8px 16px' }}>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Operator</span><span className="system-value server-kpi-value" style={{ fontWeight: 700, color: '#0f172a' }}>{totalOps}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Assistant</span><span className="system-value server-kpi-value" style={{ fontWeight: 700, color: '#0f172a' }}>{totalAsst}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>Email Backend</span><span className="system-value" style={{ fontWeight: 600, color: '#1e293b' }}>{emailBackend}</span></div>
+                <div className="system-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}><span className="system-label" style={{ fontSize: '12px', color: '#64748b' }}>From Address</span><span className="system-value system-value-small" style={{ fontSize: '11px', color: '#64748b' }}>{fromAddr}</span></div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Bottom Section: Details Grid */}
-        <div className="server-detail-grid server-detail-grid-two" style={{ marginTop: '12px' }}>
+        <div className="server-detail-grid server-detail-grid-two" style={{ marginTop: '16px', gap: '16px' }}>
           {/* System Usage Details */}
-          <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #d5def5', background: '#fff' }}>
+          <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
               <span className="server-detail-header-title" style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Layers size={14} style={{ color: '#4f46e5' }} /> System Usage Details
               </span>
               <span className="server-usage-total-badge">Total Used: {systemUsageTotal}</span>
             </div>
-            <div className="server-path-list">
+            <div className="server-path-list" style={{ padding: '16px' }}>
               {[
                 { name: 'OS Usage', size: '12.2 GB', pct: 37.6, meta: '37.6% of used disk | Machine storage outside this project' },
                 { name: 'Project Dependencies Usage', size: '553.9 MB', pct: 1.7, meta: '1.7% of used disk | venv and installed dependency folders' },
                 { name: 'Project Files Usage', size: '1.7 GB', pct: 5.1, meta: '5.1% of used disk | Project files excluding images and videos' },
                 { name: 'Project Support Usage', size: '766.6 MB', pct: 2.3, meta: '2.3% of used disk | Git, logs, build and installer support files' },
               ].map((row, i) => (
-                <div key={i} className="server-path-row">
-                  <div className="server-path-main">
+                <div key={i} className="server-path-row" style={{ marginBottom: '14px' }}>
+                  <div className="server-path-main" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>
                     <span className="server-path-name">{row.name}</span>
-                    <span className="server-path-size">{row.size}</span>
+                    <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  <div className="server-path-bar-bg">
-                    <div className="server-path-bar-fill" style={{ width: `${row.pct}%` }} />
+                  {/* Blue Progress Bar */}
+                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
+                    <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
                   </div>
-                  <div className="server-path-meta">{row.meta}</div>
+                  <div className="server-path-meta" style={{ fontSize: '11px', color: '#64748b' }}>{row.meta}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Panel Usage Details */}
-          <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #d5def5', background: '#fff' }}>
+          <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
               <span className="server-detail-header-title" style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FolderTree size={14} style={{ color: '#4f46e5' }} /> Panel Usage Details
               </span>
               <span className="server-usage-total-badge">Total Used: {panelUsageTotal}</span>
             </div>
-            <div className="server-path-list">
+            <div className="server-path-list" style={{ padding: '16px' }}>
               {[
                 { name: 'Images Usage', size: '16.9 GB', pct: 85.2, meta: '85.2% of project usage | Media and mediafiles storage' },
                 { name: 'Database Usage', size: '410.2 MB', pct: 2.0, meta: '2.0% of project usage | Overall database size (PostgreSQL/SQLite)' },
                 { name: 'Logs Usage', size: '13.4 MB', pct: 0.1, meta: '0.1% of project usage | Application and service logs' },
               ].map((row, i) => (
-                <div key={i} className="server-path-row">
-                  <div className="server-path-main">
+                <div key={i} className="server-path-row" style={{ marginBottom: '14px' }}>
+                  <div className="server-path-main" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>
                     <span className="server-path-name">{row.name}</span>
-                    <span className="server-path-size">{row.size}</span>
+                    <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  <div className="server-path-bar-bg">
-                    <div className="server-path-bar-fill" style={{ width: `${row.pct}%` }} />
+                  {/* Blue Progress Bar */}
+                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
+                    <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
                   </div>
-                  <div className="server-path-meta">{row.meta}</div>
+                  <div className="server-path-meta" style={{ fontSize: '11px', color: '#64748b' }}>{row.meta}</div>
                 </div>
               ))}
             </div>
@@ -1241,18 +1246,20 @@ export default function ManagePanelView({ addToast }) {
 
   return (
     <div className="panel-content" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Panel Tabs — exact match to manage-panel.html */}
-      <div className="panel-tabs">
-        {PANEL_TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            className={`panel-tab${activeTab === id ? ' active' : ''}`}
-            data-tab={id}
-            onClick={() => setActiveTab(id)}
-          >
-            <Icon size={13} /> {label}
-          </button>
-        ))}
+      {/* Panel Action Bar Header — Dark Navy #1e1e2e matching Sidebar */}
+      <div className="action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.12)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', boxSizing: 'border-box', flexShrink: 0 }}>
+        <div className="status-tabs">
+          {PANEL_TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`status-tab${activeTab === id ? ' active' : ''}`}
+              data-tab={id}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={13} /> {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}

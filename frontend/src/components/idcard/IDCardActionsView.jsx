@@ -2138,7 +2138,7 @@ export default function IDCardActionsView({
         </div>
 
         {/* Right: Colored Status List Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+        <div className="status-tabs" style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '2px', gap: '2px', height: '28px', boxSizing: 'border-box', marginLeft: 'auto' }}>
           {/* Render Flow-Specific Status Tabs */}
           {(['reprint', 'request', 'confirm'].includes(status) ? REPRINT_STATUS_LIST : ID_CARD_STATUS_LIST).map(s => {
             const count = statusCounts[s.key] ?? 0;
@@ -2147,22 +2147,25 @@ export default function IDCardActionsView({
               <button
                 key={s.key}
                 onClick={() => setStatus(s.key)}
+                className={`status-tab${isActive ? ' active' : ''}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '6px',
-                  padding: '3px 10px',
-                  height: '26px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  border: isActive ? `1px solid ${s.bg}` : '1px solid rgba(255,255,255,0.15)',
-                  background: isActive ? s.bg : 'rgba(255,255,255,0.08)',
+                  gap: '5px',
+                  padding: '0 10px',
+                  height: '22px',
+                  borderRadius: '3px',
+                  fontSize: '11px',
+                  lineHeight: '22px',
+                  fontWeight: isActive ? 700 : 600,
+                  border: 'none',
+                  background: isActive ? (s.bg || '#2563eb') : 'transparent',
                   color: isActive ? '#ffffff' : '#cbd5e1',
                   cursor: 'pointer',
+                  fontFamily: 'var(--font-family)',
                   transition: 'all 0.15s ease',
-                  boxShadow: isActive ? `0 2px 6px ${s.bg}40` : 'none',
+                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
                 }}
                 title={`Switch to ${s.label}`}
               >
@@ -2171,11 +2174,11 @@ export default function IDCardActionsView({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minWidth: '20px',
-                  height: '17px',
-                  padding: '0 5px',
+                  minWidth: '18px',
+                  height: '15px',
+                  padding: '0 4px',
                   borderRadius: '3px',
-                  fontSize: '11px',
+                  fontSize: '10px',
                   fontWeight: 700,
                   background: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)',
                   color: isActive ? '#ffffff' : '#cbd5e1',

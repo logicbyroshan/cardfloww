@@ -279,11 +279,11 @@ export default function ManageFeaturesView({ addToast }) {
 
 
   return (
-    <div style={{ width: '100%', height: '100%', padding: 0, margin: 0, background: '#ffffff', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: '100%', height: '100%', padding: 0, margin: 0, background: 'transparent', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       
       {/* ── Top Bar Navigation Tabs ── */}
-      <div className="panel-tabs">
-        <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: '0' }}>
+      <div className="action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxSizing: 'border-box', flexShrink: 0 }}>
+        <div className="status-tabs" style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '2px', gap: '2px', height: '28px', boxSizing: 'border-box' }}>
           {[
             { id: 'impersonate', label: 'Impersonate User', Icon: UserCog },
             { id: 'guests', label: 'Manage Guest Users', Icon: ShieldCheck },
@@ -293,9 +293,17 @@ export default function ManageFeaturesView({ addToast }) {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`panel-tab${activeTab === id ? ' active' : ''}`}
+              className={`status-tab${activeTab === id ? ' active' : ''}`}
+              style={{
+                padding: '0 10px', height: '22px', fontSize: '11px', lineHeight: '22px', borderRadius: '3px',
+                border: 'none', cursor: 'pointer', background: activeTab === id ? '#2563eb' : 'transparent',
+                color: activeTab === id ? '#ffffff' : '#cbd5e1', fontWeight: activeTab === id ? 700 : 600,
+                fontFamily: 'var(--font-family)', transition: 'all 0.15s',
+                boxShadow: activeTab === id ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                display: 'inline-flex', alignItems: 'center', gap: '5px'
+              }}
             >
-              <Icon size={13} />
+              <Icon size={12} />
               <span>{label}</span>
             </button>
           ))}
@@ -320,10 +328,10 @@ export default function ManageFeaturesView({ addToast }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Action Bar */}
           <div className="action-bar-light" id="impersonate-action-bar">
-            <div className="action-bar-left">
+            <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Search Input Box */}
-              <div className="notif-search-box" style={{ width: '260px' }}>
-                <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
+              <div className="notif-search-box" style={{ width: '240px' }}>
+                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
                 <input
                   type="text"
                   value={search}
@@ -333,32 +341,34 @@ export default function ManageFeaturesView({ addToast }) {
                 {search && (
                   <button
                     onClick={() => setSearch('')}
-                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: '0 2px' }}
+                    style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center', padding: '0 2px' }}
                     title="Clear search"
                   >
-                    <X size={13} />
+                    <X size={12} />
                   </button>
                 )}
               </div>
 
               {/* Separator */}
-              <div style={{ width: '1px', height: '18px', background: '#cbd5e1', flexShrink: 0 }} />
+              <div style={{ width: '1px', height: '16px', background: '#e2e8f0', flexShrink: 0 }} />
 
               {/* Filter Pills */}
-              {[
-                { id: 'all', label: `All (${usersList.length})` },
-                { id: 'client', label: `Organisation/Manager (${usersList.filter(u => u.rawRole === 'client').length})` },
-                { id: 'client_staff', label: `Assistant (${usersList.filter(u => u.rawRole === 'client_staff').length})` },
-                { id: 'guest_user', label: `Guest User (${usersList.filter(u => u.rawRole === 'guest_user').length})` },
-              ].map((pill) => (
-                <button
-                  key={pill.id}
-                  onClick={() => setRoleFilter(pill.id)}
-                  className={`btn btn-sm ${roleFilter === pill.id ? 'btn-primary' : 'btn-neutral'}`}
-                >
-                  {pill.label}
-                </button>
-              ))}
+              <div className="status-tabs">
+                {[
+                  { id: 'all', label: `All (${usersList.length})` },
+                  { id: 'client', label: `Organisation/Manager (${usersList.filter(u => u.rawRole === 'client').length})` },
+                  { id: 'client_staff', label: `Assistant (${usersList.filter(u => u.rawRole === 'client_staff').length})` },
+                  { id: 'guest_user', label: `Guest User (${usersList.filter(u => u.rawRole === 'guest_user').length})` },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    onClick={() => setRoleFilter(pill.id)}
+                    className={`status-tab${roleFilter === pill.id ? ' active' : ''}`}
+                  >
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -431,7 +441,7 @@ export default function ManageFeaturesView({ addToast }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
           <div className="action-bar-light">
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>Temporary Guest Pass Records</span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>Temporary Guest Pass Records</span>
             <button
               onClick={() => addToast?.('New guest pass generated', 'success')}
               className="btn btn-sm btn-primary"
@@ -672,11 +682,11 @@ export default function ManageFeaturesView({ addToast }) {
       {activeTab === 'batch' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           
-          {/* Action Bar Header (Search, Filters, Refresh — NO Stat Cards & NO New Task button) */}
+          {/* Action Bar Header */}
           <div className="action-bar-light">
-            <div className="action-bar-left">
-              <div className="notif-search-box" style={{ width: '260px' }}>
-                <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
+            <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="notif-search-box" style={{ width: '240px' }}>
+                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
                 <input
                   type="text"
                   value={batchSearch}

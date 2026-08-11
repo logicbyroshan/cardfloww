@@ -444,8 +444,9 @@
 .monitor-panel-theme .notif-actions-bar,
 .backup-panel-theme .notif-actions-bar,
 .maintenance-panel-theme .notif-actions-bar {
-  background: var(--color-white);
-  border-bottom: 1px solid var(--color-gray-200);
+  background: #1e1e2e !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 
 .templates-panel-kicker,
@@ -798,8 +799,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 20px;
-  background: var(--color-white);
-  border-bottom: 1px solid var(--color-gray-200);
+  background: #1e1e2e !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
 }
 .notif-actions-left {
   display: flex;

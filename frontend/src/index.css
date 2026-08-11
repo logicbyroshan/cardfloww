@@ -69,9 +69,10 @@ label {
   color: #94a3b8 !important;
 }
 
-/* ── Universal Action Bar & Control Heights ── */
-.action-bar:not(.action-bar-light),
-.notif-actions-bar:not(.action-bar-light) {
+/* ── Universal Action Bar & Control Heights (Dark Navy #1e1e2e matching Sidebar) ── */
+.action-bar,
+.notif-actions-bar:not(.action-bar-light),
+.search-filter-bar:not(.action-bar-light) {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
@@ -80,90 +81,120 @@ label {
   align-items: center !important;
   justify-content: space-between !important;
   background: #1e1e2e !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   gap: 8px !important;
   color: #ffffff !important;
 }
 
-/* ── Light Action Bar — for panel pages where tab bar is already dark ── */
+/* ── Secondary / Middle Sub-Action Bar (Alternating White Bar below Dark Topbar) ── */
 .action-bar-light,
 .notif-actions-bar.action-bar-light {
-  height: 46px !important;
-  min-height: 46px !important;
-  max-height: 46px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  max-height: 48px !important;
   padding: 0 16px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   background: #ffffff !important;
-  border-bottom: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   gap: 8px !important;
   color: #1e293b !important;
 }
 
-/* Search box inside light bar — white bg + dark text */
+/* Search Box inside Light Action Bar */
 .action-bar-light .notif-search-box,
 .action-bar-light .search-box {
   background: #f8fafc !important;
   border: 1px solid #cbd5e1 !important;
-  color: #1e293b !important;
+  color: #0f172a !important;
+  border-radius: 5px !important;
+  height: 28px !important;
 }
 .action-bar-light .notif-search-box:focus-within,
 .action-bar-light .search-box:focus-within {
   border-color: #2563eb !important;
   box-shadow: 0 0 0 2px rgba(37,99,235,0.15) !important;
 }
-.action-bar-light .notif-search-box input,
-.action-bar-light .search-box input,
-.action-bar-light input[type="text"] {
-  color: #1e293b !important;
+.action-bar-light input[type="text"],
+.action-bar-light input[type="search"],
+.action-bar-light .search-input {
+  color: #0f172a !important;
+  background: transparent !important;
 }
-.action-bar-light .notif-search-box input::placeholder,
-.action-bar-light .search-box input::placeholder,
 .action-bar-light input::placeholder {
   color: #94a3b8 !important;
 }
-.action-bar-light .notif-search-box svg,
-.action-bar-light .search-box svg {
+.action-bar-light svg {
   color: #64748b !important;
 }
 
-/* Button & control themes inside light action bar */
-.action-bar-light .btn-primary,
-.action-bar-light button.btn-primary {
+/* Tab Pills inside Light Action Bar */
+.action-bar-light .status-tabs,
+.action-bar-light .panel-tabs {
+  background: transparent !important;
+  border: none !important;
+  gap: 6px !important;
+}
+
+.action-bar-light .status-tab,
+.action-bar-light .panel-tab {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  border-radius: 5px !important;
+}
+.action-bar-light .status-tab:hover,
+.action-bar-light .panel-tab:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
+}
+.action-bar-light .status-tab.active,
+.action-bar-light .panel-tab.active {
+  background: #2563eb !important;
+  border: 1px solid #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Button & control themes inside action bars */
+.action-bar .btn-primary,
+.action-bar-light .btn-primary {
   background: #2563eb !important;
   color: #ffffff !important;
   border: 1px solid #2563eb !important;
 }
-.action-bar-light .btn-danger,
-.action-bar-light button.btn-danger {
+.action-bar .btn-danger,
+.action-bar-light .btn-danger {
   background: #ef4444 !important;
   color: #ffffff !important;
   border: 1px solid #ef4444 !important;
 }
+.action-bar .btn-neutral,
 .action-bar-light .btn-neutral,
-.action-bar-light .btn-secondary,
-.action-bar-light button.btn-neutral,
-.action-bar-light button.btn-secondary {
-  background: #f8fafc !important;
+.action-bar .btn-secondary,
+.action-bar-light .btn-secondary {
+  background: #ffffff !important;
   color: #334155 !important;
   border: 1px solid #cbd5e1 !important;
 }
+.action-bar select,
 .action-bar-light select,
-.action-bar-light input[type="date"],
-.action-bar-light .form-select,
-.action-bar-light .form-input {
+.action-bar input[type="date"],
+.action-bar-light input[type="date"] {
   background-color: #ffffff !important;
-  color: #1e293b !important;
+  color: #0f172a !important;
   border: 1px solid #cbd5e1 !important;
-}
-.action-bar-light .btn svg,
-.action-bar-light button svg {
-  color: inherit !important;
 }
 
 .action-bar-left,
@@ -3030,8 +3061,113 @@ header.topbar,
 }
 
 .sidebar {
-  border-right: 2px solid #cbd5e1 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
   box-sizing: border-box !important;
+}
+
+/* ── Deep Project-Wide 1px Divider & Border Consistency ── */
+.topbar,
+#topbar,
+header.topbar,
+.action-bar,
+.notif-actions-bar,
+.search-filter-bar,
+.panel-tabs-bar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.data-table th,
+.wa-table thead th,
+.notif-table th,
+.reprint-history-table th,
+.audit-users-table th,
+.recent-table th,
+table th {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+.data-table th:last-child,
+.wa-table thead th:last-child,
+.notif-table th:last-child,
+.reprint-history-table th:last-child,
+.audit-users-table th:last-child,
+.recent-table th:last-child,
+table th:last-child {
+  border-right: none !important;
+}
+
+/* ── Universal Project-Wide Tab Options (Clean, Shell-Free & Prominent Size) ── */
+.status-tabs,
+.panel-tabs,
+.sub-nav-tabs,
+.settings-tabs,
+.nav-tabs,
+.tab-group,
+.idcard-status-tabs {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  gap: 6px !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
+.status-tab,
+.panel-tab,
+.sub-nav-tab,
+.settings-tab,
+.nav-tab,
+.tab-btn,
+.idcard-status-tab {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 6px 14px !important;
+  height: 34px !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  cursor: pointer !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #cbd5e1 !important;
+  font-family: var(--font-family) !important;
+  transition: all 0.15s ease-in-out !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.status-tab:hover,
+.panel-tab:hover,
+.sub-nav-tab:hover,
+.settings-tab:hover,
+.nav-tab:hover,
+.tab-btn:hover,
+.idcard-status-tab:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
+.status-tab.active,
+.panel-tab.active,
+.sub-nav-tab.active,
+.settings-tab.active,
+.nav-tab.active,
+.tab-btn.active,
+.idcard-status-tab.active {
+  background: #2563eb !important;
+  border: 1px solid #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35) !important;
+  border-bottom: 1px solid #2563eb !important;
 }
 
 .topbar .breadcrumb,

@@ -200,6 +200,8 @@ label,
   font-size: var(--ui-consistent-table-head-font-size) !important;
   font-weight: var(--ui-consistent-table-head-font-weight) !important;
   line-height: 1.25 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .main .data-table td,

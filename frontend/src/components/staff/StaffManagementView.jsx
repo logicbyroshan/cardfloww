@@ -206,20 +206,12 @@ export default function StaffManagementView({ addToast, staffType = 'operator', 
       <div className="action-bar" id="staff-action-bar" style={{ background: '#1e1e2e', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', height: '50px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxSizing: 'border-box' }}>
         {/* Left */}
         <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div className="status-tabs" style={{ display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.18)', borderRadius: '5px', padding: '2px', gap: '2px', height: '28px', boxSizing: 'border-box' }}>
+          <div className="status-tabs">
             {STATUS_TABS.map((t) => (
               <button
                 key={t}
                 onClick={() => { setStatusTab(t); setPage(1); }}
                 className={`status-tab${statusTab === t ? ' active' : ''}`}
-                style={{
-                  padding: '0 10px', height: '22px', fontSize: '11px', lineHeight: '22px', borderRadius: '3px',
-                  border: 'none', cursor: 'pointer', background: statusTab === t ? '#2563eb' : 'transparent',
-                  color: statusTab === t ? '#ffffff' : '#cbd5e1', fontWeight: statusTab === t ? 700 : 600,
-                  fontFamily: 'var(--font-family)', transition: 'all 0.15s',
-                  boxShadow: statusTab === t ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
-                  display: 'inline-flex', alignItems: 'center'
-                }}
               >
                 {t}
               </button>
