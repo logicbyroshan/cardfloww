@@ -151,23 +151,24 @@ For complete technical specifications, architecture diagrams, and operational gu
 
 ---
 
-## 🛠️ Quick Tech Stack Summary
+## 🛠️ Tech Stack Summary
 
 | Layer | Primary Technology |
 |---|---|
-| **Backend Framework** | Django 5.2.12 (Python 3.11+) |
-| **Frontend Web SPA** | React 18, Vite, Vanilla CSS + Tailwind |
-| **Mobile App** | React Native / Expo (Native SVG Icons) |
+| **Backend Framework** | Django 5.2.12 (Python 3.11+) + Django REST API |
+| **Frontend Web SPA** | React 19, Vite, Lenis Smooth Scroll, Sonner Toasts, Lucide React Icons |
+| **Styling & Aesthetics** | Pure Vanilla CSS Design System + HSL CSS Custom Tokens |
+| **Mobile App** | React Native / Expo (Native SVG Icons & Optical Biometric Scanner) |
 | **Database & Cache** | PostgreSQL (Prod) / SQLite (Dev) + Redis Cache |
 | **Task Queue & Async** | Celery + Channels WebSockets (ASGI) |
 | **Media Processing** | OpenCV, Pillow, PyInstaller Face Cropper |
-| **Exports** | ReportLab, WeasyPrint, openpyxl, python-docx |
+| **Exports Engine** | ReportLab, WeasyPrint, openpyxl, python-docx |
 
 ---
 
 ## 🚀 Quick Start Setup
 
-### Backend (Django)
+### Backend (Django REST Server)
 ```bash
 python -m venv venv
 .\venv\Scripts\activate
@@ -176,11 +177,13 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-### Frontend Web SPA (React 18)
+### Frontend Web SPA (React 19 + Vite)
 ```bash
 cd frontend
 npm install
 npm run dev
+# Production build:
+npm run build
 ```
 
 ---

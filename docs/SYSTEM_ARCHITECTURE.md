@@ -6,12 +6,12 @@ This document provides a comprehensive technical breakdown of the **CardFlow Pla
 
 ## 1. High-Level Architectural Topology
 
-CardFlow is architected as a hybrid enterprise platform combining a robust **Django REST/Service backend**, a modern **React 18 SPA web control panel**, an **ASGI WebSocket real-time communication layer**, and an **Expo / React Native companion mobile app**.
+CardFlow is architected as a hybrid enterprise platform combining a robust **Django REST/Service backend**, a modern **React 19 SPA web control panel**, an **ASGI WebSocket real-time communication layer**, and an **Expo / React Native companion mobile app**.
 
 ```text
                                ┌────────────────────────────────────────┐
                                │           Client Interfaces            │
-                               │  - React 18 SPA Web Control Panel       │
+                               │  - React 19 SPA Web Control Panel       │
                                │  - Android / iOS Mobile Companion App  │
                                └───────────────────┬────────────────────┘
                                                    │ HTTPS / WSS
@@ -47,14 +47,14 @@ CardFlow is architected as a hybrid enterprise platform combining a robust **Dja
 ## 2. Core Subsystem Responsibilities
 
 ### 2.1 Backend Core (`core/`, `config/`)
-- **Django 5.2.12**: Core ORM, user management, and view controllers.
+- **Django 5.2.12**: Core ORM, user management, REST APIs, and service controllers.
 - **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`). Views remain thin, delegating all operations to services.
 - **Domain Split Routing**: `config.urls_panel`, `config.urls_website`, and `config.urls` support subdomain isolation between the public web landing page and administrative control panel (`https://panel.adarshbhopal.in`).
 
 ### 2.2 Modern React Web SPA (`frontend/`)
-- **React 18 & Vite**: Built for high-density tabular data editing, interactive status pipelines, and real-time dashboard analytics.
-- **State Management**: Modular state handling with atomic status updates and search filter persistence.
-- **Iconography & Styling**: Uses Lucide icons and Vanilla CSS design tokens with Tailwind CSS utility support.
+- **React 19 & Vite**: High-performance SPA frontend built for high-density tabular data editing, interactive status pipelines, and real-time dashboard analytics.
+- **Smooth Scrolling & Notifications**: Lenis smooth scrolling engine (`@studio-freight/lenis`) and Sonner toast notification pipeline (`sonner`).
+- **Iconography & Styling**: Uses Lucide icons (`lucide-react`) and Vanilla CSS design tokens with custom HSL palette rules.
 
 ### 2.3 ASGI WebSocket & Real-Time Layer (`desktop_app/`, `channels`)
 - **Django Channels (ASGI)**: Handles bi-directional WebSockets for real-time print status pushes, desktop PWA tokens, and active session telemetries.
