@@ -139,6 +139,7 @@ PANEL_URL = os.getenv('PANEL_URL', '').rstrip('/')
 # =============================================================================
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -182,6 +183,7 @@ SITE_ID = 1
 AUTH_USER_MODEL = 'core.User'
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'core.middleware.MobileAppCSRFBypassMiddleware',
     "django.middleware.security.SecurityMiddleware",
 ]
@@ -213,6 +215,22 @@ MIDDLEWARE += [
     # Maintenance mode — blocks panel for non-superadmin when enabled
     'core.middleware.MaintenanceModeMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# =============================================================================
+# SEPARATE FRONTEND & BACKEND CORS & CSRF CONFIGURATION
+# =============================================================================
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',')
+    if origin.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000').split(',')
+    if origin.strip()
 ]
 
 ROOT_URLCONF = 'config.urls'

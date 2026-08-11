@@ -11,6 +11,7 @@ cryptography==46.0.6
 cssselect2==0.8.0
 dj-database-url==3.1.0
 Django==5.2.12
+django-cors-headers==4.7.0
 et_xmlfile==2.0.0
 fonttools==4.61.1
 freetype-py==2.5.1
