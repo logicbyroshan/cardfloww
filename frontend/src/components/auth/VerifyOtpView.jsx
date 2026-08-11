@@ -45,21 +45,25 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
   return (
     <>
       <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <div style={{
-          width: '42px',
-          height: '42px',
-          borderRadius: '12px',
-          background: 'rgba(255, 255, 255, 0.15)',
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '10px'
-        }}>
+        <div
+          style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '10px',
+          }}
+        >
           <KeyRound size={22} color="#ffffff" />
         </div>
       </div>
 
-      <h2 className="auth-title" style={{ textAlign: 'center' }}>Two-Factor Verification</h2>
+      <h2 className="auth-title" style={{ textAlign: 'center' }}>
+        Two-Factor Verification
+      </h2>
       <p className="auth-subtitle" style={{ textAlign: 'center', marginBottom: '20px' }}>
         Enter the 6-digit verification code sent to your registered email/phone
       </p>
@@ -110,11 +114,7 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
           <ArrowLeft size={14} /> Back to Sign In
         </button>
 
-        <button
-          type="button"
-          className="auth-link"
-          onClick={() => setError('Resent OTP to registered contact.')}
-        >
+        <button type="button" className="auth-link" onClick={() => setError('Resent OTP to registered contact.')}>
           Resend OTP
         </button>
       </div>

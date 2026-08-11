@@ -12,20 +12,58 @@ export default function CardDownloadsModal({ isOpen, onClose }) {
     <div className="center-modal-overlay">
       <div
         className="center-modal-panel"
-        style={{ width: '560px', height: 'auto', maxHeight: '90vh', padding: '0', display: 'flex', flexDirection: 'column' }}
+        style={{
+          width: '560px',
+          height: 'auto',
+          maxHeight: '90vh',
+          padding: '0',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        <div style={{ background: '#1e293b', color: '#fff', height: '46px', minHeight: '46px', padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            background: '#1e293b',
+            color: '#fff',
+            height: '46px',
+            minHeight: '46px',
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <span style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Download size={16} style={{ color: '#10b981' }} /> Download / Export Cards
           </span>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+          <button
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+          >
             <X size={18} />
           </button>
         </div>
 
-        <div style={{ flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '1.25rem', overflowY: 'auto' }}>
+        <div
+          style={{
+            flex: 1,
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.25rem',
+            overflowY: 'auto',
+          }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}
+            >
               Export Format
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -65,7 +103,15 @@ export default function CardDownloadsModal({ isOpen, onClose }) {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.5rem' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}
+            >
               Select Photo Field Column
             </label>
             <CustomSelect
@@ -79,16 +125,49 @@ export default function CardDownloadsModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+        <div
+          style={{
+            padding: '14px 24px',
+            background: '#f8fafc',
+            borderTop: '1px solid #e2e8f0',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '10px',
+          }}
+        >
           <button
             onClick={onClose}
-            style={{ padding: '8px 16px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#475569', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}
+            style={{
+              padding: '8px 16px',
+              background: '#fff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '4px',
+              color: '#475569',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
           >
             Cancel
           </button>
           <button
-            onClick={() => { alert(`Generating ${format} export...`); onClose(); }}
-            style={{ padding: '8px 20px', background: '#059669', border: 'none', borderRadius: '4px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={() => {
+              alert(`Generating ${format} export...`);
+              onClose();
+            }}
+            style={{
+              padding: '8px 20px',
+              background: '#059669',
+              border: 'none',
+              borderRadius: '4px',
+              color: '#fff',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
             <Download size={15} />
             <span>Generate & Download</span>

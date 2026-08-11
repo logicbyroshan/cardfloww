@@ -1,7 +1,17 @@
 import React from 'react';
 import {
-  Home, Users, UserCog, UsersRound, Camera,
-  SlidersHorizontal, Gem, BookOpen, GitBranch, LogOut, ShieldCheck, Building
+  Home,
+  Users,
+  UserCog,
+  UsersRound,
+  Camera,
+  SlidersHorizontal,
+  Gem,
+  BookOpen,
+  GitBranch,
+  LogOut,
+  ShieldCheck,
+  Building,
 } from 'lucide-react';
 
 /*
@@ -16,21 +26,19 @@ const NAV_CONFIG = {
     {
       section: 'Admin Management',
       items: [
-        { id: 'staff',        label: 'Manage Operator',      Icon: UserCog     },
-        { id: 'photographers',label: 'Manage Photographer',   Icon: Camera      },
+        { id: 'staff', label: 'Manage Operator', Icon: UserCog },
+        { id: 'photographers', label: 'Manage Photographer', Icon: Camera },
       ],
     },
     {
       section: 'Client Management',
-      items: [
-        { id: 'organisations',label: 'Manage Organisation',  Icon: Building   },
-      ],
+      items: [{ id: 'organisations', label: 'Manage Organisation', Icon: Building }],
     },
     {
       section: 'CardFlow Management',
       items: [
-        { id: 'panel', label: 'Manage CardFlow',     Icon: SlidersHorizontal },
-        { id: 'pro',   label: 'Manage Pro Features', Icon: Gem               },
+        { id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal },
+        { id: 'pro', label: 'Manage Pro Features', Icon: Gem },
       ],
     },
   ],
@@ -38,32 +46,25 @@ const NAV_CONFIG = {
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'Client Management',
-      items: [
-        { id: 'organisations',label: 'Manage Organisation',  Icon: Building   },
-      ],
+      items: [{ id: 'organisations', label: 'Manage Organisation', Icon: Building }],
     },
     {
       section: 'CardFlow Management',
-      items: [
-        { id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal },
-      ],
+      items: [{ id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal }],
     },
   ],
-
 
   client: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'Management',
-      items: [
-        { id: 'staff', label: 'Manage Assistant', Icon: UserCog },
-      ],
+      items: [{ id: 'staff', label: 'Manage Assistant', Icon: UserCog }],
     },
     {
       section: 'ID Card Management',
       items: [
-        { id: 'cards',    label: 'Table Group',   Icon: ShieldCheck        },
-        { id: 'settings', label: 'Settings',      Icon: UserCog           },
+        { id: 'cards', label: 'Table Group', Icon: ShieldCheck },
+        { id: 'settings', label: 'Settings', Icon: UserCog },
       ],
     },
   ],
@@ -71,40 +72,43 @@ const NAV_CONFIG = {
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [
-        { id: 'cards',    label: 'Table Group',   Icon: ShieldCheck        },
-      ],
+      items: [{ id: 'cards', label: 'Table Group', Icon: ShieldCheck }],
     },
   ],
-
 };
 
 const ROLE_COLORS = {
-  super_admin:  { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
-  operator:     { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
-  client:       { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
-  assistant:    { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
+  super_admin: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
+  operator: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
+  client: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
+  assistant: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
 };
 
 const ROLE_LABELS = {
-  super_admin:  'Super Admin',
-  operator:     'Operator',
-  client:       'Client',
-  assistant:    'Assistant',
-  admin_staff:  'Operator',
+  super_admin: 'Super Admin',
+  operator: 'Operator',
+  client: 'Client',
+  assistant: 'Assistant',
+  admin_staff: 'Operator',
   client_staff: 'Assistant',
 };
 
 const APP_VERSION = 'v4.19.01';
 
 export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_admin', currentUser, onLogout }) {
-  const roleKey = userRole === 'admin' ? 'super_admin' : userRole === 'admin_staff' ? 'operator' : userRole === 'client_staff' ? 'assistant' : userRole;
+  const roleKey =
+    userRole === 'admin'
+      ? 'super_admin'
+      : userRole === 'admin_staff'
+        ? 'operator'
+        : userRole === 'client_staff'
+          ? 'assistant'
+          : userRole;
   const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.super_admin;
-
 
   const displayName = currentUser?.first_name
     ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim()
-    : (currentUser?.username || currentUser?.email || 'Admin');
+    : currentUser?.username || currentUser?.email || 'Admin';
 
   const initials = displayName.slice(0, 2).toUpperCase();
   const roleLabel = ROLE_LABELS[roleKey] || roleKey;
@@ -112,12 +116,32 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
   return (
     <aside className="sidebar" id="sidebar">
       {/* ── Header / Logo ── */}
-      <div className="sidebar-header" style={{ padding: '8px 12px', height: '50px', minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', borderBottom: '1px solid rgba(255, 255, 255, 0.06)', background: '#1e1e2e', boxSizing: 'border-box' }}>
+      <div
+        className="sidebar-header"
+        style={{
+          padding: '8px 12px',
+          height: '50px',
+          minHeight: '50px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          background: '#1e1e2e',
+          boxSizing: 'border-box',
+        }}
+      >
         <div className="logo-flare-container">
           <img
             src="/cardflow_logo_brand.png"
             alt="CardFlow"
-            style={{ maxHeight: '34px', maxWidth: '160px', width: '100%', objectFit: 'contain', background: 'transparent' }}
+            style={{
+              maxHeight: '34px',
+              maxWidth: '160px',
+              width: '100%',
+              objectFit: 'contain',
+              background: 'transparent',
+            }}
           />
         </div>
       </div>
@@ -165,7 +189,6 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
 
       {/* ── Footer — matches sidebar.html ── */}
       <div className="sidebar-footer">
-
         {/* Tutorial link */}
         <div className="sidebar-actions">
           <button
@@ -221,9 +244,7 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
             >
               {displayName || 'System Admin'}
             </span>
-            <span style={{ fontSize: '10px', color: '#f97316', fontWeight: 600, display: 'block' }}>
-              {roleLabel}
-            </span>
+            <span style={{ fontSize: '10px', color: '#f97316', fontWeight: 600, display: 'block' }}>{roleLabel}</span>
           </div>
         </div>
       </div>

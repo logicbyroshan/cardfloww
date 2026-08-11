@@ -41,7 +41,9 @@ export default function ResetPasswordView({ onSwitchTab }) {
             <CheckCircle2 size={18} color="#4ade80" />
             <strong style={{ color: '#ffffff' }}>Password Updated!</strong>
           </div>
-          <span style={{ fontSize: '12px' }}>Your password has been reset successfully. You can now sign in with your new password.</span>
+          <span style={{ fontSize: '12px' }}>
+            Your password has been reset successfully. You can now sign in with your new password.
+          </span>
           <button
             type="button"
             className="auth-btn-primary"

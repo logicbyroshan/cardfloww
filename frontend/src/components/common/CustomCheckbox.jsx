@@ -53,9 +53,7 @@ export default function CustomCheckbox({
           alignItems: 'center',
           justifyContent: 'center',
           transition: 'all 0.15s ease',
-          boxShadow: checked
-            ? '0 1px 3px rgba(37, 99, 235, 0.25)'
-            : '0 1px 2px rgba(0,0,0,0.04)',
+          boxShadow: checked ? '0 1px 3px rgba(37, 99, 235, 0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
           outline: 'none',
           boxSizing: 'border-box',
           marginTop: description ? '2px' : '0',
@@ -80,9 +78,7 @@ export default function CustomCheckbox({
             </span>
           )}
           {description && (
-            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>
-              {description}
-            </span>
+            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>{description}</span>
           )}
         </div>
       )}

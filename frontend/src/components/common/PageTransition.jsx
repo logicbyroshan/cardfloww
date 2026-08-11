@@ -16,7 +16,7 @@ export default function PageTransition({ pageKey, children, fullHeight = false }
         exit={{ opacity: 0, y: -25 }}
         transition={{
           opacity: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
-          y:       { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+          y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
         }}
         style={
           fullHeight

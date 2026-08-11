@@ -11,17 +11,10 @@ export default function AuthFlowContainer({ onLoginSuccess, initialTab = 'login'
   return (
     <AuthLayout>
       {currentTab === 'login' && (
-        <LoginView
-          onLoginSuccess={onLoginSuccess}
-          onSwitchTab={(tab) => setCurrentTab(tab)}
-        />
+        <LoginView onLoginSuccess={onLoginSuccess} onSwitchTab={(tab) => setCurrentTab(tab)} />
       )}
 
-      {currentTab === 'forgot' && (
-        <ForgotPasswordView
-          onSwitchTab={(tab) => setCurrentTab(tab)}
-        />
-      )}
+      {currentTab === 'forgot' && <ForgotPasswordView onSwitchTab={(tab) => setCurrentTab(tab)} />}
 
       {currentTab === 'otp' && (
         <VerifyOtpView
@@ -30,11 +23,7 @@ export default function AuthFlowContainer({ onLoginSuccess, initialTab = 'login'
         />
       )}
 
-      {currentTab === 'reset-password' && (
-        <ResetPasswordView
-          onSwitchTab={(tab) => setCurrentTab(tab)}
-        />
-      )}
+      {currentTab === 'reset-password' && <ResetPasswordView onSwitchTab={(tab) => setCurrentTab(tab)} />}
     </AuthLayout>
   );
 }

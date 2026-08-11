@@ -33,7 +33,9 @@ label {
   height: 28px !important;
   padding: 0 8px !important;
   box-sizing: border-box !important;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out !important;
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out !important;
   color: #ffffff !important;
 }
 
@@ -48,7 +50,7 @@ label {
 .notif-search-box input,
 .search-box input,
 .ui-search-box input,
-.action-bar input[type="text"] {
+.action-bar input[type='text'] {
   border: none !important;
   background: transparent !important;
   outline: none !important;
@@ -118,10 +120,10 @@ label {
 .action-bar-light .notif-search-box:focus-within,
 .action-bar-light .search-box:focus-within {
   border-color: #2563eb !important;
-  box-shadow: 0 0 0 2px rgba(37,99,235,0.15) !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
 }
-.action-bar-light input[type="text"],
-.action-bar-light input[type="search"],
+.action-bar-light input[type='text'],
+.action-bar-light input[type='search'],
 .action-bar-light .search-input {
   color: #0f172a !important;
   background: transparent !important;
@@ -190,8 +192,8 @@ label {
 }
 .action-bar select,
 .action-bar-light select,
-.action-bar input[type="date"],
-.action-bar-light input[type="date"] {
+.action-bar input[type='date'],
+.action-bar-light input[type='date'] {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border: 1px solid #cbd5e1 !important;
@@ -234,9 +236,9 @@ label {
 
 /* Selects and Date Inputs in Action Bar */
 .action-bar select,
-.action-bar input[type="date"],
+.action-bar input[type='date'],
 .notif-actions-bar select,
-.notif-actions-bar input[type="date"] {
+.notif-actions-bar input[type='date'] {
   height: 28px !important;
   min-height: 28px !important;
   font-size: 12px !important;
@@ -257,7 +259,7 @@ label {
 /* ── CSS Variables ── */
 :root {
   /* Font */
-  --font-family: "Saira Semi Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'Saira Semi Condensed', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Primary (purple-blue) */
   --primary: #667eea;
@@ -450,13 +452,23 @@ html {
 }
 
 @keyframes drawerSlideInRight {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes centerModalScaleIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .drawer-panel *,
@@ -476,7 +488,8 @@ html {
 }
 
 @keyframes heartBeat {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
   }
@@ -516,12 +529,7 @@ html {
   left: -150%;
   width: 70%;
   height: 200%;
-  background: linear-gradient(
-    105deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.45) 50%,
-    transparent 80%
-  );
+  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.45) 50%, transparent 80%);
   transform: rotate(25deg);
   animation: glassLogoFlare 5.5s cubic-bezier(0.25, 1, 0.5, 1) infinite;
   pointer-events: none;
@@ -556,12 +564,7 @@ html {
   left: -150%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(
-    105deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.3) 50%,
-    transparent 80%
-  );
+  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.3) 50%, transparent 80%);
   transform: skewX(-25deg);
   animation: statGlassFlare 4.5s ease-in-out infinite;
   pointer-events: none;
@@ -572,10 +575,12 @@ html {
 }
 
 @keyframes statGlassFlare {
-  0%, 35% {
+  0%,
+  35% {
     left: -150%;
   }
-  65%, 100% {
+  65%,
+  100% {
     left: 200%;
   }
 }
@@ -601,7 +606,6 @@ textarea {
   font-weight: 400;
   line-height: 1.4;
 }
-
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
@@ -731,7 +735,9 @@ textarea {
   background: none;
   width: calc(100% - 12px);
   text-align: left;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .nav-item:hover {
@@ -743,9 +749,8 @@ textarea {
   color: #fff;
   background: linear-gradient(135deg, rgb(0, 80, 210) 0%, rgb(0, 180, 255) 100%);
   font-weight: 600;
-  boxShadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  boxshadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
-
 
 .nav-item svg,
 .nav-item i {
@@ -802,7 +807,7 @@ textarea {
 }
 
 .sidebar-user:hover {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .user-avatar {
@@ -857,7 +862,6 @@ textarea {
   min-height: 0;
   overflow: hidden;
 }
-
 
 /* ── Topbar / Header ── */
 .topbar {
@@ -1048,13 +1052,11 @@ textarea {
   gap: 6px;
 }
 
-
 .topbar .nav-right {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 
 .header-search {
   position: relative;
@@ -1094,7 +1096,6 @@ textarea {
 
 /* ── Page content (kept for legacy compatibility) ── */
 /* Note: primary .page-content styles are at line ~385 above */
-
 
 /* ============================================================
    BUTTONS — match original exactly
@@ -1400,7 +1401,7 @@ textarea {
   min-height: 50px !important;
   max-height: 50px !important;
   background: #1e293b !important;
-  border-bottom: 1px solid rgba(255,255,255,0.10) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   padding: 0 12px !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
@@ -1419,7 +1420,7 @@ textarea {
   border: none !important;
   border-bottom: 2px solid transparent !important;
   background: transparent !important;
-  color: rgba(255,255,255,0.55) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
   cursor: pointer !important;
   white-space: nowrap !important;
   font-family: var(--font-family) !important;
@@ -1604,7 +1605,9 @@ textarea {
   margin-left: -1px;
   margin-top: -1px;
   cursor: default;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
 }
 
 .stat-card:first-child {
@@ -2009,8 +2012,6 @@ textarea {
   color: var(--gray-600);
 }
 
-
-
 /* ============================================================
    ACTIVITY FEED
    ============================================================ */
@@ -2116,7 +2117,6 @@ textarea {
   color: var(--gray-400);
 }
 
-
 /* ============================================================
    KEYFRAME ANIMATIONS
    ============================================================ */
@@ -2143,7 +2143,6 @@ textarea {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -2198,7 +2197,7 @@ textarea {
 /* ============================================================
    SELECTION CHECKBOX
    ============================================================ */
-input[type="checkbox"] {
+input[type='checkbox'] {
   width: 14px;
   height: 14px;
   accent-color: var(--primary);
@@ -2320,7 +2319,9 @@ input[type="checkbox"] {
   border-radius: 0;
   margin-left: -1px;
   margin-top: -1px;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
   cursor: default;
 }
 
@@ -2541,7 +2542,9 @@ input[type="checkbox"] {
   font-size: 12px;
   padding: 0 10px 0 26px;
   outline: none;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .recent-updates-search-input::placeholder {
@@ -2787,15 +2790,21 @@ input[type="checkbox"] {
    PAGE & TAB SMOOTH TRANSITIONS — no more splash / flicker
    ───────────────────────────────────────────────────────────── */
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Applied to top-level page containers */
 .view-container,
 .page-content,
-[class*="view-container"],
-[class*="page-wrap"] {
+[class*='view-container'],
+[class*='page-wrap'] {
   animation: pageFadeIn 0.18s ease forwards;
   will-change: opacity, transform;
 }
@@ -2803,7 +2812,7 @@ input[type="checkbox"] {
 /* Tab content panels */
 .tab-panel,
 .tab-content,
-[role="tabpanel"] {
+[role='tabpanel'] {
   animation: pageFadeIn 0.15s ease forwards;
 }
 
@@ -3101,10 +3110,10 @@ table th:last-child {
 }
 
 /* Master Action Bar Inputs & Search Bars on Dark Background */
-.action-bar:not(.action-bar-light) input[type="text"],
-.action-bar:not(.action-bar-light) input[type="search"],
+.action-bar:not(.action-bar-light) input[type='text'],
+.action-bar:not(.action-bar-light) input[type='search'],
 .action-bar:not(.action-bar-light) .search-input,
-.notif-actions-bar:not(.action-bar-light) input[type="text"] {
+.notif-actions-bar:not(.action-bar-light) input[type='text'] {
   height: 28px !important;
   min-height: 28px !important;
   max-height: 28px !important;
@@ -3180,12 +3189,12 @@ button.btn-primary,
 button.btn-primary,
 .action-bar .btn-blue,
 .action-bar .btn-primary,
-.action-bar button[id*="add"],
-.action-bar button[id*="edit"] {
+.action-bar button[id*='add'],
+.action-bar button[id*='edit'] {
   background: #2563eb !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-primary:hover:not(:disabled),
 .btn-blue:hover:not(:disabled) {
@@ -3196,12 +3205,12 @@ button.btn-primary,
 .btn-warning,
 .action-bar .btn-amber,
 .action-bar .btn-warning,
-.action-bar button[id*="reupload"],
-.action-bar button[id*="active"] {
+.action-bar button[id*='reupload'],
+.action-bar button[id*='active'] {
   background: #f59e0b !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-amber:hover:not(:disabled),
 .btn-warning:hover:not(:disabled) {
@@ -3212,12 +3221,12 @@ button.btn-primary,
 .btn-green,
 .action-bar .btn-success,
 .action-bar .btn-green,
-.action-bar button[id*="verify"],
-.action-bar button[id*="approve"] {
+.action-bar button[id*='verify'],
+.action-bar button[id*='approve'] {
   background: #10b981 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-success:hover:not(:disabled),
 .btn-green:hover:not(:disabled) {
@@ -3228,12 +3237,12 @@ button.btn-primary,
 .btn-red,
 .action-bar .btn-danger,
 .action-bar .btn-red,
-.action-bar button[id*="delete"],
-.action-bar button[id*="unverify"] {
+.action-bar button[id*='delete'],
+.action-bar button[id*='unverify'] {
   background: #ef4444 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-danger:hover:not(:disabled),
 .btn-red:hover:not(:disabled) {
@@ -3242,11 +3251,11 @@ button.btn-primary,
 
 .btn-purple,
 .action-bar .btn-purple,
-.action-bar button[id*="download"] {
+.action-bar button[id*='download'] {
   background: #8b5cf6 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-purple:hover:not(:disabled) {
   background: #7c3aed !important;
@@ -3254,11 +3263,11 @@ button.btn-primary,
 
 .btn-gray,
 .action-bar .btn-gray,
-.action-bar button[id*="view"] {
+.action-bar button[id*='view'] {
   background: #6b7280 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 .btn-gray:hover:not(:disabled) {
   background: #4b5563 !important;
@@ -3266,20 +3275,20 @@ button.btn-primary,
 
 .btn-dark-grey,
 .action-bar .btn-dark-grey,
-.action-bar button[id*="clear"] {
+.action-bar button[id*='clear'] {
   background: #374151 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 .btn-neutral,
 .action-bar .btn-neutral,
-.action-bar button[id*="refresh"] {
+.action-bar button[id*='refresh'] {
   background: #475569 !important;
   color: #ffffff !important;
   border: none !important;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Master Disabled Button Override */
@@ -3320,7 +3329,9 @@ button:disabled svg {
   border-radius: 4px !important;
   padding: 0 8px !important;
   box-sizing: border-box !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease !important;
 }
 
 .search-box:focus-within {
@@ -3417,7 +3428,9 @@ button:disabled svg {
   border-radius: 4px !important;
   box-sizing: border-box !important;
   outline: none !important;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease !important;
 }
 
 .img-slot-path-input:focus {
@@ -3513,16 +3526,24 @@ html {
 /* Sidebar nav link transitions */
 .sidebar-nav-link,
 .nav-item,
-[class*="sidebar-link"],
-[class*="nav-link"] {
-  transition: background 0.15s ease, color 0.15s ease, transform 0.12s ease !important;
+[class*='sidebar-link'],
+[class*='nav-link'] {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.12s ease !important;
 }
 
 /* Button hover micro-animations */
 button,
 .btn {
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-              box-shadow 0.15s ease, opacity 0.15s ease, transform 0.1s ease !important;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.1s ease !important;
 }
 
 button:active,
@@ -3542,10 +3563,11 @@ button:disabled:active,
 .stat-card,
 .dashboard-card,
 .info-card,
-[class*="stat-block"],
-[class*="card-block"] {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
+[class*='stat-block'],
+[class*='card-block'] {
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .stat-card:hover,
@@ -3563,37 +3585,44 @@ table tbody tr {
 
 /* Drawer slide-in */
 .drawer,
-[class*="drawer-panel"],
-[class*="side-drawer"] {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.22s ease !important;
+[class*='drawer-panel'],
+[class*='side-drawer'] {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease !important;
 }
 
 /* Modal scale-in */
 .center-modal-panel,
-[class*="modal-panel"],
-[class*="modal-content"] {
-  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.18s ease !important;
+[class*='modal-panel'],
+[class*='modal-content'] {
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.18s ease !important;
 }
 
 /* Badge / status pill hover */
 .badge,
 .status-badge,
-[class*="status-pill"],
-[class*="count-badge"] {
-  transition: transform 0.12s ease, opacity 0.12s ease !important;
+[class*='status-pill'],
+[class*='count-badge'] {
+  transition:
+    transform 0.12s ease,
+    opacity 0.12s ease !important;
 }
 
 /* Input focus smooth border glow */
 input,
 select,
 textarea {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease !important;
 }
 
 /* Link hover underline effect */
 a {
-  transition: color 0.15s ease, opacity 0.15s ease !important;
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease !important;
 }
-

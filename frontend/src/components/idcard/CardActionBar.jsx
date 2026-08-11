@@ -3,7 +3,16 @@ import { Download, Upload, Trash2, CheckCircle2, RefreshCw, Eraser, Plus } from 
 
 export default function CardActionBar({ selectedCount = 0, onAddCard, onUploadPhotos, onExportModal, onClearPending }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '1.25rem',
+        flexWrap: 'wrap',
+        gap: '1rem',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <button
           onClick={onAddCard}

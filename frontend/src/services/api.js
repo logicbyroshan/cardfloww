@@ -709,11 +709,9 @@ export const schemaApi = {
 
   /** POST /api/group/<group_id>/table/create-from-xlsx/ — create table from uploaded XLSX */
   createTableFromXlsx: async (groupId, formData) => {
-    const res = await apiClient.post(
-      `/api/group/${groupId}/table/create-from-xlsx/`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
+    const res = await apiClient.post(`/api/group/${groupId}/table/create-from-xlsx/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data;
   },
 

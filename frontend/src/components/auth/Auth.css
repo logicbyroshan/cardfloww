@@ -3,23 +3,45 @@
    ============================================================ */
 
 @keyframes floatProduct1 {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-16px) rotate(3deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(3deg);
+  }
 }
 
 @keyframes floatProduct2 {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(18px) rotate(-4deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(18px) rotate(-4deg);
+  }
 }
 
 @keyframes floatProduct3 {
-  0%, 100% { transform: scale(1) translateY(0px); }
-  50% { transform: scale(1.05) translateY(-14px); }
+  0%,
+  100% {
+    transform: scale(1) translateY(0px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-14px);
+  }
 }
 
 @keyframes pulseGlow {
-  0%, 100% { opacity: 0.65; transform: scale(1); }
-  50% { opacity: 0.88; transform: scale(1.08); }
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.08);
+  }
 }
 
 /* Fullscreen Canvas with CardFlow Indigo-Violet Radial Glow */
@@ -32,7 +54,11 @@
   justify-content: center;
   overflow: hidden;
   background: radial-gradient(circle at 50% 45%, #667eea 0%, #4338ca 35%, #2e1065 70%, #0f0728 100%);
-  font-family: "Saira Semi Condensed", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Saira Semi Condensed',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -45,7 +71,12 @@
   transform: translate(-50%, -50%);
   width: min(1000px, 92vw);
   height: min(1000px, 92vh);
-  background: radial-gradient(circle, rgba(129, 140, 248, 0.45) 0%, rgba(102, 126, 234, 0.15) 50%, rgba(15, 7, 40, 0) 75%);
+  background: radial-gradient(
+    circle,
+    rgba(129, 140, 248, 0.45) 0%,
+    rgba(102, 126, 234, 0.15) 50%,
+    rgba(15, 7, 40, 0) 75%
+  );
   filter: blur(95px);
   pointer-events: none;
   z-index: 1;
@@ -70,7 +101,9 @@
   color: #ffffff;
   z-index: 10;
   box-sizing: border-box;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .auth-card:hover {
@@ -210,7 +243,9 @@
   color: rgba(255, 255, 255, 0.88);
   text-decoration: none;
   cursor: pointer;
-  transition: color 0.2s ease, text-decoration 0.2s ease;
+  transition:
+    color 0.2s ease,
+    text-decoration 0.2s ease;
   background: none;
   border: none;
   padding: 0;

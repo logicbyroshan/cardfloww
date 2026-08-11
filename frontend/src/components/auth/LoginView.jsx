@@ -24,7 +24,11 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         setError('Invalid credentials. Please try again.');
       } else {
         // Fallback for dev / offline mode: auto-detect role from username
-        const role = username.includes('manager') ? 'client' : username.includes('assistant') ? 'assistant' : 'super_admin';
+        const role = username.includes('manager')
+          ? 'client'
+          : username.includes('assistant')
+            ? 'assistant'
+            : 'super_admin';
         onLoginSuccess?.({ username: username || 'admin', role });
       }
     } finally {
@@ -78,15 +82,20 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         </div>
 
         <div className="auth-flex-row">
-          <label style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.88)', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+          <label
+            style={{
+              fontSize: '12px',
+              color: 'rgba(255, 255, 255, 0.88)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+            }}
+          >
             <input type="checkbox" defaultChecked style={{ accentColor: '#818cf8' }} />
             Remember me
           </label>
-          <button
-            type="button"
-            className="auth-link"
-            onClick={() => onSwitchTab?.('forgot')}
-          >
+          <button type="button" className="auth-link" onClick={() => onSwitchTab?.('forgot')}>
             Forgot Password?
           </button>
         </div>
@@ -107,10 +116,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
 
       <div className="auth-footer" style={{ marginTop: '26px' }}>
         Protected Enterprise Platform — Need help?{' '}
-        <button
-          type="button"
-          onClick={() => alert('Contact System Administrator at admin@adarshbhopal.in')}
-        >
+        <button type="button" onClick={() => alert('Contact System Administrator at admin@adarshbhopal.in')}>
           Contact Admin
         </button>
       </div>

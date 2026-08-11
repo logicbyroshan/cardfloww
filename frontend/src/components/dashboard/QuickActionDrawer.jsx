@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, UserPlus, Building, Mail, Send, Shield, User, Cog, List, RefreshCw, Plus, Search, Eye, EyeOff, Camera, Link, Save, Layers, CheckSquare
+  X,
+  UserPlus,
+  Building,
+  Mail,
+  Send,
+  Shield,
+  User,
+  Cog,
+  List,
+  RefreshCw,
+  Plus,
+  Search,
+  Eye,
+  EyeOff,
+  Camera,
+  Link,
+  Save,
+  Layers,
+  CheckSquare,
 } from 'lucide-react';
 import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, panelApi } from '../../services/api';
 
@@ -10,43 +28,56 @@ import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, panelA
    ───────────────────────────────────────────────────────────────────────────── */
 function ToggleSwitch({ checked, onChange, isHeader = false }) {
   return (
-    <label style={{
-      position: 'relative',
-      display: 'inline-block',
-      width: '38px',
-      height: '20px',
-      flexShrink: 0,
-      cursor: 'pointer',
-    }}>
+    <label
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: '38px',
+        height: '20px',
+        flexShrink: 0,
+        cursor: 'pointer',
+      }}
+    >
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         style={{ opacity: 0, width: 0, height: 0 }}
       />
-      <span style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: isHeader
-          ? (checked ? '#ffffff' : 'rgba(255, 255, 255, 0.35)')
-          : (checked ? '#2563eb' : '#cbd5e1'),
-        borderRadius: '20px',
-        transition: 'background-color 0.2s ease',
-        border: isHeader ? '1px solid rgba(255, 255, 255, 0.4)' : 'none',
-      }}>
-        <span style={{
+      <span
+        style={{
           position: 'absolute',
-          content: '""',
-          height: '14px',
-          width: '14px',
-          left: '3px',
-          bottom: '3px',
-          backgroundColor: isHeader ? (checked ? '#2563eb' : '#ffffff') : '#ffffff',
-          borderRadius: '50%',
-          transition: 'transform 0.2s ease',
-          transform: checked ? 'translateX(18px)' : 'translateX(0)',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        }} />
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: isHeader
+            ? checked
+              ? '#ffffff'
+              : 'rgba(255, 255, 255, 0.35)'
+            : checked
+              ? '#2563eb'
+              : '#cbd5e1',
+          borderRadius: '20px',
+          transition: 'background-color 0.2s ease',
+          border: isHeader ? '1px solid rgba(255, 255, 255, 0.4)' : 'none',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            content: '""',
+            height: '14px',
+            width: '14px',
+            left: '3px',
+            bottom: '3px',
+            backgroundColor: isHeader ? (checked ? '#2563eb' : '#ffffff') : '#ffffff',
+            borderRadius: '50%',
+            transition: 'transform 0.2s ease',
+            transform: checked ? 'translateX(18px)' : 'translateX(0)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          }}
+        />
       </span>
     </label>
   );
@@ -62,7 +93,10 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
         className="drawer-overlay-backdrop"
         style={{
           position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: 'rgba(15, 23, 42, 0.65)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
@@ -75,7 +109,9 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
         className="side-drawer-panel"
         style={{
           position: 'fixed',
-          top: 0, right: 0, bottom: 0,
+          top: 0,
+          right: 0,
+          bottom: 0,
           width: actionType === 'message' ? '760px' : '640px',
           maxWidth: '95vw',
           height: '100vh',
@@ -91,14 +127,22 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
         {(actionType === 'add-client' || actionType === 'edit-client') && (
           <OriginalClientDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
         )}
-        {(actionType === 'add-operator' || actionType === 'edit-operator' || actionType === 'add-staff' || actionType === 'edit-staff') && (
+        {(actionType === 'add-operator' ||
+          actionType === 'edit-operator' ||
+          actionType === 'add-staff' ||
+          actionType === 'edit-staff') && (
           <OriginalOperatorDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
         )}
         {actionType === 'assign-operator' && (
           <AssignOperatorOrganisationsForm onClose={onClose} addToast={addToast} initialData={initialData} />
         )}
         {actionType === 'assign-photographer' && (
-          <AssignOperatorOrganisationsForm onClose={onClose} addToast={addToast} initialData={initialData} titleOverride="Assign Organisations to Photographer" />
+          <AssignOperatorOrganisationsForm
+            onClose={onClose}
+            addToast={addToast}
+            initialData={initialData}
+            titleOverride="Assign Organisations to Photographer"
+          />
         )}
         {(actionType === 'add-assistant' || actionType === 'edit-assistant') && (
           <OriginalAssistantDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
@@ -109,9 +153,7 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
         {(actionType === 'add-photographer' || actionType === 'edit-photographer') && (
           <OriginalPhotographerDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
         )}
-        {actionType === 'message' && (
-          <OriginalMessageDrawerForm onClose={onClose} addToast={addToast} />
-        )}
+        {actionType === 'message' && <OriginalMessageDrawerForm onClose={onClose} addToast={addToast} />}
       </div>
 
       <style>{`
@@ -129,7 +171,6 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
   );
 }
 
-
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    1. Add New Organisation Drawer
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -139,7 +180,11 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     name: initialData?.name || '',
     email: initialData?.email || '',
     phone: initialData?.phone || '',
-    status: initialData ? (initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false') : 'true',
+    status: initialData
+      ? initialData.is_active || initialData.status === 'active' || initialData.status === true
+        ? 'true'
+        : 'false'
+      : 'true',
     passwordOption: 'custom',
     password: '',
   });
@@ -151,7 +196,8 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
         name: initialData.name || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
-        status: initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false',
+        status:
+          initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false',
         passwordOption: 'custom',
         password: '',
       });
@@ -159,16 +205,28 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
   }, [initialData]);
 
   const [groupPerms, setGroupPerms] = useState({
-    add: true, edit: true, list: true, delete: true, status: true,
+    add: true,
+    edit: true,
+    list: true,
+    delete: true,
+    status: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true, verified: true, pool: true, approved: true, download: true,
+    pending: true,
+    verified: true,
+    pool: true,
+    approved: true,
+    download: true,
   });
 
   const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true, reprint_confirmed: true,
-    card_add: true, card_edit: true, card_verify: true, card_approve: true,
+    reprint_pending: true,
+    reprint_confirmed: true,
+    card_add: true,
+    card_edit: true,
+    card_verify: true,
+    card_approve: true,
   });
 
   const [saving, setSaving] = useState(false);
@@ -266,20 +324,23 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     }
   };
 
-
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
       {/* 1. Header (Fixed Top) */}
-      <div style={{
-        background: '#2563eb',
-        color: '#fff',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <UserPlus size={18} />
           <span>{isEditing ? 'Edit Organisation Details' : 'Add New Organisation'}</span>
@@ -287,35 +348,56 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+          }}
         >
           <X size={18} />
         </button>
       </div>
 
       {/* 2. Scrollable Body Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
-        
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         {/* Section 1: Organisation Information */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '14px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
             <Building size={15} /> Organisation Information
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+              <label
+                style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+              >
                 Organisation Name <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
@@ -324,13 +406,24 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter organisation / school name"
-                style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  fontFamily: 'var(--font-family)',
+                }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Email <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -339,39 +432,89 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter email address"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Phone</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Phone
+                </label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="Enter phone number (optional)"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Status</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Status
+                </label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="false">Inactive</option>
                   <option value="true">Active</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Password Option</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Password Option
+                </label>
                 <select
                   value={formData.passwordOption}
                   onChange={(e) => setFormData({ ...formData, passwordOption: e.target.value })}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="custom">Custom Password</option>
                   <option value="phone">Use Phone Number</option>
@@ -381,7 +524,9 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
 
             {formData.passwordOption === 'custom' && (
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Password <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -391,12 +536,30 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder="Enter custom password"
-                    style={{ width: '100%', height: '36px', padding: '0 36px 0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                    style={{
+                      width: '100%',
+                      height: '36px',
+                      padding: '0 36px 0 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      outline: 'none',
+                      fontFamily: 'var(--font-family)',
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer' }}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                    }}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -408,33 +571,48 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
 
         {/* Section 2: User Permission */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '14px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
             <Shield size={15} /> User Permission
           </div>
 
           {/* Category 1: GROUP SETTINGS */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Cog size={13} /> TABLE SETTINGS
               </div>
               <ToggleSwitch
                 checked={Object.values(groupPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms(prev => {
+                  setGroupPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -448,10 +626,21 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'delete', label: 'Delete Template' },
                 { key: 'status', label: 'Status Template' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -461,16 +650,29 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 2: ID CARD ACTION LIST */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <List size={13} /> ID CARD ACTION LIST
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
                 onChange={(val) => {
-                  setActionPerms(prev => {
+                  setActionPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -484,10 +686,21 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'approved', label: 'Approved List' },
                 { key: 'download', label: 'Download List' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!actionPerms[key]}
-                    onChange={(v) => setActionPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setActionPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -497,16 +710,29 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 3: REPRINT & CARD ACTIONS */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <RefreshCw size={13} /> REPRINT & CARD ACTIONS
               </div>
               <ToggleSwitch
                 checked={Object.values(reprintPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms(prev => {
+                  setReprintPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -521,10 +747,21 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'card_verify', label: 'Verify Card' },
                 { key: 'card_approve', label: 'Approve Card' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -535,18 +772,20 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
       </div>
 
       {/* 3. STICKY FOOTER */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 18px',
-        background: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: '10px',
-        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
-        zIndex: 10,
-      }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+          zIndex: 10,
+        }}
+      >
         <button
           type="button"
           onClick={onClose}
@@ -561,7 +800,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
           <X size={14} /> Cancel
@@ -580,10 +819,11 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
-          <Save size={14} /> {saving ? (isEditing ? 'Savingâ€¦' : 'Addingâ€¦') : (isEditing ? 'Save Changes' : '+ Add Organisation')}
+          <Save size={14} />{' '}
+          {saving ? (isEditing ? 'Savingâ€¦' : 'Addingâ€¦') : isEditing ? 'Save Changes' : '+ Add Organisation'}
         </button>
       </div>
     </form>
@@ -599,7 +839,11 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
-    initialData ? (initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false') : 'true'
+    initialData
+      ? initialData.is_active || initialData.status === 'active' || initialData.status === true
+        ? 'true'
+        : 'false'
+      : 'true'
   );
   const [passwordOption, setPasswordOption] = useState('custom');
   const [password, setPassword] = useState('');
@@ -610,21 +854,35 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       setOperatorName(initialData.name || initialData.full_name || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
-      setStatus(initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false');
+      setStatus(
+        initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
+      );
     }
   }, [initialData]);
 
   const [groupPerms, setGroupPerms] = useState({
-    add: true, edit: true, list: true, delete: true, status: true,
+    add: true,
+    edit: true,
+    list: true,
+    delete: true,
+    status: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true, verified: true, pool: true, approved: true, download: true,
+    pending: true,
+    verified: true,
+    pool: true,
+    approved: true,
+    download: true,
   });
 
   const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true, reprint_confirmed: true,
-    card_add: true, card_edit: true, card_verify: true, card_approve: true,
+    reprint_pending: true,
+    reprint_confirmed: true,
+    card_add: true,
+    card_edit: true,
+    card_verify: true,
+    card_approve: true,
   });
 
   const [saving, setSaving] = useState(false);
@@ -642,7 +900,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       phone,
       status: status === 'true',
       password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : (phone || '12345678'),
+      password: passwordOption === 'custom' ? password : phone || '12345678',
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
@@ -657,11 +915,17 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     try {
       let res;
       if (isEditing) {
-        try { res = await operatorApi.update(initialData.id, payload); }
-        catch { res = await staffApi.update(initialData.id, payload); }
+        try {
+          res = await operatorApi.update(initialData.id, payload);
+        } catch {
+          res = await staffApi.update(initialData.id, payload);
+        }
       } else {
-        try { res = await operatorApi.create(payload); }
-        catch { res = await staffApi.create(payload); }
+        try {
+          res = await operatorApi.create(payload);
+        } catch {
+          res = await staffApi.create(payload);
+        }
       }
       if (res?.operator || res?.staff) {
         itemToSave = { ...itemToSave, ...(res.operator || res.staff || res), name: res.name || operatorName };
@@ -683,18 +947,22 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
       {/* 1. Header (Fixed Top) */}
-      <div style={{
-        background: '#2563eb',
-        color: '#fff',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <UserPlus size={18} />
           <span>{isEditing ? 'Edit Operator Account' : 'Add New Operator'}</span>
@@ -702,35 +970,56 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+          }}
         >
           <X size={18} />
         </button>
       </div>
 
       {/* 2. Scrollable Body Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
-        
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         {/* Section 1: Operator Information */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '12px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <User size={15} /> Operator Information
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+              <label
+                style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+              >
                 Operator Name <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
@@ -739,13 +1028,24 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 value={operatorName}
                 onChange={(e) => setOperatorName(e.target.value)}
                 placeholder="Enter operator name"
-                style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  fontFamily: 'var(--font-family)',
+                }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Email <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -754,39 +1054,89 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter email address"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Phone</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Phone
+                </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Enter phone number (optional)"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Status</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Status
+                </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="false">Inactive</option>
                   <option value="true">Active</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Password Option</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Password Option
+                </label>
                 <select
                   value={passwordOption}
                   onChange={(e) => setPasswordOption(e.target.value)}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="custom">Custom Password</option>
                   <option value="phone">Use Phone Number</option>
@@ -796,7 +1146,9 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
 
             {passwordOption === 'custom' && (
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Password <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -806,12 +1158,30 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter custom password"
-                    style={{ width: '100%', height: '36px', padding: '0 36px 0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                    style={{
+                      width: '100%',
+                      height: '36px',
+                      padding: '0 36px 0 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      outline: 'none',
+                      fontFamily: 'var(--font-family)',
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer' }}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                    }}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -823,33 +1193,48 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
 
         {/* Section 2: Operator Permissions */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '14px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
             <Shield size={15} /> Operator Permissions
           </div>
 
           {/* Category 1: GROUP SETTINGS */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Cog size={13} /> TABLE SETTINGS
               </div>
               <ToggleSwitch
                 checked={Object.values(groupPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms(prev => {
+                  setGroupPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -863,10 +1248,21 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'delete', label: 'Delete Template' },
                 { key: 'status', label: 'Status Template' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -876,16 +1272,29 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 2: ID CARD ACTION LIST */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <List size={13} /> ID CARD ACTION LIST
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
                 onChange={(val) => {
-                  setActionPerms(prev => {
+                  setActionPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -899,10 +1308,21 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'approved', label: 'Approved List' },
                 { key: 'download', label: 'Download List' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!actionPerms[key]}
-                    onChange={(v) => setActionPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setActionPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -912,16 +1332,29 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 3: REPRINT & CARD ACTIONS */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <RefreshCw size={13} /> REPRINT & CARD ACTIONS
               </div>
               <ToggleSwitch
                 checked={Object.values(reprintPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms(prev => {
+                  setReprintPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -936,10 +1369,21 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'card_verify', label: 'Verify Card' },
                 { key: 'card_approve', label: 'Approve Card' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -950,18 +1394,20 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       </div>
 
       {/* 3. STICKY FOOTER */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 18px',
-        background: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: '10px',
-        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
-        zIndex: 10,
-      }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+          zIndex: 10,
+        }}
+      >
         <button
           type="button"
           onClick={onClose}
@@ -976,7 +1422,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
           <X size={14} /> Cancel
@@ -995,10 +1441,11 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
-          <Save size={14} /> {saving ? (isEditing ? 'Savingâ€¦' : 'Creatingâ€¦') : (isEditing ? 'Save Changes' : '+ Add Operator')}
+          <Save size={14} />{' '}
+          {saving ? (isEditing ? 'Savingâ€¦' : 'Creatingâ€¦') : isEditing ? 'Save Changes' : '+ Add Operator'}
         </button>
       </div>
     </form>
@@ -1015,10 +1462,11 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    clientApi.getAllForAssignment()
+    clientApi
+      .getAllForAssignment()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.clients || data?.results || [];
-        setClients(list.map(c => ({ id: String(c.id), name: c.name || c.school_name || `Organisation #${c.id}` })));
+        setClients(list.map((c) => ({ id: String(c.id), name: c.name || c.school_name || `Organisation #${c.id}` })));
       })
       .catch(() => {
         setClients([
@@ -1030,20 +1478,18 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
       });
   }, []);
 
-  const filteredClients = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredClients = clients.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const toggleSelectAll = () => {
     if (selectedClients.length === filteredClients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(filteredClients.map(c => c.id));
+      setSelectedClients(filteredClients.map((c) => c.id));
     }
   };
 
   const toggleClient = (id) => {
-    setSelectedClients(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelectedClients((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const handleSubmit = async (e) => {
@@ -1062,54 +1508,145 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      <div style={{ background: '#2563eb', color: '#fff', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <Link size={18} />
           <span>Assign Organisations to Operator</span>
         </div>
-        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Building size={15} /> Select Assigned Organisations ({selectedClients.length})
             </div>
             <div style={{ display: 'flex', gap: '8px', fontSize: '11px' }}>
-              <button type="button" onClick={toggleSelectAll} style={{ background: 'none', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>Select All</button>
-              <button type="button" onClick={() => setSelectedClients([])} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', textDecoration: 'underline' }}>Clear</button>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedClients([])}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.8)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Clear
+              </button>
             </div>
           </div>
 
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc' }}>
             <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search
+                size={13}
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#94a3b8',
+                }}
+              />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search organisation school..."
-                style={{ width: '100%', height: '32px', paddingLeft: '30px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  height: '32px',
+                  paddingLeft: '30px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
               />
             </div>
 
-            <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {filteredClients.map(c => {
+            <div
+              style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}
+            >
+              {filteredClients.map((c) => {
                 const isChecked = selectedClients.includes(c.id);
                 return (
                   <label
                     key={c.id}
                     onClick={() => toggleClient(c.id)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '8px 12px', borderRadius: '6px', border: '1px solid',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid',
                       borderColor: isChecked ? '#bfdbfe' : '#e2e8f0',
                       background: isChecked ? '#eff6ff' : '#ffffff',
-                      cursor: 'pointer', fontSize: '13px', color: '#334155', fontWeight: 500
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      color: '#334155',
+                      fontWeight: 500,
                     }}
                   >
                     <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ accentColor: '#2563eb' }} />
@@ -1122,11 +1659,51 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '12px 18px', background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
-        <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '8px 16px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontWeight: 600,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
           <X size={14} /> Cancel
         </button>
-        <button type="submit" disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: '8px 18px',
+            background: '#2563eb',
+            border: 'none',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
           <Save size={14} /> {saving ? 'Savingâ€¦' : 'Save Assignments'}
         </button>
       </div>
@@ -1140,12 +1717,18 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
 function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
   const isEditing = !!initialData;
   const [organisations, setOrganisations] = useState([]);
-  const [selectedOrgId, setSelectedOrgId] = useState(initialData?.organisation_id || initialData?.organisation?.id || '');
+  const [selectedOrgId, setSelectedOrgId] = useState(
+    initialData?.organisation_id || initialData?.organisation?.id || ''
+  );
   const [managerName, setManagerName] = useState(initialData?.name || initialData?.full_name || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
-    initialData ? (initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false') : 'true'
+    initialData
+      ? initialData.is_active || initialData.status === 'active' || initialData.status === true
+        ? 'true'
+        : 'false'
+      : 'true'
   );
   const [passwordOption, setPasswordOption] = useState('custom');
   const [password, setPassword] = useState('');
@@ -1159,7 +1742,9 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
         const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         const merged = [...api];
-        local.forEach(lc => { if (!merged.find(ac => String(ac.id) === String(lc.id))) merged.push(lc); });
+        local.forEach((lc) => {
+          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
+        });
         setOrganisations(merged);
         if (merged.length > 0 && !selectedOrgId) setSelectedOrgId(String(merged[0].id));
       } catch {
@@ -1181,7 +1766,9 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
         setManagerName(initialData.name || initialData.full_name || '');
         setEmail(initialData.email || '');
         setPhone(initialData.phone || '');
-        setStatus(initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false');
+        setStatus(
+          initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
+        );
       }
     }
   }, [initialData]);
@@ -1193,7 +1780,10 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
       return;
     }
     setSaving(true);
-    const selOrg = organisations.find(o => String(o.id) === String(selectedOrgId)) || { id: selectedOrgId, name: 'Organisation' };
+    const selOrg = organisations.find((o) => String(o.id) === String(selectedOrgId)) || {
+      id: selectedOrgId,
+      name: 'Organisation',
+    };
 
     const payload = {
       name: managerName,
@@ -1204,7 +1794,7 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
       organisation_id: selOrg.id,
       status: status === 'true' ? 'active' : 'inactive',
       password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : (phone || '12345678'),
+      password: passwordOption === 'custom' ? password : phone || '12345678',
     };
 
     const itemToSave = {
@@ -1233,7 +1823,10 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
 
     try {
       const storedMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const updatedMgrs = [itemToSave, ...storedMgrs.filter(m => String(m.id) !== String(itemToSave.id) && m.email !== itemToSave.email)];
+      const updatedMgrs = [
+        itemToSave,
+        ...storedMgrs.filter((m) => String(m.id) !== String(itemToSave.id) && m.email !== itemToSave.email),
+      ];
       localStorage.setItem('cf_custom_managers', JSON.stringify(updatedMgrs));
     } catch (_) {}
 
@@ -1245,68 +1838,227 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      <div style={{ background: '#2563eb', color: '#fff', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <UserPlus size={18} />
           <span>{isEditing ? 'Edit Manager Account' : 'Add New Manager Account'}</span>
         </div>
-        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <Building size={15} /> Select Organisation
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
+            <label
+              style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}
+            >
               Select Organisation to which this Manager belongs <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <select
               value={selectedOrgId}
               onChange={(e) => setSelectedOrgId(e.target.value)}
-              style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', fontWeight: 600, color: '#1e293b', outline: 'none', background: '#f8fafc', cursor: 'pointer' }}
+              style={{
+                width: '100%',
+                height: '38px',
+                padding: '0 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#1e293b',
+                outline: 'none',
+                background: '#f8fafc',
+                cursor: 'pointer',
+              }}
             >
-              {organisations.map(o => (
-                <option key={o.id} value={o.id}>{o.name}</option>
+              {organisations.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
               ))}
             </select>
           </div>
         </div>
 
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <User size={15} /> Manager Information
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Manager Name <span style={{ color: '#ef4444' }}>*</span></label>
-              <input type="text" required value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Enter manager name" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+              <label
+                style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+              >
+                Manager Name <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={managerName}
+                onChange={(e) => setManagerName(e.target.value)}
+                placeholder="Enter manager name"
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Email <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter email" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Email <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter email"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Phone</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Enter phone"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', background: '#fff' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    background: '#fff',
+                  }}
+                >
                   <option value="true">Active</option>
                   <option value="false">Inactive</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Password Option</label>
-                <select value={passwordOption} onChange={(e) => setPasswordOption(e.target.value)} style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', background: '#fff' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Password Option
+                </label>
+                <select
+                  value={passwordOption}
+                  onChange={(e) => setPasswordOption(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    background: '#fff',
+                  }}
+                >
                   <option value="custom">Custom Password</option>
                   <option value="phone">Use Phone Number</option>
                 </select>
@@ -1314,10 +2066,42 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
             </div>
             {passwordOption === 'custom' && (
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Password <span style={{ color: '#ef4444' }}>*</span></label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Password <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <div style={{ position: 'relative' }}>
-                  <input type={showPassword ? 'text' : 'password'} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter password" style={{ width: '100%', height: '36px', padding: '0 36px 0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    style={{
+                      width: '100%',
+                      height: '36px',
+                      padding: '0 36px 0 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                    }}
+                  >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
@@ -1327,9 +2111,48 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '12px 18px', background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
-        <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}><X size={14} /> Cancel</button>
-        <button type="submit" disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '8px 16px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontWeight: 600,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
+          <X size={14} /> Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: '8px 18px',
+            background: '#2563eb',
+            border: 'none',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
           <Save size={14} /> {saving ? 'Saving...' : isEditing ? 'Save Changes' : '+ Add Manager'}
         </button>
       </div>
@@ -1350,7 +2173,11 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
-    initialData ? (initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false') : 'true'
+    initialData
+      ? initialData.is_active || initialData.status === 'active' || initialData.status === true
+        ? 'true'
+        : 'false'
+      : 'true'
   );
   const [passwordOption, setPasswordOption] = useState('custom');
   const [password, setPassword] = useState('');
@@ -1361,21 +2188,35 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
       setAssistantName(initialData.name || initialData.full_name || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
-      setStatus(initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false');
+      setStatus(
+        initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
+      );
     }
   }, [initialData]);
 
   const [groupPerms, setGroupPerms] = useState({
-    add: true, edit: true, list: true, delete: true, status: true,
+    add: true,
+    edit: true,
+    list: true,
+    delete: true,
+    status: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true, verified: true, pool: true, approved: true, download: true,
+    pending: true,
+    verified: true,
+    pool: true,
+    approved: true,
+    download: true,
   });
 
   const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true, reprint_confirmed: true,
-    card_add: true, card_edit: true, card_verify: true, card_approve: true,
+    reprint_pending: true,
+    reprint_confirmed: true,
+    card_add: true,
+    card_edit: true,
+    card_verify: true,
+    card_approve: true,
   });
 
   const [allClients, setAllClients] = useState([]);
@@ -1388,14 +2229,23 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
         const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         const merged = [...api];
-        localClients.forEach(lc => { if (!merged.find(ac => String(ac.id) === String(lc.id))) merged.push(lc); });
-        localMgrs.forEach(m => { if (!merged.find(ac => String(ac.id) === String(m.id))) merged.push({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') }); });
+        localClients.forEach((lc) => {
+          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
+        });
+        localMgrs.forEach((m) => {
+          if (!merged.find((ac) => String(ac.id) === String(m.id)))
+            merged.push({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') });
+        });
         setAllClients(merged);
         if (merged.length > 0 && (!selectedClient || selectedClient === '1')) setSelectedClient(String(merged[0].id));
       } catch {
-        const combined = [...localClients, ...localMgrs.map(m => ({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') }))];
+        const combined = [
+          ...localClients,
+          ...localMgrs.map((m) => ({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') })),
+        ];
         setAllClients(combined);
-        if (combined.length > 0 && (!selectedClient || selectedClient === '1')) setSelectedClient(String(combined[0].id));
+        if (combined.length > 0 && (!selectedClient || selectedClient === '1'))
+          setSelectedClient(String(combined[0].id));
       }
     })();
   }, []);
@@ -1416,7 +2266,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
       status: status === 'true',
       client: selectedClient || undefined,
       password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : (phone || '12345678'),
+      password: passwordOption === 'custom' ? password : phone || '12345678',
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
@@ -1455,18 +2305,22 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
       {/* 1. Header (Fixed Top) */}
-      <div style={{
-        background: '#2563eb',
-        color: '#fff',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <UserPlus size={18} />
           <span>{isEditing ? 'Edit Assistant Details' : 'Add New Assistant'}</span>
@@ -1474,35 +2328,57 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+          }}
         >
           <X size={18} />
         </button>
       </div>
 
       {/* 2. Scrollable Body Area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
-        
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         {/* Section 1: Organisation Selection (Pick 1 Client) */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '12px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <Building size={15} /> Select Organisation
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-              Select Organisation / Client to which this Assistant is created for <span style={{ color: '#ef4444' }}>*</span>
+            <label
+              style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}
+            >
+              Select Organisation / Client to which this Assistant is created for{' '}
+              <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <select
               value={selectedClient}
@@ -1519,10 +2395,10 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 outline: 'none',
                 fontFamily: 'var(--font-family)',
                 background: '#f8fafc',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
-              {allClients.map(c => (
+              {allClients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -1533,24 +2409,28 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
         {/* Section 2: Assistant Information */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '12px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <User size={15} /> Assistant Information
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+              <label
+                style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+              >
                 Assistant Name <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
@@ -1559,13 +2439,24 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 value={assistantName}
                 onChange={(e) => setAssistantName(e.target.value)}
                 placeholder="Enter assistant name"
-                style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  fontFamily: 'var(--font-family)',
+                }}
               />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Email <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -1574,39 +2465,89 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter email address"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Phone</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Phone
+                </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Enter phone number (optional)"
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                  }}
                 />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Status</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Status
+                </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="false">Inactive</option>
                   <option value="true">Active</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Password Option</label>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Password Option
+                </label>
                 <select
                   value={passwordOption}
                   onChange={(e) => setPasswordOption(e.target.value)}
-                  style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                    fontFamily: 'var(--font-family)',
+                    background: '#fff',
+                  }}
                 >
                   <option value="custom">Custom Password</option>
                   <option value="phone">Use Phone Number</option>
@@ -1616,7 +2557,9 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
             {passwordOption === 'custom' && (
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
                   Password <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -1626,12 +2569,30 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter custom password"
-                    style={{ width: '100%', height: '36px', padding: '0 36px 0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none', fontFamily: 'var(--font-family)' }}
+                    style={{
+                      width: '100%',
+                      height: '36px',
+                      padding: '0 36px 0 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      outline: 'none',
+                      fontFamily: 'var(--font-family)',
+                    }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#6b7280', cursor: 'pointer' }}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer',
+                    }}
                   >
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
@@ -1643,33 +2604,48 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
         {/* Section 3: Assistant Permissions */}
         <div>
-          <div style={{
-            background: '#2563eb',
-            color: '#fff',
-            padding: '8px 12px',
-            borderRadius: '6px',
-            fontWeight: 700,
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '14px'
-          }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '14px',
+            }}
+          >
             <Shield size={15} /> Assistant Permissions
           </div>
 
           {/* Category 1: GROUP SETTINGS */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Cog size={13} /> TABLE SETTINGS
               </div>
               <ToggleSwitch
                 checked={Object.values(groupPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms(prev => {
+                  setGroupPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -1683,10 +2659,21 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'delete', label: 'Delete Template' },
                 { key: 'status', label: 'Status Template' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -1696,16 +2683,29 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 2: ID CARD ACTION LIST */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <List size={13} /> ID CARD ACTION LIST
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
                 onChange={(val) => {
-                  setActionPerms(prev => {
+                  setActionPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -1719,10 +2719,21 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'approved', label: 'Approved List' },
                 { key: 'download', label: 'Download List' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!actionPerms[key]}
-                    onChange={(v) => setActionPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setActionPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -1732,16 +2743,29 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
           {/* Category 3: REPRINT & CARD ACTIONS */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <RefreshCw size={13} /> REPRINT & CARD ACTIONS
               </div>
               <ToggleSwitch
                 checked={Object.values(reprintPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms(prev => {
+                  setReprintPerms((prev) => {
                     const copy = { ...prev };
-                    Object.keys(copy).forEach(k => { copy[k] = val; });
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
                     return copy;
                   });
                 }}
@@ -1756,10 +2780,21 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'card_verify', label: 'Verify Card' },
                 { key: 'card_approve', label: 'Approve Card' },
               ].map(({ key, label }) => (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
                   <ToggleSwitch
                     checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms(prev => ({ ...prev, [key]: v }))}
+                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -1770,18 +2805,20 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
       </div>
 
       {/* 3. STICKY FOOTER */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 18px',
-        background: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: '10px',
-        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
-        zIndex: 10,
-      }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+          zIndex: 10,
+        }}
+      >
         <button
           type="button"
           onClick={onClose}
@@ -1796,7 +2833,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
           <X size={14} /> Cancel
@@ -1815,7 +2852,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px'
+            gap: '4px',
           }}
         >
           <Plus size={14} /> {saving ? 'Creating…' : '+ Add Assistant'}
@@ -1831,7 +2868,9 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
   const [search, setSearch] = useState('');
   const [allGroups, setAllGroups] = useState([]);
-  const [selectedGroups, setSelectedGroups] = useState(initialData?.assigned_groups || initialData?.allowed_table_ids || ['1', '2']);
+  const [selectedGroups, setSelectedGroups] = useState(
+    initialData?.assigned_groups || initialData?.allowed_table_ids || ['1', '2']
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -1845,8 +2884,8 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
         { id: '5', name: 'STAFF & TEACHERS' },
       ];
       const merged = [...defaultGroups];
-      customGroups.forEach(cg => {
-        if (!merged.some(g => String(g.id) === String(cg.id))) {
+      customGroups.forEach((cg) => {
+        if (!merged.some((g) => String(g.id) === String(cg.id))) {
           merged.push({ id: String(cg.id), name: cg.name || cg.group_name || `Group #${cg.id}` });
         }
       });
@@ -1862,12 +2901,10 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
     }
   }, []);
 
-  const filteredGroups = allGroups.filter(g => (g.name || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredGroups = allGroups.filter((g) => (g.name || '').toLowerCase().includes(search.toLowerCase()));
 
   const toggleGroup = (id) => {
-    setSelectedGroups(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelectedGroups((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const handleSubmit = async (e) => {
@@ -1880,7 +2917,7 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
         } catch (_) {}
 
         const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-        const updated = staffList.map(s => {
+        const updated = staffList.map((s) => {
           if (String(s.id) === String(initialData.id)) {
             return { ...s, assigned_groups: selectedGroups, allowed_table_ids: selectedGroups };
           }
@@ -1888,7 +2925,10 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
         });
         localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
       }
-      addToast?.(`Assigned ${selectedGroups.length} group(s) to ${initialData?.name || 'assistant'} successfully!`, 'success');
+      addToast?.(
+        `Assigned ${selectedGroups.length} group(s) to ${initialData?.name || 'assistant'} successfully!`,
+        'success'
+      );
       onClose();
       window.__reloadStaffList?.();
     } catch {
@@ -1899,20 +2939,60 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      <div style={{ background: '#2563eb', color: '#fff', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <Layers size={18} />
           <span>Assign Groups & Classes to {initialData?.name ? `"${initialData.name}"` : 'Assistant'}</span>
         </div>
-        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CheckSquare size={15} /> Select Classes / Groups ({selectedGroups.length})
             </div>
@@ -1920,29 +3000,55 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
 
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc' }}>
             <div style={{ position: 'relative', marginBottom: '10px' }}>
-              <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search
+                size={13}
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#94a3b8',
+                }}
+              />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search class or group..."
-                style={{ width: '100%', height: '32px', paddingLeft: '30px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  height: '32px',
+                  paddingLeft: '30px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
               />
             </div>
 
-            <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {filteredGroups.map(g => {
+            <div
+              style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}
+            >
+              {filteredGroups.map((g) => {
                 const isChecked = selectedGroups.includes(g.id);
                 return (
                   <label
                     key={g.id}
                     onClick={() => toggleGroup(g.id)}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '10px',
-                      padding: '8px 12px', borderRadius: '6px', border: '1px solid',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid',
                       borderColor: isChecked ? '#bfdbfe' : '#e2e8f0',
                       background: isChecked ? '#eff6ff' : '#ffffff',
-                      cursor: 'pointer', fontSize: '13px', color: '#334155', fontWeight: 500
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      color: '#334155',
+                      fontWeight: 500,
                     }}
                   >
                     <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ accentColor: '#2563eb' }} />
@@ -1955,18 +3061,57 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '12px 18px', background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
-        <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '8px 16px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontWeight: 600,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
           <X size={14} /> Cancel
         </button>
-        <button type="submit" disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: '8px 18px',
+            background: '#2563eb',
+            border: 'none',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
           <Save size={14} /> {saving ? 'Saving…' : 'Save Group Assignments'}
         </button>
       </div>
     </form>
   );
 }
-
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    4. Add New Photographer Drawer
@@ -1979,7 +3124,11 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
-    initialData ? (initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false') : 'true'
+    initialData
+      ? initialData.is_active || initialData.status === 'active' || initialData.status === true
+        ? 'true'
+        : 'false'
+      : 'true'
   );
   const [password, setPassword] = useState('');
 
@@ -1988,7 +3137,9 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
       setPhotographerName(initialData.name || initialData.full_name || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
-      setStatus(initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false');
+      setStatus(
+        initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
+      );
     }
   }, [initialData]);
 
@@ -2001,13 +3152,17 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
         const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         const merged = [...api];
-        local.forEach(lc => { if (!merged.find(ac => String(ac.id) === String(lc.id))) merged.push(lc); });
+        local.forEach((lc) => {
+          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
+        });
         setAllClients(merged);
-      } catch { setAllClients(local); }
+      } catch {
+        setAllClients(local);
+      }
     })();
   }, []);
 
-  const filteredClients = allClients.filter(c => (c.name || '').toLowerCase().includes(search.toLowerCase()));
+  const filteredClients = allClients.filter((c) => (c.name || '').toLowerCase().includes(search.toLowerCase()));
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -2062,39 +3217,121 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      <div style={{ background: '#2563eb', color: '#fff', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <Camera size={18} />
           <span>{isEditing ? 'Edit Photographer Details' : 'Add New Photographer'}</span>
         </div>
-        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '2px' }}
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#ffffff' }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '16px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          background: '#ffffff',
+        }}
+      >
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <Building size={15} /> Assigned Organisations ({selectedClients.length})
           </div>
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px', background: '#f8fafc' }}>
             <div style={{ position: 'relative', marginBottom: '8px' }}>
-              <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search
+                size={12}
+                style={{
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#94a3b8',
+                }}
+              />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search organisation school..."
-                style={{ width: '100%', height: '28px', paddingLeft: '26px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  height: '28px',
+                  paddingLeft: '26px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  outline: 'none',
+                }}
               />
             </div>
-            <div style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {filteredClients.map(c => {
+            <div
+              style={{ maxHeight: '140px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
+              {filteredClients.map((c) => {
                 const isChecked = selectedClients.includes(c.id);
                 return (
-                  <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '4px', border: '1px solid', borderColor: isChecked ? '#bfdbfe' : '#e2e8f0', background: isChecked ? '#eff6ff' : '#ffffff', cursor: 'pointer', fontSize: '12px' }}>
-                    <input type="checkbox" checked={isChecked} onChange={() => setSelectedClients(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])} style={{ accentColor: '#2563eb' }} />
+                  <label
+                    key={c.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 10px',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: isChecked ? '#bfdbfe' : '#e2e8f0',
+                      background: isChecked ? '#eff6ff' : '#ffffff',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() =>
+                        setSelectedClients((prev) =>
+                          prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
+                        )
+                      }
+                      style={{ accentColor: '#2563eb' }}
+                    />
                     <span>{c.name}</span>
                   </label>
                 );
@@ -2104,31 +3341,141 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
         </div>
 
         <div>
-          <div style={{ background: '#2563eb', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
             <User size={15} /> Photographer Information
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Photographer Name <span style={{ color: '#ef4444' }}>*</span></label>
-              <input type="text" required value={photographerName} onChange={(e) => setPhotographerName(e.target.value)} placeholder="Enter photographer name" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+              <label
+                style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+              >
+                Photographer Name <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={photographerName}
+                onChange={(e) => setPhotographerName(e.target.value)}
+                placeholder="Enter photographer name"
+                style={{
+                  width: '100%',
+                  height: '36px',
+                  padding: '0 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Email <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter email" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Email <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter email"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Phone</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter phone" style={{ width: '100%', height: '36px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '13px', outline: 'none' }} />
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Enter phone"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '0 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '12px 18px', background: '#ffffff', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
-        <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}><X size={14} /> Cancel</button>
-        <button type="submit" disabled={saving} style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}><Plus size={14} /> {saving ? 'Creatingâ€¦' : '+ Add Photographer'}</button>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '8px 16px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontWeight: 600,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
+          <X size={14} /> Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: '8px 18px',
+            background: '#2563eb',
+            border: 'none',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} /> {saving ? 'Creatingâ€¦' : '+ Add Photographer'}
+        </button>
       </div>
     </form>
   );
@@ -2155,20 +3502,18 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
     { id: '8', name: 'ANAND VIDYA MANDIR', isLive: false },
   ];
 
-  const filtered = clientList.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = clientList.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const toggleSelectAll = () => {
     if (selectedClients.length === filtered.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(filtered.map(c => c.id));
+      setSelectedClients(filtered.map((c) => c.id));
     }
   };
 
   const toggleSingle = (id) => {
-    setSelectedClients(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelectedClients((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const handleSend = (e) => {
@@ -2186,18 +3531,22 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
   };
 
   return (
-    <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}>
-      
+    <form
+      onSubmit={handleSend}
+      style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, flex: 1 }}
+    >
       {/* 1. Header (Fixed Top) */}
-      <div style={{
-        background: '#2563eb',
-        color: '#fff',
-        padding: '12px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
+      <div
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          padding: '12px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <Mail size={18} />
           <span>Adarsh Messenger Broadcast</span>
@@ -2205,7 +3554,15 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+          }}
         >
           <X size={18} />
         </button>
@@ -2213,50 +3570,141 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
 
       {/* 2. Scrollable Dual Panel Body */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', background: '#f8fafc', minHeight: 0 }}>
-        
         {/* Left Panel: Client Selector */}
-        <div style={{ width: '320px', borderRight: '1px solid #e2e8f0', background: '#ffffff', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{
+            width: '320px',
+            borderRight: '1px solid #e2e8f0',
+            background: '#ffffff',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           <div style={{ padding: '12px', borderBottom: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>Recipients ({selectedClients.length})</span>
+            <div
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}
+            >
+              <span style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>
+                Recipients ({selectedClients.length})
+              </span>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button type="button" onClick={toggleSelectAll} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Select All</button>
-                <button type="button" onClick={() => setSelectedClients([])} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Clear</button>
+                <button
+                  type="button"
+                  onClick={toggleSelectAll}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClients([])}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
               </div>
             </div>
             <div style={{ position: 'relative' }}>
-              <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <Search
+                size={12}
+                style={{
+                  position: 'absolute',
+                  left: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#94a3b8',
+                }}
+              />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search organisation school..."
-                style={{ width: '100%', height: '28px', paddingLeft: '26px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '11px', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  height: '28px',
+                  paddingLeft: '26px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  outline: 'none',
+                }}
               />
             </div>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {filtered.map(c => {
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '8px 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            {filtered.map((c) => {
               const isChecked = selectedClients.includes(c.id);
               return (
                 <div
                   key={c.id}
                   onClick={() => toggleSingle(c.id)}
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '7px 10px', borderRadius: '6px', border: '1px solid',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '7px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid',
                     borderColor: isChecked ? '#bfdbfe' : '#e2e8f0',
                     background: isChecked ? '#eff6ff' : '#ffffff',
-                    cursor: 'pointer', transition: 'all 0.12s',
+                    cursor: 'pointer',
+                    transition: 'all 0.12s',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                     <input type="checkbox" checked={isChecked} onChange={() => {}} style={{ accentColor: '#2563eb' }} />
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#334155',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {c.name}
+                    </span>
                   </div>
                   {c.isLive && (
-                    <span style={{ fontSize: '9px', fontWeight: 700, background: '#d1fae5', color: '#047857', padding: '1px 5px', borderRadius: '2px', flexShrink: 0 }}>Live</span>
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        background: '#d1fae5',
+                        color: '#047857',
+                        padding: '1px 5px',
+                        borderRadius: '2px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Live
+                    </span>
                   )}
                 </div>
               );
@@ -2265,13 +3713,38 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
         </div>
 
         {/* Right Panel: Composer & History */}
-        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0, overflowY: 'auto', background: '#ffffff' }}>
+        <div
+          style={{
+            flex: 1,
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+            minWidth: 0,
+            overflowY: 'auto',
+            background: '#ffffff',
+          }}
+        >
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>Message Type / Visibility</label>
+            <label
+              style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+            >
+              Message Type / Visibility
+            </label>
             <select
               value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
-              style={{ width: '100%', height: '34px', padding: '0 12px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', outline: 'none', fontFamily: 'var(--font-family)', background: '#fff' }}
+              style={{
+                width: '100%',
+                height: '34px',
+                padding: '0 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '12px',
+                outline: 'none',
+                fontFamily: 'var(--font-family)',
+                background: '#fff',
+              }}
             >
               <option value="permanent">Permanent Dashboard Notification Banner</option>
               <option value="temporary_24h">Temporary Banner (Expires in 24 Hours)</option>
@@ -2292,44 +3765,85 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
               value={msgText}
               onChange={(e) => setMsgText(e.target.value)}
               placeholder="Type notification or system announcement to broadcast to organisation dashboards..."
-              style={{ width: '100%', padding: '10px', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '12px', outline: 'none', fontFamily: 'var(--font-family)', resize: 'vertical' }}
+              style={{
+                width: '100%',
+                padding: '10px',
+                border: '1px solid #d1d5db',
+                borderRadius: '4px',
+                fontSize: '12px',
+                outline: 'none',
+                fontFamily: 'var(--font-family)',
+                resize: 'vertical',
+              }}
             />
           </div>
 
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 12px', background: '#f8fafc' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>Recent Broadcast Log</div>
+          <div
+            style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '10px 12px', background: '#f8fafc' }}
+          >
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb', marginBottom: '4px' }}>
+              Recent Broadcast Log
+            </div>
             <div style={{ fontSize: '11px', color: '#475569' }}>
               <strong>System Admin:</strong> "All photo corrections for Batch 2026 are completed."
-              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>Visible to 182 recipients â€¢ 2 hours ago</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
+                Visible to 182 recipients â€¢ 2 hours ago
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* 3. STICKY FOOTER */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 18px',
-        background: '#ffffff',
-        borderTop: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        gap: '10px',
-        boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
-        zIndex: 10,
-      }}>
+      <div
+        style={{
+          flexShrink: 0,
+          padding: '12px 18px',
+          background: '#ffffff',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.05)',
+          zIndex: 10,
+        }}
+      >
         <button
           type="button"
           onClick={onClose}
-          style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '4px', color: '#2563eb', fontWeight: 600, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          style={{
+            padding: '8px 16px',
+            background: '#ffffff',
+            border: '1px solid #cbd5e1',
+            borderRadius: '4px',
+            color: '#2563eb',
+            fontWeight: 600,
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
         >
           <X size={14} /> Cancel
         </button>
         <button
           type="submit"
           disabled={sending}
-          style={{ padding: '8px 18px', background: '#2563eb', border: 'none', borderRadius: '4px', color: '#ffffff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{
+            padding: '8px 18px',
+            background: '#2563eb',
+            border: 'none',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
         >
           <Send size={13} />
           <span>{sending ? 'Sendingâ€¦' : 'Broadcast Message'}</span>
@@ -2338,7 +3852,3 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
     </form>
   );
 }
-
-
-
-

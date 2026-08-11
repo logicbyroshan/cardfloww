@@ -1,8 +1,8 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import Lenis from 'lenis'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.jsx';
+import Lenis from 'lenis';
 
 // ── Lenis Smooth Scrolling ──────────────────────────────────────────────────
 // Attach Lenis to the .page-content scrollable container (not the whole window)
@@ -39,5 +39,5 @@ requestAnimationFrame(initLenis);
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-  </StrictMode>,
-)
+  </StrictMode>
+);

@@ -5,15 +5,17 @@ import ImageUploadSlot from './ImageUploadSlot';
 import { cardApi } from '../../services/api';
 
 export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
-  const [formData, setFormData] = useState(card?.field_data || {
-    'NAME': card?.name || 'Student Name',
-    'FATHER_NAME': 'Father Name',
-    'CLASS': '10th',
-    'SECTION': 'A',
-    'ROLL_NO': '101',
-    'MOBILE': '9876543210',
-    'PHOTO': card?.photo || ''
-  });
+  const [formData, setFormData] = useState(
+    card?.field_data || {
+      NAME: card?.name || 'Student Name',
+      FATHER_NAME: 'Father Name',
+      CLASS: '10th',
+      SECTION: 'A',
+      ROLL_NO: '101',
+      MOBILE: '9876543210',
+      PHOTO: card?.photo || '',
+    }
+  );
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -61,22 +63,60 @@ export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
   return createPortal(
     <>
       <div className="drawer-overlay-backdrop" onClick={onClose} />
-      <aside className="side-drawer-panel" style={{ width: '640px', maxWidth: '95vw', padding: 0, display: 'flex', flexDirection: 'column' }}>
+      <aside
+        className="side-drawer-panel"
+        style={{ width: '640px', maxWidth: '95vw', padding: 0, display: 'flex', flexDirection: 'column' }}
+      >
         {/* Fixed Header */}
-        <div style={{ background: '#1e293b', color: '#ffffff', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155', flexShrink: 0 }}>
+        <div
+          style={{
+            background: '#1e293b',
+            color: '#ffffff',
+            padding: '14px 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #334155',
+            flexShrink: 0,
+          }}
+        >
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>Card Details #{card?.id || 'New'}</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: '#ffffff' }}>
+              Card Details #{card?.id || 'New'}
+            </h3>
             <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>ID Card Field Editor &amp; Image History</span>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
             <X size={20} />
           </button>
         </div>
 
         {/* Form Container */}
-        <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, margin: 0 }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, margin: 0 }}
+        >
           {/* Scrollable Body */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem',
+            }}
+          >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <ImageUploadSlot
                 cardId={card?.id}
@@ -97,7 +137,16 @@ export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
                 if (['PHOTO', 'SIGNATURE', 'BARCODE', 'QR_CODE'].includes(key)) return null;
                 return (
                   <div key={key}>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#475569',
+                        marginBottom: '0.35rem',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       {key.replace(/_/g, ' ')}
                     </label>
                     <input
@@ -122,7 +171,19 @@ export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
             </div>
 
             {saveError && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', fontSize: '12px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  color: '#dc2626',
+                  fontSize: '12px',
+                }}
+              >
                 <AlertCircle size={14} />
                 <span>{saveError}</span>
               </div>
@@ -130,7 +191,17 @@ export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
           </div>
 
           {/* Sticky Bottom Footer */}
-          <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexShrink: 0 }}>
+          <div
+            style={{
+              padding: '14px 24px',
+              background: '#f8fafc',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'flex-end',
+              flexShrink: 0,
+            }}
+          >
             <button
               type="button"
               onClick={onClose}

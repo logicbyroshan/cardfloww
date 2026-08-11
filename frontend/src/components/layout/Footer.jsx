@@ -7,7 +7,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Home, Layers, Table, Users, UserCheck, Shield, Settings, Sliders, HelpCircle, Sparkles } from 'lucide-react';
+import {
+  ChevronRight,
+  Home,
+  Layers,
+  Table,
+  Users,
+  UserCheck,
+  Shield,
+  Settings,
+  Sliders,
+  HelpCircle,
+  Sparkles,
+} from 'lucide-react';
 
 export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
   const [dataCountText, setDataCountText] = useState('');
@@ -25,77 +37,79 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
   const getBreadcrumbs = () => {
     switch (activeTab) {
       case 'dashboard':
-        return [
-          { label: 'CardFlow', isCurrent: true, icon: Home }
-        ];
+        return [{ label: 'CardFlow', isCurrent: true, icon: Home }];
       case 'cards':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Table Group', isCurrent: true, icon: Layers }
+          { label: 'Table Group', isCurrent: true, icon: Layers },
         ];
       case 'idcard-actions':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Table Group', tab: 'cards', icon: Layers },
-          { label: `Table Actions (${(idcardActionsState?.status || 'pending').toUpperCase()})`, isCurrent: true, icon: Table }
+          {
+            label: `Table Actions (${(idcardActionsState?.status || 'pending').toUpperCase()})`,
+            isCurrent: true,
+            icon: Table,
+          },
         ];
       case 'schema':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Table Group', tab: 'cards', icon: Layers },
-          { label: 'Table Settings', isCurrent: true, icon: Settings }
+          { label: 'Table Settings', isCurrent: true, icon: Settings },
         ];
       case 'clients':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Client Management' },
-          { label: 'Manage Organisation', isCurrent: true, icon: Users }
+          { label: 'Manage Organisation', isCurrent: true, icon: Users },
         ];
       case 'staff':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Admin Management' },
-          { label: 'Manage Operator', isCurrent: true, icon: UserCheck }
+          { label: 'Manage Operator', isCurrent: true, icon: UserCheck },
         ];
       case 'assistants':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Admin Management' },
-          { label: 'Manage Assistant', isCurrent: true, icon: UserCheck }
+          { label: 'Manage Assistant', isCurrent: true, icon: UserCheck },
         ];
       case 'photographers':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Admin Management' },
-          { label: 'Manage Photographer', isCurrent: true, icon: UserCheck }
+          { label: 'Manage Photographer', isCurrent: true, icon: UserCheck },
         ];
       case 'panel':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'CardFlow Management' },
-          { label: 'Manage CardFlow', isCurrent: true, icon: Sliders }
+          { label: 'Manage CardFlow', isCurrent: true, icon: Sliders },
         ];
       case 'pro':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'CardFlow Management' },
-          { label: 'Manage Pro Features', isCurrent: true, icon: Sparkles }
+          { label: 'Manage Pro Features', isCurrent: true, icon: Sparkles },
         ];
       case 'tutorial':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Tutorial & Guide', isCurrent: true, icon: HelpCircle }
+          { label: 'Tutorial & Guide', isCurrent: true, icon: HelpCircle },
         ];
       case 'settings':
       case 'profile':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Profile & Settings', isCurrent: true, icon: Settings }
+          { label: 'Profile & Settings', isCurrent: true, icon: Settings },
         ];
       default:
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: activeTab, isCurrent: true }
+          { label: activeTab, isCurrent: true },
         ];
     }
   };
@@ -116,7 +130,7 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
         color: '#94a3b8',
         fontSize: '12px',
         boxSizing: 'border-box',
-        zIndex: 100
+        zIndex: 100,
       }}
     >
       {/* Left: Interactive Breadcrumbs */}
@@ -138,7 +152,7 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
                     color: '#ffffff',
                     fontWeight: 600,
                     fontSize: '11px',
-                    letterSpacing: '0.01em'
+                    letterSpacing: '0.01em',
                   }}
                 >
                   {Icon && <Icon size={12} style={{ color: '#38bdf8' }} />}
@@ -161,16 +175,14 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
                     gap: '4px',
                     transition: 'color 0.15s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#38bdf8'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#38bdf8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
                 >
                   {Icon && <Icon size={12} />}
                   {item.label}
                 </button>
               ) : (
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
-                  {item.label}
-                </span>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>{item.label}</span>
               )}
             </React.Fragment>
           );
@@ -200,9 +212,7 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
             {dataCountText}
           </span>
         ) : (
-          <span style={{ fontSize: '11px', color: '#64748b' }}>
-            CardFlow System Active
-          </span>
+          <span style={{ fontSize: '11px', color: '#64748b' }}>CardFlow System Active</span>
         )}
       </div>
     </footer>

@@ -4,7 +4,7 @@ const LOADING_STEPS = [
   'Initializing CardFlow Core…',
   'Verifying Security Protocols…',
   'Loading Organization Engine…',
-  'System Ready'
+  'System Ready',
 ];
 
 export default function Preloader({ onFinished }) {
@@ -79,7 +79,8 @@ export default function Preloader({ onFinished }) {
         opacity: isFadeOut ? 0 : 1,
         transform: isFadeOut ? 'scale(1.04)' : 'scale(1)',
         filter: isFadeOut ? 'blur(10px)' : 'blur(0px)',
-        transition: 'opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1), transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), filter 0.55s ease',
+        transition:
+          'opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1), transform 0.55s cubic-bezier(0.4, 0, 0.2, 1), filter 0.55s ease',
         overflow: 'hidden',
         pointerEvents: isFadeOut ? 'none' : 'auto',
       }}
@@ -109,7 +110,8 @@ export default function Preloader({ onFinished }) {
             width: '400px',
             height: '400px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(37, 99, 235, 0.35) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%)',
+            background:
+              'radial-gradient(circle, rgba(37, 99, 235, 0.35) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%)',
             filter: 'blur(80px)',
             animation: 'preloaderPulseGlow 4s ease-in-out infinite alternate',
           }}
@@ -122,7 +124,8 @@ export default function Preloader({ onFinished }) {
             width: '450px',
             height: '450px',
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(6, 182, 212, 0.15) 50%, transparent 70%)',
+            background:
+              'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(6, 182, 212, 0.15) 50%, transparent 70%)',
             filter: 'blur(90px)',
             animation: 'preloaderPulseGlow 5s ease-in-out infinite alternate-reverse',
           }}
@@ -239,13 +242,30 @@ export default function Preloader({ onFinished }) {
             marginBottom: '28px',
           }}
         >
-          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }} />
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: '#3b82f6',
+              boxShadow: '0 0 8px #3b82f6',
+            }}
+          />
           Enterprise ID Card Suite
         </div>
 
         {/* Progress Track & Counter */}
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+              color: '#94a3b8',
+              fontWeight: 600,
+            }}
+          >
             <span>{LOADING_STEPS[stepIndex]}</span>
             <span style={{ color: '#60a5fa', fontWeight: 700 }}>{progress}%</span>
           </div>

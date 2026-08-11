@@ -17,7 +17,7 @@ function Auth3DProducts() {
           style={{
             width: '260px',
             height: 'auto',
-            filter: 'drop-shadow(0 15px 30px rgba(0, 0, 0, 0.5)) mix-blend-mode(screen)'
+            filter: 'drop-shadow(0 15px 30px rgba(0, 0, 0, 0.5)) mix-blend-mode(screen)',
           }}
         />
       </div>
@@ -30,7 +30,7 @@ function Auth3DProducts() {
           style={{
             width: '280px',
             height: 'auto',
-            filter: 'drop-shadow(0 18px 35px rgba(0, 0, 0, 0.55))'
+            filter: 'drop-shadow(0 18px 35px rgba(0, 0, 0, 0.55))',
           }}
         />
       </div>
@@ -43,7 +43,7 @@ function Auth3DProducts() {
           style={{
             width: '290px',
             height: 'auto',
-            filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6))'
+            filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6))',
           }}
         />
       </div>
@@ -62,11 +62,29 @@ function Auth3DProducts() {
             </filter>
           </defs>
           {/* Card Body */}
-          <rect x="15" y="20" width="170" height="240" rx="16" fill="url(#badgeBg)" filter="url(#badgeShadow)" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+          <rect
+            x="15"
+            y="20"
+            width="170"
+            height="240"
+            rx="16"
+            fill="url(#badgeBg)"
+            filter="url(#badgeShadow)"
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="2"
+          />
           {/* Lanyard Hole Clip */}
           <rect x="85" y="32" width="30" height="8" rx="4" fill="#1e1b4b" opacity="0.8" />
           {/* Photo Avatar Placeholder */}
-          <rect x="60" y="55" width="80" height="85" rx="10" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" />
+          <rect
+            x="60"
+            y="55"
+            width="80"
+            height="85"
+            rx="10"
+            fill="rgba(255,255,255,0.2)"
+            stroke="rgba(255,255,255,0.4)"
+          />
           <circle cx="100" cy="85" r="22" fill="#ffffff" opacity="0.8" />
           <path d="M 75 130 C 75 112 125 112 125 130 Z" fill="#ffffff" opacity="0.8" />
           {/* Text Lines */}
@@ -116,7 +134,7 @@ export default function AuthLayout({ children }) {
               objectFit: 'contain',
               margin: '0 auto 8px',
               display: 'block',
-              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.35))'
+              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.35))',
             }}
           />
         </div>
