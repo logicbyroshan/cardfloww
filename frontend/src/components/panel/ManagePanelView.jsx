@@ -235,13 +235,13 @@ function NotificationsTab({ addToast }) {
             className="btn btn-sm btn-danger"
             onClick={() => addToast?.('Maintenance mode modal opened', 'warning')}
           >
-            <AlertCircle size={12} /> Enable Maintenance
+            <AlertCircle size={12} color="#ffffff" /> Enable Maintenance
           </button>
           <button
             className="btn btn-sm btn-primary"
             onClick={() => addToast?.('Create notification modal opened', 'info')}
           >
-            <Plus size={12} /> New Notification
+            <Plus size={12} color="#ffffff" /> New Notification
           </button>
         </div>
         <div
@@ -684,7 +684,7 @@ function EmailLogsTab({ addToast }) {
             <option value="oldest">Oldest</option>
           </select>
           <button className="btn btn-sm btn-primary" onClick={() => addToast?.('Compose email modal', 'info')}>
-            <Plus size={12} /> Add New Email
+            <Plus size={12} color="#ffffff" /> Add New Email
           </button>
         </div>
         <div
@@ -1754,7 +1754,7 @@ function DownloadTemplatesTab({ addToast }) {
         </div>
         <div className="notif-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="btn btn-sm btn-primary" onClick={() => addToast?.('Create template modal opened', 'info')}>
-            <Plus size={12} /> New Template
+            <Plus size={12} color="#ffffff" /> New Template
           </button>
           <button
             className="btn btn-md btn-neutral"
@@ -1762,7 +1762,7 @@ function DownloadTemplatesTab({ addToast }) {
             title="Refresh"
             style={{ padding: '0 8px', height: '28px' }}
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={13} color="#ffffff" />
           </button>
         </div>
       </div>

@@ -532,7 +532,7 @@ export default function ManageFeaturesView({ addToast }) {
                 gap: '5px',
               }}
             >
-              <Icon size={12} />
+              <Icon size={12} color={activeTab === id ? '#ffffff' : '#cbd5e1'} />
               <span>{label}</span>
             </button>
           ))}
@@ -580,7 +580,7 @@ export default function ManageFeaturesView({ addToast }) {
             <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Search Input Box */}
               <div className="notif-search-box" style={{ width: '240px' }}>
-                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
+                <Search size={13} color="#60a5fa" style={{ flexShrink: 0, marginRight: '6px' }} />
                 <input
                   type="text"
                   value={search}
@@ -601,7 +601,7 @@ export default function ManageFeaturesView({ addToast }) {
                     }}
                     title="Clear search"
                   >
-                    <X size={12} />
+                    <X size={12} color="#94a3b8" />
                   </button>
                 )}
               </div>
@@ -685,7 +685,7 @@ export default function ManageFeaturesView({ addToast }) {
                           padding: '3px 10px',
                         }}
                       >
-                        <LogIn size={11} /> Login As User
+                        <LogIn size={11} color="#ffffff" /> Login As User
                       </button>
                     </td>
                   </tr>
@@ -756,7 +756,7 @@ export default function ManageFeaturesView({ addToast }) {
               onClick={() => addToast?.('New guest pass generated', 'success')}
               className="btn btn-sm btn-primary"
             >
-              <Plus size={13} /> Issue Guest Pass
+              <Plus size={13} color="#ffffff" /> Issue Guest Pass
             </button>
           </div>
 
