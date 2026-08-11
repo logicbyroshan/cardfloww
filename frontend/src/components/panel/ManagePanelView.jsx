@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Cpu, Layers, FolderTree, Info, Search, Clock, CheckCircle2, XCircle, FilterX, X
 } from 'lucide-react';
+import { BarChart, Bar, Cell, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import WatermarkLogo from '../common/WatermarkLogo';
 import { panelApi } from '../../services/api';
 
@@ -1177,8 +1178,23 @@ function ServerInfoTab() {
                     <span className="server-path-name">{row.name}</span>
                     <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
-                    <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
+                  <div style={{ width: '100%', height: '8px', margin: '6px 0' }}>
+                    <ResponsiveContainer width="100%" height={8}>
+                      <BarChart data={[{ v: row.pct, r: 100 - row.pct }]} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }} barSize={8}>
+                        <Bar dataKey="v" stackId="a" radius={[4, 0, 0, 4]} isAnimationActive={true} animationDuration={600}>
+                          <Cell fill="url(#usageGrad)" />
+                        </Bar>
+                        <Bar dataKey="r" stackId="a" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                          <Cell fill="#e2e8f0" />
+                        </Bar>
+                        <defs>
+                          <linearGradient id="usageGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#2563eb" />
+                            <stop offset="100%" stopColor="#3b82f6" />
+                          </linearGradient>
+                        </defs>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                   <div className="server-path-meta" style={{ fontSize: '11px', color: '#64748b' }}>{row.meta}</div>
                 </div>
@@ -1204,8 +1220,23 @@ function ServerInfoTab() {
                     <span className="server-path-name">{row.name}</span>
                     <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
-                    <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
+                  <div style={{ width: '100%', height: '8px', margin: '6px 0' }}>
+                    <ResponsiveContainer width="100%" height={8}>
+                      <BarChart data={[{ v: row.pct, r: 100 - row.pct }]} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }} barSize={8}>
+                        <Bar dataKey="v" stackId="a" radius={[4, 0, 0, 4]} isAnimationActive={true} animationDuration={600}>
+                          <Cell fill="url(#usageGrad2)" />
+                        </Bar>
+                        <Bar dataKey="r" stackId="a" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+                          <Cell fill="#e2e8f0" />
+                        </Bar>
+                        <defs>
+                          <linearGradient id="usageGrad2" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor="#2563eb" />
+                            <stop offset="100%" stopColor="#3b82f6" />
+                          </linearGradient>
+                        </defs>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                   <div className="server-path-meta" style={{ fontSize: '11px', color: '#64748b' }}>{row.meta}</div>
                 </div>

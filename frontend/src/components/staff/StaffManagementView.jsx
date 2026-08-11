@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
+import { SkeletonTableRows } from '../common/Skeleton';
 import { staffApi, operatorApi, assistantApi, photographerApi } from '../../services/api';
 
 /*
@@ -304,21 +305,7 @@ export default function StaffManagementView({ addToast, staffType = 'operator', 
           </thead>
           <tbody id="staff-table-body">
             {loading ? (
-              Array.from({ length: 15 }).map((_, i) => (
-                <tr key={i} className="skeleton-row">
-                  <td><div className="skeleton" style={{ width: '16px', height: '16px', borderRadius: '3px', margin: '0 auto' }} /></td>
-                  {isAssistant && <td><div className="skeleton skeleton-cell-mid" /></td>}
-                  <td><div className="skeleton" style={{ height: '13px', width: `${65 + (i % 4) * 8}%` }} /></td>
-                  <td><div className="skeleton" style={{ height: '13px', width: `${55 + (i % 3) * 10}%` }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '13px', width: '72%', margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-badge" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-date" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-date" style={{ margin: '0 auto', width: '75%' }} /></td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="skeleton skeleton-cell-btn" style={{ width: '22px', height: '22px', borderRadius: '4px', margin: '0 auto' }} />
-                  </td>
-                </tr>
-              ))
+              <SkeletonTableRows count={12} cols={isAssistant ? 9 : 8} dark={false} />
             ) : (
               filtered.map((s, idx) => {
                   const name = s.name || s.full_name || s.user?.get_full_name || s.username || s.user?.username || `Staff #${s.id || idx}`;

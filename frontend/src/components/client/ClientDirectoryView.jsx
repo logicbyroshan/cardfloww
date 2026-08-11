@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
+import { SkeletonTableRows } from '../common/Skeleton';
 import { clientApi } from '../../services/api';
 
 const STATUS_TABS = ['All', 'Active', 'Inactive'];
@@ -458,22 +459,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
           </thead>
           <tbody id="client-table-body">
             {loading ? (
-              Array.from({ length: 15 }).map((_, i) => (
-                <tr key={i} className="skeleton-row">
-                  <td><div className="skeleton" style={{ width: '16px', height: '16px', borderRadius: '3px', margin: '0 auto' }} /></td>
-                  <td><div className="skeleton" style={{ height: '13px', width: `${70 + (i % 4) * 7}%` }} /></td>
-                  <td><div className="skeleton" style={{ height: '13px', width: '80%' }} /></td>
-                  <td><div className="skeleton" style={{ height: '13px', width: '75%' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '13px', width: '70%', margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-badge" style={{ margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '20px', width: '40px', borderRadius: '6px', margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '20px', width: '40px', borderRadius: '6px', margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '20px', width: '50px', borderRadius: '6px', margin: '0 auto' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-date" style={{ margin: '0 auto', width: '80px' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-date" style={{ margin: '0 auto', width: '80px' }} /></td>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ width: '22px', height: '22px', borderRadius: '4px', margin: '0 auto' }} /></td>
-                </tr>
-              ))
+              <SkeletonTableRows count={12} cols={12} dark={false} />
             ) : clients.map((c, idx) => {
               const statusStr = String(c.status || (c.is_active !== undefined ? (c.is_active ? 'active' : 'inactive') : 'active')).toLowerCase();
               const isActive  = statusStr === 'active' || statusStr === 'true' || c.is_active === true;

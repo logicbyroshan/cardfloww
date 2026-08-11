@@ -17,7 +17,7 @@ import IDCardActionsView from './components/idcard/IDCardActionsView';
 import CardDownloadsModal from './components/idcard/CardDownloadsModal';
 import GlobalSearchModal from './components/common/GlobalSearchModal';
 import ConfirmDeleteModal from './components/common/ConfirmDeleteModal';
-import ToastNotification from './components/common/ToastNotification';
+import { Toaster, toast } from 'sonner';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import OldVersionWarningModal from './components/idcard/OldVersionWarningModal';
 import ReprintCardsManagerView from './components/reprint/ReprintCardsManagerView';
@@ -75,12 +75,12 @@ export default function App() {
   }, []);
 
 
-  // Toasts
-  const [toasts, setToasts] = useState([]);
+  // Toasts — powered by Sonner (zero call-site changes needed)
   const addToast = useCallback((message, type = 'info') => {
-    const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4500);
+    if (type === 'success') toast.success(message);
+    else if (type === 'error') toast.error(message);
+    else if (type === 'warning') toast.warning(message);
+    else toast.info(message);
   }, []);
 
   // Auth bootstrap — check session on mount
@@ -392,9 +392,20 @@ export default function App() {
         onClose={() => setShowWarningModal(false)}
         onConfirmOverwrite={() => { setShowWarningModal(false); addToast('Overwrite confirmed', 'warning'); }}
       />
-      <ToastNotification
-        toasts={toasts}
-        onCloseToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+      {/* Sonner Toast Container — dark theme to match app */}
+      <Toaster
+        position="bottom-right"
+        theme="dark"
+        richColors
+        closeButton
+        duration={4500}
+        toastOptions={{
+          style: {
+            fontFamily: 'var(--font-family)',
+            fontSize: '13px',
+            borderRadius: '8px',
+          },
+        }}
       />
     </div>
   );

@@ -1,34 +1,31 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 /**
- * PageTransition — wraps each page with a smooth fade+lift animation
- * on every route/tab change. Triggered by the `pageKey` prop.
+ * PageTransition — wraps each page with a smooth swipe-up animation
+ * on every route/tab change. Powered by Framer Motion AnimatePresence.
+ * Visual output is identical to the previous CSS-based transition.
  */
 export default function PageTransition({ pageKey, children, fullHeight = false }) {
-  const [animKey, setAnimKey] = useState(pageKey);
-  const [visible, setVisible] = useState(true);
-  const prevKey = useRef(pageKey);
-
-  useEffect(() => {
-    if (pageKey !== prevKey.current) {
-      // Quick swipe-up exit (100ms), then swap content and swipe-up enter (320ms)
-      setVisible(false);
-      const t = setTimeout(() => {
-        prevKey.current = pageKey;
-        setAnimKey(pageKey);
-        setVisible(true);
-      }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [pageKey]);
-
   return (
-    <div
-      key={animKey}
-      className={visible ? 'page-transition-enter' : 'page-transition-exit'}
-      style={fullHeight ? { height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: 1, minHeight: 0, width: '100%' }}
-    >
-      {children}
-    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={pageKey}
+        initial={{ opacity: 0, y: 45 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -25 }}
+        transition={{
+          opacity: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+          y:       { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
+        }}
+        style={
+          fullHeight
+            ? { height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+            : { flex: 1, minHeight: 0, width: '100%' }
+        }
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }
