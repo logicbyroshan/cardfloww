@@ -2263,7 +2263,7 @@ textarea.panel-form-input {
 .server-panel-theme .notif-actions-bar {
   border: 1px solid var(--server-brand-border);
   border-radius: 0;
-  margin: 0 0 10px;
+  margin: 0 !important;
   background: linear-gradient(180deg, var(--color-white) 0%, var(--color-blue-50) 100%);
 }
 
@@ -2609,8 +2609,8 @@ textarea.panel-form-input {
 .server-detail-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 0 !important;
+  margin-top: 0 !important;
 }
 .server-detail-grid.server-detail-grid-two .system-card {
   min-height: 460px;
