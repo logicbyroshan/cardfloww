@@ -1089,20 +1089,20 @@ function ServerInfoTab() {
 
       <div className="server-info-content-shell" style={{ padding: 0, margin: 0 }}>
         <div className="server-info-overview" style={{ borderTop: 'none', borderBottom: '1px solid #e2e8f0', margin: 0 }}>
-          <div className="server-donut-wrap" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', boxSizing: 'border-box', background: '#ffffff', borderRight: '1px solid #e2e8f0', width: '240px', flexShrink: 0 }}>
-            <div className="server-donut" style={{ background: `conic-gradient(#4f46e5 0% ${diskPct}%, #e2e8f0 ${diskPct}% 100%)`, width: '208px', height: '208px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <div className="server-donut-inner" style={{ width: '160px', height: '160px', borderRadius: '12px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <span style={{ fontSize: '32px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{diskPct}%</span>
-                <small style={{ fontSize: '13px', color: '#64748b', fontWeight: 600, marginTop: '6px' }}>Disk Used</small>
+          <div className="server-donut-wrap" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', boxSizing: 'border-box', background: '#ffffff', borderRight: '1px solid #e2e8f0', width: '192px', flexShrink: 0 }}>
+            <div className="server-donut" style={{ background: `conic-gradient(#4f46e5 0% ${diskPct}%, #e2e8f0 ${diskPct}% 100%)`, width: '160px', height: '160px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="server-donut-inner" style={{ width: '122px', height: '122px', borderRadius: '10px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                <span style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{diskPct}%</span>
+                <small style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600, marginTop: '4px' }}>Disk Used</small>
               </div>
             </div>
-            <div className="server-donut-meta" style={{ width: '208px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', background: '#ffffff', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTotal}</strong></div>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Used</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskUsed}</strong></div>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Free</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskFree}</strong></div>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Project Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{projectTotal}</strong></div>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Other System</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{otherUsed}</strong></div>
-              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b' }}><span>Tracked Folders</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTracked}</strong></div>
+            <div className="server-donut-meta" style={{ width: '160px', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px', background: '#ffffff', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTotal}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Used</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskUsed}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Free</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskFree}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Project Total</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{projectTotal}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Other System</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{otherUsed}</strong></div>
+              <div className="server-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#64748b' }}><span>Tracked Folders</span><strong style={{ color: '#0f172a', fontWeight: 700 }}>{diskTracked}</strong></div>
             </div>
           </div>
 

@@ -2321,7 +2321,7 @@ textarea.panel-form-input {
 }
 .server-info-overview {
   display: grid;
-  grid-template-columns: minmax(236px, 248px) minmax(0, 1fr);
+  grid-template-columns: 192px minmax(0, 1fr);
   border: 1px solid var(--server-brand-border);
   border-radius: 0;
   overflow: hidden;
