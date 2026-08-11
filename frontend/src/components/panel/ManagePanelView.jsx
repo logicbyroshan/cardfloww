@@ -1030,7 +1030,6 @@ function ServerInfoTab() {
     loadData();
   }, [loadData]);
 
-  // Data extraction with accurate fallbacks matching original server snapshot template
   const diskPct        = info?.disk_usage_pct ?? 56.1;
   const diskTotal      = info?.disk_total || '50.0 GB';
   const diskUsed       = info?.disk_used || '32.5 GB';
@@ -1064,7 +1063,7 @@ function ServerInfoTab() {
 
   return (
     <div className="panel-tab-content server-panel-theme active" id="tab-server-info" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <div className="notif-actions-bar action-bar-light" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="notif-actions-bar action-bar-light" style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '0 16px', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div className="notif-actions-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="panel-title" style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Server size={15} style={{ color: '#4f46e5' }} />
@@ -1088,10 +1087,8 @@ function ServerInfoTab() {
         </div>
       </div>
 
-      <div className="server-info-content-shell" style={{ padding: 0 }}>
-        {/* Top Section Grid: Donut + 4 Cards */}
-        <div className="server-info-overview">
-          {/* Donut Chart & Meta Box with Exact 16px Symmetrical Top/Bottom/Left/Right Spacing */}
+      <div className="server-info-content-shell" style={{ padding: 0, margin: 0 }}>
+        <div className="server-info-overview" style={{ borderTop: 'none', borderBottom: '1px solid #e2e8f0', margin: 0 }}>
           <div className="server-donut-wrap" style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', boxSizing: 'border-box', background: '#ffffff', borderRight: '1px solid #e2e8f0', width: '240px', flexShrink: 0 }}>
             <div className="server-donut" style={{ background: `conic-gradient(#4f46e5 0% ${diskPct}%, #e2e8f0 ${diskPct}% 100%)`, width: '208px', height: '208px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div className="server-donut-inner" style={{ width: '160px', height: '160px', borderRadius: '12px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
@@ -1109,9 +1106,7 @@ function ServerInfoTab() {
             </div>
           </div>
 
-          {/* System Cards Grid: Flush 2x2 Grid with 0 Gap & Border Lines */}
-          <div className="server-system-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
-            {/* CPU & Memory */}
+          <div className="server-system-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', background: '#ffffff' }}>
             <div className="system-card server-card server-card-cpu" style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
               <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Cpu size={14} style={{ color: '#4f46e5' }} /> CPU &amp; Memory
@@ -1124,7 +1119,6 @@ function ServerInfoTab() {
               </div>
             </div>
 
-            {/* Database */}
             <div className="system-card server-card server-card-db" style={{ borderBottom: '1px solid #e2e8f0', background: '#ffffff' }}>
               <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Database size={14} style={{ color: '#4f46e5' }} /> Database
@@ -1137,7 +1131,6 @@ function ServerInfoTab() {
               </div>
             </div>
 
-            {/* Application */}
             <div className="system-card server-card server-card-app" style={{ borderRight: '1px solid #e2e8f0', background: '#ffffff' }}>
               <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Info size={14} style={{ color: '#4f46e5' }} /> Application
@@ -1150,7 +1143,6 @@ function ServerInfoTab() {
               </div>
             </div>
 
-            {/* Team & Email */}
             <div className="system-card server-card server-card-team" style={{ background: '#ffffff' }}>
               <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 16px', fontWeight: 700, fontSize: '12px', borderBottom: '1px solid #f1f5f9', color: '#1e293b' }}>
                 <Mail size={14} style={{ color: '#4f46e5' }} /> Team &amp; Email
@@ -1165,9 +1157,7 @@ function ServerInfoTab() {
           </div>
         </div>
 
-        {/* Bottom Section: Details Grid */}
-        <div className="server-detail-grid server-detail-grid-two" style={{ marginTop: '16px', gap: '16px' }}>
-          {/* System Usage Details */}
+        <div className="server-detail-grid server-detail-grid-two" style={{ marginTop: 0, gap: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
           <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
               <span className="server-detail-header-title" style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1187,7 +1177,6 @@ function ServerInfoTab() {
                     <span className="server-path-name">{row.name}</span>
                     <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  {/* Blue Progress Bar */}
                   <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
                     <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
                   </div>
@@ -1197,7 +1186,6 @@ function ServerInfoTab() {
             </div>
           </div>
 
-          {/* Panel Usage Details */}
           <div className="system-card" style={{ margin: 0, padding: 0, overflow: 'hidden', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div className="system-card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
               <span className="server-detail-header-title" style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1216,7 +1204,6 @@ function ServerInfoTab() {
                     <span className="server-path-name">{row.name}</span>
                     <span className="server-path-size" style={{ fontWeight: 700, color: '#0f172a' }}>{row.size}</span>
                   </div>
-                  {/* Blue Progress Bar */}
                   <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', margin: '6px 0' }}>
                     <div style={{ height: '100%', width: `${row.pct}%`, background: 'linear-gradient(90deg, #2563eb, #3b82f6)', borderRadius: '4px' }} />
                   </div>
