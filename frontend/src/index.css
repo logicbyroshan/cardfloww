@@ -3097,13 +3097,63 @@ table th:last-child {
 }
 
 /* ── Universal Project-Wide Tab Options (Clean, Shell-Free & Prominent Size) ── */
+/* ── Segmented Filter Status Tabs (All / Active / Inactive Pill Container) ── */
 .status-tabs,
+.idcard-status-tabs {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 6px !important;
+  padding: 3px !important;
+  gap: 3px !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+}
+
+.status-tab,
+.idcard-status-tab {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 4px 12px !important;
+  height: 26px !important;
+  font-size: 11.5px !important;
+  line-height: 1.2 !important;
+  font-weight: 600 !important;
+  border-radius: 4px !important;
+  border: none !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  color: #cbd5e1 !important;
+  font-family: var(--font-family) !important;
+  transition: all 0.15s ease-in-out !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+}
+
+.status-tab:hover,
+.idcard-status-tab:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.status-tab.active,
+.idcard-status-tab.active {
+  background: #2563eb !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4) !important;
+}
+
+/* ── Top Bar Navigation Tabs (Notifications, System & Server, etc.) ── */
 .panel-tabs,
 .sub-nav-tabs,
 .settings-tabs,
 .nav-tabs,
-.tab-group,
-.idcard-status-tabs {
+.tab-group {
   display: inline-flex !important;
   align-items: center !important;
   background: transparent !important;
@@ -3116,19 +3166,17 @@ table th:last-child {
   box-shadow: none !important;
 }
 
-.status-tab,
 .panel-tab,
 .sub-nav-tab,
 .settings-tab,
 .nav-tab,
-.tab-btn,
-.idcard-status-tab {
+.tab-btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
   padding: 6px 14px !important;
-  height: 34px !important;
+  height: 32px !important;
   font-size: 12px !important;
   line-height: 1.2 !important;
   font-weight: 600 !important;
@@ -3143,31 +3191,26 @@ table th:last-child {
   box-shadow: none !important;
 }
 
-.status-tab:hover,
 .panel-tab:hover,
 .sub-nav-tab:hover,
 .settings-tab:hover,
 .nav-tab:hover,
-.tab-btn:hover,
-.idcard-status-tab:hover {
+.tab-btn:hover {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.12) !important;
   border-color: rgba(255, 255, 255, 0.24) !important;
 }
 
-.status-tab.active,
 .panel-tab.active,
 .sub-nav-tab.active,
 .settings-tab.active,
 .nav-tab.active,
-.tab-btn.active,
-.idcard-status-tab.active {
+.tab-btn.active {
   background: #2563eb !important;
   border: 1px solid #2563eb !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35) !important;
-  border-bottom: 1px solid #2563eb !important;
 }
 
 .topbar .breadcrumb,
