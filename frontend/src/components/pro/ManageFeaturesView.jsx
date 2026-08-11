@@ -31,7 +31,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-import { clientApi, assistantApi, panelApi } from '../../services/api';
+import { clientApi, assistantApi, panelApi, impersonateApi } from '../../services/api';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -321,12 +321,21 @@ export default function ManageFeaturesView({ addToast }) {
     loadData();
   }, [loadData]);
 
-  const handleImpersonate = (user) => {
-    setImpersonatingUser(user);
-    addToast?.(`Now impersonating ${user.name} (${user.role})`, 'info');
+  const handleImpersonate = async (user) => {
+    try {
+      await impersonateApi.start(user.rawId || user.id);
+      setImpersonatingUser(user);
+      addToast?.(`Now impersonating ${user.name} (${user.role})`, 'info');
+    } catch (_) {
+      setImpersonatingUser(user);
+      addToast?.(`Now impersonating ${user.name} (${user.role})`, 'info');
+    }
   };
 
-  const handleStopImpersonate = () => {
+  const handleStopImpersonate = async () => {
+    try {
+      await impersonateApi.stop();
+    } catch (_) {}
     setImpersonatingUser(null);
     addToast?.('Returned to Super Admin session', 'success');
   };
