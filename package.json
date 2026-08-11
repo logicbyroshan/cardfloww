@@ -4,8 +4,5 @@
     "prod:app": "cd android_app && npx expo export",
     "build:apk": "cd android_app/android && gradlew assembleRelease",
     "build:aab": "cd android_app/android && gradlew bundleRelease"
-  },
-  "dependencies": {
-    "@tailwindcss/cli": "^4.2.0"
   }
 }

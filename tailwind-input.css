@@ -1,9 +1,0 @@
-@import "tailwindcss";
-@import "./static/css/tailwind-custom-base.css";
-@import "./static/css/tailwind-variable-bridge.css";
-@import "./static/css/notification-bell.css";
-
-/* Explicit sources keep class detection reliable in v4 builds. */
-@source "./templates/**/*.{html,js}";
-@source "./static/js/**/*.js";
-@source "./static/css/**/*.css";

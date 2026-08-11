@@ -174,7 +174,7 @@ def manage_assistants(request):
         'perm_idcard_retrieve': True,
         'perm_mobile_app': True,
     }
-    return render(request, 'assistants/manage.html', context)
+    return render(request, 'index.html', context)
 
 
 

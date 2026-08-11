@@ -954,7 +954,7 @@ def mobile_login(request):
             if client is None:
                 return _mobile_no_client_redirect()
             return redirect('/app/')
-    return render(request, 'mobile_app/login.html')
+    return render(request, 'index.html')
 
 
 @ensure_csrf_cookie
@@ -970,7 +970,7 @@ def mobile_no_access(request):
         title = 'No Active Client Context'
         message = 'Your account is signed in, but no active client is assigned. Please contact your administrator to assign an active client.'
 
-    return render(request, 'mobile_app/no_access.html', {
+    return render(request, 'index.html', {
         'user_name': (user.get_full_name() or user.username) if user else '',
         'reason': reason,
         'no_access_title': title,
@@ -982,7 +982,7 @@ def mobile_no_access(request):
 def desktop_required(request):
     """Inform users that this action/list is only available on desktop panel."""
     status = (request.GET.get('status') or '').strip().lower()
-    return render(request, 'mobile_app/desktop_required.html', {
+    return render(request, 'index.html', {
         'status': status,
         'status_display': status.replace('_', ' ').title() if status else 'This List',
     })
@@ -1983,7 +1983,7 @@ def home(request):
     ctx['reprint_request_total'] = reprint_request_total
     ctx['reprint_confirmed_total'] = reprint_confirmed_total
 
-    response = render(request, 'mobile_app/home.html', ctx)
+    response = render(request, 'index.html', ctx)
     response['Cache-Control'] = 'no-store'
     return response
 
@@ -2037,7 +2037,7 @@ def clients_list(request):
     for _cd in client_data:
         _cd['tables'] = None
 
-    return render(request, 'mobile_app/clients_list.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'clients': client_data,
         'clients_json': client_data,
@@ -2081,7 +2081,7 @@ def client_groups(request, client_id):
         download_cards=Count('id_cards', filter=Q(id_cards__status='download')),
     ).order_by('group__name', 'name')
 
-    return render(request, 'mobile_app/groups.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'client_name': client.name,
@@ -2136,7 +2136,7 @@ def table_picker(request, status):
     if len(tables_list) == 1:
         return redirect('mobile_app:card_list', table_id=tables_list[0].id, status=status)
 
-    return render(request, 'mobile_app/table_picker.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'tables': tables_list,
@@ -2654,7 +2654,7 @@ def card_list(request, table_id, status):
             perms.get('perm_idcard_delete_from_pool')
         )
 
-    response = render(request, 'mobile_app/list_page.html', {
+    response = render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         # Always show the table owner in list subtitle to avoid stale fallback client labels.
         'client': getattr(table.group, 'client', None) or client,
@@ -2771,7 +2771,7 @@ def reprint_lists(request, client_id):
             'confirmed': confirmed,
         })
 
-    return render(request, 'mobile_app/reprint_lists.html', {
+    return render(request, 'index.html', {
         'client': target_client,
         'tables': table_items,
         'active_step': active_step,
@@ -3035,7 +3035,7 @@ def reprint_table(request, table_id):
             'confirmed_at': rr.updated_at.strftime('%d-%b-%Y %H:%M') if rr.updated_at else '',
         })
 
-    return render(request, 'mobile_app/reprint_table.html', {
+    return render(request, 'index.html', {
         'client': table.group.client,
         'table': table,
         'active_step': active_step,
@@ -3084,7 +3084,7 @@ def camera_capture(request, table_id, card_id=None):
             name = fd.get('NAME') or fd.get('name') or fd.get('Name') or f'Card #{card.id}'
             all_cards.append({'id': card.id, 'name': name})
 
-    return render(request, 'mobile_app/camera.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'table': table,
@@ -3126,7 +3126,7 @@ def notifications(request):
         for n in system_notifications
     ]
 
-    return render(request, 'mobile_app/notifications.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'notifications': notifications_payload,
@@ -3142,7 +3142,7 @@ def profile(request):
     if not client:
         return redirect('/app/login/')
 
-    return render(request, 'mobile_app/profile.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'user_email': user.email or '',
         'user_phone': getattr(user, 'phone', '') or '',
@@ -3166,7 +3166,7 @@ def permissions_center(request):
     if not client:
         return redirect('/app/login/')
 
-    return render(request, 'mobile_app/permissions.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         **perms,
@@ -4601,7 +4601,7 @@ def card_detail(request, card_id):
 
     card_data = result.data
 
-    return render(request, 'mobile_app/card_detail.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'card': card_data,
@@ -4639,7 +4639,7 @@ def staff_manage(request):
     # Get groups for assignment dropdown
     groups = IDCardGroup.objects.filter(client=client).values('id', 'name')
 
-    return render(request, 'mobile_app/staff_manage.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'staff_list': staff_list,
@@ -4683,7 +4683,7 @@ def groups_overview(request):
         download_cards=Count('id_cards', filter=Q(id_cards__status='download')),
     ).order_by('group__name', 'name')
 
-    return render(request, 'mobile_app/groups.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'groups': groups,
@@ -4809,7 +4809,7 @@ def settings_page(request):
     ctx['python_version'] = f'{_sys.version_info.major}.{_sys.version_info.minor}.{_sys.version_info.micro}'
     ctx['debug_mode'] = settings.DEBUG
 
-    return render(request, 'mobile_app/settings.html', ctx)
+    return render(request, 'index.html', ctx)
 
 
 @require_mobile_client
@@ -4885,7 +4885,7 @@ def search_page(request):
                 'table_id': card.table.id,
             })
 
-    return render(request, 'mobile_app/search.html', {
+    return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
         'client': client,
         'query': query,

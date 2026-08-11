@@ -136,7 +136,7 @@ def client_idcard_group(request):
         'group': group,
         'tables': tables,
     }
-    return render(request, 'idcard-group.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_user
@@ -192,21 +192,9 @@ def client_idcard_actions(request, table_id):
         user_role=user.get_role_display(),
     )
     
-    # Provide the correct base URL for HTMX requests in the template
-    # This ensures HTMX calls go to the client endpoint, not the admin one
+    # React SPA handles all card data fetching via REST API.
     context['actions_base_url'] = reverse('client:idcard_actions', args=[table.id])
-    
-    # HTMX partial response:
-    # - default HTMX requests (pagination/filter) return only table container.
-    # - explicit shell request is used by no-reload status-tab navigation.
-    force_full_shell = (
-        request.GET.get('_shell') == '1'
-        or request.headers.get('HX-Boosted', '').lower() == 'true'
-    )
-    if is_htmx(request) and not force_full_shell:
-        return render(request, 'partials/idcard/table-container.html', context)
-    
-    return render(request, 'idcard-actions.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_admin
@@ -273,9 +261,9 @@ def client_group_settings(request):
     }
 
     if is_htmx(request):
-        return render(request, 'partials/group-setting/table-container.html', context)
+        return render(request, 'index.html', context)
 
-    return render(request, 'group-setting.html', context)
+    return render(request, 'index.html', context)
 
 
 

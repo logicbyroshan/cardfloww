@@ -140,7 +140,7 @@ def dashboard(request):
     context['tables'] = tables
     context['accessible_tables'] = tables
     
-    return render(request, 'client/dashboard.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_user
@@ -177,7 +177,7 @@ def card_groups(request):
         **permissions,
     }
     
-    return render(request, 'client/groups.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_user
@@ -229,7 +229,7 @@ def card_table(request, table_id):
         **permissions,
     }
     
-    return render(request, 'client/cards.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_user
@@ -287,7 +287,7 @@ def manage_staff(request):
         **permissions,
     }
     
-    return render(request, 'client/staff.html', context)
+    return render(request, 'index.html', context)
 
 
 @require_client_user
@@ -338,4 +338,4 @@ def messages(request):
         'total_count': paginator.count,
         **permissions,
     }
-    return render(request, 'client/messages.html', context)
+    return render(request, 'index.html', context)
