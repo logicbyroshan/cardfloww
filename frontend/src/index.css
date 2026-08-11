@@ -3107,7 +3107,8 @@ table th:last-child {
   border-radius: 6px !important;
   padding: 3px !important;
   gap: 3px !important;
-  height: auto !important;
+  height: 32px !important;
+  min-height: 32px !important;
   box-sizing: border-box !important;
 }
 
@@ -3117,8 +3118,8 @@ table th:last-child {
   align-items: center !important;
   justify-content: center !important;
   gap: 5px !important;
-  padding: 4px 12px !important;
-  height: 26px !important;
+  padding: 0 12px !important;
+  height: 24px !important;
   font-size: 11.5px !important;
   line-height: 1.2 !important;
   font-weight: 600 !important;
