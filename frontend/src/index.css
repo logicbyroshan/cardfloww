@@ -2009,68 +2009,7 @@ textarea {
   color: var(--gray-600);
 }
 
-/* ============================================================
-   TOAST
-   ============================================================ */
-.toast-wrapper {
-  position: fixed;
-  bottom: 40px;
-  left: 20px;
-  right: auto;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 8px;
-  z-index: 999999;
-  pointer-events: none;
-}
 
-.toast {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 400;
-  color: #fff;
-  min-width: 200px;
-  max-width: 320px;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.2s, transform 0.2s;
-  pointer-events: none;
-}
-
-.toast.show {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.toast.success {
-  background: var(--success);
-}
-
-.toast.error {
-  background: var(--danger);
-}
-
-.toast.warning {
-  background: var(--warning);
-}
-
-.toast.info {
-  background: var(--blue);
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  margin-left: auto;
-  flex-shrink: 0;
-}
 
 /* ============================================================
    ACTIVITY FEED
@@ -2177,69 +2116,6 @@ textarea {
   color: var(--gray-400);
 }
 
-/* ============================================================
-   LOADING SKELETON
-   ============================================================ */
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out infinite;
-  border-radius: 3px;
-  display: block;
-}
-
-/* Table skeleton row fills */
-.data-table tbody tr.skeleton-row td {
-  padding: 10px 12px;
-}
-
-.skeleton-row td:nth-child(1) .skeleton {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-}
-
-.skeleton-cell-wide {
-  height: 13px;
-  width: 90%;
-  display: block;
-  border-radius: 3px;
-}
-
-.skeleton-cell-mid {
-  height: 13px;
-  width: 70%;
-  display: block;
-  border-radius: 3px;
-}
-
-.skeleton-cell-narrow {
-  height: 13px;
-  width: 50%;
-  display: block;
-  border-radius: 3px;
-}
-
-.skeleton-cell-badge {
-  height: 20px;
-  width: 58px;
-  border-radius: 10px;
-  display: block;
-}
-
-.skeleton-cell-date {
-  height: 13px;
-  width: 82%;
-  display: block;
-  border-radius: 3px;
-}
-
-.skeleton-cell-btn {
-  height: 22px;
-  width: 52px;
-  border-radius: 4px;
-  display: block;
-}
 
 /* ============================================================
    KEYFRAME ANIMATIONS
@@ -3549,36 +3425,7 @@ button:disabled svg {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15) !important;
 }
 
-/* Toast Notifications Container — Top Z-Index Above All Overlays & Drawers */
-.toast-wrapper {
-  position: fixed !important;
-  bottom: 24px !important;
-  left: 24px !important;
-  z-index: 999999999 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-  max-width: 420px !important;
-  pointer-events: auto !important;
-}
-
-.toast {
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  padding: 10px 16px !important;
-  border-radius: 6px !important;
-  color: #ffffff !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
-  animation: slideInUp 0.2s ease-out !important;
-}
-
-.toast.success { background: #10b981 !important; }
-.toast.error   { background: #ef4444 !important; }
-.toast.warning { background: #f59e0b !important; }
-.toast.info    { background: #2563eb !important; }
+/* ──────────────────────────────────────────────────────────────────────────── */
 
 /* Table & Global Scrollbar Styling — Crisp Square Corners */
 ::-webkit-scrollbar {
@@ -3661,19 +3508,6 @@ html {
     opacity: 0;
     transform: translateY(-25px);
   }
-}
-
-/* Page enter state — applied via PageTransition component */
-.page-transition-enter {
-  animation: pageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) both !important;
-  will-change: opacity, transform;
-}
-
-/* Page exit state — quick swipe-up exit before content swap */
-.page-transition-exit {
-  animation: pageExit 0.1s cubic-bezier(0.4, 0, 1, 1) both !important;
-  pointer-events: none;
-  will-change: opacity, transform;
 }
 
 /* Sidebar nav link transitions */

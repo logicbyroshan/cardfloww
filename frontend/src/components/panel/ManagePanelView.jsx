@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Cpu, Layers, FolderTree, Info, Search, Clock, CheckCircle2, XCircle, FilterX, X
 } from 'lucide-react';
-import { BarChart, Bar, Cell, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
 import WatermarkLogo from '../common/WatermarkLogo';
 import { panelApi } from '../../services/api';
 
