@@ -906,40 +906,22 @@ def build_idcard_actions_context(request, table, *, default_per_page=100,
 @login_required
 @require_any_admin
 def idcard_actions(request, table_id):
-    """View and manage ID cards in a table, optionally filtered by status.
-    
-    Supports HTMX partial responses for pagination, filtering, and status tabs.
-    Query params: status, page, per_page, search, class, section, course, branch
+    """View and manage ID cards in a table — returns React SPA shell.
+
+    The React SPA (IDCardActionsView.jsx) fetches all card data via REST API.
+    Query params (status, page, per_page, search, class, section, etc.) are
+    handled entirely on the frontend.
     """
     table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
-    
-    # Check if user has access to this table's client
     user = request.user
     if not PermissionService.can_access_client(user, table.group.client_id):
         return redirect('manage_clients')
-    
-    status_filter = request.GET.get('status', None)
-    if status_filter:
-        required_perm = _STATUS_LIST_PERM.get(status_filter)
-        if required_perm and not PermissionService.has_permission(user, required_perm):
-            return redirect('manage_clients')
-    
-    context = build_idcard_actions_context(
-        request, table,
-        default_per_page=100,
-        per_page_options=[100, 200, 300, 400, 500],
-    """Actions page for an IDCardTable (Pending, Verified, Pool, Approved, Download)."""
-    table, context = _build_idcard_actions_context(request, table_id)
-    if not table:
-        return redirect('manage_clients')
 
-    force_full_shell = (
-        request.GET.get('_shell') == '1'
-        or request.headers.get('HX-Boosted', '').lower() == 'true'
-    )
-    if is_htmx(request) and not force_full_shell:
-        return render(request, 'index.html', context)
-
+    context = {
+        'active_page': 'manage_clients',
+        'user_role': get_user_role(user),
+        'table_id': table.id,
+    }
     return render(request, 'index.html', context)
 
 

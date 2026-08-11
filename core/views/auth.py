@@ -43,10 +43,13 @@ api_user_audit_actions = ProUserAuditActionsAPIView.as_view()
 
 
 def inactive_view(request):
-    """Display inactive account page — shown after forced logout."""
-    from django.shortcuts import render
+    """Redirect to SPA login — React handles the inactive account screen."""
+    from django.http import JsonResponse
     reason = request.GET.get('reason', '')
-    return render(request, 'auth/inactive.html', {'reason': reason})
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or (request.content_type or '') == 'application/json':
+        return JsonResponse({'success': False, 'message': 'Account inactive.', 'reason': reason}, status=403)
+    from django.shortcuts import render
+    return render(request, 'index.html', {'reason': reason})
 
 
 def maintenance_view(request):
@@ -56,7 +59,7 @@ def maintenance_view(request):
     if not request.user.is_authenticated:
         return redirect('inactive')
     reason = request.GET.get('reason', '')
-    return render(request, 'auth/maintenance.html', {'reason': reason})
+    return render(request, 'index.html', {'reason': reason})
 
 
 def api_check_maintenance(request):

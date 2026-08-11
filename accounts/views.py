@@ -56,13 +56,11 @@ def _truthy(value):
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class LoginPageView(View):
     """
-    Render the login page with multi-step auth flow.
-    Handles role selection, email/password, and password reset.
-    @ensure_csrf_cookie ensures the csrftoken cookie is set on GET,
+    Serve the React SPA shell for the login route.
+    @ensure_csrf_cookie ensures the csrftoken cookie is set on GET
     so subsequent AJAX POSTs can read it for the X-CSRFToken header.
     """
-    template_name = 'auth/login.html'
-    
+
     def get(self, request):
         # If user is already authenticated, redirect to dashboard
         if request.user.is_authenticated:
@@ -85,7 +83,7 @@ class LoginPageView(View):
                 target += '&next=' + quote(next_url)
             return redirect(target)
         
-        return render(request, self.template_name)
+        return render(request, 'index.html')
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
@@ -101,15 +99,13 @@ class GetCSRFTokenView(View):
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class SecureCredentialVaultView(View):
     """
-    Render the Secure Credential Vault page.
-    Users enter their email address to view a one-time credential.
+    Render the React SPA for the Secure Credential Vault page.
+    The SPA handles the email prompt and credential reveal flow via POST.
     """
-    template_name = 'auth/secure_credential_vault.html'
-    
+
     def get(self, request, token):
-        # We just render the page with the token in context.
-        # The Alpine.js/JS frontend will handle the email prompt and POST.
-        return render(request, self.template_name, {'token': token})
+        # Serve the SPA shell; the SPA reads ?token= from the URL and handles the vault UI.
+        return render(request, 'index.html', {'token': token})
         
     def post(self, request, token):
         try:

@@ -54,34 +54,15 @@ def _is_legacy_root_uuid_path(request) -> bool:
 
 
 def _render_error(request, *, status_code: int, title: str, heading: str, message: str):
-    is_api = (
-        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        or (request.content_type or '') == 'application/json'
-        or (request.path or '').startswith('/api/')
-        or (request.path or '').startswith('/app/api/')
-    )
-    if is_api:
-        from django.http import JsonResponse
-        return JsonResponse({
-            'success': False,
-            'message': message,
-            'status_code': status_code,
-            'title': title
-        }, status=status_code)
-
-    template_name = 'errors/error_mobile.html' if _is_mobile_app_error(request) else 'errors/error.html'
-    return render(
-        request,
-        template_name,
-        {
-            'status_code': status_code,
-            'title': title,
-            'heading': heading,
-            'message': message,
-            'home_url': _resolve_home_url(request),
-        },
-        status=status_code,
-    )
+    from django.http import JsonResponse
+    # Always return JSON — the React SPA frontend handles all error display in the browser.
+    # Non-API browser requests also get JSON so the SPA can show the correct error UI.
+    return JsonResponse({
+        'success': False,
+        'message': message,
+        'status_code': status_code,
+        'title': title
+    }, status=status_code)
 
 
 def error_400(request, exception=None):
@@ -189,19 +170,8 @@ def csrf_failure(request, reason=''):
 
 def mobile_download_page(request, dummy=None):
     """
-    Renders the dedicated mobile download page for mobile users
-    attempting to access the admin panel.
+    Mobile users trying to access the admin panel are redirected to the
+    React SPA, which shows the appropriate mobile-block overlay.
     """
-    return render(
-        request,
-        'errors/error_mobile.html',
-        {
-            'status_code': 200,
-            'title': 'Download Mobile App',
-            'heading': 'Admin Panel Not Available on Mobile Browsers',
-            'message': 'To manage ID cards and access all admin features on your phone, please download the official Adarsh ID Cards app.',
-            'home_url': '/',
-        },
-        status=200,
-    )
+    return render(request, 'index.html', {}, status=200)
 

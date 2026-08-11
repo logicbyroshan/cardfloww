@@ -1,12 +1,19 @@
 """
-HTMX Utilities — helpers for detecting HTMX requests and rendering partials.
+HTMX Utilities — helpers for detecting HTMX requests.
+
+HTMX is no longer used in the React 19 SPA frontend. These helpers are kept
+for backward compatibility with any internal API views that still check
+HX-Request headers, but `render_partial` now always renders index.html
+since there are no HTML partial templates any more.
 
 Usage in views:
-    from core.utils.htmx import is_htmx, render_partial
+    from core.utils.htmx import is_htmx
 
     def my_view(request):
         context = { ... }
-        return render_partial(request, 'my-page.html', 'partials/my-table.html', context)
+        if is_htmx(request):
+            return JsonResponse(context)
+        return render(request, 'index.html', context)
 """
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -19,23 +26,17 @@ def is_htmx(request):
 
 def render_partial(request, full_template, partial_template, context):
     """
-    If the request is an HTMX request, render only the partial template.
-    Otherwise, render the full page template.
+    Legacy helper — now always renders index.html (the React SPA shell)
+    since all partial templates have been removed.
     """
-    template = partial_template if is_htmx(request) else full_template
-    return render(request, template, context)
+    # Both full and partial responses now serve the SPA shell.
+    return render(request, 'index.html', context)
 
 
 def htmx_trigger(response, event_name, detail=None):
     """
     Add an HX-Trigger header to a response so HTMX can react to server events.
-
-    Usage:
-        resp = render(request, 'partial.html', ctx)
-        return htmx_trigger(resp, 'refreshTable')
-
-    With detail:
-        return htmx_trigger(resp, 'showToast', {'message': 'Saved!', 'type': 'success'})
+    Kept for API compatibility.
     """
     import json
     if detail:
