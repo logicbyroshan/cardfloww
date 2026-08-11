@@ -1,7 +1,0 @@
-{% for opt in per_page_options %}
-<div class="dropdown-option {% if opt == per_page %}selected{% endif %}"
-     data-value="{{ opt }}"
-     hx-get="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}&per_page={{ opt }}"
-     hx-target="#staff-table-container"
-     hx-swap="innerHTML">{{ opt }}</div>
-{% endfor %}

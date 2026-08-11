@@ -1,9 +1,0 @@
-<div class="filter-group">
-    {% include 'components/filter-dropdown.html' with dropdown_id='status-dropdown' toggle_id='statusToggle' options_id='statusOptions' selected_text_id='statusSelectedText' default_label='All Status' options_template='partials/staff/action-bar-filter-options.html' %}
-</div>
-{% if show_client_filter %}
-<div class="filter-group">
-    {% include 'components/filter-dropdown.html' with dropdown_id='client-dropdown' toggle_id='clientToggle' options_id='clientOptions' selected_text_id='clientSelectedText' default_label='All Clients' options_template='partials/staff/action-bar-client-options.html' %}
-</div>
-{% endif %}
-{% include 'components/search-box.html' with input_id="searchInput" placeholder="Search All..." clear_id="searchClearBtn" %}

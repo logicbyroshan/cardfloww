@@ -1,4 +1,0 @@
-<div class="dropdown-option {% if not client_filter %}selected{% endif %}" data-value="">All Clients</div>
-{% for opt in client_filter_options %}
-<div class="dropdown-option {% if client_filter == opt.id|stringformat:'s' %}selected{% endif %}" data-value="{{ opt.id }}">{{ opt.name }}</div>
-{% endfor %}

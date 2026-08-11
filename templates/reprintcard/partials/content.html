@@ -1,9 +1,0 @@
-{% load static %}
-{% load custom_filters %}
-<!-- Reprint Cards Content - {{ table.name }} - Step: {{ current_step }} -->
-
-{% if current_step == 'request_list' %}
-{% include "reprintcard/partials/step-request-list.html" %}
-{% elif current_step == 'confirmed' %}
-{% include "reprintcard/partials/step-confirmed.html" %}
-{% endif %}

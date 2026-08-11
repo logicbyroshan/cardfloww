@@ -1,7 +1,0 @@
-{% for opt in per_page_options %}
-<div class="dropdown-option {% if opt == per_page %}selected{% endif %}"
-     data-value="{{ opt }}"
-     hx-get="?page=1&status={{ current_status|default:'pending' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if class_filter %}&class={{ class_filter }}{% endif %}{% if section_filter %}&section={{ section_filter }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}{% if branch_filter %}&branch={{ branch_filter }}{% endif %}&per_page={{ opt }}"
-     hx-target="#card-table-container"
-     hx-swap="innerHTML">{{ opt }}</div>
-{% endfor %}

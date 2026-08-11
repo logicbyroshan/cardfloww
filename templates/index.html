@@ -1,105 +1,13 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="index, follow">
-  <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>Dashboard - Adarsh ID Cards</title>
-  <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}">
-  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v={{ APP_VERSION|default:'1.0.66' }}">
-  <link rel="stylesheet" href="{% static 'dist/css/core.min.css' %}?v={{ APP_VERSION|default:'1.0.66' }}">
-  <!-- Page-specific: dashboard cards, stats, activity -->
-  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={{ APP_VERSION|default:'1.0.66' }}">
-  <link rel="stylesheet" href="{% static 'css/vendor/fontawesome/all.min.css' %}?v={{ APP_VERSION|default:'1.0.66' }}">
-  <!-- Shared Alpine runtime loader -->
-  {% include 'partials/common/alpine-loader.html' %}
-</head>
-<body x-data="layoutState" x-init="init">
-  {% include 'partials/impersonate-bar.html' %}
-
-  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-gray-900 focus:shadow-lg">Skip to main content</a>
-
-  {% include 'partials/sidebar.html' %}
-
-  <!-- Main -->
-  <main class="main dashboard-main" id="main-content">
-
-    {% include 'partials/dashboard/topbar.html' %}
-
-    <!-- Dashboard Content -->
-    <div class="dashboard-content">
-
-      <!-- Fixed Top: Welcome Banner + Stats Cards -->
-      <div class="dashboard-top-fixed">
-        {% include 'partials/dashboard/welcome-notification-banner.html' %}
-        {% include 'partials/dashboard/stats-cards.html' %}
-      </div>
-
-      <!-- Scrollable Middle -->
-      <div class="dashboard-middle-scroll">
-        <div class="dashboard-workspace">
-          <div class="dashboard-main-column" id="dashboardMainColumn">
-            <section class="dashboard-snap-panel is-active" data-dashboard-panel="recent-clients">
-              {% include 'partials/dashboard/recent-updates.html' %}
-            </section>
-
-            <section class="dashboard-snap-panel" data-dashboard-panel="recent-reprints">
-              {% include 'partials/dashboard/recent-reprints.html' %}
-            </section>
-
-            <section class="dashboard-snap-panel" data-dashboard-panel="recent-updates">
-              {% include 'partials/dashboard/recent-activity.html' %}
-            </section>
-          </div>
-
-          <aside class="dashboard-side-column">
-            <div class="dashboard-side-sticky">
-              {% include 'partials/dashboard/section-tabs.html' %}
-              {% include 'partials/dashboard/quick-actions.html' %}
-              {% include 'partials/dashboard/side-overview-stats.html' %}
-            </div>
-          </aside>
-        </div>
-      </div>
-
-    </div>
-
-  </main>
-
-  {% include 'partials/dashboard/search-modal.html' %}
-  {% include 'partials/dashboard/delete-modal.html' %}
-  {% include 'partials/dashboard/upgrade-modal.html' %}
-  {% include 'partials/dashboard/reupload-modal.html' %}
-  {% if is_super_admin or perm_idcard_client_list %}
-  {% include 'partials/client/group-message-drawer.html' %}
-  {% endif %}
-
-  <div id="dashboardQuickActionOverlay" class="drawer-overlay dashboard-quick-action-overlay" aria-hidden="true">
-    <aside id="dashboardQuickActionDrawer" class="side-drawer dashboard-quick-action-drawer" role="dialog" aria-modal="true" aria-label="Quick action drawer">
-      <div class="dashboard-quick-action-drawer-head">
-        <div id="dashboardQuickActionTitle" class="dashboard-quick-action-drawer-title">Quick Action</div>
-        <button type="button" id="dashboardQuickActionClose" class="dashboard-quick-action-drawer-close" aria-label="Close quick action drawer">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-      <iframe
-        id="dashboardQuickActionFrame"
-        class="dashboard-quick-action-frame"
-        src="about:blank"
-        title="Quick action"
-        loading="lazy"
-      ></iframe>
-    </aside>
-  </div>
-
-  <script defer src="{% static 'dist/js/core.min.js' %}"></script>
-  <script defer src="{% static 'js/core/unified-select-dropdown.js' %}"></script>
-  <script defer src="{% static 'dist/js/dashboard.min.js' %}"></script>
-  <script defer src="{% static 'js/dashboard-client-message-drawer.js' %}"></script>
-  <script defer src="{% static 'js/dashboard-quick-action-drawer-bridge.js' %}"></script>
-  {% include 'partials/htmx-config.html' %}
-  {% include 'partials/dashboard/welcome-notification-js.html' %}
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CardFlow - ID Card Management Platform</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
