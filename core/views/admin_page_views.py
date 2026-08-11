@@ -300,10 +300,10 @@ def manage_staff(request):
     }
     
     if is_htmx(request):
-        response = render(request, 'partials/staff/table-container.html', context)
+        response = render(request, 'index.html', context)
         return _apply_drawer_embed_frame_headers(request, response)
 
-    response = render(request, 'manage-staff.html', context)
+    response = render(request, 'index.html', context)
     return _apply_drawer_embed_frame_headers(request, response)
 
 
@@ -398,10 +398,10 @@ def manage_clients(request):
     }
     
     if is_htmx(request):
-        response = render(request, 'partials/client/table-container.html', context)
+        response = render(request, 'index.html', context)
         return _apply_drawer_embed_frame_headers(request, response)
 
-    response = render(request, 'manage-client.html', context)
+    response = render(request, 'index.html', context)
     return _apply_drawer_embed_frame_headers(request, response)
 
 
@@ -733,7 +733,7 @@ def idcard_group(request, client_id):
         'tables': tables,
         'can_manage_clients': can_manage_clients,
     }
-    return render(request, 'idcard-group.html', context)
+    return render(request, 'index.html', context)
 
 
 # ────────────────────────────────────────────────────────────
@@ -928,48 +928,41 @@ def idcard_actions(request, table_id):
         request, table,
         default_per_page=100,
         per_page_options=[100, 200, 300, 400, 500],
-        active_page='manage_clients',
-        user_role=get_user_role(user),
-    )
-    
-    # Provide the correct base URL for HTMX requests in the template
-    from django.urls import reverse
-    context['actions_base_url'] = reverse('idcard_actions', args=[table.id])
-    
-    # HTMX partial response:
-    # - default HTMX requests (pagination/filter) return only table container.
-    # - explicit shell request is used by no-reload status-tab navigation.
+    """Actions page for an IDCardTable (Pending, Verified, Pool, Approved, Download)."""
+    table, context = _build_idcard_actions_context(request, table_id)
+    if not table:
+        return redirect('manage_clients')
+
     force_full_shell = (
         request.GET.get('_shell') == '1'
         or request.headers.get('HX-Boosted', '').lower() == 'true'
     )
     if is_htmx(request) and not force_full_shell:
-        return render(request, 'partials/idcard/table-container.html', context)
-    
-    return render(request, 'idcard-actions.html', context)
+        return render(request, 'index.html', context)
+
+    return render(request, 'index.html', context)
 
 
 # Group Settings
 @login_required
 @require_any_admin
 def group_settings(request, client_id):
-    """Settings for a specific client — manage their groups and tables.
-    Supports HTMX partial responses for table refresh after CRUD."""
+    """Settings for a specific client — manage their groups and tables."""
     client = get_object_or_404(Client, id=client_id)
     user = request.user
     if not PermissionService.can_access_client(user, client_id):
         return redirect('manage_clients')
-    
+
     search_query = request.GET.get('search', '').strip()
-    
+
     group = IDCardService.ensure_default_group(client)
     tables_qs = IDCardTable.objects.filter(group=group).select_related('group').annotate(
         total_cards=Count('id_cards')
     ).order_by('-created_at')
-    
+
     if search_query:
         tables_qs = tables_qs.filter(name__icontains=search_query)
-    
+
     DEFAULT_PER_PAGE = 10
     PER_PAGE_OPTIONS = [5, 10, 25, 50]
     try:
@@ -978,10 +971,10 @@ def group_settings(request, client_id):
             per_page = DEFAULT_PER_PAGE
     except (ValueError, TypeError):
         per_page = DEFAULT_PER_PAGE
-    
+
     paginator = Paginator(tables_qs, per_page)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-    
+
     can_manage_clients = PermissionService.is_super_admin(user) or PermissionService.has(user, 'perm_idcard_client_list')
     context = {
         'active_page': 'manage_clients',
@@ -996,15 +989,13 @@ def group_settings(request, client_id):
         'search_query': search_query,
         'can_manage_clients': can_manage_clients,
     }
-    
+
     if is_htmx(request):
-        return render(request, 'partials/group-setting/table-container.html', context)
-    
-    return render(request, 'group-setting.html', context)
+        return render(request, 'index.html', context)
+
+    return render(request, 'index.html', context)
 
 
-# Notifications page, manage_panel, and api_email_logs have moved to the
-# panel app.  Import them here so existing URL patterns continue to resolve.
 from panel.views.manage_panel_views import (  # noqa: F401
     notifications_page,
     manage_panel,
@@ -1015,11 +1006,6 @@ from panel.views.manage_panel_views import (  # noqa: F401
 )
 
 
-# NOTE: Reprint Cards page view moved to 'reprintcard' app
-# See reprintcard/views.py → reprint_cards()
-
-
-# System Settings - Available to all logged in users
 @login_required
 def settings(request):
     """User settings/profile view - accessible by all user types"""
@@ -1027,7 +1013,7 @@ def settings(request):
         'active_page': 'settings',
         'user_role': get_user_role(request.user),
     }
-    return render(request, 'settings.html', context)
+    return render(request, 'index.html', context)
 
 
 def _resolve_tutorial_scope(user):
@@ -1054,7 +1040,6 @@ def _resolve_tutorial_video_url(scope):
     return client_url
 
 
-
 @login_required
 def tutorial(request):
     """Role-aware tutorial and usage guide page."""
@@ -1070,7 +1055,7 @@ def tutorial(request):
         'tutorial_video_url': _resolve_tutorial_video_url(tutorial_scope),
         'tutorial_lang': tutorial_lang,
     }
-    return render(request, 'tutorial.html', context)
+    return render(request, 'index.html', context)
 
 
 @login_required
@@ -1092,7 +1077,7 @@ def tutorial_personal_guide(request):
         'personal_guide_download_url': reverse('tutorial_personal_guide_download'),
         'can_share_personal_guide': tutorial_scope == 'admin',
     }
-    return render(request, 'tutorial-personal-guide.html', context)
+    return render(request, 'index.html', context)
 
 
 @login_required

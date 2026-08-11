@@ -366,15 +366,13 @@ def login_as_user_page(request):
         'active_page': 'impersonate',
         'user_role': get_user_role(request.user),
     }
-    return render(request, 'impersonate/login-as-user.html', context)
+    return render(request, 'index.html', context)
 
 
 # ── Pro User Deep History (Pro User only) ─────────────────────────────
 @login_required
 def pro_user_activity_logs_page(request):
     """Backward-compatible URL for the merged Pro User User Options page."""
-    # Allow access to the activity logs landing for users who may use
-    # the Pro User options (pro_user and super_admin via can_use_pro_user_options).
     if not PermissionService.can_use_pro_user_options(request.user):
         return redirect('dashboard')
     return redirect('login_as_user')
@@ -395,7 +393,7 @@ def pro_user_guest_users_page(request):
         'user_role': get_user_role(request.user),
         'current_client_id': getattr(current_client, 'id', ''),
     }
-    return render(request, 'pro_user/guest-users.html', context)
+    return render(request, 'index.html', context)
 
 
 @login_required
@@ -409,7 +407,7 @@ def pro_user_batch_jobs_page(request):
         'pro_tab': 'batch_jobs',
         'user_role': get_user_role(request.user),
     }
-    return render(request, 'pro_user/batch-jobs.html', context)
+    return render(request, 'index.html', context)
 
 
 @login_required
@@ -429,7 +427,7 @@ def pro_user_activity_logs_detail_page(request, user_id):
             'role_display': target_user.get_role_display() if hasattr(target_user, 'get_role_display') else (target_user.role or '-'),
         },
     }
-    return render(request, 'pro_user/user-deep-history-detail.html', context)
+    return render(request, 'index.html', context)
 
 
 # Dashboard

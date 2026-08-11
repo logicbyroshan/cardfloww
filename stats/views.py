@@ -63,7 +63,7 @@ def statistics_page(request):
         'pro_tab': 'statistics',
         'user_role': _get_user_role(request.user),
     }
-    return render(request, 'stats/statistics.html', context)
+    return render(request, 'index.html', context)
 
 
 def _get_active_device_counts():

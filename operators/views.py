@@ -96,9 +96,9 @@ def operators_management_page(request):
     }
 
     if request.headers.get('HX-Request'):
-        return render(request, 'partials/staff/table-container.html', context)
+        return render(request, 'index.html', context)
 
-    return render(request, 'operators/manage.html', context)
+    return render(request, 'index.html', context)
 
 
 # =============================================================================
@@ -491,4 +491,4 @@ def operator_dashboard(request):
         'recent_activities': recent_activities,
     }
 
-    return render(request, 'dashboard/operator.html', context)
+    return render(request, 'index.html', context)

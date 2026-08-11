@@ -125,10 +125,10 @@ def manage_photographers(request):
     }
 
     if is_htmx:
-        response = render(request, 'partials/photographer/table-container.html', context)
+        response = render(request, 'index.html', context)
         return _apply_drawer_embed_frame_headers(request, response)
 
-    response = render(request, 'manage-photographers.html', context)
+    response = render(request, 'index.html', context)
     return _apply_drawer_embed_frame_headers(request, response)
 
 

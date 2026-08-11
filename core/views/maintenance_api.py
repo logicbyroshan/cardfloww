@@ -86,7 +86,7 @@ def system_maintenance_page(request):
     if not status.get('enabled'):
         return redirect(redirect_url)
     end_time_json = _json.dumps(status['end_time']) if status['end_time'] else 'null'
-    return render(request, 'system-maintenance.html', {
+    return render(request, 'index.html', {
         'message': status['message'],
         'end_time_json': end_time_json,
         'redirect_url': redirect_url,

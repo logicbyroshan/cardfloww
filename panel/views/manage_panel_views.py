@@ -76,7 +76,7 @@ def _can_access_manage_panel(user) -> bool:
 @login_required
 def notifications_page(request):
     """Full notifications page for all authenticated users."""
-    return render(request, 'notifications.html', {'active_page': 'notifications'})
+    return render(request, 'index.html', {'active_page': 'notifications'})
 
 
 # ── Manage Panel ─────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ def manage_panel(request):
     context['total_admin_staff'] = user_counts['admin_staff']
     context['total_guest_users'] = user_counts['guest_users']
     context['total_client_staff'] = user_counts['client_staff']
-    return render(request, 'manage-panel.html', context)
+    return render(request, 'index.html', context)
 
 
 # ── Email Logs API ────────────────────────────────────────────────────────

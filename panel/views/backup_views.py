@@ -87,7 +87,7 @@ def backup_select_clients(request):
     """Page: shows all clients with sort/filter for backup selection."""
     task_id = request.GET.get('task')
     if not task_id:
-        return render(request, 'backup-select-clients.html', {'error': 'No backup task specified.'})
+        return render(request, 'index.html', {'error': 'No backup task specified.'})
 
     task = get_object_or_404(BackupTask, pk=task_id, created_by=request.user, status='pending')
 
@@ -108,7 +108,7 @@ def backup_select_clients(request):
     else:
         clients_qs = clients_qs.order_by('-total_cards')
 
-    return render(request, 'backup-select-clients.html', {
+    return render(request, 'index.html', {
         'task': task,
         'clients': clients_qs,
         'current_sort': sort,

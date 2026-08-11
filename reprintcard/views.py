@@ -541,7 +541,7 @@ def reprint_cards(request, table_id):
         'can_reprint_request_list': can_request_list,
         'can_reprint_confirmed_list': can_confirmed_list,
     }
-    return render(request, 'reprintcard/reprint-cards.html', context)
+    return render(request, 'index.html', context)
 
 
 # ---------------------------------------------------------------------------
