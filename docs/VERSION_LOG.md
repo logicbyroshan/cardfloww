@@ -2,6 +2,7 @@
 
 | Date | Platform Version | Mobile Version | Mobile Build | Key Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| **2026-08-11** | **v5.0.0** | **1.1.00** | **100** | **Major Architecture Milestone: Complete migration to React 19 SPA frontend + Django REST API backend. Total purge of legacy HTML templates, build-css.bat, build_bundles.py, and unneeded static assets.** |
 | **2026-06-12** | **v4.18.4** | **1.0.99** | **99** | **Fix: Resolve Android touch event conflicts for photo picking menu and column filters; fix backend image path normalization for unchanged URLs.** |
 | **2026-06-12** | **v4.18.4** | **1.0.97** | **97** | **Fix: TypeError crash in forms/lists on null fields, safeguard FilterDrawer, ClientGroups, CardList, and GroupSettings against empty fields, and verify backend normalized image matches.** |
 | **2026-06-12** | **v4.18.4** | **1.0.96** | **96** | **Fix: Update crash with type error, center logo to prevent cropping on Android, request notification permissions, and sign with correct release key fingerprint.** |
