@@ -31,6 +31,7 @@ import { authApi } from './services/api';
 import QuickActionDrawer from './components/dashboard/QuickActionDrawer';
 
 import { UserCog, X } from 'lucide-react';
+import Lenis from 'lenis';
 
 const BOOT = { LOADING: 'loading', AUTH: 'auth', UNAUTH: 'unauth' };
 
@@ -44,6 +45,43 @@ export default function App() {
   const [idcardActionsState, setIdcardActionsState] = useState(null); // { tableId, status }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState('all');
+
+  // Initialize Lenis smooth scroll safely on .page-content container
+  useEffect(() => {
+    if (bootState !== BOOT.AUTH) return;
+    let lenis = null;
+    let rafId = null;
+
+    const timer = setTimeout(() => {
+      const container = document.querySelector('.page-content');
+      if (!container) return;
+      try {
+        lenis = new Lenis({
+          wrapper: container,
+          content: container,
+          duration: 1.1,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          orientation: 'vertical',
+          smoothWheel: true,
+          wheelMultiplier: 1,
+          touchMultiplier: 2,
+        });
+        function raf(time) {
+          lenis?.raf(time);
+          rafId = requestAnimationFrame(raf);
+        }
+        rafId = requestAnimationFrame(raf);
+      } catch (err) {
+        console.warn('Lenis init warning:', err);
+      }
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (rafId) cancelAnimationFrame(rafId);
+      if (lenis) lenis.destroy();
+    };
+  }, [bootState]);
 
   // Register global impersonation callback
   useEffect(() => {
