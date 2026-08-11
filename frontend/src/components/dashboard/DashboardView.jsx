@@ -342,7 +342,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 12px',
                 textAlign: 'left',
                 fontWeight: 700,
-                width: '55%',
+                width: '46%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -401,6 +401,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               PENDING{renderSortIcon('pending')}
@@ -418,6 +419,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               VERIFIED{renderSortIcon('verified')}
@@ -435,6 +437,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               APPROVED{renderSortIcon('approved')}
@@ -452,6 +455,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               PRINTED{renderSortIcon('printed')}
@@ -469,6 +473,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               REQUESTED{renderSortIcon('request')}
@@ -485,6 +490,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 cursor: 'pointer',
                 userSelect: 'none',
                 height: '38px',
+                whiteSpace: 'nowrap',
               }}
             >
               DELETED{renderSortIcon('deleted')}
@@ -583,7 +589,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       color: '#0f172a',
                       fontSize: '12px',
                       borderRight: '1px solid #e2e8f0',
-                      width: '55%',
+                      width: '46%',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -874,7 +880,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             fontSize: '12px',
                             fontWeight: 600,
                             borderRight: '1px solid #e2e8f0',
-                            width: '55%',
+                            width: '46%',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
