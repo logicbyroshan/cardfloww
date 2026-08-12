@@ -198,7 +198,7 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Clean URL query parameters (such as ?next=...) to keep browser address bar 100% clean
+  // Clean URL query parameters and sync semantic path aliases
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search) {
       const urlParams = new URLSearchParams(window.location.search);
@@ -210,6 +210,19 @@ export default function App() {
       }
     }
   }, []);
+
+  // Sync clean, semantic role URLs in browser address bar (e.g. /org/prime-manager/dash, /org/assistant/dash)
+  useEffect(() => {
+    if (bootState !== BOOT.AUTH) return;
+    const path = window.location.pathname;
+    if (path.includes('prime-manager')) {
+      setActiveTab('prime-manager-dashboard');
+    } else if (path.includes('assistant')) {
+      setActiveTab('assistant-dashboard');
+    } else if (path.includes('photographer')) {
+      setActiveTab('photographer-dashboard');
+    }
+  }, [bootState]);
 
   // Initialize Lenis smooth scroll safely on .page-content container
   useEffect(() => {
