@@ -2,6 +2,7 @@
 
 | Date | Platform Version | Mobile Version | Mobile Build | Key Changes |
 | :--- | :--- | :--- | :--- | :--- |
+| **2026-08-12** | **v5.2.0** | **1.1.00** | **100** | **Backend Optimization: Total purge of 2,250+ lines of legacy HTML page views, dead backup files (word_images_backup.py, views_pages.py, views_shared_pages.py), and unrouted page handlers across all 9 Django apps (accounts, assistants, organisation, operators, panel, reprintcard, stats, staff, core). Pure REST API backend complete.** |
 | **2026-08-12** | **v5.1.1** | **1.1.00** | **100** | **Security Hardening: CORS_ALLOW_ALL_ORIGINS defaulted to False. Added X-Frame-Options: DENY, Cache-Control: no-store, and Cross-Origin-Resource-Policy: same-site to all API responses. Tightened rate limiting and PermissionValidationMiddleware ALWAYS_EXEMPT gate.** |
 | **2026-08-12** | **v5.1.0** | **1.1.00** | **100** | **Architecture: Backend converted to pure REST API (no HTML rendering). All UI pages now exclusively on React SPA. Removed /panel/ route prefix, cleaned all HTML page views. Middleware returns JSON 401/403. CSRF prefetch on SPA boot.** |
 | **2026-08-11** | **v5.0.0** | **1.1.00** | **100** | **Major Architecture Milestone: Complete migration to React 19 SPA frontend + Django REST API backend. Total purge of legacy HTML templates, build-css.bat, build_bundles.py, and unneeded static assets.** |
