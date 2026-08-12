@@ -79,35 +79,20 @@ export const authApi = {
 export const impersonateApi = {
   /** GET list of users available for impersonation */
   getUsers: async () => {
-    try {
-      const res = await apiClient.get('/api/auth/impersonate/users/');
-      return res.data;
-    } catch {
-      const res = await apiClient.get('/panel/api/auth/impersonate/users/');
-      return res.data;
-    }
+    const res = await apiClient.get('/api/auth/impersonate/users/');
+    return res.data;
   },
 
   /** POST start impersonating user_id */
   start: async (userId) => {
-    try {
-      const res = await apiClient.post('/api/auth/impersonate/start/', { user_id: userId });
-      return res.data;
-    } catch {
-      const res = await apiClient.post('/panel/api/auth/impersonate/start/', { user_id: userId });
-      return res.data;
-    }
+    const res = await apiClient.post('/api/auth/impersonate/start/', { user_id: userId });
+    return res.data;
   },
 
   /** POST stop impersonation */
   stop: async () => {
-    try {
-      const res = await apiClient.post('/api/auth/impersonate/stop/');
-      return res.data;
-    } catch {
-      const res = await apiClient.post('/panel/api/auth/impersonate/stop/');
-      return res.data;
-    }
+    const res = await apiClient.post('/api/auth/impersonate/stop/');
+    return res.data;
   },
 };
 
@@ -295,13 +280,8 @@ export const operatorApi = {
       const res = await apiClient.get('/operators/api/operator/', { params });
       return res.data;
     } catch {
-      try {
-        const res = await apiClient.get('/panel/operators/api/operator/', { params });
-        return res.data;
-      } catch {
-        const res = await apiClient.get('/api/staff/', { params });
-        return res.data;
-      }
+      const res = await apiClient.get('/api/staff/', { params });
+      return res.data;
     }
   },
 
@@ -311,13 +291,8 @@ export const operatorApi = {
       const res = await apiClient.post('/operators/api/operator/', data);
       return res.data;
     } catch {
-      try {
-        const res = await apiClient.post('/panel/operators/api/operator/', data);
-        return res.data;
-      } catch {
-        const res = await apiClient.post('/api/staff/create/', data);
-        return res.data;
-      }
+      const res = await apiClient.post('/api/staff/create/', data);
+      return res.data;
     }
   },
 

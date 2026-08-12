@@ -643,7 +643,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
             <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
                 className="btn"
-                onClick={() => (onNavigate ? onNavigate('cards') : (window.location.href = '/panel/idcard-group/'))}
+                onClick={() => onNavigate?.('cards')}
                 title="Tables"
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
