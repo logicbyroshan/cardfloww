@@ -955,7 +955,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    TABLE DRAWER FORM — Create New Table / Edit Table
    ═══════════════════════════════════════════════════════════════════════════ */
-function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSave, addToast }) {
+export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSave, addToast }) {
   const isEditing = Boolean(editingTable);
 
   const [tableName, setTableName] = useState(editingTable?.name || '');
