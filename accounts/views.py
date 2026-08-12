@@ -613,7 +613,14 @@ def redirect_to_dashboard(request):
 # IMPERSONATION VIEWS (Pro User only)
 # =============================================================================
 
-class ImpersonateStartAPIView(LoginRequiredMixin, View):
+class APILoginRequiredMixin:
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ImpersonateStartAPIView(APILoginRequiredMixin, View):
     """
     POST /api/auth/impersonate/start/
     Body: { "user_id": <int> }
@@ -641,7 +648,7 @@ class ImpersonateStartAPIView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'An error occurred.'}, status=500)
 
 
-class ImpersonateStopAPIView(LoginRequiredMixin, View):
+class ImpersonateStopAPIView(APILoginRequiredMixin, View):
     """
     POST /api/auth/impersonate/stop/
     Stops impersonation and returns to the Pro User session.
@@ -667,7 +674,7 @@ class ImpersonateStopAPIView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'An error occurred.'}, status=500)
 
 
-class ImpersonateListAPIView(LoginRequiredMixin, View):
+class ImpersonateListAPIView(APILoginRequiredMixin, View):
     """
     GET /api/auth/impersonate/users/
     Returns list of users the Pro User can impersonate.
@@ -687,7 +694,7 @@ class ImpersonateListAPIView(LoginRequiredMixin, View):
 # PRO USER AUDIT VIEWS (Pro User only)
 # =============================================================================
 
-class ProUserAuditUsersAPIView(LoginRequiredMixin, View):
+class ProUserAuditUsersAPIView(APILoginRequiredMixin, View):
     """GET /api/auth/user-audit/users/ - list users available for deep history audit."""
     login_url = '/panel/auth/login/'
 
@@ -734,7 +741,7 @@ class ProUserAuditUsersAPIView(LoginRequiredMixin, View):
         return JsonResponse({'success': True, 'users': users})
 
 
-class ProUserAuditHistoryAPIView(LoginRequiredMixin, View):
+class ProUserAuditHistoryAPIView(APILoginRequiredMixin, View):
     """GET /api/auth/user-audit/history/ - deep history for a selected user."""
     login_url = '/panel/auth/login/'
 
@@ -921,7 +928,7 @@ class ProUserAuditHistoryAPIView(LoginRequiredMixin, View):
         })
 
 
-class ProUserAuditActionsAPIView(LoginRequiredMixin, View):
+class ProUserAuditActionsAPIView(APILoginRequiredMixin, View):
     """GET /api/auth/user-audit/actions/ - supported action filters."""
     login_url = '/panel/auth/login/'
 
@@ -934,3 +941,102 @@ class ProUserAuditActionsAPIView(LoginRequiredMixin, View):
             for key, label in ActivityLog.ACTION_CHOICES
         ]
         return JsonResponse({'success': True, 'actions': actions})
+
+
+# =============================================================================
+# AUTH ME & PROFILE API VIEWS
+# =============================================================================
+
+class AuthMeAPIView(View):
+    """
+    GET /api/auth/me/
+    Return session & role payload for currently authenticated user.
+    """
+    def get(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return JsonResponse({'authenticated': False}, status=200)
+
+        role = getattr(user, 'role', 'admin') or ('admin' if user.is_superuser else 'client')
+        return JsonResponse({
+            'authenticated': True,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': getattr(user, 'email', ''),
+                'first_name': getattr(user, 'first_name', ''),
+                'last_name': getattr(user, 'last_name', ''),
+                'full_name': user.get_full_name() or user.username,
+                'role': role,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+            }
+        })
+
+
+class ProfileAPIView(APILoginRequiredMixin, View):
+    """GET /api/profile/"""
+    login_url = '/panel/auth/login/'
+
+    def get(self, request):
+        from .services_profile import UserProfileService
+        profile_data = UserProfileService.get_profile(request.user, request=request)
+        return JsonResponse({'success': True, 'profile': profile_data})
+
+
+class ProfileUpdateAPIView(APILoginRequiredMixin, View):
+    """POST /api/profile/update/"""
+    login_url = '/panel/auth/login/'
+
+    def post(self, request):
+        from .services_profile import UserProfileService
+        try:
+            data = json.loads(request.body)
+            success, message, profile_data = UserProfileService.update_profile(request.user, data, request=request)
+            status = 200 if success else 400
+            return JsonResponse({'success': success, 'message': message, 'profile': profile_data}, status=status)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+
+
+class ProfileChangePasswordAPIView(APILoginRequiredMixin, View):
+    """POST /api/profile/change-password/"""
+    login_url = '/panel/auth/login/'
+
+    def post(self, request):
+        from .services_profile import UserProfileService
+        try:
+            data = json.loads(request.body)
+            current_pass = data.get('current_password', '')
+            new_pass = data.get('new_password', '')
+            success, message = UserProfileService.change_password(
+                request.user, current_pass, new_pass, current_session_key=request.session.session_key
+            )
+            status = 200 if success else 400
+            return JsonResponse({'success': success, 'message': message}, status=status)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
+
+
+class ProfileUploadImageAPIView(APILoginRequiredMixin, View):
+    """POST /api/profile/upload-image/"""
+    login_url = '/panel/auth/login/'
+
+    def post(self, request):
+        from .services_profile import UserProfileService
+        image_file = request.FILES.get('image') or request.FILES.get('profile_image')
+        success, message, image_url = UserProfileService.upload_profile_image(request.user, image_file)
+        status = 200 if success else 400
+        return JsonResponse({'success': success, 'message': message, 'image_url': image_url}, status=status)
+
+
+class ProfileRemoveImageAPIView(APILoginRequiredMixin, View):
+    """POST /api/profile/remove-image/"""
+    login_url = '/panel/auth/login/'
+
+    def post(self, request):
+        from .services_profile import UserProfileService
+        success, message = UserProfileService.remove_profile_image(request.user)
+        status = 200 if success else 400
+        return JsonResponse({'success': success, 'message': message}, status=status)
+

@@ -27,6 +27,8 @@ from .services import (
 from core.services.permission_service import (
     require_super_admin,
     require_any_admin,
+    api_require_super_admin,
+    api_require_any_admin,
 )
 
 
@@ -105,8 +107,7 @@ def operators_management_page(request):
 # OPERATOR CRUD API
 # =============================================================================
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['GET', 'POST'])
 def api_operator_list_create(request):
     """
@@ -157,8 +158,7 @@ def api_operator_list_create(request):
     return JsonResponse(result, status=status)
 
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['GET', 'PUT', 'POST', 'DELETE'])
 def api_operator_detail(request, operator_id):
     """
@@ -239,8 +239,7 @@ def api_operator_detail(request, operator_id):
         return JsonResponse(result, status=status)
 
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['POST'])
 def api_operator_toggle_status(request, operator_id):
     """Toggle operator active/inactive status."""
@@ -270,8 +269,7 @@ def api_operator_toggle_status(request, operator_id):
         return JsonResponse({'success': False, 'message': 'An error occurred. Please try again.'}, status=500)
 
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['POST'])
 def api_operator_delete(request, operator_id):
     """Delete an operator via POST (used by the JS frontend)."""
@@ -296,8 +294,7 @@ def api_operator_delete(request, operator_id):
         return JsonResponse({'success': False, 'message': 'An error occurred. Please try again.'}, status=500)
 
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['POST'])
 def api_operator_reset_password(request, operator_id):
     """Reset operator password and send email."""
@@ -333,8 +330,7 @@ def api_operator_reset_password(request, operator_id):
 # PERMISSION & CLIENT LISTING API
 # =============================================================================
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['GET'])
 def api_available_permissions(request):
     """Get list of permissions that can be assigned to operators."""
@@ -345,8 +341,7 @@ def api_available_permissions(request):
     })
 
 
-@login_required
-@require_super_admin
+@api_require_super_admin
 @require_http_methods(['GET'])
 def api_available_clients(request):
     """Get list of all clients for assignment to operators (includes inactive)."""
@@ -361,8 +356,7 @@ def api_available_clients(request):
 # OPERATOR SELF-SERVICE API
 # =============================================================================
 
-@login_required
-@require_any_admin
+@api_require_any_admin
 @require_http_methods(['GET'])
 def api_my_permissions(request):
     """Get current user's permissions (for operator dashboard)."""
@@ -382,8 +376,7 @@ def api_my_permissions(request):
     })
 
 
-@login_required
-@require_any_admin
+@api_require_any_admin
 @require_http_methods(['GET'])
 def api_my_clients(request):
     """Get clients accessible to the current operator user."""
@@ -399,8 +392,7 @@ def api_my_clients(request):
 # CLIENT-SCOPED DATA ACCESS EXAMPLES
 # =============================================================================
 
-@login_required
-@require_any_admin
+@api_require_any_admin
 @check_permission('can_view_clients')
 @require_http_methods(['GET'])
 def api_scoped_clients(request):
@@ -424,8 +416,7 @@ def api_scoped_clients(request):
     })
 
 
-@login_required
-@require_any_admin
+@api_require_any_admin
 @check_permission('can_view_idcard_data')
 @check_client_access('client_id')
 @require_http_methods(['GET'])

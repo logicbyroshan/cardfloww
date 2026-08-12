@@ -68,17 +68,22 @@ class CompatibilityService:
         return role
 
     @staticmethod
-    def decode_id(wrapped_id: int) -> Tuple[str, int]:
+    def decode_id(wrapped_id: Any) -> Tuple[str, int]:
         """
         Decodes a wrapped compatibility ID to determine staff_type and real database ID.
         100000+ -> Operator
         200000+ -> Assistant
         """
-        if wrapped_id >= 200000:
-            return 'assistant', (wrapped_id - 200000)
-        elif wrapped_id >= 100000:
-            return 'operator', (wrapped_id - 100000)
-        return 'unknown', wrapped_id
+        try:
+            val = int(wrapped_id)
+        except (ValueError, TypeError):
+            return 'unknown', 0
+
+        if val >= 200000:
+            return 'assistant', (val - 200000)
+        elif val >= 100000:
+            return 'operator', (val - 100000)
+        return 'unknown', val
 
     @staticmethod
     def encode_id(real_id: int, role: str) -> int:

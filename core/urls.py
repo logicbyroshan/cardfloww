@@ -2,6 +2,9 @@ from django.urls import include, path
 from django.views.decorators.csrf import csrf_exempt
 from . import views
 from exports import views as export_views
+from client import views_api as client_views_api
+from accounts import views as accounts_views
+
 
 urlpatterns = [
     # ==================== AUTHENTICATION ====================
@@ -15,13 +18,14 @@ urlpatterns = [
     path('api/maintenance/toggle/', views.api_maintenance_toggle, name='api_maintenance_toggle'),
     path('api/auth/check-email/', csrf_exempt(views.api_check_email), name='api_check_email'),
     path('api/auth/login/', csrf_exempt(views.api_login), name='api_login'),
+    path('api/auth/csrf/', accounts_views.GetCSRFTokenView.as_view(), name='api_get_csrf_token'),
     path('api/auth/me/', views.api_auth_me, name='api_auth_me'),
     path('api/auth/forgot-password/', csrf_exempt(views.api_forgot_password), name='api_forgot_password'),
     path('api/auth/verify-otp/', csrf_exempt(views.api_verify_otp), name='api_verify_otp'),
     path('api/auth/reset-password/', csrf_exempt(views.api_reset_password), name='api_reset_password'),
-    path('api/auth/impersonate/start/', csrf_exempt(views.api_impersonate_start), name='api_impersonate_start'),
-    path('api/auth/impersonate/stop/', csrf_exempt(views.api_impersonate_stop), name='api_impersonate_stop'),
-    path('api/auth/impersonate/users/', csrf_exempt(views.api_impersonate_users), name='api_impersonate_users'),
+    path('api/auth/impersonate/start/', csrf_exempt(accounts_views.ImpersonateStartAPIView.as_view()), name='api_impersonate_start'),
+    path('api/auth/impersonate/stop/', csrf_exempt(accounts_views.ImpersonateStopAPIView.as_view()), name='api_impersonate_stop'),
+    path('api/auth/impersonate/users/', csrf_exempt(accounts_views.ImpersonateListAPIView.as_view()), name='api_impersonate_users'),
     path('api/auth/user-audit/users/', csrf_exempt(views.api_user_audit_users), name='api_user_audit_users'),
     path('api/auth/user-audit/history/', csrf_exempt(views.api_user_audit_history), name='api_user_audit_history'),
     path('api/auth/user-audit/actions/', csrf_exempt(views.api_user_audit_actions), name='api_user_audit_actions'),
@@ -132,12 +136,34 @@ urlpatterns = [
     path('settings/', views.settings, name='settings'),
     
     # ==================== API ENDPOINTS ====================
+    # Client App Dashboard, Group, & Staff APIs (for React SPA)
+    path('api/dashboard/', client_views_api.api_dashboard_data, name='api_client_dashboard'),
+    path('api/reprint-history/', client_views_api.api_reprint_history, name='api_client_reprint_history'),
+    path('api/groups/', client_views_api.api_groups_list, name='api_client_groups'),
+    path('api/groups/active/', client_views_api.api_client_groups_list, name='api_client_groups_active'),
+    path('api/class-section-options/', client_views_api.api_class_section_options, name='api_client_class_section_options'),
+    path('api/tables/', client_views_api.api_tables_list, name='api_client_tables'),
+    path('api/messages/drawer/', client_views_api.api_messages_drawer, name='api_client_messages_drawer'),
+
+    # Client Staff Management APIs (for React SPA)
+    path('api/client-staff/', client_views_api.api_staff_list_create, name='api_client_staff_list_create'),
+    path('api/client-staff/<int:staff_id>/', client_views_api.api_staff_detail, name='api_client_staff_detail'),
+    path('api/client-staff/<int:staff_id>/toggle-status/', client_views_api.api_staff_toggle_status, name='api_client_staff_toggle_status'),
+    path('api/client-staff/<int:staff_id>/set-temp-password/', client_views_api.api_staff_set_temp_password, name='api_client_staff_set_temp_password'),
+
     # Client APIs
     path('api/client/create/', views.api_client_create, name='api_client_create'),
+    path('api/clients/create/', views.api_client_create, name='api_clients_create'),
     path('api/client/<int:client_id>/', views.api_client_get, name='api_client_get'),
+    path('api/clients/<int:client_id>/', views.api_client_get, name='api_clients_get'),
     path('api/client/<int:client_id>/update/', views.api_client_update, name='api_client_update'),
+    path('api/clients/<int:client_id>/update/', views.api_client_update, name='api_clients_update'),
     path('api/client/<int:client_id>/delete/', views.api_client_delete, name='api_client_delete'),
+    path('api/clients/<int:client_id>/delete/', views.api_client_delete, name='api_clients_delete'),
     path('api/client/<int:client_id>/toggle-status/', views.api_client_toggle_status, name='api_client_toggle_status'),
+    path('api/clients/<int:client_id>/toggle-status/', views.api_client_toggle_status, name='api_clients_toggle_status'),
+
+
     path('api/client/<int:client_id>/staff/', views.api_client_staff, name='api_client_staff'),
     path('api/client/<int:client_id>/staff/<int:staff_id>/toggle-status/', views.api_client_staff_toggle_status, name='api_client_staff_toggle_status'),
     path('api/client/<int:client_id>/staff/<int:staff_id>/permissions/', views.api_client_staff_permissions, name='api_client_staff_permissions'),

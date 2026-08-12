@@ -18,12 +18,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 
 from core.services.user_profile_service import UserProfileService
+from core.services.permission_service import api_require_any_authenticated
 from accounts.rate_limit import rate_limit
 
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["GET"])
 def api_get_profile(request):
     """Get current user's profile data."""
@@ -36,7 +37,7 @@ def api_get_profile(request):
     return JsonResponse({'success': True, 'profile': profile})
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 def api_update_profile(request):
     """Update current user's profile data."""
@@ -55,7 +56,7 @@ def api_update_profile(request):
         return JsonResponse({'success': False, 'message': 'An error occurred'})
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 @rate_limit(max_requests=5, window_seconds=300, key_prefix='password_change')
 def api_change_password(request):
@@ -76,7 +77,7 @@ def api_change_password(request):
         return JsonResponse({'success': False, 'message': 'An error occurred'})
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 @rate_limit(max_requests=20, window_seconds=60, key_prefix='security_settings')
 def api_update_security_settings(request):
@@ -105,7 +106,7 @@ def api_update_security_settings(request):
         return JsonResponse({'success': False, 'message': 'An error occurred'})
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 @rate_limit(max_requests=30, window_seconds=60, key_prefix='super_mode_toggle')
 def api_toggle_super_mode(request):
@@ -133,7 +134,7 @@ def api_toggle_super_mode(request):
         return JsonResponse({'success': False, 'message': 'Failed to update Super Mode'}, status=500)
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='profile_image')
 def api_upload_profile_image(request):
@@ -152,7 +153,7 @@ def api_upload_profile_image(request):
         return JsonResponse({'success': False, 'message': 'An error occurred'})
 
 
-@login_required
+@api_require_any_authenticated
 @require_http_methods(["POST"])
 def api_remove_profile_image(request):
     """Remove profile image."""
@@ -162,6 +163,7 @@ def api_remove_profile_image(request):
     except Exception as e:
         logger.exception("Settings API error (remove_profile_image): %s", e)
         return JsonResponse({'success': False, 'message': 'An error occurred'})
+
 
 
 __all__ = [

@@ -62,10 +62,15 @@ class ImpersonateService:
         if current_user.pk == target_user_id:
             return {'success': False, 'message': 'Cannot impersonate yourself.'}
 
+        # Decode ID if compatibility wrapped
+        from core.services.compat_service import CompatibilityService
+        _, real_id = CompatibilityService.decode_id(target_user_id)
+
         # Cannot impersonate operators or photographers
+        UserModel = get_user_model()
         try:
-            target_user = User.objects.get(pk=target_user_id)
-        except User.DoesNotExist:
+            target_user = UserModel.objects.get(pk=real_id)
+        except UserModel.DoesNotExist:
             return {'success': False, 'message': 'User not found.'}
 
         if target_user.role in ('operator', 'admin_staff', 'photographer'):
@@ -74,8 +79,6 @@ class ImpersonateService:
         # Cannot chain impersonations
         if cls.is_impersonating(request):
             return {'success': False, 'message': 'Already impersonating. Stop first.'}
-
-
 
         if not target_user.is_active:
             return {'success': False, 'message': 'Cannot impersonate an inactive user.'}
@@ -92,6 +95,8 @@ class ImpersonateService:
         # Set impersonation markers in the new session
         request.session[cls.SESSION_KEY] = original_user_id
         request.session[cls.SESSION_NAME_KEY] = original_user_name
+        request.session.modified = True
+        request.session.save()
 
         # Re-seed session fingerprint immediately after login() rotates session.
         try:
@@ -131,9 +136,13 @@ class ImpersonateService:
         if not original_user_id:
             return {'success': False, 'message': 'Not currently impersonating.'}
 
+        UserModel = get_user_model()
+        from core.services.compat_service import CompatibilityService
+        _, real_orig_id = CompatibilityService.decode_id(original_user_id)
         try:
-            original_user = User.objects.get(pk=original_user_id)
-        except User.DoesNotExist:
+            original_user = UserModel.objects.using('default').get(pk=real_orig_id)
+        except UserModel.DoesNotExist:
+            logger.error("Impersonate stop: Original account not found for user ID %s", real_orig_id)
             return {'success': False, 'message': 'Original account not found.'}
 
         impersonated_name = request.user.get_full_name() or request.user.username
@@ -143,6 +152,14 @@ class ImpersonateService:
             del request.session[cls.SESSION_KEY]
         if cls.SESSION_NAME_KEY in request.session:
             del request.session[cls.SESSION_NAME_KEY]
+
+        # Clear any thread-local guest sandbox routing context so login updates default DB
+        try:
+            from core.db_router import GuestSandboxRouter
+            GuestSandboxRouter.clear_guest_db()
+        except Exception:
+            pass
+        original_user._state.db = 'default'
 
         # Returning from impersonation should also avoid side-effect session revocations.
         request._skip_device_session_enforcement = True
@@ -182,8 +199,9 @@ class ImpersonateService:
         if not cls.can_impersonate(request.user):
             return []
 
+        UserModel = get_user_model()
         users = (
-            User.objects
+            UserModel.objects
             .filter(is_active=True)
             .select_related('client_profile', 'assistant_profile__client', 'operator_profile')
             .exclude(pk=request.user.pk)
@@ -210,7 +228,7 @@ class ImpersonateService:
                 'name': name,
                 'email': u.email,
                 'role': u.role,
-                'role_display': dict(User.ROLE_CHOICES).get(u.role, u.role),
+                'role_display': dict(UserModel.ROLE_CHOICES).get(u.role, u.role),
                 'is_active': u.is_active,
                 'client_name': client_name,
             }))

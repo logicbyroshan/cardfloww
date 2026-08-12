@@ -288,7 +288,7 @@ export default function ReprintCardsManagerView({ addToast }) {
                           fontSize: '11px',
                         }}
                       >
-                        {(page - 1) * pageSize + idx + 1}
+                        {idx + 1}
                       </td>
                       <td style={{ fontWeight: 600 }}>{name}</td>
                       <td>

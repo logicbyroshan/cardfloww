@@ -188,26 +188,6 @@ function StatCardsRow({ stats, loading, onNavigate }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Default Fallback Clients matching SS2
-───────────────────────────────────────────────────────────────────────── */
-const MOCK_CLIENT_ROWS = [
-  {
-    id: 'mock-1',
-    name: 'Mathura Das School of Execellence',
-    pending: 0,
-    verified: 0,
-    approved: 0,
-    downloaded: 0,
-    pool: 0,
-  },
-  { id: 'mock-2', name: 'Delhi Public School', pending: 12, verified: 45, approved: 120, downloaded: 350, pool: 2 },
-  { id: 'mock-3', name: 'St. Xavier High School', pending: 5, verified: 18, approved: 60, downloaded: 180, pool: 0 },
-];
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Helper to compute exact card counts per table (API + LocalStorage)
-───────────────────────────────────────────────────────────────────────── */
 function getTableCounts(t) {
   if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, request: 0, reprint: 0, confirmed: 0 };
   let pending = t.pending_count ?? t.pending ?? 0;
@@ -231,14 +211,7 @@ function getTableCounts(t) {
     const combinedLocal = [...listByTableId, ...listByTableName, ...filteredGlobalCards];
 
     if (combinedLocal.length > 0) {
-      let lp = 0,
-        lv = 0,
-        la = 0,
-        ld = 0,
-        lpool = 0,
-        lrp = 0,
-        lreq = 0,
-        lconf = 0;
+      let lp = 0, lv = 0, la = 0, ld = 0, lpool = 0, lrp = 0, lreq = 0, lconf = 0;
       const seenIds = new Set();
       combinedLocal.forEach((c) => {
         if (!c) return;
@@ -270,16 +243,12 @@ function getTableCounts(t) {
   return { pending, verified, approved, download, pool, request, reprint, confirmed };
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Recent Client Updates Table (Left Main Area) — SS2 Exact
-   Count Badges are CLICKABLE BUTTONS (border-radius: 2px sharp boxes)
-───────────────────────────────────────────────────────────────────────── */
 function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate, search, setSearch }) {
   const [expandedRows, setExpandedRows] = useState({});
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
 
-  const displayList = clients && clients.length > 0 ? clients : MOCK_CLIENT_ROWS;
+  const displayList = clients || [];
   const rows = displayList.filter(
     (c) => !search || (c.name || c.school_name || '').toLowerCase().includes(search.toLowerCase())
   );

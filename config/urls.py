@@ -168,7 +168,6 @@ urlpatterns += [
 
     # ==================== ADMIN PANEL (/panel/) ====================
     # All internal/admin routes live under /panel/
-    path('panel/', include('core.urls')),
     path('panel/auth/', include('accounts.urls')),
     path('panel/client/', include('client.urls')),
     path('panel/assistants/', include('assistants.urls')),
@@ -179,10 +178,10 @@ urlpatterns += [
     path('panel/reprint/', include('reprintcard.urls')),
     path('panel/staff/', include('staff.urls')),
     path('panel/stats/', include('stats.urls')),
+    path('panel/', include('core.urls')),
 
     # Backward-compatible root mounts for deployments that still hit the app
     # without the /panel prefix.
-    path('', include('core.urls')),
     path('', include(('accounts.urls', 'accounts'), namespace='accounts_root')),
     path('auth/', include(('accounts.urls', 'accounts'), namespace='accounts_auth_root')),
     path('client/', include(('client.urls', 'client'), namespace='client_root')),
@@ -194,6 +193,7 @@ urlpatterns += [
     path('work/', include(('idcards.urls', 'idcards'), namespace='idcards_root')),
     path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
+    path('', include('core.urls')),
 
     # ==================== MOBILE APP DOWNLOAD LANDING (/app/*) ====================
     path('app/', core_views.mobile_download_page, name='mobile_download_page'),

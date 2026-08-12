@@ -114,9 +114,16 @@ def api_debug_workflow(request):
 # ALLOWED TRANSITIONS API (any authenticated user)
 # =============================================================================
 
+from ..services.permission_service import (
+    PermissionService,
+    api_require_any_authenticated,
+)
+
+
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_card_allowed_transitions(request, card_id):
+
     """
     Return the transitions allowed for a specific card for the requesting user.
 

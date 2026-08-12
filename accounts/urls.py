@@ -42,9 +42,17 @@ urlpatterns = [
     
     path('api/auth/check-email/', views.CheckEmailAPIView.as_view(), name='api_check_email'),
     path('api/auth/login/', views.LoginAPIView.as_view(), name='api_login'),
+    path('api/auth/me/', views.AuthMeAPIView.as_view(), name='api_auth_me'),
     path('api/auth/forgot-password/', views.ForgotPasswordAPIView.as_view(), name='api_forgot_password'),
     path('api/auth/verify-otp/', views.VerifyOTPAPIView.as_view(), name='api_verify_otp'),
     path('api/auth/reset-password/', views.ResetPasswordAPIView.as_view(), name='api_reset_password'),
+
+    # Profile management endpoints
+    path('api/profile/', views.ProfileAPIView.as_view(), name='api_profile'),
+    path('api/profile/update/', views.ProfileUpdateAPIView.as_view(), name='api_profile_update'),
+    path('api/profile/change-password/', views.ProfileChangePasswordAPIView.as_view(), name='api_profile_change_password'),
+    path('api/profile/upload-image/', views.ProfileUploadImageAPIView.as_view(), name='api_profile_upload_image'),
+    path('api/profile/remove-image/', views.ProfileRemoveImageAPIView.as_view(), name='api_profile_remove_image'),
 
     # Impersonation endpoints (Pro User only)
     path('api/auth/impersonate/start/', views.ImpersonateStartAPIView.as_view(), name='api_impersonate_start'),
@@ -59,3 +67,4 @@ urlpatterns = [
     # Session refresh (silent keepalive for active users)
     path('api/auth/session-refresh/', api_session_refresh, name='api_session_refresh'),
 ]
+

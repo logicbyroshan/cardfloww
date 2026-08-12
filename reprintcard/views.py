@@ -25,7 +25,7 @@ from django.utils.dateparse import parse_datetime
 from idcards.models import IDCard, IDCardTable
 from core.services import IDCardService
 from core.services.base import BaseService
-from core.services.permission_service import PermissionService, api_require_permission
+from core.services.permission_service import PermissionService, api_require_permission, api_require_any_authenticated
 from core.services.activity_service import ActivityService
 from core.views.base import get_user_role
 from core.views.idcard_helpers import _get_class_section_field_names, _build_class_filter_q
@@ -549,7 +549,7 @@ def reprint_cards(request, table_id):
 # ---------------------------------------------------------------------------
 
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_step_counts(request, table_id):
     """Return step counts for the reprint workflow tabs."""
     perm_err = _require_reprint_scope(request.user, 'any_reprint')
@@ -565,7 +565,7 @@ def api_reprint_step_counts(request, table_id):
 
 
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_list(request, table_id):
     """List source IDCards (Download only) for Reprint List step."""
     perm_err = _require_reprint_scope(request.user, 'cards')
@@ -626,7 +626,7 @@ def api_reprint_list(request, table_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_request_create(request, table_id):
     """Create reprint requests for card IDs (goes to request list).
     Body: { "card_ids": [1, 2, 3], "reason": "optional" }
@@ -674,7 +674,7 @@ def api_reprint_request_create(request, table_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_confirm(request, table_id):
     """Confirm reprint requests: requested → confirmed.
     Body: { "rr_ids": [1, 2, 3] }
@@ -710,7 +710,7 @@ def api_reprint_confirm(request, table_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_retrieve(request, table_id):
     """Move confirmed reprint requests back to requested status.
     Body: { "rr_ids": [1, 2, 3] }
@@ -747,7 +747,7 @@ def api_reprint_retrieve(request, table_id):
 
 
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_request_list(request, table_id):
     """List requested reprint requests (status='requested')."""
     perm_err = _require_reprint_scope(request.user, 'request')
@@ -827,7 +827,7 @@ def api_request_list(request, table_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_reject(request, table_id):
     """Reject (delete) reprint requests in 'requested' or 'confirmed' status.
     Body: { "rr_ids": [1, 2, 3] }
@@ -862,7 +862,7 @@ def api_reprint_reject(request, table_id):
 
 
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_confirmed_list(request, table_id):
     """List confirmed reprint requests (status='confirmed')."""
     perm_err = _require_reprint_scope(request.user, 'confirmed')
@@ -942,7 +942,7 @@ def api_confirmed_list(request, table_id):
 
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_mark_downloaded(request, table_id):
     """Mark confirmed reprints as downloaded: confirmed → downloaded.
     Body: { "rr_ids": [1, 2, 3] }
@@ -978,7 +978,7 @@ def api_reprint_mark_downloaded(request, table_id):
 
 
 @require_http_methods(["GET"])
-@login_required
+@api_require_any_authenticated
 def api_download_list(request, table_id):
     """List downloaded reprint requests (status='downloaded')."""
     perm_err = _require_reprint_scope(request.user, 'confirmed')
@@ -1038,7 +1038,7 @@ def api_download_list(request, table_id):
 # ---------------------------------------------------------------------------
 
 @require_http_methods(["POST"])
-@login_required
+@api_require_any_authenticated
 def api_reprint_send_to_print(request, table_id):
     """Send requested reprint items to the cardprint Generate List.
 

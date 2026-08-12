@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Q
 
-from core.services.permission_service import PermissionService
+from core.services.permission_service import PermissionService, api_require_any_authenticated
 from core.services.live_presence_service import LiveClientPresenceService
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -112,7 +112,7 @@ def _take_hourly_snapshot(user):
     )
 
 
-@login_required
+@api_require_any_authenticated
 def api_statistics_data(request):
     """
     JSON API — real activity metrics over time.
@@ -456,7 +456,7 @@ def check_and_send_load_alerts(concurrent_users: int):
         break
 
 
-@login_required
+@api_require_any_authenticated
 def api_check_server_load(request):
     """Lightweight endpoint polled by the statistics page JS."""
     if not PermissionService.can_use_pro_user_options(request.user):

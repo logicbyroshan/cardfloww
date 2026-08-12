@@ -62,103 +62,8 @@ export default function ManageFeaturesView({ addToast }) {
   const [batchPageSize, setBatchPageSize] = useState(25);
 
   const [usersList, setUsersList] = useState([]);
-  const [guestUsers, setGuestUsers] = useState([
-    {
-      id: 'GST-101',
-      name: 'Sanjay Verma',
-      email: 'sanjay.guest@cardflow.com',
-      expires: '2026-08-10 18:00',
-      status: 'Active',
-    },
-    {
-      id: 'GST-102',
-      name: 'Vikram Mehta',
-      email: 'vikram.guest@cardflow.com',
-      expires: '2026-08-05 23:59',
-      status: 'Active',
-    },
-    {
-      id: 'GST-103',
-      name: 'Ritu Sharma',
-      email: 'ritu.guest@cardflow.com',
-      expires: '2026-08-01 12:00',
-      status: 'Expired',
-    },
-  ]);
-  const [batchJobs, setBatchJobs] = useState([
-    {
-      id: '#JOB-8841',
-      name: 'Bulk Student Excel Data Ingestion',
-      type: 'Bulk Upload',
-      user: 'admin@dpsd.edu.in',
-      records: '450 / 450 records',
-      progress: 100,
-      status: 'completed',
-      started: '2026-08-03T14:20:00Z',
-      download_url: '#',
-      duration: '14s',
-    },
-    {
-      id: '#JOB-8840',
-      name: 'Student Photo ZIP Auto Match & Sync',
-      type: 'Photo Sync',
-      user: 'rajesh.k@cardflow.com',
-      records: '320 / 320 photos',
-      progress: 100,
-      status: 'completed',
-      started: '2026-08-03T12:05:00Z',
-      download_url: '#',
-      duration: '48s',
-    },
-    {
-      id: '#JOB-8839',
-      name: 'ID Card Batch Print PDF Generation',
-      type: 'Bulk Export',
-      user: 'amit.op@cardflow.com',
-      records: '1,250 / 1,250 cards',
-      progress: 65,
-      status: 'processing',
-      started: '2026-08-03T15:10:00Z',
-      download_url: null,
-      duration: '1m 20s',
-    },
-    {
-      id: '#JOB-8838',
-      name: 'Field Schema Re-upload Data Patch',
-      type: 'Re-upload Patch',
-      user: 'priya.asst@cardflow.com',
-      records: '85 / 85 records',
-      progress: 100,
-      status: 'completed',
-      started: '2026-08-02T18:45:00Z',
-      download_url: '#',
-      duration: '6s',
-    },
-    {
-      id: '#JOB-8837',
-      name: 'Bulk Staff Ingestion & Account Provisioning',
-      type: 'Bulk Upload',
-      user: 'admin@dpsd.edu.in',
-      records: '50 / 50 records',
-      progress: 100,
-      status: 'completed',
-      started: '2026-08-01T09:30:00Z',
-      download_url: '#',
-      duration: '9s',
-    },
-    {
-      id: '#JOB-8836',
-      name: 'Archived Card Records ZIP Backup Export',
-      type: 'Bulk Export',
-      user: 'sanjay.guest@cardflow.com',
-      records: '0 / 200 records',
-      progress: 20,
-      status: 'failed',
-      started: '2026-07-31T11:15:00Z',
-      download_url: null,
-      duration: '3s',
-    },
-  ]);
+  const [guestUsers, setGuestUsers] = useState([]);
+  const [batchJobs, setBatchJobs] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -246,50 +151,6 @@ export default function ManageFeaturesView({ addToast }) {
         }
       });
 
-      if (list.length === 0) {
-        list = [
-          {
-            id: 'usr-1',
-            name: 'Delhi Public School (Organisation)',
-            email: 'admin@dpsd.edu.in',
-            role: 'Manage Organisation',
-            rawRole: 'client',
-            status: 'Active',
-          },
-          {
-            id: 'usr-2',
-            name: 'Rajesh Kumar (Manager)',
-            email: 'rajesh.k@cardflow.com',
-            role: 'Manage Manager',
-            rawRole: 'client',
-            status: 'Active',
-          },
-          {
-            id: 'usr-3',
-            name: 'Amit Sharma (Operator)',
-            email: 'amit.op@cardflow.com',
-            role: 'Manage Operator',
-            rawRole: 'client_staff',
-            status: 'Active',
-          },
-          {
-            id: 'usr-4',
-            name: 'Priya Singh (Assistant)',
-            email: 'priya.asst@cardflow.com',
-            role: 'Manage Assistant',
-            rawRole: 'client_staff',
-            status: 'Active',
-          },
-          {
-            id: 'usr-5',
-            name: 'Sanjay Verma (Guest User)',
-            email: 'sanjay.guest@cardflow.com',
-            role: 'Guest User',
-            rawRole: 'guest_user',
-            status: 'Active',
-          },
-        ];
-      }
       setUsersList(list);
 
       if (opsRes.status === 'fulfilled' && opsRes.value) {

@@ -22,7 +22,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 
 from idcards.models import IDCardTable
-from core.services.permission_service import PermissionService
+from core.services.permission_service import PermissionService, api_require_any_authenticated
 from accounts.rate_limit import rate_limit
 
 from django.core.cache import cache as django_cache
@@ -747,7 +747,7 @@ def _write_http_response_to_file(response, file_path: str) -> int:
 # EXCEL EXPORT
 # =============================================================================
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_xlsx(request, table_id: int) -> HttpResponse:
@@ -850,7 +850,7 @@ def api_export_xlsx(request, table_id: int) -> HttpResponse:
 # WORD EXPORT
 # =============================================================================
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_docx(request, table_id: int) -> HttpResponse:
@@ -1030,7 +1030,7 @@ def api_export_docx(request, table_id: int) -> HttpResponse:
 # PDF EXPORT
 # =============================================================================
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_pdf(request, table_id: int) -> HttpResponse:
@@ -1165,7 +1165,7 @@ def api_export_pdf(request, table_id: int) -> HttpResponse:
 # Threshold: exports with more cards than this use background generation
 _ASYNC_PDF_THRESHOLD = 500
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_pdf_async(request, table_id: int) -> JsonResponse:
@@ -1247,7 +1247,7 @@ def api_export_pdf_async(request, table_id: int) -> JsonResponse:
     })
 
 
-@login_required
+@api_require_any_authenticated
 def api_export_status(request, task_id: str) -> JsonResponse:
     """
     Check the status of a background export task.
@@ -1290,7 +1290,7 @@ def api_export_status(request, task_id: str) -> JsonResponse:
 # IMAGE ZIP EXPORT
 # =============================================================================
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_images(request, table_id: int) -> JsonResponse:
@@ -1424,7 +1424,7 @@ def api_export_images(request, table_id: int) -> JsonResponse:
 # EXPORT PREVIEW
 # =============================================================================
 
-@login_required
+@api_require_any_authenticated
 def api_export_preview(request, table_id: int) -> JsonResponse:
     """
     Get export preview/capabilities for a table.
@@ -1488,7 +1488,7 @@ _DOWNLOAD_ALL_STATUSES = {
 }
 
 
-@login_required
+@api_require_any_authenticated
 @require_POST
 @rate_limit(max_requests=3, window_seconds=60, key_prefix='export_all')
 def api_download_all_cards(request, table_id: int) -> JsonResponse:

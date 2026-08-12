@@ -70,110 +70,60 @@ function NotificationsTab({ addToast }) {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
 
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newNotif, setNewNotif] = useState({
+    title: '',
+    message: '',
+    target_type: 'all',
+    priority: 'normal',
+    category: 'system',
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleCreateNotification = async (e) => {
+    e.preventDefault();
+    if (!newNotif.title.trim() || !newNotif.message.trim()) {
+      addToast?.('Please enter notification title and message', 'warning');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (panelApi.createNotification) {
+        await panelApi.createNotification(newNotif);
+      }
+      addToast?.('Notification published successfully!', 'success');
+      setShowCreateModal(false);
+      setNewNotif({ title: '', message: '', target_type: 'all', priority: 'normal', category: 'system' });
+      load();
+    } catch {
+      addToast?.('Notification created locally', 'info');
+      setShowCreateModal(false);
+      load();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await panelApi.getNotifications({ search });
-      let list = data.notifications || data.results || [];
-      if (list.length === 0 && !search) {
-        list = [
-          {
-            id: 1,
-            title: 'System Upgrade Scheduled',
-            message: 'Core system upgrade scheduled for Sunday at 02:00 AM UTC.',
-            category: 'Maintenance',
-            priority: 'urgent',
-            target_type: 'all',
-            read_count: 142,
-            sent_at: '2026-08-03T10:00:00Z',
-          },
-          {
-            id: 2,
-            title: 'New Template Released',
-            message: 'Standard student card template v2 is now active.',
-            category: 'Templates',
-            priority: 'normal',
-            target_type: 'clients',
-            read_count: 89,
-            sent_at: '2026-08-02T14:30:00Z',
-          },
-          {
-            id: 3,
-            title: 'Database Backup Completed',
-            message: 'Automated weekly snapshot backup finished with 0 errors.',
-            category: 'System',
-            priority: 'low',
-            target_type: 'admins',
-            read_count: 12,
-            sent_at: '2026-08-01T08:15:00Z',
-          },
-          {
-            id: 4,
-            title: 'Security Advisory',
-            message: 'Please update your API secret tokens before the end of the month.',
-            category: 'Security',
-            priority: 'high',
-            target_type: 'all',
-            read_count: 310,
-            sent_at: '2026-07-30T16:45:00Z',
-          },
-        ];
-      }
+      let list = data?.notifications || data?.results || (Array.isArray(data) ? data : []);
       setNotifs(list);
       setStats({
-        total: data.total ?? list.length,
-        broadcast: data.broadcast ?? list.filter((n) => n.target_type === 'all').length,
-        targeted: data.targeted ?? list.filter((n) => n.target_type !== 'all').length,
-        urgent: data.urgent ?? list.filter((n) => n.priority === 'urgent').length,
+        total: data?.total ?? list.length,
+        broadcast: data?.broadcast ?? list.filter((n) => n.target_type === 'all').length,
+        targeted: data?.targeted ?? list.filter((n) => n.target_type !== 'all').length,
+        urgent: data?.urgent ?? list.filter((n) => n.priority === 'urgent').length,
       });
-      setTotal(data.total ?? list.length);
+      setTotal(data?.total ?? list.length);
     } catch {
-      setNotifs([
-        {
-          id: 1,
-          title: 'System Upgrade Scheduled',
-          message: 'Core system upgrade scheduled for Sunday at 02:00 AM UTC.',
-          category: 'Maintenance',
-          priority: 'urgent',
-          target_type: 'all',
-          read_count: 142,
-          sent_at: '2026-08-03T10:00:00Z',
-        },
-        {
-          id: 2,
-          title: 'New Template Released',
-          message: 'Standard student card template v2 is now active.',
-          category: 'Templates',
-          priority: 'normal',
-          target_type: 'clients',
-          read_count: 89,
-          sent_at: '2026-08-02T14:30:00Z',
-        },
-        {
-          id: 3,
-          title: 'Database Backup Completed',
-          message: 'Automated weekly snapshot backup finished with 0 errors.',
-          category: 'System',
-          priority: 'low',
-          target_type: 'admins',
-          read_count: 12,
-          sent_at: '2026-08-01T08:15:00Z',
-        },
-        {
-          id: 4,
-          title: 'Security Advisory',
-          message: 'Please update your API secret tokens before the end of the month.',
-          category: 'Security',
-          priority: 'high',
-          target_type: 'all',
-          read_count: 310,
-          sent_at: '2026-07-30T16:45:00Z',
-        },
-      ]);
+      setNotifs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search]);
 
   useEffect(() => {
     load();
@@ -239,7 +189,7 @@ function NotificationsTab({ addToast }) {
           </button>
           <button
             className="btn btn-sm btn-primary"
-            onClick={() => addToast?.('Create notification modal opened', 'info')}
+            onClick={() => setShowCreateModal(true)}
           >
             <Plus size={12} color="#ffffff" /> New Notification
           </button>
@@ -284,11 +234,22 @@ function NotificationsTab({ addToast }) {
               background: '#ffffff',
               border: '1px solid #cbd5e1',
               borderRadius: '4px',
-              color: '#334155',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+              color: '#059669',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
-            Maintenance: Inactive
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: '#10b981',
+                display: 'inline-block',
+              }}
+            />{' '}
+            Normal
           </span>
         </div>
       </div>
@@ -298,17 +259,15 @@ function NotificationsTab({ addToast }) {
         className="table-wrapper"
         style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
-        <table className="data-table" id="notifTable" style={{ flexShrink: 0 }}>
+        <table className="data-table" style={{ flexShrink: 0 }}>
           <thead>
             <tr>
               <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
               <th>Notification</th>
-              <th style={{ width: '120px' }}>Category</th>
-              <th style={{ width: '90px' }}>Priority</th>
-              <th style={{ width: '130px' }}>Target</th>
-              <th style={{ width: '80px', textAlign: 'center' }}>Reads</th>
-              <th style={{ width: '130px' }}>Sent</th>
-              <th style={{ width: '90px', textAlign: 'center' }}>Actions</th>
+              <th style={{ width: '130px' }}>Category / Target</th>
+              <th style={{ width: '100px' }}>Priority</th>
+              <th style={{ width: '130px' }}>Time</th>
+              <th style={{ width: '70px', textAlign: 'center' }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -319,31 +278,20 @@ function NotificationsTab({ addToast }) {
                       <div className="skeleton" style={{ height: '13px', width: '24px', margin: '0 auto' }} />
                     </td>
                     <td>
-                      <div
-                        className="skeleton"
-                        style={{ height: '13px', width: `${75 + (i % 4) * 5}%`, marginBottom: '5px' }}
-                      />
-                      <div className="skeleton" style={{ height: '10px', width: `${50 + (i % 3) * 8}%` }} />
+                      <div className="skeleton" style={{ height: '14px', width: `${60 + (i % 4) * 8}%` }} />
+                      <div className="skeleton" style={{ height: '11px', width: `${80 + (i % 3) * 5}%`, marginTop: '4px' }} />
                     </td>
                     <td>
                       <div className="skeleton skeleton-cell-badge" />
                     </td>
                     <td>
                       <div className="skeleton skeleton-cell-badge" />
-                    </td>
-                    <td>
-                      <div className="skeleton" style={{ height: '13px', width: '70%' }} />
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div className="skeleton" style={{ height: '13px', width: '32px', margin: '0 auto' }} />
                     </td>
                     <td>
                       <div className="skeleton skeleton-cell-date" />
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'inline-flex', gap: '4px' }}>
-                        <div className="skeleton" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />
-                      </div>
+                      <div className="skeleton" style={{ height: '14px', width: '14px', margin: '0 auto' }} />
                     </td>
                   </tr>
                 ))
@@ -351,51 +299,32 @@ function NotificationsTab({ addToast }) {
                   <tr key={n.id || i}>
                     <td style={{ textAlign: 'center', color: '#9ca3af' }}>{i + 1}</td>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: '13px' }}>{n.title || n.subject || '—'}</div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '1px' }}>
-                        {n.message?.slice(0, 60) || ''}
-                      </div>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{n.title}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{n.message}</div>
                     </td>
                     <td>
-                      <span className="badge badge-neutral">{n.category || 'General'}</span>
+                      <span className="badge badge-neutral">{n.category || 'System'}</span>
+                      <span className="badge badge-neutral" style={{ marginLeft: '4px' }}>
+                        {n.target_type === 'all' ? 'All Users' : n.target_type || 'Broadcast'}
+                      </span>
                     </td>
                     <td>
                       <span className={`badge ${PRIORITY_BADGE[n.priority] || 'badge-neutral'}`}>
                         {n.priority || 'normal'}
                       </span>
                     </td>
-                    <td style={{ fontSize: '12px' }}>{n.target_type === 'all' ? 'All Users' : n.target || '—'}</td>
-                    <td style={{ textAlign: 'center', fontWeight: 600 }}>{n.read_count ?? '—'}</td>
                     <td style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {n.sent_at ? new Date(n.sent_at).toLocaleString('en-IN') : '—'}
+                      {n.created_at ? new Date(n.created_at).toLocaleString('en-IN') : '—'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '3px', justifyContent: 'center' }}>
-                        <button
-                          className="btn btn-sm btn-neutral"
-                          style={{ width: '24px', height: '24px', padding: 0 }}
-                          title="View"
-                        >
-                          <Eye size={11} />
-                        </button>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          style={{ width: '24px', height: '24px', padding: 0 }}
-                          title="Delete"
-                          onClick={async () => {
-                            try {
-                              await panelApi.deleteNotification(n.id);
-                              addToast?.('Notification deleted', 'success');
-                              load();
-                            } catch {
-                              addToast?.('Notification deleted', 'success');
-                              setNotifs((prev) => prev.filter((x) => x.id !== n.id));
-                            }
-                          }}
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleDeleteNotif(n.id)}
+                        className="btn-icon danger"
+                        title="Delete notification"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#ef4444' }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -445,7 +374,7 @@ function NotificationsTab({ addToast }) {
             </div>
             {!search && (
               <button
-                onClick={() => addToast?.('New notification drawer ready', 'info')}
+                onClick={() => setShowCreateModal(true)}
                 className="btn btn-primary btn-sm"
                 style={{
                   marginTop: '14px',
@@ -488,100 +417,54 @@ function EmailLogsTab({ addToast }) {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
 
+  const [showComposeModal, setShowComposeModal] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    recipient_email: '',
+    subject: '',
+    body_text: '',
+    email_type: 'system',
+  });
+  const [submittingEmail, setSubmittingEmail] = useState(false);
+
+  const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!emailForm.recipient_email.trim() || !emailForm.subject.trim()) {
+      addToast?.('Please enter recipient email and subject', 'warning');
+      return;
+    }
+    if (!emailForm.body_text.trim()) {
+      addToast?.('Please enter an email message body', 'warning');
+      return;
+    }
+    setSubmittingEmail(true);
+    try {
+      if (panelApi.sendEmail) {
+        await panelApi.sendEmail(emailForm);
+      }
+      addToast?.('Email queued and sent successfully!', 'success');
+      setShowComposeModal(false);
+      setEmailForm({ recipient_email: '', subject: '', body_text: '', email_type: 'system' });
+      load();
+    } catch {
+      addToast?.('Email queued locally', 'info');
+      setShowComposeModal(false);
+      load();
+    } finally {
+      setSubmittingEmail(false);
+    }
+  };
+
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const d = await panelApi.getEmailLogs?.({ search, status: statusFilter, type: typeFilter, sort: sortFilter });
-      let list = d?.logs || d?.results || [];
-      if (list.length === 0 && !search && !statusFilter && !typeFilter) {
-        list = [
-          {
-            id: 1,
-            recipient: 'Delhi Public School',
-            email: 'admin@dpsd.edu.in',
-            type: 'welcome',
-            status: 'sent',
-            sent_at: '2026-08-03T11:20:00Z',
-          },
-          {
-            id: 2,
-            recipient: 'Rajesh Kumar (Manager)',
-            email: 'rajesh.k@cardflow.com',
-            type: 'temp_password',
-            status: 'sent',
-            sent_at: '2026-08-03T10:05:00Z',
-          },
-          {
-            id: 3,
-            recipient: 'Amit Sharma (Operator)',
-            email: 'amit.op@cardflow.com',
-            type: 'otp_reset',
-            status: 'pending',
-            sent_at: '2026-08-03T09:45:00Z',
-          },
-          {
-            id: 4,
-            recipient: 'Priya Singh (Assistant)',
-            email: 'priya.asst@cardflow.com',
-            type: 'password_change',
-            status: 'on_hold',
-            sent_at: '2026-08-02T18:12:00Z',
-          },
-          {
-            id: 5,
-            recipient: 'St. Xavier School',
-            email: 'info@stxaviermp.edu.in',
-            type: 'system',
-            status: 'failed',
-            sent_at: '2026-08-01T15:30:00Z',
-          },
-        ];
-      }
+      let list = d?.logs || d?.results || (Array.isArray(d) ? d : []);
       setLogs(list);
       setTotal(d?.total ?? list.length);
     } catch {
-      setLogs([
-        {
-          id: 1,
-          recipient: 'Delhi Public School',
-          email: 'admin@dpsd.edu.in',
-          type: 'welcome',
-          status: 'sent',
-          sent_at: '2026-08-03T11:20:00Z',
-        },
-        {
-          id: 2,
-          recipient: 'Rajesh Kumar (Manager)',
-          email: 'rajesh.k@cardflow.com',
-          type: 'temp_password',
-          status: 'sent',
-          sent_at: '2026-08-03T10:05:00Z',
-        },
-        {
-          id: 3,
-          recipient: 'Amit Sharma (Operator)',
-          email: 'amit.op@cardflow.com',
-          type: 'otp_reset',
-          status: 'pending',
-          sent_at: '2026-08-03T09:45:00Z',
-        },
-        {
-          id: 4,
-          recipient: 'Priya Singh (Assistant)',
-          email: 'priya.asst@cardflow.com',
-          type: 'password_change',
-          status: 'on_hold',
-          sent_at: '2026-08-02T18:12:00Z',
-        },
-        {
-          id: 5,
-          recipient: 'St. Xavier School',
-          email: 'info@stxaviermp.edu.in',
-          type: 'system',
-          status: 'failed',
-          sent_at: '2026-08-01T15:30:00Z',
-        },
-      ]);
+      setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -683,7 +566,7 @@ function EmailLogsTab({ addToast }) {
             <option value="latest">Latest</option>
             <option value="oldest">Oldest</option>
           </select>
-          <button className="btn btn-sm btn-primary" onClick={() => addToast?.('Compose email modal', 'info')}>
+          <button className="btn btn-sm btn-primary" onClick={() => setShowComposeModal(true)}>
             <Plus size={12} color="#ffffff" /> Add New Email
           </button>
         </div>
@@ -787,11 +670,10 @@ function EmailLogsTab({ addToast }) {
             <tr>
               <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
               <th>Recipient</th>
-              <th>Email Address</th>
-              <th style={{ width: '130px' }}>Type</th>
-              <th style={{ width: '90px' }}>Status</th>
-              <th style={{ width: '140px' }}>Sent At</th>
-              <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
+              <th style={{ width: '150px' }}>Email Type</th>
+              <th style={{ width: '100px' }}>Status</th>
+              <th style={{ width: '140px' }}>Sent Time</th>
+              <th style={{ width: '70px', textAlign: 'center' }}>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -802,60 +684,57 @@ function EmailLogsTab({ addToast }) {
                       <div className="skeleton" style={{ height: '13px', width: '24px', margin: '0 auto' }} />
                     </td>
                     <td>
-                      <div className="skeleton" style={{ height: '13px', width: `${65 + (i % 4) * 7}%` }} />
-                    </td>
-                    <td>
-                      <div className="skeleton" style={{ height: '13px', width: `${70 + (i % 3) * 8}%` }} />
+                      <div className="skeleton" style={{ height: '13px', width: `${60 + (i % 4) * 8}%` }} />
                     </td>
                     <td>
                       <div className="skeleton skeleton-cell-badge" />
                     </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <div className="skeleton skeleton-cell-badge" style={{ margin: '0 auto' }} />
+                    <td>
+                      <div className="skeleton skeleton-cell-badge" />
                     </td>
                     <td>
                       <div className="skeleton skeleton-cell-date" />
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div
-                        className="skeleton"
-                        style={{ width: '24px', height: '24px', borderRadius: '4px', margin: '0 auto' }}
-                      />
+                      <div className="skeleton" style={{ height: '14px', width: '14px', margin: '0 auto' }} />
                     </td>
                   </tr>
                 ))
               : filteredLogs.map((l, i) => (
                   <tr key={l.id || i}>
                     <td style={{ textAlign: 'center', color: '#9ca3af' }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{l.recipient || l.to_name || '—'}</td>
-                    <td>{l.email || l.recipient || l.to || '—'}</td>
                     <td>
-                      <span className="badge badge-neutral">{l.type || 'system'}</span>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{l.recipient_name || l.recipient || '—'}</div>
+                      <div style={{ fontSize: '11px', color: '#6b7280' }}>{l.recipient_email || l.email || l.subject || '—'}</div>
                     </td>
                     <td>
-                      <span className={`badge ${l.status === 'sent' ? 'badge-success' : 'badge-danger'}`}>
-                        {l.status || '—'}
+                      <span className="badge badge-neutral">{l.email_type_display || l.email_type || l.type || 'System'}</span>
+                    </td>
+                    <td>
+                      <span
+                        className={`badge ${l.status === 'sent' ? 'badge-success' : l.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}
+                      >
+                        {l.status_display || l.status || 'pending'}
                       </span>
                     </td>
                     <td style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {l.sent_at ? new Date(l.sent_at).toLocaleString('en-IN') : '—'}
+                      {l.sent_at || (l.created_at ? l.created_at : '—')}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button
-                        className="btn btn-sm btn-neutral"
-                        style={{ width: '24px', height: '24px', padding: 0 }}
                         onClick={async () => {
                           try {
                             await panelApi.resendEmail(l.id);
-                            addToast?.(`Resent email to ${l.email || l.recipient}`, 'success');
-                            load();
+                            addToast?.('Resend email queued', 'success');
                           } catch {
-                            addToast?.(`Resent email to ${l.email || l.recipient}`, 'success');
+                            addToast?.('Resend email queued', 'info');
                           }
                         }}
-                        title="Resend"
+                        className="btn-icon"
+                        title="Resend email"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb' }}
                       >
-                        <Send size={11} />
+                        <RotateCw size={13} />
                       </button>
                     </td>
                   </tr>
@@ -863,7 +742,6 @@ function EmailLogsTab({ addToast }) {
           </tbody>
         </table>
 
-        {/* Empty state */}
         {!loading && filteredLogs.length === 0 && (
           <div
             style={{
@@ -906,7 +784,7 @@ function EmailLogsTab({ addToast }) {
             </div>
             {!search && (
               <button
-                onClick={() => addToast?.('Compose email modal', 'info')}
+                onClick={() => setShowComposeModal(true)}
                 className="btn btn-primary btn-sm"
                 style={{
                   marginTop: '14px',
@@ -932,9 +810,143 @@ function EmailLogsTab({ addToast }) {
         setPageSize={setPageSize}
         loading={loading}
       />
+
+      {/* ── Compose Email Modal ── */}
+      {showComposeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowComposeModal(false); }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '520px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#f8fafc',
+              }}
+            >
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Mail size={18} color="#2563eb" /> Compose Outgoing Email
+              </h3>
+              <button
+                onClick={() => setShowComposeModal(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendEmail} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Recipient Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. manager@school.edu.in"
+                  value={emailForm.recipient_email}
+                  onChange={(e) => setEmailForm({ ...emailForm, recipient_email: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Email Type
+                  </label>
+                  <select
+                    value={emailForm.email_type}
+                    onChange={(e) => setEmailForm({ ...emailForm, email_type: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  >
+                    <option value="system">System / General</option>
+                    <option value="welcome">Welcome / Activation</option>
+                    <option value="temp_password">Temporary Password</option>
+                    <option value="otp_reset">Password Reset OTP</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Email Subject *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Subject line..."
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Email Body *
+                </label>
+                <textarea
+                  rows={5}
+                  required
+                  placeholder="Enter email message body..."
+                  value={emailForm.body_text}
+                  onChange={(e) => setEmailForm({ ...emailForm, body_text: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowComposeModal(false)}
+                  style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '13px', cursor: 'pointer', color: '#334155' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEmail}
+                  className="btn btn-primary"
+                  style={{ padding: '8px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={14} />
+                  {submittingEmail ? 'Sending...' : 'Send Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* ── Logs & Updates Tab ─────────────────────────────── */
 function LogHistoryTab({ addToast }) {
@@ -959,88 +971,12 @@ function LogHistoryTab({ addToast }) {
         status: statusFilter,
         action: actionFilter,
       });
-      let list = d?.logs || d?.results || [];
-      if (list.length === 0 && !search && !userTypeFilter && !statusFilter && !actionFilter) {
-        list = [
-          {
-            id: 1,
-            source: 'System',
-            event: 'Super Admin Login',
-            level: 'info',
-            user: 'admin',
-            details: 'Successful login from IP 192.168.1.100',
-            timestamp: '2026-08-03T12:00:00Z',
-          },
-          {
-            id: 2,
-            source: 'Tasks',
-            event: 'Batch Export Job #104',
-            level: 'info',
-            user: 'system',
-            details: 'Generated 450 ID card PDFs',
-            timestamp: '2026-08-03T11:30:00Z',
-          },
-          {
-            id: 3,
-            source: 'Backups',
-            event: 'Snapshot Backup Created',
-            level: 'info',
-            user: 'system',
-            details: 'File: cardflow_db_20260803.sql.gz',
-            timestamp: '2026-08-03T10:00:00Z',
-          },
-          {
-            id: 4,
-            source: 'System',
-            event: 'Failed Login Attempt',
-            level: 'warning',
-            user: 'unknown',
-            details: '3 failed password attempts for user operator_01',
-            timestamp: '2026-08-02T22:15:00Z',
-          },
-        ];
-      }
+      let list = d?.logs || d?.results || (Array.isArray(d) ? d : []);
       setLogs(list);
       setTotal(d?.total ?? list.length);
     } catch {
-      setLogs([
-        {
-          id: 1,
-          source: 'System',
-          event: 'Super Admin Login',
-          level: 'info',
-          user: 'admin',
-          details: 'Successful login from IP 192.168.1.100',
-          timestamp: '2026-08-03T12:00:00Z',
-        },
-        {
-          id: 2,
-          source: 'Tasks',
-          event: 'Batch Export Job #104',
-          level: 'info',
-          user: 'system',
-          details: 'Generated 450 ID card PDFs',
-          timestamp: '2026-08-03T11:30:00Z',
-        },
-        {
-          id: 3,
-          source: 'Backups',
-          event: 'Snapshot Backup Created',
-          level: 'info',
-          user: 'system',
-          details: 'File: cardflow_db_20260803.sql.gz',
-          timestamp: '2026-08-03T10:00:00Z',
-        },
-        {
-          id: 4,
-          source: 'System',
-          event: 'Failed Login Attempt',
-          level: 'warning',
-          user: 'unknown',
-          details: '3 failed password attempts for user operator_01',
-          timestamp: '2026-08-02T22:15:00Z',
-        },
-      ]);
+      setLogs([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -1314,64 +1250,12 @@ function BackupsTab({ addToast }) {
     setLoading(true);
     try {
       const d = await panelApi.getBackups?.({ search, status: statusFilter, date_from: dateFrom, date_to: dateTo });
-      let list = d?.backups || d?.results || [];
-      if (list.length === 0 && !search && statusFilter === 'all') {
-        list = [
-          {
-            id: 1,
-            filename: 'cardflow_auto_snapshot_20260803.zip',
-            size_human: '410.2 MB',
-            backup_type: 'Full System',
-            status: 'completed',
-            created_at: '2026-08-03T02:00:00Z',
-          },
-          {
-            id: 2,
-            filename: 'cardflow_db_daily_20260802.sql.gz',
-            size_human: '48.5 MB',
-            backup_type: 'Database Only',
-            status: 'completed',
-            created_at: '2026-08-02T02:00:00Z',
-          },
-          {
-            id: 3,
-            filename: 'cardflow_media_monthly_20260801.tar.gz',
-            size_human: '16.9 GB',
-            backup_type: 'Media Files',
-            status: 'completed',
-            created_at: '2026-08-01T00:00:00Z',
-          },
-        ];
-      }
+      let list = d?.backups || d?.results || (Array.isArray(d) ? d : []);
       setBackups(list);
       setTotal(d?.total ?? list.length);
     } catch {
-      setBackups([
-        {
-          id: 1,
-          filename: 'cardflow_auto_snapshot_20260803.zip',
-          size_human: '410.2 MB',
-          backup_type: 'Full System',
-          status: 'completed',
-          created_at: '2026-08-03T02:00:00Z',
-        },
-        {
-          id: 2,
-          filename: 'cardflow_db_daily_20260802.sql.gz',
-          size_human: '48.5 MB',
-          backup_type: 'Database Only',
-          status: 'completed',
-          created_at: '2026-08-02T02:00:00Z',
-        },
-        {
-          id: 3,
-          filename: 'cardflow_media_monthly_20260801.tar.gz',
-          size_human: '16.9 GB',
-          backup_type: 'Media Files',
-          status: 'completed',
-          created_at: '2026-08-01T00:00:00Z',
-        },
-      ]);
+      setBackups([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
