@@ -1070,8 +1070,10 @@ function LogHistoryTab({ addToast }) {
             <option value="">All User Types</option>
             <option value="super_admin">Super Admin</option>
             <option value="admin_staff">Operator</option>
-            <option value="client">Client</option>
-            <option value="client_staff">Assistant</option>
+            <option value="prime_manager">Prime Manager</option>
+            <option value="manager">Manager</option>
+            <option value="assistant">Assistant</option>
+            <option value="guest_prime_manager">Guest Prime Manager</option>
           </select>
           <select
             value={statusFilter}

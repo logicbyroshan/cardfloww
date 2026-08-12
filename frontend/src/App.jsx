@@ -88,7 +88,7 @@ export default function App() {
     window.__setActiveImpersonation = (user) => {
       setImpersonatedUser(user);
       if (user) {
-        setUserRole(user.rawRole || 'client');
+        setUserRole(user.rawRole || 'prime_manager');
       } else {
         setUserRole('super_admin');
       }
@@ -153,7 +153,7 @@ export default function App() {
     window.__setActiveImpersonation = (user) => {
       if (user) {
         setImpersonatedUser(user);
-        setUserRole(user.rawRole || user.role || 'client');
+        setUserRole(user.rawRole || user.role || 'prime_manager');
       } else {
         setImpersonatedUser(null);
         refreshUser();

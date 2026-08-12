@@ -87,7 +87,7 @@ export default function ManageFeaturesView({ addToast }) {
             name: c.name || c.school_name || 'Client Account',
             email: c.email || c.user?.email || 'N/A',
             role: c.client_type === 'manager' ? 'Manage Manager' : 'Manage Organisation',
-            rawRole: 'client',
+            rawRole: 'prime_manager',
             status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
           });
         });
@@ -102,7 +102,7 @@ export default function ManageFeaturesView({ addToast }) {
             name: s.name || s.user?.get_full_name || s.user?.username || 'Assistant',
             email: s.email || s.user?.email || 'N/A',
             role: s.role_display || 'Manage Assistant',
-            rawRole: 'client_staff',
+            rawRole: 'assistant',
             status: 'Active',
           });
         });
@@ -119,7 +119,7 @@ export default function ManageFeaturesView({ addToast }) {
             name: c.name || 'Organisation Account',
             email: c.email || 'N/A',
             role: 'Manage Organisation',
-            rawRole: 'client',
+            rawRole: 'prime_manager',
             status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
           });
         }
@@ -132,7 +132,7 @@ export default function ManageFeaturesView({ addToast }) {
             name: m.name || 'Manager Account',
             email: m.email || 'N/A',
             role: m.client_type === 'primary' ? 'Client (Primary Owner)' : 'Manager Account',
-            rawRole: 'client',
+            rawRole: 'prime_manager',
             status: m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'Active',
           });
         }
@@ -489,16 +489,20 @@ export default function ManageFeaturesView({ addToast }) {
                 {[
                   { id: 'all', label: `All (${usersList.length})` },
                   {
-                    id: 'client',
-                    label: `Organisation/Manager (${usersList.filter((u) => u.rawRole === 'client').length})`,
+                    id: 'prime_manager',
+                    label: `Prime Manager (${usersList.filter((u) => u.rawRole === 'prime_manager').length})`,
                   },
                   {
-                    id: 'client_staff',
-                    label: `Assistant (${usersList.filter((u) => u.rawRole === 'client_staff').length})`,
+                    id: 'manager',
+                    label: `Manager (${usersList.filter((u) => u.rawRole === 'manager').length})`,
                   },
                   {
-                    id: 'guest_user',
-                    label: `Guest User (${usersList.filter((u) => u.rawRole === 'guest_user').length})`,
+                    id: 'assistant',
+                    label: `Assistant (${usersList.filter((u) => u.rawRole === 'assistant').length})`,
+                  },
+                  {
+                    id: 'guest_prime_manager',
+                    label: `Guest Prime Manager (${usersList.filter((u) => u.rawRole === 'guest_prime_manager').length})`,
                   },
                 ].map((pill) => (
                   <button

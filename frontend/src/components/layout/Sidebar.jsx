@@ -88,10 +88,14 @@ const ROLE_COLORS = {
   pro_user: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
   operator: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
   admin_staff: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
-  client: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
+  prime_manager: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
+  manager: { bg: 'linear-gradient(145deg, #0d9488, #0f766e)', color: '#ccfbf1' },
+  guest_prime_manager: { bg: 'linear-gradient(145deg, #65a30d, #4d7c0f)', color: '#ecfccb' },
   assistant: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
-  client_staff: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
   photographer: { bg: 'linear-gradient(145deg, #d97706, #b45309)', color: '#fef3c7' },
+  // Compat aliases
+  client: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
+  client_staff: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
 };
 
 const ROLE_LABELS = {
@@ -99,10 +103,14 @@ const ROLE_LABELS = {
   pro_user: 'Pro Admin',
   operator: 'Operator',
   admin_staff: 'Operator',
-  client: 'Client Admin',
+  prime_manager: 'Prime Manager',
+  manager: 'Manager',
+  guest_prime_manager: 'Guest Prime Manager',
   assistant: 'Assistant',
-  client_staff: 'Assistant',
   photographer: 'Photographer',
+  // Compat aliases
+  client: 'Prime Manager',
+  client_staff: 'Assistant',
 };
 
 const APP_VERSION = 'v5.0.0';
@@ -116,9 +124,13 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
         ? 'operator'
         : normalizedRole === 'client_staff'
           ? 'assistant'
-          : NAV_CONFIG[normalizedRole]
-            ? normalizedRole
-            : 'super_admin';
+          : normalizedRole === 'client'
+            ? 'prime_manager'
+            : normalizedRole === 'guest_user'
+              ? 'guest_prime_manager'
+              : NAV_CONFIG[normalizedRole]
+                ? normalizedRole
+                : 'super_admin';
   const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.super_admin;
 
   const displayName = currentUser?.first_name
