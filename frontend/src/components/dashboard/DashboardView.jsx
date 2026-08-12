@@ -1967,13 +1967,19 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
         setLoading(false);
       }
     },
-    [stats, getLocalStats]
+    [getLocalStats]
   );
 
   useEffect(() => {
+    if (window.location.pathname.includes('/login')) return;
+
     load(true);
     window.__reloadDashboard = () => load(false);
-    const interval = setInterval(() => load(false), 20000);
+    const interval = setInterval(() => {
+      if (!window.location.pathname.includes('/login')) {
+        load(false);
+      }
+    }, 30000);
     return () => {
       clearInterval(interval);
       if (window.__reloadDashboard === load) delete window.__reloadDashboard;

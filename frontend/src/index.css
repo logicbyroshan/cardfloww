@@ -1,10 +1,47 @@
-@import url('https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@300;400;500;600;700;800&display=swap');
 @import '../../static/css/manage-panel.css';
 @import '../../static/css/idcard-action-bar.css';
 @import '../../static/css/idcard-actions-enhanced.css';
 @import '../../static/css/idcard-group.css';
 @import '../../static/css/idcard-table.css';
 @import '../../static/css/ui-control-consistency.css';
+
+/* ── Local & CDN Saira Semi Condensed Font Definitions ── */
+@font-face {
+  font-family: 'Saira Semi Condensed';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/saira-semi-condensed-400.ttf') format('truetype'),
+       url('/fonts/saira-semi-condensed-400.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Saira Semi Condensed';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/static/fonts/saira-semi-condensed-500.ttf') format('truetype'),
+       url('/fonts/saira-semi-condensed-500.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Saira Semi Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/saira-semi-condensed-600.ttf') format('truetype'),
+       url('/fonts/saira-semi-condensed-600.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Saira Semi Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/saira-semi-condensed-700.ttf') format('truetype'),
+       url('/fonts/saira-semi-condensed-700.ttf') format('truetype');
+}
 
 /* ── Prevent Accidental Text Selection on Controls, Headers & Badges ── */
 .topbar,

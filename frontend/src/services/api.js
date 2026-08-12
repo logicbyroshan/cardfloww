@@ -31,6 +31,22 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Suppress infinite 401 error loops when unauthenticated
+let isRedirectingToLogin = false;
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      const isLoginPage = window.location.pathname.includes('/login');
+      if (!isRedirectingToLogin && !isLoginPage) {
+        isRedirectingToLogin = true;
+        window.location.href = '/panel/auth/login/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // ─── Group 1: Authentication & Session ─────────────────────────────────────
 export const authApi = {
   /** POST /api/auth/login/ — returns { success, user, role, … } */
