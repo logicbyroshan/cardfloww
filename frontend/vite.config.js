@@ -27,6 +27,7 @@ const djangoRoutes = [
 ];
 
 export default defineConfig({
+  base: '/static/',
   plugins: [react()],
   server: {
     port: 5173,

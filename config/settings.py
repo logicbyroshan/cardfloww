@@ -560,7 +560,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'static', BASE_DIR / 'frontend' / 'dist']
 
 # Whitenoise for serving static files in production
 # CompressedManifest version: content-hashes filenames (app.js → app.abc123.js)

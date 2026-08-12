@@ -80,6 +80,13 @@ class User(AbstractUser):
         except Exception:
             pass
         return None
+
+    @property
+    def client_profile(self):
+        try:
+            return getattr(self, 'organisation_profile', None)
+        except Exception:
+            return None
     
     def save(self, *args, **kwargs):
         """

@@ -22,6 +22,14 @@ class Assistant(models.Model):
         related_name='assistants',
     )
 
+    @property
+    def client_id(self):
+        return self.organisation_id
+
+    @property
+    def client(self):
+        return self.organisation
+
     # Tables this assistant can access (empty = all tables in the organisation)
     assigned_groups = models.ManyToManyField(
         'tables.Table',
