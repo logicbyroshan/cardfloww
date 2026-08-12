@@ -188,39 +188,36 @@ class PermissionValidationMiddleware:
     different deployment environments.
     """
     
-    # URL suffixes that are exempt from permission checking (prefix is prepended)
-    EXEMPT_SUFFIXES = [
-        'auth/login/',
-        'auth/logout/',
-        'auth/password-reset/',
-        'api/auth/',
-        'app/login/',
-        'app/no-access/',
-        'app/manifest.json',
-        'app/sw.js',
-        # Also allow manifest and service-worker at root on panel host
-        'manifest.json',
-        'sw.js',
-        'app/api/auth/',
-        'api/mobile/auth/',
-        'api/mobile/server-info/',
-        'inactive/',
-        'maintenance/',
-    ]
-    
-    # Paths that are always exempt regardless of prefix
+    # URL suffixes that are exempt from permission checking.
+    # NOTE: These used to combine a /panel/ prefix but that prefix is now removed.
+    # Keep this list for backward compat in case any code still references them,
+    # but the real exemption logic uses ALWAYS_EXEMPT below.
+    EXEMPT_SUFFIXES: list = []
+
+    # Paths that are ALWAYS exempt from the auth gate, regardless of anything.
+    # These are the ONLY paths that bypass authentication on the backend.
     ALWAYS_EXEMPT = [
         '/static/',
         '/media/',
         '/favicon.ico',
-        '/api/health/',
-        '/api/auth/',
-        '/api/mobile/',
         '/robots.txt',
         '/sitemap.xml',
-        '/panel-entry/',
         '/__debug__/',
+        # Public API endpoints that must work without auth:
+        '/api/health/',       # Health check (uptime monitors)
+        '/api/auth/csrf/',    # CSRF token — SPA fetches on boot before login
+        '/api/auth/login/',   # Login endpoint
+        '/api/auth/logout/',  # Logout is idempotent — allowed unauthenticated
+        '/api/auth/check-email/',     # Email lookup for multi-step login
+        '/api/auth/forgot-password/', # Password reset request
+        '/api/auth/verify-otp/',      # OTP verification
+        '/api/auth/reset-password/',  # Password reset completion
+        '/api/auth/me/',      # Used by SPA on boot to check session state
+        '/api/mobile/',       # Mobile app API (has its own token auth)
+        '/api/web/',          # Desktop PWA/web API (has its own auth)
+        '/app/',              # Mobile download pages (public HTML)
     ]
+
     
     def __init__(self, get_response):
         self.get_response = get_response
@@ -313,26 +310,18 @@ class PermissionValidationMiddleware:
             request.session['_pvm_force_recheck'] = 1
     
     def _is_exempt_url(self, request):
-        """Check if URL is exempt from permission validation."""
-        path = request.path
+        """Check if URL is exempt from the authentication gate.
         
-        # Always-exempt paths (static, media, admin, etc.)
+        Only paths listed in ALWAYS_EXEMPT bypass the auth check.
+        Everything else requires a valid authenticated session.
+        """
+        path = request.path
+
+        # Check ALWAYS_EXEMPT — exact prefix match
         for exempt in self.ALWAYS_EXEMPT:
             if path.startswith(exempt):
                 return True
-        
-        # Panel-specific exempt paths (with correct prefix)
-        prefix = self._panel_prefix(request)
-        for suffix in self.EXEMPT_SUFFIXES:
-            exempt_path = f'{prefix}/{suffix}'
-            if path.startswith(exempt_path) or f'{path}/'.startswith(exempt_path):
-                return True
-        
-        # On local dev: public website pages (not under /panel/) don't need auth
-        if not getattr(request, '_is_panel_subdomain', False):
-            if not path.startswith('/panel/') and not path.startswith('/api/'):
-                return True
-        
+
         return False
     # How often (seconds) to re-validate user from DB.
     # Between checks, the cached validation in the session is trusted.
@@ -921,11 +910,13 @@ class SecurityHeadersMiddleware:
         self.get_response = get_response
         self._permissions_policy = getattr(
             django_settings, 'PERMISSIONS_POLICY',
-            'camera=(), microphone=(), geolocation=(), payment=(), usb=()'
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
         )
         self._panel_domain = getattr(django_settings, 'PANEL_DOMAIN', '').lower().strip()
-        self._allow_unsafe_inline = bool(getattr(django_settings, 'CSP_ALLOW_UNSAFE_INLINE', True))
-        self._allow_unsafe_eval = bool(getattr(django_settings, 'CSP_ALLOW_UNSAFE_EVAL', True))
+        # Off by default — opt-in only for /app/* pages or local debug.
+        # Production API responses NEVER need unsafe-inline or unsafe-eval.
+        self._allow_unsafe_inline = bool(getattr(django_settings, 'CSP_ALLOW_UNSAFE_INLINE', False))
+        self._allow_unsafe_eval = bool(getattr(django_settings, 'CSP_ALLOW_UNSAFE_EVAL', False))
         self._allow_local_engine = bool(getattr(django_settings, 'CSP_ALLOW_LOCAL_ENGINE_CONNECT', False))
 
     def _build_script_src(self, extra_sources=None):
@@ -1010,8 +1001,18 @@ class SecurityHeadersMiddleware:
         if any(request.path.startswith(p) for p in self.SKIP_PREFIXES):
             return response
 
-        # Content-Security-Policy
-        # Only apply to HTML responses (skip JSON API responses)
+        # ── Cache-Control: no-store for ALL API responses ──────────────────────
+        # Prevents browsers and proxies from caching authenticated API responses.
+        # Applied to /api/* regardless of auth state — ensures tokens, user data,
+        # and sensitive records are never served from cache after logout.
+        if request.path.startswith('/api/'):
+            if 'Cache-Control' not in response:
+                response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+                response['Pragma'] = 'no-cache'
+                response['Expires'] = '0'
+
+        # ── Content-Security-Policy ─────────────────────────────────────────────
+        # Only apply CSP to HTML responses (JSON APIs don't need it).
         content_type = response.get('Content-Type', '')
         if 'text/html' in content_type and 'Content-Security-Policy' not in response:
             is_pwa = request.path.startswith('/app/')
@@ -1022,23 +1023,27 @@ class SecurityHeadersMiddleware:
                 else self._build_panel_csp(frame_ancestors=frame_ancestors)
             )
 
+        # ── Permissions-Policy ──────────────────────────────────────────────────
         if self._permissions_policy:
-            # Mobile PWA needs camera access for photo capture
+            # Mobile PWA needs camera access for photo capture.
             if request.path.startswith('/app/'):
                 response['Permissions-Policy'] = (
                     'camera=(self), microphone=(), geolocation=(), '
-                    'payment=(), usb=()'
+                    'payment=(), usb=(), interest-cohort=()'
                 )
             else:
                 response['Permissions-Policy'] = self._permissions_policy
 
-        # Prevent caching of authenticated panel pages (security best practice)
-        is_panel = getattr(request, '_is_panel_subdomain', False) or request.path.startswith('/panel/')
-        if is_panel and hasattr(request, 'user') and request.user.is_authenticated:
-            if 'Cache-Control' not in response:
-                response['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
-                response['Pragma'] = 'no-cache'
-
+        # ── Cross-Origin-Resource-Policy ────────────────────────────────────────
+        # Prevents other sites from loading our API responses in no-cors mode.
+        # 'same-site' allows the SPA (cardflow.in) and API (privatexyz.cardflow.in)
+        # to share resources since they are same-site (*.cardflow.in).
+        if 'Cross-Origin-Resource-Policy' not in response:
+            if request.path.startswith('/media/'):
+                # Media files (ID card images) must only be loadable from same site.
+                response['Cross-Origin-Resource-Policy'] = 'same-site'
+            elif request.path.startswith('/api/'):
+                response['Cross-Origin-Resource-Policy'] = 'same-site'
 
         return response
 

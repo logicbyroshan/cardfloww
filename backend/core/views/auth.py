@@ -43,23 +43,17 @@ api_user_audit_actions = ProUserAuditActionsAPIView.as_view()
 
 
 def inactive_view(request):
-    """Redirect to SPA login — React handles the inactive account screen."""
+    """Return JSON 403 — React handles the inactive account UI screen."""
     from django.http import JsonResponse
     reason = request.GET.get('reason', '')
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or (request.content_type or '') == 'application/json':
-        return JsonResponse({'success': False, 'message': 'Account inactive.', 'reason': reason}, status=403)
-    from django.shortcuts import render
-    return render(request, 'index.html', {'reason': reason})
+    return JsonResponse({'success': False, 'message': 'Account inactive.', 'reason': reason}, status=403)
 
 
 def maintenance_view(request):
-    """Display maintenance page for suspended client/client_staff (user stays logged in)."""
-    from django.shortcuts import render, redirect
-    # If user is not logged in, send to inactive page
-    if not request.user.is_authenticated:
-        return redirect('inactive')
+    """Return JSON 403 — React handles the maintenance UI screen."""
+    from django.http import JsonResponse
     reason = request.GET.get('reason', '')
-    return render(request, 'index.html', {'reason': reason})
+    return JsonResponse({'success': False, 'message': 'Account in maintenance.', 'reason': reason}, status=403)
 
 
 def api_check_maintenance(request):

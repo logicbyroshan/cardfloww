@@ -533,12 +533,7 @@ def api_dashboard_card_stats(request):
         user = request.user
         # Return empty stats for unauthenticated users (React app fallback)
         if not user.is_authenticated:
-            return JsonResponse({'success': True, 'stats': {
-                'total_id_cards': 0, 'pending': 0, 'verified': 0,
-                'approved': 0, 'downloaded': 0, 'pool': 0,
-                'total_organizations': 0, 'total_operators': 0,
-                'total_assistants': 0, 'total_photographers': 0,
-            }})
+            return JsonResponse({'success': False, 'authenticated': False, 'message': 'Authentication required.'}, status=401)
 
         is_scoped = PermissionService.is_operator(user)
         cache_suffix = f':{user.pk}' if is_scoped else ''

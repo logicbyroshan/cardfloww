@@ -224,7 +224,11 @@ MIDDLEWARE += [
 # =============================================================================
 # SEPARATE FRONTEND & BACKEND CORS & CSRF CONFIGURATION
 # =============================================================================
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'True').lower() in ('true', '1', 'yes')
+# CRITICAL: Default must be False. If .env is missing in production, CORS_ALLOW_ALL_ORIGINS=True
+# would allow any origin (including attacker.com) to make credentialed requests to the API.
+# Set CORS_ALLOW_ALL_ORIGINS=True in local .env only; never in production .env.
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes')
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
@@ -440,7 +444,10 @@ if not DEBUG:
 
 # ── Security headers (always applied, both dev and prod) ──
 SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'SAMEORIGIN'
+# DENY is correct for a pure API backend — we serve zero embeddable HTML pages.
+# The only exception (/app/*) are mobile download pages that are never embedded.
+X_FRAME_OPTIONS = 'DENY'
+
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
@@ -472,6 +479,13 @@ SESSION_COOKIE_DOMAIN = None
 # Set to 0 to disable. Default: 30 days (matches SESSION_COOKIE_AGE).
 # The absolute max-age policy provides a secondary safety net.
 SESSION_IDLE_TIMEOUT = int(os.getenv('SESSION_IDLE_TIMEOUT', str(60 * 60 * 24 * 30)))
+
+# ── Rate limiting: trust X-Forwarded-For header? ──
+# MUST be False unless your production Nginx is explicitly configured to
+# strip client-supplied X-Forwarded-For headers before forwarding to Django.
+# Default False prevents IP spoofing on the rate limiter.
+RATE_LIMIT_TRUST_X_FORWARDED_FOR = _env_bool('RATE_LIMIT_TRUST_X_FORWARDED_FOR', False)
+
 
 # ── Session absolute max-age (seconds) ──
 # Hard cap on session lifetime regardless of activity.
