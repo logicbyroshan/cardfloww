@@ -373,7 +373,7 @@ class IDCardTableService(BaseService):
         if not group:
             group = IDCardGroup.objects.create(
                 client=client,
-                name=f"{client.name} - Default Group",
+                name=f"{client.name} - Default Table",
                 is_active=True,
             )
         return group

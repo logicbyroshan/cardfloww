@@ -644,7 +644,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
               <button
                 className="btn"
                 onClick={() => (onNavigate ? onNavigate('cards') : (window.location.href = '/panel/idcard-group/'))}
-                title="Table Group"
+                title="Tables"
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   color: '#ffffff',
@@ -661,7 +661,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
                   boxSizing: 'border-box',
                 }}
               >
-                <ShieldCheck size={13} /> <span>Table Group</span>
+                <ShieldCheck size={13} /> <span>Tables</span>
               </button>
               <button
                 className="btn"

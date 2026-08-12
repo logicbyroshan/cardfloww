@@ -62,7 +62,7 @@ const NAV_CONFIG = {
     {
       section: 'ID Card Management',
       items: [
-        { id: 'cards', label: 'Table Group', Icon: ShieldCheck },
+        { id: 'cards', label: 'Tables', Icon: ShieldCheck },
         { id: 'settings', label: 'Settings', Icon: UserCog },
       ],
     },
@@ -71,14 +71,14 @@ const NAV_CONFIG = {
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [{ id: 'cards', label: 'Table Group', Icon: ShieldCheck }],
+      items: [{ id: 'cards', label: 'Tables', Icon: ShieldCheck }],
     },
   ],
   photographer: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [{ id: 'cards', label: 'Table Group', Icon: Camera }],
+      items: [{ id: 'cards', label: 'Tables', Icon: Camera }],
     },
   ],
 };

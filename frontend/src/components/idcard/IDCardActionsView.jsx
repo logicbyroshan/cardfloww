@@ -3297,7 +3297,7 @@ export default function IDCardActionsView({ tableId, initialStatus = 'pending', 
           color: '#ffffff',
         }}
       >
-        {/* Left: Table Group, Table Setting, Divider, Download Buttons, Divider, Image Sort, Clear Pending Path */}
+        {/* Left: Tables, Table Setting, Divider, Download Buttons, Divider, Image Sort, Clear Pending Path */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <button
             type="button"
@@ -3317,10 +3317,10 @@ export default function IDCardActionsView({ tableId, initialStatus = 'pending', 
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
-            title="Back to Table Group"
+            title="Back to Tables"
           >
             <Layers size={13} />
-            <span>Table Group</span>
+            <span>Tables</span>
           </button>
 
           <span style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 3px' }} />

@@ -475,7 +475,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             // Sub-tables for dropdown rows (Matching actual table names)
             const rawSubTables =
               Array.isArray(c.tables) && c.tables.length > 0
-                ? c.tables.filter((t) => t.name !== 'Default Table Group' && t.name !== 'Default Group')
+                ? c.tables.filter((t) => t.name !== 'Default Table' && !t.name?.endsWith('- Default Table'))
                 : [];
 
             const matchedTables =
@@ -483,7 +483,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 ? rawSubTables
                 : (allTables || []).filter((t) => {
                     if (!t) return false;
-                    if (t.name === 'Default Table Group' || t.name === 'Default Group') return false;
+                    if (t.name === 'Default Table' || t.name?.endsWith('- Default Table')) return false;
                     const tClientId = String(
                       t.client_id ||
                         t.clientId ||

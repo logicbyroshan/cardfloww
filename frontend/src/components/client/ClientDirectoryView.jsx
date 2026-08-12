@@ -594,7 +594,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                 className="btn"
                 disabled={!selected}
                 onClick={() => onNavigate?.('cards')}
-                title="View Table Groups"
+                title="View Tables"
                 style={{
                   background: selected ? '#3b82f6' : 'rgba(255, 255, 255, 0.08)',
                   color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
@@ -611,7 +611,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                   boxSizing: 'border-box',
                 }}
               >
-                <CreditCard size={13} /> <span>Table Groups</span>
+                <CreditCard size={13} /> <span>Tables</span>
               </button>
               <button
                 className="btn"
@@ -728,7 +728,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                     onDoubleClick={() => onNavigate?.('cards', { clientId: c.id })}
                     data-client-id={c.id}
                     style={{ fontSize: '13px', cursor: 'pointer' }}
-                    title="Single-click to select | Double-click to open Table Group"
+                    title="Single-click to select | Double-click to open Tables"
                   >
                     <td
                       className="text-center"
@@ -1230,7 +1230,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                           </div>
                         </div>
 
-                        {/* Assigned Table Groups */}
+                        {/* Assigned Tables */}
                         <div style={{ marginBottom: '14px' }}>
                           <div
                             style={{
@@ -1244,7 +1244,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                             }}
                           >
                             <CreditCard size={12} style={{ color: '#2563eb' }} />
-                            <span>Assigned Table Groups ({(m.assigned_tables || ['All Tables']).length}):</span>
+                            <span>Assigned Tables ({(m.assigned_tables || ['All Tables']).length}):</span>
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                             {(m.assigned_tables || ['All Tables']).map((tbl, tIdx) => (
@@ -1943,7 +1943,7 @@ function ManagerInlineForm({ manager, orgName, onSave, onCancel }) {
         )}
       </div>
 
-      {/* Assigned Table Groups */}
+      {/* Assigned Tables */}
       <div
         style={{
           background: '#ffffff',
@@ -1955,7 +1955,7 @@ function ManagerInlineForm({ manager, orgName, onSave, onCancel }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
           <CreditCard size={14} style={{ color: '#2563eb' }} />
-          <label style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>Assign Table Groups / Classes:</label>
+          <label style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>Assign Tables:</label>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {availableTables.map((tbl) => {

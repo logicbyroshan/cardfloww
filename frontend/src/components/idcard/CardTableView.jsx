@@ -630,7 +630,7 @@ export default function CardTableView({ addToast, onNavigate }) {
                 size={28}
                 style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }}
               />
-              <span>Loading Table Group data…</span>
+              <span>Loading Tables data…</span>
             </div>
           ) : filteredTables.length === 0 ? (
             <div

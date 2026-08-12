@@ -344,7 +344,7 @@ export default function App() {
                 />
               )}
 
-              {/* ── ID Cards / Table Group ── */}
+              {/* ── ID Cards / Tables ── */}
               {activeTab === 'cards' && (
                 <CardTableView
                   addToast={addToast}
