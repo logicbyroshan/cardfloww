@@ -20,6 +20,9 @@ import {
   X,
   Send,
   Printer,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 import WatermarkLogo from '../common/WatermarkLogo';
 
@@ -88,16 +91,24 @@ function WelcomeBanner({ currentUser }) {
    7 Stat Cards Row (Connected 1px border lines, NO GAPS)
 ───────────────────────────────────────────────────────────────────────── */
 const STAT_CARDS_DEF = [
-  { key: 'pending_cards', label: 'Pending Cards', defaultVal: 0, bg: '#f59e0b', Icon: Clock },
-  { key: 'verified_cards', label: 'Verified Cards', defaultVal: 0, bg: '#10b981', Icon: CheckCircle2 },
-  { key: 'approved_cards', label: 'Approved Cards', defaultVal: 0, bg: '#3b82f6', Icon: ThumbsUp },
-  { key: 'printed_cards', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
-  { key: 'requested_cards', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
-  { key: 'deleted_cards', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
-  { key: 'total_id_cards', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
+  { key: 'pending_cards', growthKey: 'pending', label: 'Pending Cards', defaultVal: 0, bg: '#f59e0b', Icon: Clock },
+  { key: 'verified_cards', growthKey: 'verified', label: 'Verified Cards', defaultVal: 0, bg: '#10b981', Icon: CheckCircle2 },
+  { key: 'approved_cards', growthKey: 'approved', label: 'Approved Cards', defaultVal: 0, bg: '#3b82f6', Icon: ThumbsUp },
+  { key: 'printed_cards', growthKey: 'printed', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
+  { key: 'requested_cards', growthKey: 'requested', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
+  { key: 'deleted_cards', growthKey: 'deleted', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
+  { key: 'total_id_cards', growthKey: 'total', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
 ];
 
-function StatCardsRow({ stats, loading, onNavigate }) {
+function StatCardsRow({ stats, loading, onNavigate, userRole = 'super_admin' }) {
+  const isAdminOrOperator = [
+    'super_admin',
+    'pro_user',
+    'admin',
+    'operator',
+    'admin_staff',
+  ].includes(String(userRole || '').toLowerCase());
+
   return (
     <div
       style={{
@@ -109,7 +120,7 @@ function StatCardsRow({ stats, loading, onNavigate }) {
         flexShrink: 0,
       }}
     >
-      {STAT_CARDS_DEF.map(({ key, label, defaultVal, bg, Icon }, idx) => {
+      {STAT_CARDS_DEF.map(({ key, growthKey, label, defaultVal, bg, Icon }, idx) => {
         const rawVal =
           stats?.[key] ??
           stats?.[key.replace('_cards', '')] ??
@@ -121,13 +132,18 @@ function StatCardsRow({ stats, loading, onNavigate }) {
         const val = rawVal !== undefined ? rawVal : defaultVal;
         const statusKey = key.replace('_cards', '');
         const isLast = idx === STAT_CARDS_DEF.length - 1;
+
+        const growthVal = stats?.growth?.[growthKey] ?? stats?.[`${growthKey}_growth`] ?? 0;
+        const isPositive = growthVal > 0;
+        const isNegative = growthVal < 0;
+
         return (
           <button
             key={key}
             onClick={() => onNavigate('cards', { statusFilter: statusKey })}
             className="stat-card-glass"
             style={{
-              padding: '10px 10px',
+              padding: '10px 8px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -166,20 +182,52 @@ function StatCardsRow({ stats, loading, onNavigate }) {
                 {label}
               </div>
             </div>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '6px',
-                background: bg,
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Icon size={15} />
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }}>
+              <div
+                style={{
+                  width: '30px',
+                  height: '30px',
+                  borderRadius: '6px',
+                  background: bg,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon size={15} />
+              </div>
+
+              {/* Daily Growth Indicator for Admin & Operator */}
+              {isAdminOrOperator && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    padding: '1px 4px',
+                    borderRadius: '6px',
+                    background: isPositive ? '#dcfce7' : isNegative ? '#fee2e2' : '#f1f5f9',
+                    color: isPositive ? '#15803d' : isNegative ? '#b91c1c' : '#64748b',
+                    border: `1px solid ${isPositive ? '#bbf7d0' : isNegative ? '#fca5a5' : '#e2e8f0'}`,
+                    whiteSpace: 'nowrap',
+                    lineHeight: 1,
+                  }}
+                  title={`${growthVal >= 0 ? '+' : ''}${growthVal} cards today`}
+                >
+                  {isPositive ? (
+                    <TrendingUp size={9} />
+                  ) : isNegative ? (
+                    <TrendingDown size={9} />
+                  ) : (
+                    <Minus size={9} />
+                  )}
+                  <span>{growthVal >= 0 ? `+${growthVal}` : growthVal}</span>
+                </div>
+              )}
             </div>
           </button>
         );
@@ -1779,7 +1827,7 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
 /* ─────────────────────────────────────────────────────────────────────────
    Main DashboardView Assembly
 ───────────────────────────────────────────────────────────────────────── */
-export default function DashboardView({ onNavigate, currentUser, onOpenActionDrawer }) {
+export default function DashboardView({ onNavigate, currentUser, onOpenActionDrawer, userRole = 'super_admin' }) {
   const [stats, setStats] = useState(null);
   const [clients, setClients] = useState([]);
   const [allTables, setAllTables] = useState([]);
@@ -1965,8 +2013,8 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
     <div
       style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}
     >
-      {/* 1. 6 Stat Cards Row */}
-      <StatCardsRow stats={stats} loading={loading} onNavigate={onNavigate} />
+      {/* 1. 7 Stat Cards Row with Daily Growth Indicators */}
+      <StatCardsRow stats={stats} loading={loading} onNavigate={onNavigate} userRole={currentUser?.role || userRole} />
 
       {/* 3. Main Dashboard Body: Dynamic Left Section + Right Stacked Panels */}
       <div

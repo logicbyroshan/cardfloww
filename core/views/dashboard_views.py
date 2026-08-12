@@ -583,6 +583,16 @@ def api_dashboard_card_stats(request):
             total_assistants = 0
             total_photographers = 0
 
+        today = timezone.now().date()
+        today_agg = card_qs.filter(created_at__date=today).aggregate(
+            pending_today=Count('id', filter=Q(status='pending')),
+            verified_today=Count('id', filter=Q(status='verified')),
+            approved_today=Count('id', filter=Q(status='approved')),
+            printed_today=Count('id', filter=Q(status='download')),
+            pool_today=Count('id', filter=Q(status='pool')),
+            total_today=Count('id'),
+        )
+
         stats = {
             'total': agg.get('total', 0),
             'pending': agg.get('pending', 0),
@@ -597,6 +607,16 @@ def api_dashboard_card_stats(request):
             'approved_cards': agg.get('approved', 0),
             'download_cards': agg.get('downloaded', 0),
             'pool_cards': agg.get('pool', 0),
+            # Daily Growth metrics
+            'growth': {
+                'pending': today_agg.get('pending_today', 0),
+                'verified': today_agg.get('verified_today', 0),
+                'approved': today_agg.get('approved_today', 0),
+                'printed': today_agg.get('printed_today', 0),
+                'requested': 0,
+                'deleted': today_agg.get('pool_today', 0),
+                'total': today_agg.get('total_today', 0),
+            },
             # Users Overview counts
             'total_organizations': total_orgs,
             'total_clients': total_orgs,
