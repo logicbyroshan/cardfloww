@@ -1273,14 +1273,14 @@ class ActivityService:
 
         status_label = cls._extract_status_from_description(text)
         if action == 'client_status':
-            target = target_name or client_context or (f'Client #{target_id}' if target_id else 'client')
+            target = target_name or client_context or (f'Organisation #{target_id}' if target_id else 'organisation')
             status_phrase = cls._humanize_status_change('client', status_label)
             if actor_descriptor != 'System':
                 return _with_merge_suffix(f'{actor_descriptor} {status_phrase} {target}')
             return _with_merge_suffix(f'{status_phrase.capitalize()} {target}')
 
         if action == 'staff_status':
-            target = target_name or (f'Staff #{target_id}' if target_id else 'staff member')
+            target = target_name or (f'Manager #{target_id}' if target_id else 'manager account')
             status_phrase = cls._humanize_status_change('staff', status_label)
             if actor_descriptor != 'System':
                 return _with_merge_suffix(f'{actor_descriptor} {status_phrase} {target}')
@@ -1288,23 +1288,23 @@ class ActivityService:
 
         if action in {'client_update', 'client_create', 'client_delete'}:
             verb_map = {
-                'client_update': 'updated client profile',
-                'client_create': 'created client account',
-                'client_delete': 'removed client account',
+                'client_update': 'updated organisation profile',
+                'client_create': 'created organisation account',
+                'client_delete': 'removed organisation account',
             }
-            target = target_name or client_context or (f'Client #{target_id}' if target_id else 'client')
+            target = target_name or client_context or (f'Organisation #{target_id}' if target_id else 'organisation')
             if actor_descriptor != 'System':
                 return _with_merge_suffix(f'{actor_descriptor} {verb_map.get(action)} for {target}')
             return _with_merge_suffix(f'{verb_map.get(action).capitalize()} for {target}')
 
         if action in {'staff_update', 'staff_create', 'staff_delete', 'staff_assignment'}:
             verb_map = {
-                'staff_update': 'updated staff profile',
-                'staff_create': 'created staff account',
-                'staff_delete': 'removed staff account',
-                'staff_assignment': 'updated staff assignment scope',
+                'staff_update': 'updated manager profile',
+                'staff_create': 'created manager account',
+                'staff_delete': 'removed manager account',
+                'staff_assignment': 'updated manager assignment scope',
             }
-            target = target_name or (f'Staff #{target_id}' if target_id else 'staff member')
+            target = target_name or (f'Manager #{target_id}' if target_id else 'manager account')
             if actor_descriptor != 'System':
                 return _with_merge_suffix(f'{actor_descriptor} {verb_map.get(action)} for {target}')
             return _with_merge_suffix(f'{verb_map.get(action).capitalize()} for {target}')

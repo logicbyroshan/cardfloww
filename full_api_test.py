@@ -105,10 +105,10 @@ log("Auth", "Get Profile via GET /api/auth/me/", PASS if auth_ok else FAIL,
 
 # ── 2: Organisation Management ──────────────────────────────
 print("\n[2] Organisation Management")
+org_email = f"org_{timestamp}_{rand_id}@cardflow.com"
 org_code = f"ORG{rand_id}"
-org_email = f"org_{timestamp}_{rand_id}@testschool.edu.in"
 status, data = api_post("/api/client/create/", {
-    "name": f"Test Academy {rand_id}",
+    "name": f"Greenwood Academy {rand_id}",
     "email": org_email,
     "phone": f"9876{rand_id}0",
     "code": org_code,
@@ -116,18 +116,18 @@ status, data = api_post("/api/client/create/", {
 client_id = None
 if status in (200, 201) and isinstance(data, dict):
     client_id = data.get("id") or (data.get("client") or {}).get("id") or (data.get("data") or {}).get("id")
-    log("Client", "Create Organisation", PASS, f"Client ID={client_id}")
+    log("Organisation", "Create Organisation", PASS, f"Organisation ID={client_id}")
 else:
-    log("Client", "Create Organisation", FAIL, f"Status={status} | {str(data)[:150]}")
+    log("Organisation", "Create Organisation", FAIL, f"Status={status} | {str(data)[:150]}")
 
 status, data = api_get("/api/clients/active/")
-log("Client", "List Active Organisations", PASS if status == 200 else FAIL, f"Status={status}")
+log("Organisation", "List Active Organisations", PASS if status == 200 else FAIL, f"Status={status}")
 
-# ── 3: Staff & Operator Management ─────────────────────────
-print("\n[3] Staff / Operator Management")
+# ── 3: Operator & Photographer Management ────────────────────
+print("\n[3] Operator & Photographer Management")
 op_email = f"operator_{timestamp}_{rand_id}@cardflow.com"
 status, data = api_post("/api/staff/create/", {
-    "name": f"Operator {rand_id}",
+    "name": f"Field Operator {rand_id}",
     "email": op_email,
     "phone": f"987{rand_id}01",
     "password": "AlexOperator@123",
@@ -136,9 +136,9 @@ status, data = api_post("/api/staff/create/", {
 staff_id = None
 if status in (200, 201) and isinstance(data, dict):
     staff_id = (data.get("data") or {}).get("staff", {}).get("id") or (data.get("staff") or {}).get("id") or data.get("id")
-    log("Staff", "Create Operator/Admin-Staff", PASS, f"Staff ID={staff_id}")
+    log("Operator", "Create Operator / Field Manager", PASS, f"Operator ID={staff_id}")
 else:
-    log("Staff", "Create Operator/Admin-Staff", FAIL, f"Status={status} | {str(data)[:150]}")
+    log("Operator", "Create Operator / Field Manager", FAIL, f"Status={status} | {str(data)[:150]}")
 
 photo_email = f"photo_{timestamp}_{rand_id}@cardflow.com"
 status, data = api_post("/api/photographer/create/", {
@@ -151,35 +151,35 @@ status, data = api_post("/api/photographer/create/", {
 photo_id = None
 if status in (200, 201) and isinstance(data, dict):
     photo_id = (data.get("data") or {}).get("staff", {}).get("id") or (data.get("staff") or {}).get("id") or data.get("id")
-    log("Staff", "Create Photographer", PASS, f"Photographer ID={photo_id}")
+    log("Photographer", "Create Photographer", PASS, f"Photographer ID={photo_id}")
 else:
-    log("Staff", "Create Photographer", FAIL, f"Status={status} | {str(data)[:150]}")
+    log("Photographer", "Create Photographer", FAIL, f"Status={status} | {str(data)[:150]}")
 
-# Set temporary password for staff
+# Set temporary password for operator
 if staff_id:
     status, data = api_post(f"/api/staff/{staff_id}/set-temp-password/", {
         "password": "NewTempPassword@123",
     })
     ok = status in (200, 201) and isinstance(data, dict) and data.get("success")
-    log("Staff", f"Set Temp Password for Staff #{staff_id}", PASS if ok else FAIL, f"Message: {data.get('message') if isinstance(data, dict) else data}")
+    log("Operator", f"Set Temp Password for Operator #{staff_id}", PASS if ok else FAIL, f"Message: {data.get('message') if isinstance(data, dict) else data}")
 else:
-    log("Staff", "Set Temp Password", FAIL, "No staff_id available")
+    log("Operator", "Set Temp Password", FAIL, "No staff_id available")
 
-# Toggle staff status
+# Toggle operator status
 if staff_id:
     status, data = api_post(f"/api/staff/{staff_id}/toggle-status/", {})
     ok = status in (200, 201) and isinstance(data, dict) and data.get("success")
-    log("Staff", f"Toggle Staff #{staff_id} Active Status", PASS if ok else FAIL, f"Status={status}")
+    log("Operator", f"Toggle Operator #{staff_id} Active Status", PASS if ok else FAIL, f"Status={status}")
 
 # Toggle photographer status
 if photo_id:
     status, data = api_post(f"/api/photographer/{photo_id}/toggle-status/", {})
     ok = status in (200, 201) and isinstance(data, dict) and data.get("success")
-    log("Staff", f"Toggle Photographer #{photo_id} Active Status", PASS if ok else FAIL, f"Status={status}")
+    log("Photographer", f"Toggle Photographer #{photo_id} Active Status", PASS if ok else FAIL, f"Status={status}")
 else:
     # If photographer list endpoint exists, grab first photographer id
     p_status, p_data = api_get("/api/photographers/")
-    log("Staff", "Toggle Photographer Active Status", PASS, "Photographer toggle endpoint verified")
+    log("Photographer", "Toggle Photographer Active Status", PASS, "Photographer toggle endpoint verified")
 
 # ── 4: Notifications Module ─────────────────────────────────
 print("\n[4] Notifications Module")

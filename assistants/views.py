@@ -405,7 +405,7 @@ def api_staff_detail(request, staff_id):
         }, status=status_code)
     
     # DELETE
-    staff_name = f'Staff #{staff_id}'
+    staff_name = f'Manager #{staff_id}'
     last_active_str = 'never active'
     try:
         existing_staff = Assistant.objects.select_related('user').filter(id=staff_id).first()
@@ -455,7 +455,7 @@ def api_staff_toggle_status(request, staff_id):
                         request=request,
                         target_model='Staff',
                         target_id=staff_id,
-                        target_name=f'Staff #{staff_id}',
+                        target_name=f'Manager #{staff_id}',
                     )
             except Exception:
                 logger.exception('Failed to log staff status activity for staff_id=%s', staff_id)
@@ -507,7 +507,7 @@ def api_staff_set_temp_password(request, staff_id):
     if result.success:
         try:
             staff = Assistant.objects.select_related('user').filter(id=staff_id).first()
-            staff_name = f'Staff #{staff_id}'
+            staff_name = f'Manager #{staff_id}'
             if staff:
                 staff_name = staff.user.get_full_name() or staff.user.username
             ActivityService.log(

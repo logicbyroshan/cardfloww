@@ -514,7 +514,7 @@ export default function StaffManagementView({
                   s.user?.get_full_name ||
                   s.username ||
                   s.user?.username ||
-                  `Staff #${s.id || idx}`;
+                  `${isAssistant ? 'Manager' : 'Operator'} #${s.id || idx + 1}`;
                 const email = s.email || s.user?.email || '—';
                 const phone = s.phone || s.user?.phone || '—';
                 const statusStr = String(
