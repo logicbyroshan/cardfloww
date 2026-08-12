@@ -501,7 +501,7 @@ class LoginViewTests(TestCase):
         self.assertEqual(user_sessions, 20)
 
     def test_mobile_login_keeps_guest_user_existing_mobile_sessions(self):
-        from client.models import Client
+        from organisation.models import Organisation
         from accounts.models import UserDeviceSession
         from django.utils import timezone
 
@@ -511,7 +511,7 @@ class LoginViewTests(TestCase):
             password='testpass123',
             role='guest_prime_manager',
         )
-        Client.objects.create(
+        Organisation.objects.create(
             user=guest_user,
             name='Guest Mobile',
             status='active',
@@ -886,7 +886,7 @@ class AuthServiceRoleEdgeTests(TestCase):
             password='clientpass123',
             role='client',
         )
-        result = AuthService.authenticate_user('client2@example.com', 'clientpass123', role='admin_staff')
+        result = AuthService.authenticate_user('client2@example.com', 'clientpass123', role='operator')
         self.assertFalse(result['success'])
 
     def test_authenticate_blocks_after_repeated_failures(self):
@@ -1194,14 +1194,14 @@ class UserProfileServiceTests(TestCase):
 
 class ProfileApiIntegrationTests(TestCase):
     def setUp(self):
-        from client.models import Client
+        from organisation.models import Organisation
         self.user = User.objects.create_user(
             username='api-profile@example.com',
             email='api-profile@example.com',
             password='testpass123',
             role='client',
         )
-        Client.objects.create(user=self.user, name='Profile Test Client')
+        Organisation.objects.create(user=self.user, name='Profile Test Client')
         self.client.login(username='api-profile@example.com', password='testpass123')
 
     def test_get_profile_api(self):
@@ -1270,7 +1270,7 @@ class ProUserAuditApiTests(TestCase):
             username='admin-staff@example.com',
             email='admin-staff@example.com',
             password='testpass123',
-            role='admin_staff',
+            role='operator',
         )
 
     def test_user_audit_user_list_requires_pro_user(self):
@@ -1395,7 +1395,7 @@ class ImpersonationApiTests(TestCase):
                 username=f'bulk-admin-{idx}@example.com',
                 email=f'bulk-admin-{idx}@example.com',
                 password='testpass123',
-                role='admin_staff',
+                role='operator',
             )
 
         assistant_user = User.objects.create_user(
@@ -1435,7 +1435,7 @@ class ImpersonationApiTests(TestCase):
             username='admin-staff-imp@example.com',
             email='admin-staff-imp@example.com',
             password='testpass123',
-            role='admin_staff',
+            role='operator',
         )
 
         self.client.login(username='admin-staff-imp@example.com', password='testpass123')
@@ -1554,14 +1554,14 @@ class GuestSandboxDatabaseTests(TestCase):
     databases = '__all__'
 
     def setUp(self):
-        from client.models import Client
+        from organisation.models import Organisation
         self.guest_user = User.objects.create_user(
             username='guest-test-sandbox@example.com',
             email='guest-test-sandbox@example.com',
             password='testpass123',
             role='guest_prime_manager',
         )
-        self.client_profile = Client.objects.create(
+        self.client_profile = Organisation.objects.create(
             user=self.guest_user,
             name='Guest Sandbox Client',
             status='active',
@@ -1572,7 +1572,7 @@ class GuestSandboxDatabaseTests(TestCase):
         from django.test.client import RequestFactory
         from django.contrib.sessions.backends.db import SessionStore
         from core.middleware import GuestSandboxMiddleware
-        from idcards.models import IDCardGroup
+        from tables.models import Table
         import os
         from django.conf import settings
 
@@ -1604,17 +1604,17 @@ class GuestSandboxDatabaseTests(TestCase):
         GuestSandboxRouter.set_guest_db(f"guest_{session_key_one}")
         try:
             # Create a card group inside Guest 1's sandbox
-            g1 = IDCardGroup.objects.create(
+            g1 = Table.objects.create(
                 client=self.client_profile,
                 name="Group Guest One",
             )
             # Verify it exists in sandbox 1
-            self.assertTrue(IDCardGroup.objects.filter(id=g1.id).exists())
+            self.assertTrue(Table.objects.filter(id=g1.id).exists())
         finally:
             GuestSandboxRouter.clear_guest_db()
 
         # Verify that it does NOT exist in the default database!
-        self.assertFalse(IDCardGroup.objects.using('default').filter(name="Group Guest One").exists())
+        self.assertFalse(Table.objects.using('default').filter(name="Group Guest One").exists())
 
         # 4. Establish Session Two
         request_two = factory.get('/panel/')
@@ -1637,7 +1637,7 @@ class GuestSandboxDatabaseTests(TestCase):
         # 6. Verify Guest 2 cannot see Guest 1's card group
         GuestSandboxRouter.set_guest_db(f"guest_{session_key_two}")
         try:
-            self.assertFalse(IDCardGroup.objects.filter(name="Group Guest One").exists())
+            self.assertFalse(Table.objects.filter(name="Group Guest One").exists())
         finally:
             GuestSandboxRouter.clear_guest_db()
 

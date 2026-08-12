@@ -5,17 +5,17 @@ import logging
 import os
 from collections import defaultdict
 
-from client.models import Client
-from idcards.models import IDCardTable, IDCard
+from organisation.models import Organisation
+from tables.models import Table, IDCard
 from core.services.base import BaseService, ServiceResult
 from core.services.permission_service import PermissionService
 
-from .services_access import ClientAccessService
+from .services_access import OrganisationAccessService
 
 logger = logging.getLogger(__name__)
 
 
-class ClientImageService(BaseService):
+class OrganisationImageService(BaseService):
     """
     Service for client image uploads.
     Handles image upload and linking to card data.
@@ -32,17 +32,17 @@ class ClientImageService(BaseService):
             images: List of uploaded image files
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 return ServiceResult(success=False, message='Client profile not found')
             
             # Verify table access
             try:
-                table = IDCardTable.objects.get(id=table_id)
-            except IDCardTable.DoesNotExist:
+                table = Table.objects.get(id=table_id)
+            except Table.DoesNotExist:
                 return ServiceResult(success=False, message='Table not found')
             
-            if not ClientAccessService.can_access_table(user, table):
+            if not OrganisationAccessService.can_access_table(user, table):
                 return ServiceResult(success=False, message='Access denied')
             
             # Check upload permission
@@ -150,5 +150,5 @@ class ClientImageService(BaseService):
             )
             
         except Exception as e:
-            logger.exception('ClientImageService.upload_images failed: %s', e)
+            logger.exception('OrganisationImageService.upload_images failed: %s', e)
             return ServiceResult(success=False, message='An unexpected error occurred. Please try again.')

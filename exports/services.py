@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 
-from idcards.models import IDCardTable, IDCard
+from tables.models import Table, IDCard
 from core.services.permission_service import PermissionService
 
 from .excel import ExcelExporter, ExcelExportResult
@@ -35,7 +35,7 @@ class ExportContext:
     cards may be a QuerySet or SortedCardList (sorted by class/section/name).
     """
     user: Any
-    table: IDCardTable
+    table: Table
     cards: Any  # QuerySet or SortedCardList
     has_permission: bool = True
     error_message: str = ''
@@ -111,7 +111,7 @@ class ExportService:
     
     def get_scoped_cards(
         self,
-        table: IDCardTable,
+        table: Table,
         card_ids: Optional[List[int]] = None
     ) -> QuerySet:
         """
@@ -187,7 +187,7 @@ class ExportService:
             )
         
         try:
-            table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+            table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
         except Exception:
             return ExportContext(
                 user=self.user,

@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from client.models import Client
+from organisation.models import Organisation
 
 
 class Operator(models.Model):
@@ -9,14 +9,14 @@ class Operator(models.Model):
     assigned_clients controls which clients this operator can access.
     """
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='operator_profile')
-    assigned_clients = models.ManyToManyField(Client, blank=True, related_name='assigned_operators')
+    assigned_organisations = models.ManyToManyField(Organisation, blank=True, related_name='assigned_operators')
     
     department = models.CharField(max_length=100, blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
     
-    # ID Card Client List Permission
-    perm_idcard_client_list = models.BooleanField(default=False)
-    perm_manage_client_staff = models.BooleanField(default=False)
+    # ID Card Organisation List Permission
+    perm_idcard_client_list = models.BooleanField(default=False)  # kept DB name for compat
+    perm_manage_assistant = models.BooleanField(default=False)
     perm_manage_photographer_staff = models.BooleanField(default=False)
     
     # ID Card Setting Permissions

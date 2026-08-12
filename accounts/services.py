@@ -1204,7 +1204,7 @@ class RoleService:
             'pro_user': 'Pro Admin',
             'super_admin': 'Super Admin',
             'operator': 'Operator',
-            'admin_staff': 'Operator',
+            'operator': 'Operator',
             'client': 'Client Admin',
             'guest_prime_manager': 'Guest Sandbox User',
             'assistant': 'Assistant',

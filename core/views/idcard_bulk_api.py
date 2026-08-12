@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.cache import cache as django_cache
 from django.core.files.uploadhandler import MemoryFileUploadHandler
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from ..services import IDCardService
 from mediafiles.services import ImageService
 from ..services.base import BaseService
@@ -183,7 +183,7 @@ def api_idcard_bulk_upload(request, table_id):
             except Exception:
                 pass  # Non-critical — proceed if check fails
         
-        table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+        table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
         
         if 'file' not in request.FILES:
             return JsonResponse({'success': False, 'message': 'No file uploaded!'}, status=400)
@@ -676,7 +676,7 @@ def api_idcard_reupload_images(request, table_id):
     if folder_access_err:
         return folder_access_err
     # Client/client_staff cannot reupload images for tables with approved/download/reprint cards
-    if request.user.role in ('client', 'client_staff'):
+    if request.user.PermissionService.is_client_role(user):
         has_locked = IDCard.objects.filter(
             table_id=table_id, status__in=_CLIENT_READONLY_STATUSES
         ).exists()
@@ -696,7 +696,7 @@ def api_idcard_reupload_images(request, table_id):
         from django.db import transaction
         from ..services.bulk_upload_service import DiskBackedImageStore
         
-        table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+        table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
         client = table.group.client
         
         reupload_zip_source = None

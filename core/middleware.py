@@ -181,8 +181,8 @@ class PermissionValidationMiddleware:
     
     Enforces:
     - User.is_active must be True
-    - For client users: Client.status must be 'active'
-    - For client_staff: Client.status must be 'active' and staff user must be active
+    - For client users: Organisation.status must be 'active'
+    - For client_staff: Organisation.status must be 'active' and staff user must be active
     
     Handles paths with and without the /panel/ prefix for flexibility across 
     different deployment environments.
@@ -520,9 +520,9 @@ class PermissionValidationMiddleware:
         if not fresh_user.is_active:
             logger.warning("PVM_DEBUG: User %s (ID: %d) is now inactive", user.username, user.pk)
             return self._force_logout(request, 'Your account has been deactivated.')
-        if fresh_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'guest_user'):
+        if fresh_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'guest_prime_manager'):
             return self._validate_client_access(request, fresh_user)
-        elif fresh_user.role in ('assistant', 'client_staff'):
+        elif fresh_user.role in ('assistant'):
             return self._validate_assistant_access(request, fresh_user)
         elif fresh_user.role == 'photographer':
             allowed_prefixes = (
@@ -542,31 +542,31 @@ class PermissionValidationMiddleware:
             if not is_allowed:
                 logger.warning("PermissionValidationMiddleware: Photographer %s tried to access forbidden web path %s", fresh_user.username, path)
                 return self._force_logout(request, 'Photographers are only permitted to access the mobile application.')
-        if fresh_user.role in ['super_admin', 'pro_user', 'operator', 'admin_staff', 'photographer']:
+        if fresh_user.role in ['super_admin', 'pro_user', 'operator', 'photographer']:
              logger.debug("PVM_DEBUG: Admin validation success for %s", fresh_user.username)
         return None
     
     def _validate_client_access(self, request, user):
         """Validate client user access"""
-        from client.models import Client
+        from organisation.models import Organisation
         try:
-            client_row = Client.objects.filter(user_id=user.pk).values('id', 'name', 'status').first()
+            client_row = Organisation.objects.filter(user_id=user.pk).values('id', 'name', 'status').first()
             if not client_row:
                 raise Client.DoesNotExist()
         except Client.DoesNotExist:
-            logger.warning("PermissionValidationMiddleware: Client profile not found for user %s", user.username)
+            logger.warning("PermissionValidationMiddleware: Organisation profile not found for user %s", user.username)
             return self._force_logout(request, 'Your client profile is not configured.')
         except Exception as exc:
             logger.error("PermissionValidationMiddleware: DB error fetching client: %s", exc)
             return self._validation_unavailable_response(request)
         if client_row['status'] != 'active':
-            logger.warning("PermissionValidationMiddleware: Client is now %s", client_row['status'])
+            logger.warning("PermissionValidationMiddleware: Organisation is now %s", client_row['status'])
             return self._redirect_to_maintenance(request, 'Your organization account has been suspended.')
         session_client_id = request.session.get('_client_id')
         if session_client_id is None:
             request.session['_client_id'] = client_row['id']
         elif session_client_id != client_row['id']:
-            logger.warning("PermissionValidationMiddleware: Client reassigned")
+            logger.warning("PermissionValidationMiddleware: Organisation reassigned")
             return self._force_logout(request, 'Your account configuration has changed. Please log in again.')
         return None
     
@@ -611,8 +611,8 @@ class PermissionValidationMiddleware:
                 'accessible_client_ids': PermissionService.get_accessible_client_ids(user),
             }
             if PermissionService.is_client(user):
-                from client.models import Client
-                request.user_scope['client_id'] = Client.objects.filter(user_id=user.id).values_list('id', flat=True).first()
+                from organisation.models import Organisation
+                request.user_scope['client_id'] = Organisation.objects.filter(user_id=user.id).values_list('id', flat=True).first()
             elif PermissionService.is_assistant(user):
                 from assistants.models import Assistant
                 request.user_scope['client_id'] = Assistant.objects.filter(user_id=user.id).values_list('client_id', flat=True).first()
@@ -1085,9 +1085,9 @@ def ensure_template_db():
         
         # Clear seeded database rows to start with a clean schema
         from core.models import User
-        from client.models import Client
+        from organisation.models import Organisation
         User.objects.using(db_alias).all().delete()
-        Client.objects.using(db_alias).all().delete()
+        Organisation.objects.using(db_alias).all().delete()
         
         _TEMPLATE_DB_MIGRATED = True
         logger.info("Guest sandbox template database is up to date.")
@@ -1113,28 +1113,28 @@ def ensure_template_db():
 
 def populate_sandbox_database(client_id, db_alias):
     """Copy client-scoped records from the default database to the guest sandbox database."""
-    from client.models import Client
+    from organisation.models import Organisation
     from core.models import User
     from assistants.models import Assistant
     from operators.models import Operator
-    from idcards.models import IDCardGroup, IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from reprintcard.models import ReprintRequest
     from mediafiles.models import CardMedia
     
     # 1. Clear any seeded data in the destination database first to avoid unique constraints
     User.objects.using(db_alias).all().delete()
-    Client.objects.using(db_alias).all().delete()
+    Organisation.objects.using(db_alias).all().delete()
     Assistant.objects.using(db_alias).all().delete()
     Operator.objects.using(db_alias).all().delete()
-    IDCardGroup.objects.using(db_alias).all().delete()
-    IDCardTable.objects.using(db_alias).all().delete()
+    Table.objects.using(db_alias).all().delete()
+    Table.objects.using(db_alias).all().delete()
     IDCard.objects.using(db_alias).all().delete()
     ReprintRequest.objects.using(db_alias).all().delete()
     CardMedia.objects.using(db_alias).all().delete()
 
     # 2. Query data from default database
     try:
-        client = Client.objects.using('default').get(id=client_id)
+        client = Organisation.objects.using('default').get(id=client_id)
     except Client.DoesNotExist:
         logger.warning("Client profile with id=%s not found during sandbox population", client_id)
         return
@@ -1166,14 +1166,14 @@ def populate_sandbox_database(client_id, db_alias):
     # Save operators and their Many-to-Many fields
     for op in operators:
         op.save(using=db_alias)
-        op.assigned_clients.set(list(op.assigned_clients.using('default').all()), clear=True)
+        op.assigned_organisations.set(list(op.assigned_organisations.using('default').all()), clear=True)
         
-    # 6. Save IDCardGroup, IDCardTable, IDCard, ReprintRequest, CardMedia
-    groups = list(IDCardGroup.objects.using('default').filter(client_id=client_id))
+    # 6. Save Table, Table, IDCard, ReprintRequest, CardMedia
+    groups = list(Table.objects.using('default').filter(client_id=client_id))
     for g in groups:
         g.save(using=db_alias)
         
-        tables = list(IDCardTable.objects.using('default').filter(group_id=g.id))
+        tables = list(Table.objects.using('default').filter(group_id=g.id))
         for t in tables:
             t.save(using=db_alias)
             

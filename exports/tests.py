@@ -25,12 +25,12 @@ def _setup_export_data():
         username='exclient@test.com', email='exclient@test.com',
         password='clientpass1', role='client',
     )
-    from client.models import Client
-    client = Client.objects.create(user=client_user, name='Export Client')
+    from organisation.models import Organisation
+    client = Organisation.objects.create(user=client_user, name='Export Client')
 
-    from idcards.models import IDCardGroup, IDCardTable, IDCard
-    group = IDCardGroup.objects.create(client=client, name='Export Group')
-    table = IDCardTable.objects.create(
+    from tables.models import Table, IDCard
+    group = Table.objects.create(client=client, name='Export Group')
+    table = Table.objects.create(
         group=group, name='Export Table',
         fields=[
             {'name': 'NAME', 'type': 'text', 'order': 1},
@@ -66,7 +66,7 @@ class ExportPermissionTests(TestCase):
 
     def test_admin_can_export_xlsx(self):
         self.client.login(username='exadmin@test.com', password='adminpass1')
-        from idcards.models import IDCard
+        from tables.models import IDCard
         card_ids = list(IDCard.objects.filter(table=self.table).values_list('id', flat=True))
         response = self.client.post(
             f'/panel/exports/xlsx/{self.table.id}/',
@@ -103,8 +103,8 @@ class ExportServiceTests(TestCase):
             username='other@test.com', email='other@test.com',
             password='otherpass1', role='client',
         )
-        from client.models import Client
-        Client.objects.create(user=other_user, name='Other Client')
+        from organisation.models import Organisation
+        Organisation.objects.create(user=other_user, name='Other Client')
         # Other user should not see cards from the first client's table via ExportService
         from exports.services import ExportService
         service = ExportService(other_user)
@@ -182,7 +182,7 @@ class ExportViewHelperTests(TestCase):
         self.assertEqual(len(ids), 5)
 
     def test_get_card_ids_fallback_requires_client_scope(self):
-        from client.models import Client
+        from organisation.models import Organisation
         from exports.views import _get_card_ids_from_request
 
         outsider = User.objects.create_user(
@@ -191,7 +191,7 @@ class ExportViewHelperTests(TestCase):
             password='pass1234',
             role='client',
         )
-        Client.objects.create(user=outsider, name='Outsider Client')
+        Organisation.objects.create(user=outsider, name='Outsider Client')
 
         request = self.factory.post(
             f'/panel/exports/xlsx/{self.table.id}/',
@@ -204,7 +204,7 @@ class ExportViewHelperTests(TestCase):
         self.assertIsNone(ids)
 
     def test_get_card_ids_fallback_class_section_uses_canonical_class_matching(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
         from exports.views import _get_card_ids_from_request
 
         self.table.fields = [
@@ -237,8 +237,8 @@ class ExportViewHelperTests(TestCase):
         self.assertEqual(ids, [matched.id])
 
     def test_get_card_ids_fallback_respects_client_staff_row_scope(self):
-        from client.models import Client
-        from idcards.models import IDCard
+        from organisation.models import Organisation
+        from tables.models import IDCard
         from staff.models import Staff
         from exports.views import _get_card_ids_from_request
 
@@ -267,10 +267,10 @@ class ExportViewHelperTests(TestCase):
             role='client_staff',
         )
         # Keep parent client profile present and active.
-        Client.objects.filter(pk=self.client_obj.pk).update(status='active')
+        Organisation.objects.filter(pk=self.client_obj.pk).update(status='active')
         Staff.objects.create(
             user=staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
             assigned_table_ids=[self.table.id],
             allowed_classes=['KG1'],
@@ -319,7 +319,7 @@ class ExportViewHelperTests(TestCase):
         self.assertEqual(result.data.get('total_count'), 5)
 
     def test_get_card_ids_fallback_respects_image_filter(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
         from exports.views import _get_card_ids_from_request
 
         self.table.fields = [
@@ -524,8 +524,8 @@ class PdfExporterUnitTests(SimpleTestCase):
 
 class ExportServiceAdvancedTests(TestCase):
     def setUp(self):
-        from client.models import Client
-        from idcards.models import IDCardGroup, IDCardTable, IDCard
+        from organisation.models import Organisation
+        from tables.models import Table, IDCard
         from staff.models import Staff
 
         self.super_admin = User.objects.create_user(
@@ -541,13 +541,13 @@ class ExportServiceAdvancedTests(TestCase):
             username='svc-owner2@test.com', email='svc-owner2@test.com',
             password='pass1234', role='client',
         )
-        self.client1 = Client.objects.create(user=owner1, name='Svc Client 1')
-        self.client2 = Client.objects.create(user=owner2, name='Svc Client 2')
+        self.client1 = Organisation.objects.create(user=owner1, name='Svc Client 1')
+        self.client2 = Organisation.objects.create(user=owner2, name='Svc Client 2')
 
-        group1 = IDCardGroup.objects.create(client=self.client1, name='Group 1')
-        group2 = IDCardGroup.objects.create(client=self.client2, name='Group 2')
-        self.table1 = IDCardTable.objects.create(group=group1, name='Table 1', fields=[{'name': 'NAME', 'type': 'text'}])
-        self.table2 = IDCardTable.objects.create(group=group2, name='Table 2', fields=[{'name': 'NAME', 'type': 'text'}])
+        group1 = Table.objects.create(client=self.client1, name='Group 1')
+        group2 = Table.objects.create(client=self.client2, name='Group 2')
+        self.table1 = Table.objects.create(group=group1, name='Table 1', fields=[{'name': 'NAME', 'type': 'text'}])
+        self.table2 = Table.objects.create(group=group2, name='Table 2', fields=[{'name': 'NAME', 'type': 'text'}])
 
         IDCard.objects.create(table=self.table1, field_data={'NAME': 'A'}, status='pending')
         IDCard.objects.create(table=self.table1, field_data={'NAME': 'B'}, status='verified')
@@ -555,14 +555,14 @@ class ExportServiceAdvancedTests(TestCase):
 
         self.staff_user = User.objects.create_user(
             username='svc-staff@test.com', email='svc-staff@test.com',
-            password='pass1234', role='admin_staff',
+            password='pass1234', role='operator',
         )
         self.staff = Staff.objects.create(
             user=self.staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_bulk_download=True,
         )
-        self.staff.assigned_clients.add(self.client1)
+        self.staff.assigned_organisations.add(self.client1)
 
     def test_get_scoped_cards_admin_staff_assigned_only(self):
         from exports.services import ExportService
@@ -577,7 +577,7 @@ class ExportServiceAdvancedTests(TestCase):
     def test_get_scoped_cards_client_staff_respects_table_row_scope(self):
         from exports.services import ExportService
         from staff.models import Staff
-        from idcards.models import IDCard
+        from tables.models import IDCard
 
         self.table1.fields = [
             {'name': 'NAME', 'type': 'text', 'order': 1},
@@ -597,7 +597,7 @@ class ExportServiceAdvancedTests(TestCase):
         )
         Staff.objects.create(
             user=cs_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client1,
             assigned_table_ids=[self.table1.id],
             allowed_classes=['KG1'],
@@ -614,7 +614,7 @@ class ExportServiceAdvancedTests(TestCase):
 
         denied_user = User.objects.create_user(
             username='svc-denied@test.com', email='svc-denied@test.com',
-            password='pass1234', role='admin_staff',
+            password='pass1234', role='operator',
         )
         service = ExportService(denied_user)
         context = service._prepare_context(self.table1.id, require_export_permission=True)
@@ -643,24 +643,24 @@ class ExportApiIntegrationAdvancedTests(TestCase):
 
         self.staff_unassigned = User.objects.create_user(
             username='exstaffu@test.com', email='exstaffu@test.com',
-            password='pass1234', role='admin_staff',
+            password='pass1234', role='operator',
         )
         Staff.objects.create(
             user=self.staff_unassigned,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_bulk_download=True,
         )
 
         self.staff_assigned = User.objects.create_user(
             username='exstaffa@test.com', email='exstaffa@test.com',
-            password='pass1234', role='admin_staff',
+            password='pass1234', role='operator',
         )
         self.staff_assigned_profile = Staff.objects.create(
             user=self.staff_assigned,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_bulk_download=True,
         )
-        self.staff_assigned_profile.assigned_clients.add(self.client_obj)
+        self.staff_assigned_profile.assigned_organisations.add(self.client_obj)
 
     def tearDown(self):
         cache.clear()
@@ -853,14 +853,14 @@ class ExportApiIntegrationAdvancedTests(TestCase):
             username='imgstaff@test.com',
             email='imgstaff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
         staff = Staff.objects.create(
             user=staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_bulk_download=True,
         )
-        staff.assigned_clients.add(self.client_obj)
+        staff.assigned_organisations.add(self.client_obj)
 
         self.client.login(username='imgstaff@test.com', password='pass1234')
 
@@ -966,9 +966,9 @@ class ExportApiIntegrationAdvancedTests(TestCase):
 
 class ExportDeepLimitAndRoleTests(TestCase):
     def setUp(self):
-        from client.models import Client
+        from organisation.models import Organisation
         from staff.models import Staff
-        from idcards.models import IDCardGroup, IDCardTable, IDCard
+        from tables.models import Table, IDCard
 
         self.super_admin = User.objects.create_user(
             username='deep-super@test.com',
@@ -983,7 +983,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
             password='pass1234',
             role='client',
         )
-        self.client_obj = Client.objects.create(user=self.client_user, name='Deep Client')
+        self.client_obj = Organisation.objects.create(user=self.client_user, name='Deep Client')
         self.client_obj.perm_idcard_bulk_download = True
         self.client_obj.perm_idcard_approved_list = True
         self.client_obj.perm_idcard_download_list = True
@@ -997,14 +997,14 @@ class ExportDeepLimitAndRoleTests(TestCase):
             username='deep-adminstaff@test.com',
             email='deep-adminstaff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
         self.admin_staff = Staff.objects.create(
             user=self.admin_staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_bulk_download=True,
         )
-        self.admin_staff.assigned_clients.add(self.client_obj)
+        self.admin_staff.assigned_organisations.add(self.client_obj)
 
         self.client_staff_user = User.objects.create_user(
             username='deep-clientstaff@test.com',
@@ -1014,7 +1014,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
         )
         self.client_staff_profile = Staff.objects.create(
             user=self.client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
             perm_idcard_bulk_download=True,
             perm_idcard_approved_list=True,
@@ -1022,8 +1022,8 @@ class ExportDeepLimitAndRoleTests(TestCase):
             perm_idcard_pending_list=True,
         )
 
-        group = IDCardGroup.objects.create(client=self.client_obj, name='Deep Group')
-        self.table = IDCardTable.objects.create(
+        group = Table.objects.create(client=self.client_obj, name='Deep Group')
+        self.table = Table.objects.create(
             group=group,
             name='Deep Table',
             fields=[
@@ -1042,7 +1042,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
         self.client_staff_profile.save(update_fields=['assigned_table_ids'])
 
     def test_export_pdf_requires_status_list_permission(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
 
         self.client.login(username='deep-adminstaff@test.com', password='pass1234')
         card_id = IDCard.objects.filter(table=self.table).values_list('id', flat=True).first()
@@ -1055,11 +1055,11 @@ class ExportDeepLimitAndRoleTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_export_pdf_client_staff_blocked_for_unassigned_table(self):
-        from idcards.models import IDCard, IDCardGroup, IDCardTable
+        from tables.models import IDCard, Table, Table
         from staff.models import Staff
 
-        other_group = IDCardGroup.objects.create(client=self.client_obj, name='Other Group')
-        other_table = IDCardTable.objects.create(
+        other_group = Table.objects.create(client=self.client_obj, name='Other Group')
+        other_table = Table.objects.create(
             group=other_group,
             name='Other Table',
             fields=[{'name': 'NAME', 'type': 'text', 'order': 1}],
@@ -1074,7 +1074,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
         )
         Staff.objects.create(
             user=restricted_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
             assigned_table_ids=[other_table.id],
             perm_idcard_bulk_download=True,
@@ -2086,7 +2086,7 @@ class StreamFileResponseTests(TestCase):
             username='stream-normal@test.com',
             email='stream-normal@test.com',
             password='pass12345',
-            role='admin_staff',
+            role='operator',
         )
 
     def test_large_file_keeps_existing_temp_spool_behavior(self):

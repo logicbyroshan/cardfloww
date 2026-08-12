@@ -23,8 +23,8 @@ import os
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from client.models import Client
-from idcards.models import IDCard
+from organisation.models import Organisation
+from tables.models import IDCard
 from mediafiles.models import CardMedia
 from core.services.base import BaseService
 
@@ -74,11 +74,11 @@ class Command(BaseCommand):
         # ── Resolve client ──────────────────────────────────────────────────
         if client_id:
             try:
-                client = Client.objects.get(id=client_id)
+                client = Organisation.objects.get(id=client_id)
             except Client.DoesNotExist:
                 raise CommandError(f"Client with id={client_id} not found.")
         elif client_name:
-            clients = Client.objects.filter(name__icontains=client_name)
+            clients = Organisation.objects.filter(name__icontains=client_name)
             if not clients.exists():
                 raise CommandError(f"No client matching name: {client_name!r}")
             if clients.count() > 1:

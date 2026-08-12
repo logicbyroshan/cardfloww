@@ -12,7 +12,7 @@ from django.db import transaction
 from django.utils.timezone import localtime
 
 from core.models import User, EmailLog, Photographer, PhotographerAssignment
-from client.models import Client
+from organisation.models import Organisation
 from core.utils import send_welcome_email
 from core.utils.email_utils import generate_secure_password
 from core.services.base import BaseService, ServiceResult
@@ -86,7 +86,7 @@ class PhotographerService(BaseService):
                 'expires_at_display': localtime(ass.expires_at).strftime('%d-%m-%Y %H:%M') if ass.expires_at else 'No Expiration',
                 'allowed_table_ids': list(ass.allowed_table_ids or []),
             })
-        data['assigned_clients'] = assignments
+        data['assigned_organisations'] = assignments
         # Also simple list of ids for UI drawer compatibility
         data['assigned_client_ids'] = [a['client_id'] for a in assignments]
         return data
@@ -185,7 +185,7 @@ class PhotographerService(BaseService):
                 photographer = Photographer.objects.create(**photographer_kwargs)
                 
                 # Assign clients with optional expirations
-                assigned_clients = data.get('assigned_clients', [])
+                assigned_clients = data.get('assigned_organisations', [])
                 if isinstance(assigned_clients, str):
                     try:
                         assigned_clients = json.loads(assigned_clients)
@@ -298,7 +298,7 @@ class PhotographerService(BaseService):
             photographer.save()
 
             # Update assignments
-            assigned_clients = data.get('assigned_clients', [])
+            assigned_clients = data.get('assigned_organisations', [])
             if isinstance(assigned_clients, str):
                 try:
                     assigned_clients = json.loads(assigned_clients)

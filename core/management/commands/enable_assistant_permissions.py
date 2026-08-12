@@ -1,6 +1,6 @@
 import sys
 from django.core.management.base import BaseCommand
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
 from assistants.services import AssistantService
 
@@ -21,7 +21,7 @@ class Command(BaseCommand):
         
         if not client_input:
             # Interactive mode - list all clients or prompt
-            clients = list(Client.objects.all().order_by('name'))
+            clients = list(Organisation.objects.all().order_by('name'))
             if not clients:
                 self.stdout.write(self.style.ERROR('No clients found in the system.'))
                 return
@@ -50,7 +50,7 @@ class Command(BaseCommand):
         else:
             # Find client by name
             client_input = client_input.strip()
-            clients = list(Client.objects.filter(name__icontains=client_input))
+            clients = list(Organisation.objects.filter(name__icontains=client_input))
             if not clients:
                 self.stdout.write(self.style.ERROR(f"No clients found matching name: '{client_input}'"))
                 return

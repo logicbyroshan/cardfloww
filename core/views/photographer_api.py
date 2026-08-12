@@ -8,7 +8,7 @@ from django.db.models import Q
 from django.utils.timezone import localtime
 
 from core.models import User, Photographer, PhotographerAssignment
-from client.models import Client
+from organisation.models import Organisation
 from ..services.permission_service import require_super_admin, api_require_super_admin, PermissionService
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
@@ -79,14 +79,14 @@ def manage_photographers(request):
     staff_qs = Photographer.objects.select_related('user').prefetch_related('photographer_assignments__client').order_by('-id')
 
     # active_clients used for assignment dropdown
-    active_clients = Client.objects.filter(status='active', is_guest=False)
+    active_clients = Organisation.objects.filter(status='active', is_guest=False)
     
     if not PermissionService.is_super_admin(user):
         operator = getattr(user, 'operator_profile', None)
         if operator:
-            active_clients = operator.assigned_clients.filter(status='active', is_guest=False)
+            active_clients = operator.assigned_organisations.filter(status='active', is_guest=False)
         else:
-            active_clients = Client.objects.none()
+            active_clients = Organisation.objects.none()
             
     active_clients = active_clients.order_by('name').values('id', 'name')
 
@@ -274,7 +274,7 @@ def api_photographer_assign_clients(request, staff_id):
 
         before_snapshot = _photographer_assignment_snapshot(staff)
 
-        assigned_clients = data.get('assigned_clients', [])
+        assigned_clients = data.get('assigned_organisations', [])
         if isinstance(assigned_clients, str):
             try:
                 import json as _json
@@ -285,7 +285,7 @@ def api_photographer_assign_clients(request, staff_id):
         if not PermissionService.is_super_admin(request.user):
             operator = getattr(request.user, 'operator_profile', None)
             if operator:
-                allowed_client_ids = set(operator.assigned_clients.values_list('id', flat=True))
+                allowed_client_ids = set(operator.assigned_organisations.values_list('id', flat=True))
             else:
                 return JsonResponse({'success': False, 'message': 'Not authorized to manage assignments'}, status=403)
         else:
@@ -352,10 +352,10 @@ def api_photographer_assign_clients(request, staff_id):
 def api_photographer_client_tables(request, client_id):
     """Return all groups and their tables for a client — used by assignment drawer."""
     try:
-        from idcards.models import IDCardGroup, IDCardTable, IDCard
+        from tables.models import Table, IDCard
         from mediafiles.utils import get_card_photo_url
 
-        groups = IDCardGroup.objects.filter(client_id=client_id, is_active=True).order_by('name')
+        groups = Table.objects.filter(client_id=client_id, is_active=True).order_by('name')
         
         # Calculate captured/uncaptured counts per table for this client
         assigned_cards_qs = IDCard.objects.filter(
@@ -376,7 +376,7 @@ def api_photographer_client_tables(request, client_id):
 
         result = []
         for group in groups:
-            tables = IDCardTable.objects.filter(
+            tables = Table.objects.filter(
                 group=group, deleted_by_client=False
             ).order_by('name').values('id', 'name', 'is_active')
             

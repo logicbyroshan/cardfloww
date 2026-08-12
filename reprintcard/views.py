@@ -22,7 +22,7 @@ from django.utils.timezone import localtime
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from core.services import IDCardService
 from core.services.base import BaseService
 from core.services.permission_service import PermissionService, api_require_permission, api_require_any_authenticated
@@ -49,15 +49,15 @@ def _reprint_access_denied():
 
 def _check_reprint_table_scope(user, table_id):
     """Check user has access to the client owning this table."""
-    table = get_object_or_404(IDCardTable.objects.select_related('group'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group'), id=table_id)
     if not PermissionService.is_super_admin(user):
         staff_profile = getattr(user, 'staff_profile', None)
-        if staff_profile and staff_profile.staff_type == 'admin_staff':
-            if not staff_profile.assigned_clients.filter(id=table.group.client_id).exists():
+        if staff_profile and staff_profile.staff_type == 'operator':
+            if not staff_profile.assigned_organisations.filter(id=table.group.client_id).exists():
                 return None, _reprint_access_denied()
         elif PermissionService.is_client_role(user):
-            from client.services import ClientAccessService
-            if not ClientAccessService.can_access_table(user, table):
+            from organisation.services import OrganisationAccessService
+            if not OrganisationAccessService.can_access_table(user, table):
                 return None, _reprint_access_denied()
     return table, None
 
@@ -428,7 +428,7 @@ def _get_reprint_step_counts(table):
 def reprint_cards(request, table_id):
     """Reprint Cards page — Reprint List → Request List → Confirmed."""
     table = get_object_or_404(
-        IDCardTable.objects.select_related('group__client'), id=table_id,
+        Table.objects.select_related('group__client'), id=table_id,
     )
     user = request.user
     if not PermissionService.can_access_client(user, table.group.client_id):

@@ -237,7 +237,7 @@ def generate_export_filename(base_name: str, extension: str, timestamp: bool = T
         base_name: Base name for the file (e.g., table name / list name)
         extension: File extension (e.g., 'xlsx', 'docx', 'zip')
         timestamp: (kept for backward compat, ignored now)
-        client_name: Client/institution name to prefix
+        client_name: Organisation/institution name to prefix
         status: Status label (e.g., 'pending', 'verified', 'approved')
         
     Returns:
@@ -795,7 +795,7 @@ def sort_cards_for_export(cards_qs, table_fields):
     
     Args:
         cards_qs: QuerySet or iterable of IDCard instances
-        table_fields: list of field config dicts from IDCardTable.fields
+        table_fields: list of field config dicts from Table.fields
         
     Returns:
         SortedCardList if sorting is possible, original queryset otherwise.

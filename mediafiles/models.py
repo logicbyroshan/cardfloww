@@ -49,7 +49,7 @@ class CardMedia(models.Model):
     
     Design Notes:
     - card: Optional FK to IDCard (null for template images)
-    - group: Optional FK to IDCardGroup (for template images)
+    - group: Optional FK to Table (for template images)
     - client: Required FK for data scoping and organization
     - media_type: Categorizes the image (photo, signature, template, etc.)
     - original_filename: Preserves original name for Excel matching
@@ -57,9 +57,9 @@ class CardMedia(models.Model):
     IMPORTANT: This model uses app_label='mediafiles' - it has its own migrations.
     """
     
-    # Media type choices - matches IDCardTable.IMAGE_FIELD_TYPES plus templates
+    # Media type choices - matches Table.IMAGE_FIELD_TYPES plus templates
     MEDIA_TYPE_CHOICES = [
-        # Card image types (from IDCardTable.IMAGE_FIELD_TYPES)
+        # Card image types (from Table.IMAGE_FIELD_TYPES)
         ('photo', 'Photo'),
         ('rel_photo', 'Relation Photo'),
         ('mother_photo', 'Mother Photo (Legacy)'),
@@ -67,7 +67,7 @@ class CardMedia(models.Model):
         ('barcode', 'Barcode'),
         ('qr_code', 'QR Code'),
         ('signature', 'Signature'),
-        # Template image types (from IDCardGroup)
+        # Template image types (from Table)
         ('template_front', 'Template Front'),
         ('template_back', 'Template Back'),
         # Generic/other
@@ -124,7 +124,7 @@ class CardMedia(models.Model):
         max_length=100,
         blank=True,
         null=True,
-        help_text='Dynamic field name from IDCardTable (e.g., "Photo", "Father Photo")'
+        help_text='Dynamic field name from Table (e.g., "Photo", "Father Photo")'
     )
     
     # Audit fields

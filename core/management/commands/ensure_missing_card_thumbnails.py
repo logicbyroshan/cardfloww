@@ -20,7 +20,7 @@ from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 
 from core.services.base import BaseService
-from idcards.models import IDCard
+from tables.models import IDCard
 from mediafiles.services import ImageService
 from mediafiles.services.image_thumbnail import ThumbnailService
 

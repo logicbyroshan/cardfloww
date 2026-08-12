@@ -85,12 +85,12 @@ def register_revalidation_signals() -> None:
             try:
                 from assistants.models import Assistant
 
-                client_id = (
+                organisation_id = (
                     Assistant.objects.filter(user_id=instance.pk)
-                    .values_list('client_id', flat=True)
+                    .values_list('organisation_id', flat=True)
                     .first()
                 )
-                _bump_dashboard_versions_for_client(client_id)
+                _bump_dashboard_versions_for_client(organisation_id)
             except Exception as exc:
                 logger.debug('Assistant cache bump from user save failed for user=%s: %s', instance.pk, exc)
 
@@ -107,10 +107,10 @@ def register_revalidation_signals() -> None:
 
             affected = [instance.user_id]
             affected.extend(
-                Assistant.objects.filter(client_id=instance.pk).values_list('user_id', flat=True)
+                Assistant.objects.filter(organisation_id=instance.pk).values_list('user_id', flat=True)
             )
             affected.extend(
-                Operator.objects.filter(assigned_clients=instance)
+                Operator.objects.filter(assigned_organisations=instance)
                 .values_list('user_id', flat=True)
             )
             bump_users_revalidation(affected)
@@ -131,8 +131,8 @@ def register_revalidation_signals() -> None:
         if action in ('post_add', 'post_remove', 'post_clear'):
             bump_user_revalidation(getattr(instance, 'user_id', None))
             _bump_admin_dashboard_versions()
-            client_id = getattr(instance, 'client_id', None)
-            _bump_dashboard_versions_for_client(client_id)
+            organisation_id = getattr(instance, 'organisation_id', None)
+            _bump_dashboard_versions_for_client(organisation_id)
 
     post_save.connect(
         _on_user_saved,
@@ -154,13 +154,13 @@ def register_revalidation_signals() -> None:
     )
 
     # Imported lazily here so app loading is fully initialized first.
-    from client.models import Client
+    from organisation.models import Organisation
     from operators.models import Operator
     from assistants.models import Assistant
 
     post_save.connect(
         _on_client_saved,
-        sender=Client,
+        sender=Organisation,
         dispatch_uid='pvm_reval_client_post_save',
         weak=False,
     )
@@ -178,7 +178,7 @@ def register_revalidation_signals() -> None:
     )
     m2m_changed.connect(
         _on_profile_m2m_changed,
-        sender=Operator.assigned_clients.through,
+        sender=Operator.assigned_organisations.through,
         dispatch_uid='pvm_reval_operator_assigned_clients_m2m',
         weak=False,
     )

@@ -11,7 +11,7 @@ from typing import Dict, Any, List
 
 from django.shortcuts import get_object_or_404
 
-from idcards.models import IDCardTable, IDCard
+from tables.models import Table, IDCard
 from .cache_version_service import CacheVersionService
 from .base import BaseService, ServiceResult
 
@@ -36,9 +36,9 @@ class IDCardBulkService(BaseService):
         Kept as a thin wrapper so existing callers don't break.
         """
         try:
-            from idcards.services_workflow import WorkflowService
+            from tables.services_workflow import WorkflowService
 
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             return WorkflowService.bulk_transition(
                 table, card_ids, new_status,
                 user=user, request=request,
@@ -61,7 +61,7 @@ class IDCardBulkService(BaseService):
         then performs the SQL DELETE in a single atomic statement.
         """
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
 
             # If delete_all is requested, instead of deleting we move all cards
             # to the 'pool' status so they become available for reprint/requests.
@@ -158,7 +158,7 @@ class IDCardBulkService(BaseService):
                     message='Please enter at least 2 characters to search'
                 )
 
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             query_upper = query.strip().upper()
             query_int = int(query.strip()) if query.strip().isdigit() else None
 
@@ -273,7 +273,7 @@ class IDCardBulkService(BaseService):
             from django.db.models import CharField, Count
             from collections import defaultdict
 
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             fields = table.fields or []
 
             # Find the class field name

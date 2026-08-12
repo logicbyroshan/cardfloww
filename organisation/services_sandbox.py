@@ -2,8 +2,8 @@ import uuid
 import logging
 from django.db import transaction
 from core.models import User
-from client.models import Client
-from idcards.models import IDCardTable, IDCardGroup
+from organisation.models import Organisation
+from tables.models import Table
 
 logger = logging.getLogger(__name__)
 
@@ -62,25 +62,25 @@ class SandboxService:
                 cloned_client.image_folder_code = ''
                 
                 # Copy permissions
-                from client.services_client_core import ClientService
+                from organisation.services_client_core import OrganisationService as ClientService
                 for perm in ClientService.PERMISSION_FIELDS:
                     setattr(cloned_client, perm, getattr(original_client, perm, False))
                 cloned_client.save()
                 
                 # Clone IDCardGroups and their Tables
-                for group in IDCardGroup.objects.filter(client=original_client):
+                for group in Table.objects.filter(client=original_client):
                     # Get original tables before cloning the group
-                    original_tables = list(IDCardTable.objects.filter(group=group))
+                    original_tables = list(Table.objects.filter(group=group))
                     
                     # Duplicate the group
-                    group_clone = IDCardGroup.objects.get(id=group.id)
+                    group_clone = Table.objects.get(id=group.id)
                     group_clone.pk = None
                     group_clone.client = cloned_client
                     group_clone.save()
                     
                     # Clone tables for this group
                     for table in original_tables:
-                        table_clone = IDCardTable.objects.get(id=table.id)
+                        table_clone = Table.objects.get(id=table.id)
                         table_clone.pk = None
                         table_clone.group = group_clone
                         table_clone.save()
@@ -102,7 +102,7 @@ class SandboxService:
             if not user or not user.username.startswith('guestclone_'):
                 return
                 
-            from client.services_client_core import ClientService
+            from organisation.services_client_core import OrganisationService as ClientService
             client = getattr(user, 'client_profile', None)
             
             with transaction.atomic():

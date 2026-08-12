@@ -45,7 +45,7 @@ class Table(models.Model):
     """
     Table — the core schema unit belonging to an Organisation.
 
-    Collapses the old IDCardGroup + IDCardTable two-level hierarchy into
+    Collapses the old Table + Table two-level hierarchy into
     a single flat model. Each Organisation has Tables; each Table defines
     the field configuration (column names & types) for its ID Cards.
 
@@ -214,7 +214,7 @@ class IDCard(models.Model):
 
     # Legacy: old code accessed card.client / card.group
     @property
-    def client(self):
+    def Organisation(self):
         return self.organisation
 
     @property
@@ -290,6 +290,6 @@ def clear_idcard_distinct_values_cache(sender, instance, **kwargs):
 
 
 # ── Legacy compatibility aliases ────────────────────────────────────────
-# Old code importing IDCardGroup / IDCardTable will use Table instead
-IDCardTable = Table
-IDCardGroup = Table   # single-level now; group = table
+# Old code importing Table / Table will use Table instead
+Table = Table
+Table = Table   # single-level now; group = table

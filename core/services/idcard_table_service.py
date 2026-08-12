@@ -2,8 +2,8 @@
 IDCard Table Service — table schema CRUD and default-group provisioning.
 
 Part of the IDCardService split. Handles:
-- IDCardTable serialization, CRUD, toggle, list
-- Default IDCardGroup creation
+- Table serialization, CRUD, toggle, list
+- Default Table creation
 """
 import logging
 from typing import Dict, Any
@@ -11,7 +11,7 @@ from typing import Dict, Any
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import localtime
 
-from idcards.models import IDCardGroup, IDCardTable
+from tables.models import Table
 from .base import BaseService, ServiceResult
 
 logger = logging.getLogger(__name__)
@@ -82,8 +82,8 @@ class IDCardTableService(BaseService):
     # ==================== Serialization ====================
 
     @classmethod
-    def serialize_table(cls, table: IDCardTable) -> Dict[str, Any]:
-        """Serialize IDCardTable to dict"""
+    def serialize_table(cls, table: Table) -> Dict[str, Any]:
+        """Serialize Table to dict"""
         normalized_fields = []
         for field in (table.fields or []):
             if not isinstance(field, dict):
@@ -92,7 +92,7 @@ class IDCardTableService(BaseService):
             normalized['type'] = cls._normalize_field_type(field.get('type', 'text'))
             normalized_fields.append(normalized)
 
-        from idcards.models import IDCard
+        from tables.models import IDCard
         from django.db.models import Count, Q
 
         counts = IDCard.objects.filter(table=table).aggregate(
@@ -174,7 +174,7 @@ class IDCardTableService(BaseService):
     def create_table(cls, group_id: int, data: Dict[str, Any]) -> ServiceResult:
         """Create a new ID Card Table"""
         try:
-            group = get_object_or_404(IDCardGroup, id=group_id)
+            group = get_object_or_404(Table, id=group_id)
 
             name = data.get('name', '').strip().upper()
             if not name:
@@ -221,7 +221,7 @@ class IDCardTableService(BaseService):
             else:
                 table_type = cls._infer_table_type(name, org_name, org_type)
 
-            table = IDCardTable.objects.create(
+            table = Table.objects.create(
                 group=group,
                 name=name,
                 table_type=table_type,
@@ -242,7 +242,7 @@ class IDCardTableService(BaseService):
     def get_table(cls, table_id: int) -> ServiceResult:
         """Get a single ID Card Table"""
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             return ServiceResult(
                 success=True,
                 data={'table': cls.serialize_table(table)}
@@ -254,7 +254,7 @@ class IDCardTableService(BaseService):
     def update_table(cls, table_id: int, data: Dict[str, Any]) -> ServiceResult:
         """Update an ID Card Table"""
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
 
             name = data.get('name', '').strip().upper()
             if not name:
@@ -319,7 +319,7 @@ class IDCardTableService(BaseService):
     def delete_table(cls, table_id: int) -> ServiceResult:
         """Delete an ID Card Table"""
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             table_name = table.name
             table.delete()
 
@@ -336,7 +336,7 @@ class IDCardTableService(BaseService):
         try:
             from django.db import transaction
             with transaction.atomic():
-                table = IDCardTable.objects.select_for_update().get(id=table_id)
+                table = Table.objects.select_for_update().get(id=table_id)
                 table.is_active = not table.is_active
                 status = 'active' if table.is_active else 'inactive'
                 status_display = 'Active' if table.is_active else 'Inactive'
@@ -347,7 +347,7 @@ class IDCardTableService(BaseService):
                 message=f'Table status changed to {status_display}!',
                 data={'status': status, 'status_display': status_display}
             )
-        except IDCardTable.DoesNotExist:
+        except Table.DoesNotExist:
             return ServiceResult(success=False, message='Table not found')
         except Exception as e:
             return ServiceResult(success=False, message=str(e))
@@ -356,8 +356,8 @@ class IDCardTableService(BaseService):
     def list_tables(cls, group_id: int) -> ServiceResult:
         """List all ID Card Tables for a group"""
         try:
-            group = get_object_or_404(IDCardGroup, id=group_id)
-            tables = IDCardTable.objects.filter(group=group)
+            group = get_object_or_404(Table, id=group_id)
+            tables = Table.objects.filter(group=group)
 
             return ServiceResult(
                 success=True,
@@ -367,11 +367,11 @@ class IDCardTableService(BaseService):
             return ServiceResult(success=False, message=str(e))
 
     @classmethod
-    def ensure_default_group(cls, client) -> 'IDCardGroup':
-        """Return the first IDCardGroup for a client, creating one if none exists."""
-        group = IDCardGroup.objects.filter(client=client).first()
+    def ensure_default_group(cls, client) -> 'Table':
+        """Return the first Table for a client, creating one if none exists."""
+        group = Table.objects.filter(client=client).first()
         if not group:
-            group = IDCardGroup.objects.create(
+            group = Table.objects.create(
                 client=client,
                 name=f"{client.name} - Default Table",
                 is_active=True,

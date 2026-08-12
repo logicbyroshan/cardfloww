@@ -1,7 +1,7 @@
 """
 IDCardService -- barrel re-export.
 
-SINGLE AUTHORITY for IDCard / IDCardTable mutations.
+SINGLE AUTHORITY for IDCard / Table mutations.
 Combines table, card, and bulk sub-services via MRO into one class
 so all existing callers (IDCardService.method()) keep working.
 

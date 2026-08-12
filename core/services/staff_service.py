@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class StaffService(BaseService):
     PERMISSION_FIELDS = [
         'perm_idcard_client_list',
-        'perm_manage_client_staff',
+        'perm_manage_assistant',
         'perm_idcard_setting_list', 'perm_idcard_setting_add', 
         'perm_idcard_setting_edit', 'perm_idcard_setting_delete', 
         'perm_idcard_setting_status',
@@ -43,10 +43,10 @@ class StaffService(BaseService):
     ]
 
     @classmethod
-    def create(cls, data: Dict[str, Any], staff_type: str = 'admin_staff', client=None, request=None, **kwargs) -> ServiceResult:
+    def create(cls, data: Dict[str, Any], staff_type: str = 'operator', client=None, request=None, **kwargs) -> ServiceResult:
         if staff_type == 'photographer':
             return PhotographerService.create(data, request=request)
-        elif staff_type == 'client_staff':
+        elif staff_type == 'assistant':
             return AssistantService.create_assistant(user=request.user if request else None, data=data)
         else:
             name = str(data.get('name') or '').strip()
@@ -66,7 +66,7 @@ class StaffService(BaseService):
                 import uuid
                 email = f"staff_{uuid.uuid4().hex[:8]}@noemail.local"
 
-            assigned_client_ids = data.get('assigned_clients', [])
+            assigned_client_ids = data.get('assigned_organisations', [])
             if isinstance(assigned_client_ids, str):
                 import json
                 try:
@@ -105,7 +105,7 @@ class StaffService(BaseService):
         except (TypeError, ValueError):
             return 'unknown', 0
         if 100000 <= val < 200000:
-            return 'admin_staff', val - 100000
+            return 'operator', val - 100000
         elif 200000 <= val < 300000:
             return 'client_staff', val - 200000
         elif 300000 <= val < 400000:
@@ -116,7 +116,7 @@ class StaffService(BaseService):
             if Assistant.objects.filter(id=val).exists():
                 return 'client_staff', val
             if Operator.objects.filter(id=val).exists():
-                return 'admin_staff', val
+                return 'operator', val
             return 'unknown', val
 
     @classmethod
@@ -124,7 +124,7 @@ class StaffService(BaseService):
         staff_type, real_id = cls._decode_staff_id(staff_id)
         if staff_type == 'photographer':
             return PhotographerService.update(real_id, data)
-        elif staff_type == 'admin_staff':
+        elif staff_type == 'operator':
             operator = Operator.objects.filter(id=real_id).first()
             if operator:
                 name = str(data.get('name') or '').strip()
@@ -132,7 +132,7 @@ class StaffService(BaseService):
                 first_name = name_parts[0] if name_parts else ''
                 last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
                 
-                assigned_client_ids = data.get('assigned_clients', [])
+                assigned_client_ids = data.get('assigned_organisations', [])
                 if isinstance(assigned_client_ids, str):
                     import json
                     try:
@@ -174,7 +174,7 @@ class StaffService(BaseService):
                 photographer.user.set_password(new_password)
                 photographer.user.save()
                 return ServiceResult(success=True, message='Password updated successfully')
-        elif staff_type == 'admin_staff':
+        elif staff_type == 'operator':
             raw_res = OperatorCreationService.set_temp_password(profile_id=real_id, new_password=new_password, is_assistant=False, request=request)
             if raw_res.get('success'):
                 return ServiceResult(success=True, message='Password updated successfully')
@@ -187,7 +187,7 @@ class StaffService(BaseService):
         staff_type, real_id = cls._decode_staff_id(staff_id)
         if staff_type == 'photographer':
             return PhotographerService.get(real_id)
-        elif staff_type == 'admin_staff':
+        elif staff_type == 'operator':
             operator = Operator.objects.filter(id=real_id).first()
             if operator:
                 from staff.models import Staff
@@ -203,7 +203,7 @@ class StaffService(BaseService):
         staff_type, real_id = cls._decode_staff_id(staff_id)
         if staff_type == 'photographer':
             return PhotographerService.delete(real_id)
-        elif staff_type == 'admin_staff':
+        elif staff_type == 'operator':
             raw_res = OperatorCreationService.delete_operator(deleted_by=None, operator_id=real_id)
             if raw_res.get('success'):
                 return ServiceResult(success=True, message=raw_res.get('message', 'Operator deleted successfully'))
@@ -217,7 +217,7 @@ class StaffService(BaseService):
         staff_type, real_id = cls._decode_staff_id(staff_id)
         if staff_type == 'photographer':
             return PhotographerService.toggle_status(real_id)
-        elif staff_type == 'admin_staff':
+        elif staff_type == 'operator':
             raw_res = OperatorCreationService.toggle_status(toggled_by=None, operator_id=real_id)
             if raw_res.get('success'):
                 return ServiceResult(
@@ -260,7 +260,7 @@ class StaffService(BaseService):
         
         # Include assigned client IDs
         data['assigned_client_ids'] = list(
-            staff.assigned_clients.values_list('id', flat=True)
+            staff.assigned_organisations.values_list('id', flat=True)
         )
         
         return data
@@ -276,7 +276,7 @@ class StaffService(BaseService):
         """List all admin staff"""
         try:
             from staff.models import Staff
-            staff_list = Staff.objects.filter(staff_type='admin_staff')
+            staff_list = Staff.objects.filter(staff_type='operator')
             serialized = [cls.serialize(s) for s in staff_list]
             return ServiceResult(
                 success=True,
@@ -291,7 +291,7 @@ class StaffService(BaseService):
         """List all staff for a specific client"""
         try:
             from staff.models import Staff
-            staff_list = Staff.objects.filter(staff_type='client_staff', client_id=client_id)
+            staff_list = Staff.objects.filter(staff_type='assistant', client_id=client_id)
             serialized = [cls.serialize(s) for s in staff_list]
             return ServiceResult(
                 success=True,

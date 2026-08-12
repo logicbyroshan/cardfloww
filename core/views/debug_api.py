@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from ..models import User, ActivityLog
 from ..services.permission_service import (
     PermissionService,
@@ -83,7 +83,7 @@ def api_debug_workflow(request):
         Returns: global transition matrix + reprint matrix.
     """
     from ..services.permission_service import PermissionService
-    from idcards.services_workflow import WorkflowService
+    from tables.services_workflow import WorkflowService
     from reprintcard.services import ReprintWorkflowService
 
     if not PermissionService.is_super_admin(request.user):
@@ -130,7 +130,7 @@ def api_card_allowed_transitions(request, card_id):
     GET /panel/api/card/<card_id>/allowed-transitions/
     Response: { "success": true, "allowed_transitions": ["verified", "pool"] }
     """
-    from idcards.services_workflow import WorkflowService
+    from tables.services_workflow import WorkflowService
 
     try:
         card = get_object_or_404(IDCard.objects.select_related('table__group'), id=card_id)
@@ -235,7 +235,7 @@ def api_debug_image_integrity(request):
 
     if table_id:
         try:
-            table = get_object_or_404(IDCardTable, id=int(table_id))
+            table = get_object_or_404(Table, id=int(table_id))
         except (ValueError, TypeError):
             return JsonResponse({'success': False, 'message': 'Invalid table_id'}, status=400)
 

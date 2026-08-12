@@ -6,12 +6,12 @@ Ensures clients (and client-staff) can only reach their own data.
 from typing import Optional
 from django.db.models import Q
 
-from client.models import Client
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from organisation.models import Organisation
+from tables.models import Table, IDCard
 from core.services.permission_service import PermissionService
 
 
-class ClientAccessService:
+class OrganisationAccessService:
     """
     Service for managing client data access.
     Ensures clients can only access their own data.
@@ -157,7 +157,7 @@ class ClientAccessService:
                 setattr(staff, '_cached_assigned_table_ids_for_access', explicit_table_ids)
                 return explicit_table_ids
 
-        assigned_table_ids = ClientAccessService._normalize_positive_int_ids(
+        assigned_table_ids = OrganisationAccessService._normalize_positive_int_ids(
             staff.assigned_table_ids or []
         )
         setattr(staff, '_cached_assigned_table_ids_for_access', assigned_table_ids)
@@ -174,12 +174,12 @@ class ClientAccessService:
         if cached is not None:
             return cached
 
-        assigned_ids = set(staff.assigned_clients.values_list('id', flat=True))
+        assigned_ids = set(staff.assigned_organisations.values_list('id', flat=True))
         setattr(staff, '_cached_assigned_client_ids_for_access', assigned_ids)
         return assigned_ids
 
     @staticmethod
-    def get_client_for_user(user) -> Optional[Client]:
+    def get_organisation_for_user(user) -> Optional[Organisation]:
         """
         Get the Client instance for a user.
         Works for both 'client' and 'client_staff' roles.
@@ -202,14 +202,14 @@ class ClientAccessService:
             return client_profile
 
         if PermissionService.is_client_staff(user):
-            staff = ClientAccessService._get_staff_profile(user)
+            staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
                 return staff.client
 
         return None
 
     @staticmethod
-    def can_access_client(user, client_id: int) -> bool:
+    def can_access_organisation(user, client_id: int) -> bool:
         """Check if user can access a specific client's data.
         super_admin has unrestricted access.
         admin_staff/photographer is restricted to assigned clients.
@@ -218,13 +218,13 @@ class ClientAccessService:
             return True
         if PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
             return PermissionService.can_access_client(user, client_id)
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
             return False
         return client.id == client_id
 
     @staticmethod
-    def can_access_group(user, group: IDCardGroup) -> bool:
+    def can_access_group(user, group: Table) -> bool:
         """Check if user can access a specific group.
         super_admin has unrestricted access.
         admin_staff/photographer is restricted to assigned clients.
@@ -235,7 +235,7 @@ class ClientAccessService:
         if PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
             return PermissionService.can_access_client(user, group.client_id)
 
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
             return False
         if group.client_id != client.id:
@@ -243,13 +243,13 @@ class ClientAccessService:
 
         # For client_staff with assigned groups: restrict to assigned only
         if PermissionService.is_client_staff(user):
-            staff = ClientAccessService._get_staff_profile(user)
+            staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
-                assigned_table_ids = ClientAccessService._assigned_table_ids_for_access(staff)
-                assigned_group_ids = ClientAccessService._assigned_group_ids_for_access(staff)
+                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
 
                 if assigned_table_ids and assigned_group_ids:
-                    return (group.id in assigned_group_ids) or IDCardTable.objects.filter(
+                    return (group.id in assigned_group_ids) or Table.objects.filter(
                         id__in=assigned_table_ids,
                         group_id=group.id,
                         group__client_id=group.client_id,
@@ -257,7 +257,7 @@ class ClientAccessService:
                     ).exists()
 
                 if assigned_table_ids:
-                    return IDCardTable.objects.filter(
+                    return Table.objects.filter(
                         id__in=assigned_table_ids,
                         group_id=group.id,
                         group__client_id=group.client_id,
@@ -271,7 +271,7 @@ class ClientAccessService:
         return True
 
     @staticmethod
-    def can_access_table(user, table: IDCardTable) -> bool:
+    def can_access_table(user, table: Table) -> bool:
         """Check if user can access a specific table.
         super_admin has unrestricted access.
         admin_staff/photographer is restricted to assigned clients.
@@ -282,7 +282,7 @@ class ClientAccessService:
         if PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
             return PermissionService.can_access_client(user, table.group.client_id)
 
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
             return False
         if table.group.client_id != client.id:
@@ -290,10 +290,10 @@ class ClientAccessService:
 
         # For client_staff with assigned groups: restrict to assigned groups only
         if PermissionService.is_client_staff(user):
-            staff = ClientAccessService._get_staff_profile(user)
+            staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
-                assigned_table_ids = ClientAccessService._assigned_table_ids_for_access(staff)
-                assigned_group_ids = ClientAccessService._assigned_group_ids_for_access(staff)
+                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
 
                 if assigned_table_ids and assigned_group_ids:
                     return (table.id in assigned_table_ids) or (table.group_id in assigned_group_ids)
@@ -313,12 +313,12 @@ class ClientAccessService:
         All views and services MUST use this method instead of inline Q filters.
         
         Returns:
-            QuerySet of IDCardTable, filtered to only tables the user can access.
+            QuerySet of Table, filtered to only tables the user can access.
             For client_staff with no assignments, returns tables.none().
         """
         if base_qs is None:
-            from idcards.models import IDCardTable
-            base_qs = IDCardTable.objects.filter(
+            from tables.models import Table
+            base_qs = Table.objects.filter(
                 group__client=client,
                 is_active=True,
                 deleted_by_client=False,
@@ -327,7 +327,7 @@ class ClientAccessService:
         if not PermissionService.is_client_staff(user):
             return base_qs
         
-        staff = ClientAccessService._get_staff_profile(user)
+        staff = OrganisationAccessService._get_staff_profile(user)
         if not staff:
             return base_qs.none()
         
@@ -338,8 +338,8 @@ class ClientAccessService:
         # tables when a client operates in "table mode" (single group). 
         # If they have specific tables assigned, we ignore the legacy/side-effect group assignments.
         if assigned_table_ids and assigned_group_ids:
-            from idcards.models import IDCardGroup
-            if IDCardGroup.objects.filter(client=client).count() <= 1:
+            from tables.models import Table
+            if Table.objects.filter(client=client).count() <= 1:
                 assigned_group_ids = []
 
         if assigned_table_ids and assigned_group_ids:
@@ -369,7 +369,7 @@ class ClientAccessService:
         if PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
             return PermissionService.can_access_client(user, card.table.group.client_id)
 
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
             return False
         if card.table.group.client_id != client.id:
@@ -377,10 +377,10 @@ class ClientAccessService:
 
         # For client_staff with assigned groups
         if PermissionService.is_client_staff(user):
-            staff = ClientAccessService._get_staff_profile(user)
+            staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
-                assigned_table_ids = ClientAccessService._assigned_table_ids_for_access(staff)
-                assigned_group_ids = ClientAccessService._assigned_group_ids_for_access(staff)
+                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
 
                 if assigned_table_ids and assigned_group_ids:
                     return (card.table_id in assigned_table_ids) or (card.table.group_id in assigned_group_ids)
@@ -397,11 +397,11 @@ class ClientAccessService:
         """Return a list of accessible table IDs for a user.
         Returns None if all tables are accessible (no restriction).
         """
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
             return []
         if PermissionService.is_client_staff(user):
-            qs = ClientAccessService.get_scoped_tables_qs(user, client)
+            qs = OrganisationAccessService.get_scoped_tables_qs(user, client)
             return list(qs.values_list('id', flat=True))
         return None
 

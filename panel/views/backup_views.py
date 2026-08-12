@@ -26,7 +26,7 @@ from django.views.decorators.http import require_http_methods
 from core.models import BackupTask
 from core.services.activity_service import ActivityService
 from core.services.permission_service import require_permission, api_require_permission, PermissionService
-from client.models import Client
+from organisation.models import Organisation
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ def backup_select_clients(request):
     task = get_object_or_404(BackupTask, pk=task_id, created_by=request.user, status='pending')
 
     sort = request.GET.get('sort', 'most_data')
-    clients_qs = Client.objects.filter(status='active').annotate(
+    clients_qs = Organisation.objects.filter(status='active').annotate(
         total_cards=Count('id_card_groups__tables__id_cards'),
         total_tables=Count('id_card_groups__tables', distinct=True),
     )
@@ -187,7 +187,7 @@ def api_backup_start(request):
     if BackupTask.objects.filter(status='processing').exists():
         return _json_error('Another backup is already running. Please wait for it to finish.', status=429)
 
-    valid_clients = list(Client.objects.filter(pk__in=client_ids, status='active').only('pk', 'name'))
+    valid_clients = list(Organisation.objects.filter(pk__in=client_ids, status='active').only('pk', 'name'))
     if not valid_clients:
         return _json_error('No valid active clients selected.')
     valid_client_count = len(valid_clients)

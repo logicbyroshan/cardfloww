@@ -1,6 +1,6 @@
 """
 Client Service Module
-Contains: Client CRUD operations, serialization
+Contains: Organisation CRUD operations, serialization
 """
 import secrets
 from typing import Dict, Any, Optional, List
@@ -11,7 +11,7 @@ from django.db.models.deletion import ProtectedError
 from django.utils.timezone import localtime
 
 from core.models import User, EmailLog
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
 from core.utils import send_welcome_email
 from core.services.base import BaseService, ServiceResult
@@ -22,7 +22,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ClientService(BaseService):
+class OrganisationService(BaseService):
     """
     Service for Client CRUD operations.
     
@@ -74,28 +74,28 @@ class ClientService(BaseService):
     ]
     
     @classmethod
-    def serialize(cls, client: Client, include_permissions: bool = True) -> Dict[str, Any]:
+    def serialize(cls, client: Organisation, include_permissions: bool = True) -> Dict[str, Any]:
         """Serialize Client/Organisation instance to dict"""
         prime_manager_name = client.user.get_full_name() or client.user.username
         data = {
-            'id': client.id,
-            'organisation_id': client.id,
-            'name': client.name,
-            'organisation_name': client.name,
+            'id': Organisation.id,
+            'organisation_id': Organisation.id,
+            'name': Organisation.name,
+            'organisation_name': Organisation.name,
             'prime_manager': prime_manager_name,
-            'prime_manager_id': client.user.id,
+            'prime_manager_id': Organisation.user.id,
             'role_title': 'Guest Prime Manager' if client.is_guest else 'Prime Manager',
             'is_guest': bool(getattr(client, 'is_guest', False)),
             'email': cls._public_email(client.user.email),
-            'phone': client.user.phone or '',
-            'city': client.city or '',
-            'state': client.state or '',
-            'pincode': client.pincode or '',
-            'status': client.status,
+            'phone': Organisation.user.phone or '',
+            'city': Organisation.city or '',
+            'state': Organisation.state or '',
+            'pincode': Organisation.pincode or '',
+            'status': Organisation.status,
             # Keep photo_url/logo_url keys as empty strings for backward compatibility.
             'photo_url': '',
             'logo_url': '',
-            'icon': client.icon,
+            'icon': Organisation.icon,
             'created_at': localtime(client.created_at).strftime('%d-%m-%Y %H:%M'),
             'updated_at': localtime(client.updated_at).strftime('%d-%m-%Y %H:%M'),
         }
@@ -260,7 +260,7 @@ class ClientService(BaseService):
                     else:
                         client_kwargs[perm] = (perm in DEFAULT_ACTIVE_PERMISSIONS)
 
-                client = Client.objects.create(**client_kwargs)
+                client = Organisation.objects.create(**client_kwargs)
 
                 # Queue welcome email only when it is actually needed:
                 # - active now, a real email exists, and this is not a guest sandbox
@@ -337,7 +337,7 @@ class ClientService(BaseService):
     def create_guest_from_client(cls, client_id: int, request=None) -> ServiceResult:
         """Convert an existing client into a guest sandbox client."""
         try:
-            client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+            client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
             user = client.user
 
             if client.is_guest or user.role == 'guest_prime_manager':
@@ -364,7 +364,7 @@ class ClientService(BaseService):
     def restore_client_from_guest(cls, client_id: int, request=None) -> ServiceResult:
         """Convert a guest sandbox client back into a normal client."""
         try:
-            client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+            client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
             user = client.user
 
             if not client.is_guest and user.role != 'guest_prime_manager':
@@ -391,7 +391,7 @@ class ClientService(BaseService):
     def get(cls, client_id: int, include_permissions: bool = True) -> ServiceResult:
         """Get a client by ID"""
         try:
-            client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+            client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
             return ServiceResult(
                 success=True,
                 data={'client': cls.serialize(client, include_permissions)}
@@ -403,7 +403,7 @@ class ClientService(BaseService):
     def update(cls, client_id: int, data: Dict[str, Any]) -> ServiceResult:
         """Update a client"""
         try:
-            client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+            client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
             user = client.user
             
             with transaction.atomic():
@@ -477,7 +477,7 @@ class ClientService(BaseService):
             return cls._unexpected_error_result('update', e)
     
     @classmethod
-    def _cascade_revoked_permissions(cls, client: Client, revoked_permissions: List[str]) -> None:
+    def _cascade_revoked_permissions(cls, client: Organisation, revoked_permissions: List[str]) -> None:
         """
         Cascade revoked permissions to all assistants.
         Enforces: Assistant Permission ⊆ Client Permission
@@ -570,7 +570,7 @@ class ClientService(BaseService):
 
             if archived_user_ids:
                 logger.warning(
-                    'ClientService.delete: client %s deleted but archived protected user accounts: %s',
+                    'ClientService.delete: Organisation %s deleted but archived protected user accounts: %s',
                     client_id,
                     archived_user_ids,
                 )
@@ -597,7 +597,7 @@ class ClientService(BaseService):
             welcome_skipped_reason = ''
 
             with transaction.atomic():
-                client = Client.objects.select_related('user').select_for_update().get(id=client_id)
+                client = Organisation.objects.select_related('user').select_for_update().get(id=client_id)
                 user = client.user
                 real_email_available = cls._has_real_email(user.email)
                 is_activating = (client.status != 'active')
@@ -675,7 +675,7 @@ class ClientService(BaseService):
                         welcome_user_id = user.pk
                         welcome_email_log_id = log.pk
                         welcome_email_info = {
-                            'name': client.name or user.get_full_name(),
+                            'name': Organisation.name or user.get_full_name(),
                             'email': user.email,
                             'password': credential_password,
                             'phone': user.phone or '',
@@ -752,7 +752,7 @@ class ClientService(BaseService):
                 success=True,
                 message=message,
                 data={
-                    'status': client.status,
+                    'status': Organisation.status,
                     'status_display': status_display,
                     'staff_deactivated': deactivated_staff_count
                 }
@@ -761,7 +761,7 @@ class ClientService(BaseService):
             return cls._unexpected_error_result('toggle_status', e)
     
     @classmethod
-    def _cascade_deactivate_staff(cls, client: Client) -> int:
+    def _cascade_deactivate_staff(cls, client: Organisation) -> int:
         """
         Deactivate all assistants when client is deactivated.
         Returns the count of assistants deactivated.
@@ -784,7 +784,7 @@ class ClientService(BaseService):
     def list_all(cls, include_inactive: bool = False) -> ServiceResult:
         """List all clients"""
         try:
-            queryset = Client.objects.select_related('user').all()
+            queryset = Organisation.objects.select_related('user').all()
             if not include_inactive:
                 queryset = queryset.filter(status='active')
             
@@ -840,7 +840,7 @@ class ClientService(BaseService):
             return ServiceResult(
                 success=True,
                 data={
-                    'client_name': client.name,
+                    'client_name': Organisation.name,
                     'staff': staff_list,
                     'total': len(staff_list),
                     'active': active_count,
@@ -904,7 +904,7 @@ class ClientService(BaseService):
                     message='Assistant member not found or does not belong to this client'
                 )
             
-            # Permission mapping: staff perm -> client perm
+            # Permission mapping: staff perm -> Organisation perm
             STAFF_TO_CLIENT_PERMS = {
                 'perm_idcard_client_list': 'perm_idcard_client_list',
                 'perm_idcard_setting_list': 'perm_idcard_setting_list',
@@ -966,7 +966,7 @@ class ClientService(BaseService):
         Sends a welcome email with the new credentials so the user knows their password.
         """
         try:
-            client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+            client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
             user = client.user
 
             if not new_password or not new_password.strip():

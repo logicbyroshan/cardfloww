@@ -18,8 +18,8 @@ from django.db import connection
 from django.db.models import Count, F, Max, Q, Min
 from django.utils import timezone
 
-from client.models import Client
-from idcards.models import IDCard, IDCardTable
+from organisation.models import Organisation
+from tables.models import IDCard, Table
 from ..models import User
 from ..services import IDCardService
 from ..services.activity_service import ActivityService
@@ -66,7 +66,7 @@ def _dashboard_live_surface_counts(*, user, is_scoped=False, accessible_ids=None
     if is_scoped:
         scoped_client_ids = list(accessible_ids or [])
         client_user_ids = set(
-            Client.objects.filter(id__in=scoped_client_ids).values_list('user_id', flat=True)
+            Organisation.objects.filter(id__in=scoped_client_ids).values_list('user_id', flat=True)
         )
         from assistants.models import Assistant
         assistant_user_ids = set(
@@ -213,9 +213,9 @@ def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, clie
 
     if target_model == 'staff' and target_id_int:
         staff_type = staff_type_map.get(target_id_int)
-        if staff_type == 'client_staff':
+        if staff_type == 'assistant':
             return reverse('manage_client_staff')
-        if staff_type == 'admin_staff':
+        if staff_type == 'operator':
             return reverse('manage_staff')
 
     if target_model == 'client':
@@ -224,14 +224,14 @@ def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, clie
     if action.startswith('client_'):
         return reverse('manage_clients')
     if action.startswith('staff_'):
-        return reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'client_staff' else reverse('manage_staff')
+        return reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'assistant' else reverse('manage_staff')
 
     if action in ('login', 'logout'):
-        if actor_role in ('prime_manager', 'manager', 'guest_prime_manager', 'client'):
+        if actor_role in ('prime_manager', 'manager', 'guest_prime_manager'):
             return reverse('manage_clients')
-        if actor_role in ('assistant', 'client_staff'):
+        if actor_role in ('assistant'):
             return reverse('manage_client_staff')
-        if actor_role in ('admin_staff', 'super_admin'):
+        if actor_role in ('operator', 'super_admin'):
             return reverse('manage_staff')
 
     if action.startswith('card_') or action.startswith('reprint_') or action in ('bulk_upgrade', 'bulk_delete', 'image_upload', 'image_reupload'):
@@ -286,7 +286,7 @@ def _enrich_recent_activities_for_dashboard(user, activities):
         from operators.models import Operator
         from assistants.models import Assistant
         for row in Operator.objects.filter(id__in=staff_ids).values('id'):
-            staff_type_map[row['id']] = 'admin_staff'
+            staff_type_map[row['id']] = 'operator'
         for row in Assistant.objects.filter(id__in=staff_ids).values('id'):
             staff_type_map[row['id']] = 'client_staff'
 
@@ -306,7 +306,7 @@ def _enrich_recent_activities_for_dashboard(user, activities):
 
         if name_filter:
             accessible_clients = (
-                PermissionService.get_accessible_clients(user, Client.objects.all())
+                PermissionService.get_accessible_clients(user, Organisation.objects.all())
                 .filter(name_filter)
                 .only('id', 'name')
             )
@@ -319,7 +319,7 @@ def _enrich_recent_activities_for_dashboard(user, activities):
     if client_id_by_name:
         client_ids = list(client_id_by_name.values())
         first_table_rows = (
-            IDCardTable.objects
+            Table.objects
             .filter(group__client_id__in=client_ids)
             .values('group__client_id')
             .annotate(first_table_id=Min('id'))
@@ -464,7 +464,7 @@ def dashboard(request):
     overview_cache_key = f'dashboard_overview_stats{cache_suffix}'
     overview_stats = cache.get(overview_cache_key)
     if overview_stats is None:
-        clients_qs = Client.objects.all()
+        clients_qs = Organisation.objects.all()
         from assistants.models import Assistant
         assistents_qs = Assistant.objects.all()
         if is_scoped:
@@ -568,13 +568,13 @@ def api_dashboard_card_stats(request):
             from ..models import User as CoreUser
             if is_scoped:
                 # Operator sees only their assigned scope
-                total_orgs = Client.objects.filter(id__in=accessible_ids).count()
-                total_operators = CoreUser.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count()
+                total_orgs = Organisation.objects.filter(id__in=accessible_ids).count()
+                total_operators = CoreUser.objects.filter(role__in=('operator'), is_active=True).count()
                 total_assistants = CoreUser.objects.filter(role='assistant', is_active=True).count() if hasattr(CoreUser, 'role') else 0
                 total_photographers = CoreUser.objects.filter(role='photographer', is_active=True).count()
             else:
-                total_orgs = Client.objects.count()
-                total_operators = CoreUser.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count()
+                total_orgs = Organisation.objects.count()
+                total_operators = CoreUser.objects.filter(role__in=('operator'), is_active=True).count()
                 total_assistants = CoreUser.objects.filter(role='assistant', is_active=True).count() if hasattr(CoreUser, 'role') else 0
                 total_photographers = CoreUser.objects.filter(role='photographer', is_active=True).count()
         except Exception:
@@ -646,7 +646,7 @@ def api_recent_client_updates(request):
         # Get recent clients - scoped by PermissionService
         # Show all accessible clients (including inactive) for dashboard recents.
         # Order by most-recently-approved card data, then newest-created client.
-        base_qs = Client.objects.all()
+        base_qs = Organisation.objects.all()
         clients_qs = PermissionService.get_accessible_clients(
             user, base_qs
         ).values('id', 'name', 'status', 'created_at').annotate(
@@ -737,7 +737,7 @@ def api_recent_client_updates(request):
                 'id': client_id,
                 'client_id': client_id,
                 'name': client_name,
-                'status': client.get('status'),
+                'status': Organisation.get('status'),
                 'initial': client_name[0].upper() if client_name else 'C',
                 'first_table_id': first_table_map.get(client_id),
                 'tables': tables_map.get(client_id, []),
@@ -821,7 +821,7 @@ def api_reprint_overview(request):
         user = request.user
 
         # Show all accessible clients (including inactive) for both admin roles.
-        base_qs = Client.objects.all()
+        base_qs = Organisation.objects.all()
         accessible_clients = PermissionService.get_accessible_clients(user, base_qs)
 
         # Order reprint clients by latest request-list activity, then newest client.
@@ -1042,13 +1042,13 @@ def api_global_search(request):
         )
         
         # Scope by role
-        _manager_roles = ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'client_staff', 'assistant')
+        _manager_roles = ('prime_manager', 'manager', 'guest_prime_manager', 'assistant')
         is_client_role = user.role in _manager_roles
         if PermissionService.is_super_admin(user):
             pass  # super_admin sees all
         elif PermissionService.is_client_role(user):
-            from client.services import ClientAccessService
-            client = ClientAccessService.get_client_for_user(user)
+            from organisation.services import OrganisationAccessService
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if client:
                 base_cards = base_cards.filter(table__organisation=client)
             else:
@@ -1062,7 +1062,7 @@ def api_global_search(request):
                 base_cards = base_cards.none()
 
         if scoped_table_id:
-            scoped_table = IDCardTable.objects.only('id', 'organisation_id').filter(id=scoped_table_id).first()
+            scoped_table = Table.objects.only('id', 'organisation_id').filter(id=scoped_table_id).first()
             if not scoped_table:
                 return JsonResponse({'success': False, 'message': 'Table not found.'}, status=404)
 
@@ -1070,8 +1070,8 @@ def api_global_search(request):
                 return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
             if PermissionService.is_client_role(user):
-                from client.services import ClientAccessService
-                if not ClientAccessService.can_access_table(user, scoped_table):
+                from organisation.services import OrganisationAccessService
+                if not OrganisationAccessService.can_access_table(user, scoped_table):
                     return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
             base_cards = base_cards.filter(table_id=scoped_table_id)
@@ -1090,7 +1090,7 @@ def api_global_search(request):
         table_ids = sorted({card.table_id for card in cards if card.table_id})
         table_map = {
             table.id: table
-            for table in IDCardTable.objects.filter(id__in=table_ids).select_related('group__client').only(
+            for table in Table.objects.filter(id__in=table_ids).select_related('group__client').only(
                 'id',
                 'name',
                 'fields',

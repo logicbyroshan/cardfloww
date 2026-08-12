@@ -43,9 +43,9 @@ class PhotoValidationApiTests(TestCase):
 class MobileStaffAssignmentTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
-        from client.models import Client
+        from organisation.models import Organisation
         from assistants.models import Assistant
-        from idcards.models import IDCardGroup, IDCardTable
+        from tables.models import Table
 
         User = get_user_model()
         self.superuser = User.objects.create_superuser(
@@ -54,7 +54,7 @@ class MobileStaffAssignmentTests(TestCase):
         self.client_user = User.objects.create_user(
             username='client@test.com', email='client@test.com', password='clientpass1', role='client'
         )
-        self.client_obj = Client.objects.create(user=self.client_user, name='Test Client')
+        self.client_obj = Organisation.objects.create(user=self.client_user, name='Test Client')
         
         self.assistant_user = User.objects.create_user(
             username='assistant@test.com', email='assistant@test.com', password='assistantpass1', role='client_staff'
@@ -63,8 +63,8 @@ class MobileStaffAssignmentTests(TestCase):
             user=self.assistant_user, client=self.client_obj
         )
         
-        self.group = IDCardGroup.objects.create(client=self.client_obj, name='Test Group')
-        self.table = IDCardTable.objects.create(group=self.group, name='Test Table')
+        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
+        self.table = Table.objects.create(group=self.group, name='Test Table')
         
     def test_mobile_staff_assignment_endpoint(self):
         # Set session flag

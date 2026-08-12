@@ -12,9 +12,9 @@ from core.utils import send_welcome_email
 logger = logging.getLogger(__name__)
 
 
-class ClientStaffService(BaseService):
+class OrganisationStaffService(BaseService):
     """
-    Shim ClientStaffService class that wraps AssistantService.
+    Shim OrganisationStaffService class that wraps AssistantService.
     """
     STAFF_PERMISSION_FIELDS = AssistantService.ASSISTANT_PERMISSION_FIELDS
     NON_DELEGABLE_CLIENT_STAFF_PERMS = AssistantService.NON_DELEGABLE_ASSISTANT_PERMS

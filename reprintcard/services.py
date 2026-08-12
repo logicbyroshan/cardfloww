@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 from django.db import transaction
 from django.utils import timezone
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from core.services.base import ServiceResult
 from core.services.cache_version_service import CacheVersionService
 from core.services.activity_service import ActivityService
@@ -64,7 +64,7 @@ class ReprintWorkflowService:
         return normalized
 
     @classmethod
-    def _bump_dashboard_cache_versions(cls, table: IDCardTable) -> None:
+    def _bump_dashboard_cache_versions(cls, table: Table) -> None:
         """Invalidate dashboard cache versions for reprint data updates."""
         try:
             CacheVersionService.bump('admin_dash_counts', 'global')
@@ -137,7 +137,7 @@ class ReprintWorkflowService:
     @classmethod
     def bulk_transition(
         cls,
-        table: IDCardTable,
+        table: Table,
         rr_ids: List[int],
         target_status: str,
         user=None,
@@ -198,7 +198,7 @@ class ReprintWorkflowService:
     @classmethod
     def create_requests(
         cls,
-        table: IDCardTable,
+        table: Table,
         card_ids: List[int],
         reason: str = '',
         requested_by=None,
@@ -267,7 +267,7 @@ class ReprintWorkflowService:
     @classmethod
     def reject_requests(
         cls,
-        table: IDCardTable,
+        table: Table,
         rr_ids: List[int],
         move_card_to_deleted: bool = False,
         move_card_to_pool: bool = False,

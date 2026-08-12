@@ -19,9 +19,9 @@ from collections import Counter
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from client.models import Client
+from organisation.models import Organisation
 from core.services.base import BaseService
-from idcards.models import IDCard
+from tables.models import IDCard
 
 
 class Command(BaseCommand):
@@ -187,7 +187,7 @@ class Command(BaseCommand):
 
     def _resolve_client(self, *, client_id, client_name, exact):
         if client_id:
-            client = Client.objects.filter(id=client_id).only("id", "name", "status").first()
+            client = Organisation.objects.filter(id=client_id).only("id", "name", "status").first()
             if not client:
                 raise CommandError(f"No client found with id={client_id}")
             return client
@@ -196,9 +196,9 @@ class Command(BaseCommand):
             raise CommandError("Provide either --client-id or --client-name")
 
         if exact:
-            matches = Client.objects.filter(name__iexact=client_name).only("id", "name", "status")
+            matches = Organisation.objects.filter(name__iexact=client_name).only("id", "name", "status")
         else:
-            matches = Client.objects.filter(name__icontains=client_name).only("id", "name", "status")
+            matches = Organisation.objects.filter(name__icontains=client_name).only("id", "name", "status")
 
         count = matches.count()
         if count == 0:

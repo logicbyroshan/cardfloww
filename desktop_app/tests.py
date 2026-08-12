@@ -9,8 +9,8 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 
-from client.models import Client
-from idcards.models import IDCard, IDCardGroup, IDCardTable
+from organisation.models import Organisation
+from tables.models import IDCard, Table, Table
 from mediafiles.models import CardMedia
 
 User = get_user_model()
@@ -34,9 +34,9 @@ class DesktopAppApiTests(TestCase):
             password='pass12345',
             role='super_admin',
         )
-        self.client_obj = Client.objects.create(user=self.user, name='Alpha School', status='active')
-        self.group = IDCardGroup.objects.create(client=self.client_obj, name='Grade 1')
-        self.table = IDCardTable.objects.create(
+        self.client_obj = Organisation.objects.create(user=self.user, name='Alpha School', status='active')
+        self.group = Table.objects.create(client=self.client_obj, name='Grade 1')
+        self.table = Table.objects.create(
             group=self.group,
             name='2026 Cards',
             fields=[

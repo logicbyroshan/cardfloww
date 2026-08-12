@@ -204,7 +204,7 @@ def process_reupload_images(task):
                 'status_filter': str (optional)
             }
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.base import BaseService
     from mediafiles.services import ImageService
     from core.utils.field_utils import validate_image_bytes
@@ -218,9 +218,9 @@ def process_reupload_images(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('group__client').get(id=table_id)
         client = table.group.client
-    except IDCardTable.DoesNotExist:
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     
@@ -437,7 +437,7 @@ def process_reupload_images(task):
                                 pending_media_deletes.append((card.pk, img_field))
                             pending_media_creates.append({
                                 'card': card,
-                                'client': client,
+                                'client': Organisation,
                                 'saved_path': saved_path,
                                 'field_name': img_field,
                             })

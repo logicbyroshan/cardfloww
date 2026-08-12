@@ -15,7 +15,7 @@ from core.services.permission_service import PermissionService, api_require_any_
 from core.services.live_presence_service import LiveClientPresenceService
 from django.contrib.auth import get_user_model
 User = get_user_model()
-from client.models import Client
+from organisation.models import Organisation
 from accounts.models import UserDeviceSession
 from stats.models import StatsSnapshot, ServerLoadAlert
 from core.models import BackgroundTask
@@ -86,7 +86,7 @@ def _get_active_device_counts():
 
 def _take_hourly_snapshot(user):
     """Write a real snapshot right now if the last one is older than 1 hour."""
-    from idcards.models import IDCard
+    from tables.models import IDCard
 
     now = timezone.localtime(timezone.now())
     latest = StatsSnapshot.objects.order_by('-timestamp').first()
@@ -120,7 +120,7 @@ def api_statistics_data(request):
                     'weekly' (last 12 wk), 'monthly' (last 12 mo).
     """
     from core.models import ActivityLog
-    from idcards.models import IDCard
+    from tables.models import IDCard
 
     if not PermissionService.can_use_pro_user_options(request.user):
         return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
@@ -320,7 +320,7 @@ def api_statistics_data(request):
             except Exception:
                 pass
 
-    from idcards.models import IDCard as IDCard2
+    from tables.models import IDCard as IDCard2
     total_cards_ever = IDCard2.objects.count()
 
     return JsonResponse({

@@ -18,7 +18,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from accounts.rate_limit import rate_limit
 
-from idcards.models import IDCardTable, IDCard
+from tables.models import Table, IDCard
 from ..services import IDCardService
 from ..services.permission_service import api_require_permission, PermissionService
 
@@ -279,7 +279,7 @@ def api_idcard_table_list(request, group_id):
 @api_require_permission('perm_idcard_setting_list')
 def api_schema_list(request):
     """List all table schemas for the current user/client or default group."""
-    from client.models import Client
+    from organisation.models import Organisation
     try:
         if PermissionService.is_client_role(request.user):
             client = getattr(request.user, 'client_profile', None)
@@ -289,7 +289,7 @@ def api_schema_list(request):
             result = IDCardService.list_tables(group.id)
             return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
         else:
-            client = Client.objects.filter(status='active').first()
+            client = Organisation.objects.filter(status='active').first()
             if not client:
                 return JsonResponse({'success': True, 'tables': []})
             group = IDCardService.ensure_default_group(client)
@@ -304,19 +304,19 @@ def api_schema_list(request):
 @api_require_permission('perm_idcard_setting_add')
 def api_schema_create(request):
     """Create a new table schema without requiring group_id upfront."""
-    from client.models import Client
+    from organisation.models import Organisation
     try:
         data = json.loads(request.body or '{}')
         client = None
 
         if data.get('client_id'):
-            client = Client.objects.filter(id=data.get('client_id')).first()
+            client = Organisation.objects.filter(id=data.get('client_id')).first()
 
         if not client and PermissionService.is_client_role(request.user):
             client = getattr(request.user, 'client_profile', None)
 
         if not client:
-            client = Client.objects.filter(status='active').first()
+            client = Organisation.objects.filter(status='active').first()
 
         if not client:
             return JsonResponse({'success': False, 'message': 'No active organisation found.'}, status=400)
@@ -455,7 +455,7 @@ def _infer_relation_slot_type(sample_values) -> str:
 def _infer_field_type(header_name: str, sample_values=None) -> str:
     """Infer field type from an XLSX header name.
 
-    Returns one of the VALID_FIELD_TYPES for IDCardTable.
+    Returns one of the VALID_FIELD_TYPES for Table.
     Falls back to 'text' for any unrecognised header.
     """
     normalized = header_name.strip().lower().replace('_', ' ')
@@ -474,7 +474,7 @@ def _infer_field_type(header_name: str, sample_values=None) -> str:
 @api_require_permission('perm_idcard_setting_add')
 def api_create_table_from_xlsx(request, group_id):
     """
-    Create a new IDCardTable from an XLSX file's header row, then bulk-upload
+    Create a new Table from an XLSX file's header row, then bulk-upload
     the data rows into the table.  Optionally accepts ZIP files for image fields.
 
     This combines two steps into one:
@@ -685,7 +685,7 @@ def api_create_table_from_xlsx(request, group_id):
         table_name = base.strip().upper()[:255] or 'IMPORTED TABLE'
 
     try:
-        table = IDCardTable.objects.create(
+        table = Table.objects.create(
             group=group,
             name=table_name,
             fields=fields,

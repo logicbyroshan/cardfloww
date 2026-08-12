@@ -192,7 +192,7 @@ class LogoutView(View):
 
             # Sandbox Cleanup
             if getattr(request.user, 'role', '') == 'guest_prime_manager' and request.user.username.startswith('guestclone_'):
-                from client.services_sandbox import SandboxService
+                from organisation.services_sandbox import SandboxService
                 SandboxService.cleanup_clone(request.user.id)
 
             ActivityService.log_logout(request, request.user)
@@ -245,7 +245,7 @@ class BaseDashboardView(LoginRequiredMixin, View):
 
 class StaffDashboardView(BaseDashboardView):
     """DEPRECATED ÔÇö redirects to /panel/."""
-    allowed_roles = ['admin_staff']
+    allowed_roles = ['operator']
     def get(self, request):
         return redirect('/panel/')
 
@@ -341,7 +341,7 @@ class LoginAPIView(View):
                 
                 # Clone guest user for strict session sandbox isolation
                 if getattr(user, 'role', '') == 'guest_prime_manager':
-                    from client.services_sandbox import SandboxService
+                    from organisation.services_sandbox import SandboxService
                     user = SandboxService.create_session_clone(user)
                     result['user'] = user
 
@@ -385,7 +385,7 @@ class LoginAPIView(View):
                 )
                 
                 # Log activity
-                if user.role in ('client', 'client_staff', 'assistant') and has_different_browser_session:
+                if user.role in ('assistant') and has_different_browser_session:
                     display_name = user.get_full_name() or user.username
                     ActivityService.log(
                         'login',

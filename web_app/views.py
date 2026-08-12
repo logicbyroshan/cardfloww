@@ -2,8 +2,8 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.db.models import Count, OuterRef, Subquery, IntegerField
 from django.db.models.functions import Coalesce
-from client.models import Client
-from idcards.models import IDCard
+from organisation.models import Organisation
+from tables.models import IDCard
 
 def api_public_clients_list(request):
     """
@@ -30,16 +30,16 @@ def api_public_clients_list(request):
     ).values('count')
 
     # Fetch clients, prefetch their user profile for email lookup
-    clients_queryset = Client.objects.select_related('user').annotate(
+    clients_queryset = Organisation.objects.select_related('user').annotate(
         total_records_count=Coalesce(Subquery(card_count_subquery, output_field=IntegerField()), 0)
     ).order_by('name')
 
     clients_data = []
     for client in clients_queryset:
         clients_data.append({
-            'name': client.name,
-            'email': client.user.email if client.user else '',
-            'total_records': client.total_records_count,
+            'name': Organisation.name,
+            'email': Organisation.user.email if client.user else '',
+            'total_records': Organisation.total_records_count,
         })
 
     return JsonResponse({

@@ -31,7 +31,7 @@ from django.utils import timezone
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 
 from core.models import BackgroundTask
-from idcards.models import IDCardTable
+from tables.models import Table
 from core.utils.upload_security import validate_zip_safety
 from core.services.permission_service import (
     PermissionService,
@@ -706,7 +706,7 @@ def api_create_bulk_upload_task(request, table_id):
 
     try:
         # Validate table exists
-        table = get_object_or_404(IDCardTable, id=table_id)
+        table = get_object_or_404(Table, id=table_id)
 
         upload_chunk_size = None
         
@@ -905,7 +905,7 @@ def api_create_reupload_task(request, table_id):
         }
     """
     from core.views.idcard_api import _check_client_scope_by_table, _CLIENT_READONLY_STATUSES
-    from idcards.models import IDCard
+    from tables.models import IDCard
     
     # Check client scope
     _tbl, err = _check_client_scope_by_table(request.user, table_id)
@@ -916,7 +916,7 @@ def api_create_reupload_task(request, table_id):
         return folder_access_err
     
     # Client/client_staff cannot reupload for tables with locked cards
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
         has_locked = IDCard.objects.filter(
             table_id=table_id,
             status__in=_CLIENT_READONLY_STATUSES
@@ -933,7 +933,7 @@ def api_create_reupload_task(request, table_id):
     
     try:
         # Validate table exists
-        get_object_or_404(IDCardTable, id=table_id)
+        get_object_or_404(Table, id=table_id)
 
         upload_chunk_size = None
 
@@ -1012,7 +1012,7 @@ def api_create_reupload_task(request, table_id):
             ActivityService.log_image_reupload(
                 request,
                 updated_count=0,
-                table=get_object_or_404(IDCardTable, id=table_id),
+                table=get_object_or_404(Table, id=table_id),
                 target_field=target_field or '',
                 is_async=True,
             )
@@ -1071,7 +1071,7 @@ def api_create_export_task(request, table_id):
     
     try:
         # Validate table exists
-        table = get_object_or_404(IDCardTable, id=table_id)
+        table = get_object_or_404(Table, id=table_id)
         
         # Parse request body
         try:
@@ -1171,7 +1171,7 @@ def api_create_export_task(request, table_id):
         # Apply class filter if enabled
         if class_filter_enabled and selected_classes:
             from core.views.idcard_helpers import _get_class_section_course_branch_field_names
-            from idcards.models import IDCard
+            from tables.models import IDCard
             from core.utils.field_utils import normalize_class_value
 
             class_field, _, _, _ = _get_class_section_course_branch_field_names(table)

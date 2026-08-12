@@ -133,13 +133,13 @@ class CropService:
               }
             }
         """
-        from idcards.models import IDCardTable, IDCard
+        from tables.models import Table, IDCard
         from mediafiles.constants import IMAGE_FIELD_TYPES
 
         # Validate table
         try:
-            table = IDCardTable.objects.select_related("group__client").get(id=table_id)
-        except IDCardTable.DoesNotExist:
+            table = Table.objects.select_related("group__client").get(id=table_id)
+        except Table.DoesNotExist:
             return {"success": False, "message": f"Table {table_id} not found"}
 
         # Get image fields from table definition
@@ -307,7 +307,7 @@ class CropService:
         them back to the corresponding cards, replacing the original images.
 
         Args:
-            table_id:   The IDCardTable PK (for permission verification)
+            table_id:   The Table PK (for permission verification)
             batch_id:   The crop batch identifier
             use_edited: If True, prefer images from the /edited/ folder
             user:       The user making the request (for logging)
@@ -317,7 +317,7 @@ class CropService:
         """
         import json
 
-        from idcards.models import IDCardTable, IDCard
+        from tables.models import Table, IDCard
         from mediafiles.services import ImageService
 
         batch_dir = cls._batch_dir(batch_id)
@@ -334,8 +334,8 @@ class CropService:
 
         # Validate table
         try:
-            table = IDCardTable.objects.select_related("group__client").get(id=table_id)
-        except IDCardTable.DoesNotExist:
+            table = Table.objects.select_related("group__client").get(id=table_id)
+        except Table.DoesNotExist:
             return {"success": False, "message": f"Table {table_id} not found"}
 
         client = table.group.client

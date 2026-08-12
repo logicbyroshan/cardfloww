@@ -14,9 +14,9 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from client.models import Client
+from organisation.models import Organisation
 from core.services.base import BaseService
-from idcards.models import IDCard, IDCardGroup, IDCardTable
+from tables.models import IDCard, Table, Table
 from mediafiles.constants import IMAGE_FIELD_TYPES
 from mediafiles.models import CardMedia
 from mediafiles.services import ImageService
@@ -187,17 +187,17 @@ class DesktopAppService:
     @classmethod
     def _scope_objects(cls, *, client_id: Optional[int] = None, table_id: Optional[int] = None, search_query: Optional[str] = None, include_data: bool = True):
         if table_id:
-            table = IDCardTable.objects.select_related('group', 'group__client').filter(id=table_id).first()
+            table = Table.objects.select_related('group', 'group__client').filter(id=table_id).first()
             if not table:
                 return None
             client_id = table.group.client_id
-            clients = Client.objects.filter(id=client_id).order_by('id')
-            groups = IDCardGroup.objects.select_related('client').filter(client_id=client_id).order_by('id')
-            tables = IDCardTable.objects.select_related('group', 'group__client').filter(group__client_id=client_id).order_by('id')
+            clients = Organisation.objects.filter(id=client_id).order_by('id')
+            groups = Table.objects.select_related('client').filter(client_id=client_id).order_by('id')
+            tables = Table.objects.select_related('group', 'group__client').filter(group__client_id=client_id).order_by('id')
             cards = IDCard.objects.select_related('table', 'table__group', 'table__group__client').filter(table_id=table.id, status__in=['approved', 'download']).order_by('-id') if include_data else IDCard.objects.none()
             return clients, groups, tables, cards
 
-        clients = Client.objects.all().order_by('id')
+        clients = Organisation.objects.all().order_by('id')
         if search_query:
             clients = clients.filter(name__icontains=search_query)
         if client_id:
@@ -206,34 +206,34 @@ class DesktopAppService:
                 return None
         
         if not include_data:
-            return clients, IDCardGroup.objects.none(), IDCardTable.objects.none(), IDCard.objects.none()
+            return clients, Table.objects.none(), Table.objects.none(), IDCard.objects.none()
 
         client_ids = list(clients.values_list('id', flat=True))
-        groups = IDCardGroup.objects.select_related('client').filter(client_id__in=client_ids).order_by('id')
-        tables = IDCardTable.objects.select_related('group', 'group__client').filter(group__client_id__in=client_ids).order_by('id')
+        groups = Table.objects.select_related('client').filter(client_id__in=client_ids).order_by('id')
+        tables = Table.objects.select_related('group', 'group__client').filter(group__client_id__in=client_ids).order_by('id')
         table_ids = list(tables.values_list('id', flat=True))
         cards = IDCard.objects.select_related('table', 'table__group', 'table__group__client').filter(table_id__in=table_ids, status__in=['approved', 'download']).order_by('-id')
         return clients, groups, tables, cards
 
     @staticmethod
-    def _serialize_client(client: Client) -> Dict[str, Any]:
+    def _serialize_client(organisation: Organisation) -> Dict[str, Any]:
         return {
-            'id': client.id,
-            'name': client.name,
-            'status': client.status,
-            'is_guest': client.is_guest,
-            'image_folder_code': client.image_folder_code,
+            'id': Organisation.id,
+            'name': Organisation.name,
+            'status': Organisation.status,
+            'is_guest': Organisation.is_guest,
+            'image_folder_code': Organisation.image_folder_code,
             'image_folder_uuid': str(client.image_folder_uuid),
-            'city': client.city,
-            'state': client.state,
-            'pincode': client.pincode,
+            'city': Organisation.city,
+            'state': Organisation.state,
+            'pincode': Organisation.pincode,
             'address': '',
-            'created_at': client.created_at.isoformat() if client.created_at else None,
-            'updated_at': client.updated_at.isoformat() if client.updated_at else None,
+            'created_at': Organisation.created_at.isoformat() if client.created_at else None,
+            'updated_at': Organisation.updated_at.isoformat() if client.updated_at else None,
         }
 
     @staticmethod
-    def _serialize_group(group: IDCardGroup) -> Dict[str, Any]:
+    def _serialize_group(group: Table) -> Dict[str, Any]:
         return {
             'id': group.id,
             'client_id': group.client_id,
@@ -245,7 +245,7 @@ class DesktopAppService:
         }
 
     @staticmethod
-    def _serialize_table(table: IDCardTable) -> Dict[str, Any]:
+    def _serialize_table(table: Table) -> Dict[str, Any]:
         image_fields = [field for field in (table.fields or []) if field.get('type') in IMAGE_FIELD_TYPES]
         return {
             'id': table.id,

@@ -27,7 +27,7 @@ from django.db import transaction
 from django.db.models import QuerySet, Count, Q
 
 from core.models import User
-from client.models import Client
+from organisation.models import Organisation
 from operators.models import Operator
 from core.services.permission_service import PermissionService
 from core.utils.email_utils import generate_secure_password, send_welcome_email
@@ -85,7 +85,7 @@ OPERATOR_GROUP = 'operator_group'
 
 # Map Django permission codenames to Operator perm_ fields
 CODENAME_TO_OPERATOR_PERMS = {
-    'can_view_clients': ['perm_idcard_client_list', 'perm_manage_client_staff'],
+    'can_view_clients': ['perm_idcard_client_list', 'perm_manage_assistant'],
     'can_view_idcard_settings': ['perm_idcard_setting_list'],
     'can_add_idcard_settings': ['perm_idcard_setting_add'],
     'can_edit_idcard_settings': ['perm_idcard_setting_edit', 'perm_idcard_setting_status'],
@@ -357,8 +357,8 @@ class OperatorCreationService:
                 
                 # Assign clients
                 if assigned_client_ids:
-                    clients = Client.objects.filter(id__in=assigned_client_ids)
-                    operator.assigned_clients.set(clients)
+                    clients = Organisation.objects.filter(id__in=assigned_client_ids)
+                    operator.assigned_organisations.set(clients)
                 
                 # Add to operator group
                 group = OperatorPermissionService.get_or_create_operator_group()
@@ -482,8 +482,8 @@ class OperatorCreationService:
                 
                 # Update assigned clients
                 if assigned_client_ids is not None:
-                    clients = Client.objects.filter(id__in=assigned_client_ids)
-                    operator.assigned_clients.set(clients)
+                    clients = Organisation.objects.filter(id__in=assigned_client_ids)
+                    operator.assigned_organisations.set(clients)
                 
                 # Update permissions
                 if permission_codenames is not None or perm_keys is not None:
@@ -805,7 +805,7 @@ class OperatorCreationService:
                     'error': 'Only Super Admin can view operators list'
                 }
             
-            operator_list = list(Operator.objects.all().select_related('user').prefetch_related('assigned_clients'))
+            operator_list = list(Operator.objects.all().select_related('user').prefetch_related('assigned_organisations'))
 
             user_ids = [o.user_id for o in operator_list]
             perm_counts_by_user = {}
@@ -828,7 +828,7 @@ class OperatorCreationService:
             
             data = []
             for operator in operator_list:
-                assigned = list(operator.assigned_clients.all())
+                assigned = list(operator.assigned_organisations.all())
                 data.append({
                     'id': operator.pk,
                     'user_id': operator.user.pk,
@@ -842,7 +842,7 @@ class OperatorCreationService:
                         {'id': c.id, 'name': c.name, 'organisation_id': c.id, 'organisation_name': c.name}
                         for c in assigned
                     ],
-                    'assigned_clients': [
+                    'assigned_organisations': [
                         {'id': c.id, 'name': c.name, 'organisation_id': c.id, 'organisation_name': c.name}
                         for c in assigned
                     ],
@@ -875,7 +875,7 @@ class OperatorCreationService:
             
             operator = Operator.objects.filter(
                 id=operator_id
-            ).select_related('user').prefetch_related('assigned_clients').first()
+            ).select_related('user').prefetch_related('assigned_organisations').first()
             
             if not operator:
                 return {'success': False, 'error': 'Operator not found'}
@@ -896,11 +896,11 @@ class OperatorCreationService:
                     'department': operator.department or '',
                     'is_active': operator.user.is_active,
                     'status': 'active' if operator.user.is_active else 'inactive',
-                    'assigned_clients': [
+                    'assigned_organisations': [
                         {'id': c.id, 'name': c.name}
-                        for c in operator.assigned_clients.all()
+                        for c in operator.assigned_organisations.all()
                     ],
-                    'assigned_client_ids': [c.id for c in operator.assigned_clients.all()],
+                    'assigned_client_ids': [c.id for c in operator.assigned_organisations.all()],
                     'permissions': permissions,
                     'created_at': operator.created_at.isoformat(),
                     'updated_at': operator.updated_at.isoformat(),
@@ -924,14 +924,14 @@ class OperatorClientScopingService:
     def get_accessible_clients(cls, user: User) -> QuerySet:
         """Get QuerySet of clients accessible to the user."""
         if not user.is_authenticated:
-            return Client.objects.none()
+            return Organisation.objects.none()
         if PermissionService.is_super_admin(user):
-            return Client.objects.all()
+            return Organisation.objects.all()
         if PermissionService.is_operator(user):
             operator = getattr(user, 'operator_profile', None)
             if operator:
-                return operator.assigned_clients.all()
-        return Client.objects.none()
+                return operator.assigned_organisations.all()
+        return Organisation.objects.none()
     
     @classmethod
     def get_accessible_client_ids(cls, user: User) -> List[int]:
@@ -939,7 +939,7 @@ class OperatorClientScopingService:
         return PermissionService.get_accessible_client_ids(user)
     
     @classmethod
-    def can_access_client(cls, user: User, client_id: int) -> bool:
+    def can_access_organisation(cls, user: User, client_id: int) -> bool:
         """Check if user can access a specific client."""
         return PermissionService.can_access_client(user, client_id)
     

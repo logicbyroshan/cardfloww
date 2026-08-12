@@ -3,10 +3,10 @@ import logging
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
 from assistants.services import AssistantService
-from idcards.models import IDCardGroup, IDCardTable
+from tables.models import Table
 from core.services.activity_service import ActivityService
 from core.services.permission_service import require_super_admin, api_require_super_admin, PermissionService
 from django.contrib.auth.decorators import login_required
@@ -18,7 +18,7 @@ def api_require_assistant_manager(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
-        if not (PermissionService.is_super_admin(request.user) or PermissionService.has(request.user, 'perm_manage_client_staff')):
+        if not (PermissionService.is_super_admin(request.user) or PermissionService.has(request.user, 'perm_manage_assistant')):
             return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -126,28 +126,28 @@ def manage_assistants(request):
     Render the admin-side assistant management page.
     """
     user = request.user
-    can_manage = PermissionService.is_super_admin(user) or PermissionService.has(user, 'perm_manage_client_staff')
+    can_manage = PermissionService.is_super_admin(user) or PermissionService.has(user, 'perm_manage_assistant')
     if not can_manage:
         return HttpResponseForbidden("Access Denied")
 
     # Heal missing assistant profiles
     from core.models import User as CoreUser
-    users_without_profile = CoreUser.objects.filter(role__in=['assistant', 'client_staff'], assistant_profile__isnull=True)
+    users_without_profile = CoreUser.objects.filter(role__in=['assistant'], assistant_profile__isnull=True)
     if users_without_profile.exists():
-        default_client = Client.objects.first()
+        default_client = Organisation.objects.first()
         for u in users_without_profile:
             Assistant.objects.get_or_create(user=u, defaults={'client': default_client})
 
     if PermissionService.is_super_admin(user):
-        clients = Client.objects.all().order_by('name')
+        clients = Organisation.objects.all().order_by('name')
         staff_list = Assistant.objects.all().select_related('user', 'client').order_by('-created_at')
     else:
         operator = getattr(user, 'operator_profile', None)
         if operator:
-            clients = operator.assigned_clients.all().order_by('name')
+            clients = operator.assigned_organisations.all().order_by('name')
             staff_list = Assistant.objects.filter(client__in=clients).select_related('user', 'client').order_by('-created_at')
         else:
-            clients = Client.objects.none()
+            clients = Organisation.objects.none()
             staff_list = Assistant.objects.none()
     
     context = {
@@ -157,7 +157,7 @@ def manage_assistants(request):
         'staff_list': staff_list,
         'is_super_admin': PermissionService.is_super_admin(user),
         'perm_idcard_client_list': True,
-        'perm_manage_client_staff': True,
+        'perm_manage_assistant': True,
         'perm_idcard_pending_list': True,
         'perm_idcard_verified_list': True,
         'perm_idcard_approved_list': True,
@@ -189,7 +189,7 @@ def api_staff_list_create(request):
         client_id = request.GET.get('client_id')
         target_client = None
         if client_id:
-            target_client = Client.objects.filter(id=client_id).first()
+            target_client = Organisation.objects.filter(id=client_id).first()
             if not target_client:
                 return JsonResponse({'success': False, 'error': 'Selected client not found'}, status=404)
 
@@ -242,7 +242,7 @@ def api_staff_list_create(request):
             'error': 'Please select a client to create an assistant.'
         }, status=400)
 
-    target_client = Client.objects.filter(id=client_id).first()
+    target_client = Organisation.objects.filter(id=client_id).first()
     if not target_client:
         return JsonResponse({
             'success': False,
@@ -298,9 +298,9 @@ def api_staff_detail(request, staff_id):
         from core.models import User as CoreUser
         ast = Assistant.objects.filter(id=staff_id).first()
         if not ast:
-            usr = CoreUser.objects.filter(id=staff_id, role__in=['assistant', 'client_staff']).first()
+            usr = CoreUser.objects.filter(id=staff_id, role__in=['assistant']).first()
             if usr:
-                default_client = Client.objects.first()
+                default_client = Organisation.objects.first()
                 Assistant.objects.get_or_create(user=usr, defaults={'client': default_client})
     except Exception:
         pass
@@ -543,11 +543,11 @@ def api_client_groups_list(request):
     if not client_id:
         return JsonResponse({'success': False, 'message': 'client_id is required'}, status=400)
 
-    client = Client.objects.filter(id=client_id).first()
+    client = Organisation.objects.filter(id=client_id).first()
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
     
-    groups_qs = IDCardGroup.objects.filter(client=client).order_by('name')
+    groups_qs = Table.objects.filter(client=client).order_by('name')
     group_count = groups_qs.count()
 
     if group_count <= 1:
@@ -555,7 +555,7 @@ def api_client_groups_list(request):
         # which list (Student List, Staff List, etc.) to use.
         # This applies both for the assignment drawer AND for the auto-create
         # modal — previously for_auto_create=true bypassed this, hiding tables.
-        tables_qs = IDCardTable.objects.filter(
+        tables_qs = Table.objects.filter(
             group__client=client,
             deleted_by_client=False,
         ).order_by('name').values('id', 'name', 'group_id')
@@ -592,14 +592,14 @@ def api_class_section_options(request):
     API: Get distinct class and section values from all cards of a selected client.
     Requires client_id query param.
     """
-    from idcards.models import IDCard, IDCardTable
-    from idcards.models import IDCardGroup
+    from tables.models import IDCard, Table
+    from tables.models import Table
 
     client_id = request.GET.get('client_id')
     if not client_id:
         return JsonResponse({'success': False, 'message': 'client_id is required'}, status=400)
 
-    client = Client.objects.filter(id=client_id).first()
+    client = Organisation.objects.filter(id=client_id).first()
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
 
@@ -610,7 +610,7 @@ def api_class_section_options(request):
 
     resolved_id_source = id_source
     if resolved_id_source == 'auto':
-        group_count = IDCardGroup.objects.filter(client=client).count()
+        group_count = Table.objects.filter(client=client).count()
         resolved_id_source = 'table' if group_count <= 1 else 'group'
 
     group_ids = []
@@ -621,14 +621,14 @@ def api_class_section_options(request):
             group_ids = []
 
     # Resolve effective tables.
-    tables_qs = IDCardTable.objects.filter(group__client=client, deleted_by_client=False)
+    tables_qs = Table.objects.filter(group__client=client, deleted_by_client=False)
 
     if group_ids:
         valid_group_ids = set(
-            IDCardGroup.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
         )
         valid_table_ids = set(
-            IDCardTable.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
         )
 
         if resolved_id_source == 'table':
@@ -833,7 +833,7 @@ def api_staff_bulk_upload_xlsx(request):
     if not client_id:
         return JsonResponse({'success': False, 'message': 'client_id is required'}, status=400)
 
-    target_client = Client.objects.filter(id=client_id).first()
+    target_client = Organisation.objects.filter(id=client_id).first()
     if not target_client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
 
@@ -893,7 +893,7 @@ def api_staff_auto_create(request):
     if not client_id or not selection_id or not acronym or not mode:
         return JsonResponse({'success': False, 'message': 'client_id, a group or table selection, acronym, and mode are required'}, status=400)
 
-    target_client = Client.objects.filter(id=client_id).first()
+    target_client = Organisation.objects.filter(id=client_id).first()
     if not target_client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
 
@@ -901,12 +901,12 @@ def api_staff_auto_create(request):
     target_table = None
 
     if id_source == 'table':
-        target_table = IDCardTable.objects.filter(id=selection_id, group__client=target_client, deleted_by_client=False).first()
+        target_table = Table.objects.filter(id=selection_id, group__client=target_client, deleted_by_client=False).first()
         if not target_table:
             return JsonResponse({'success': False, 'message': 'List/Table not found'}, status=404)
         target_group = target_table.group  # also carry the parent group for assignment
     else:
-        target_group = IDCardGroup.objects.filter(id=selection_id, client=target_client).first()
+        target_group = Table.objects.filter(id=selection_id, client=target_client).first()
         if not target_group:
             return JsonResponse({'success': False, 'message': 'Group/List not found'}, status=404)
 

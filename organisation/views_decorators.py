@@ -13,7 +13,7 @@ from django.urls import reverse
 
 from core.services.permission_service import PermissionService
 
-from .services import ClientAccessService
+from .services import OrganisationAccessService
 
 
 # =============================================================================
@@ -89,7 +89,7 @@ def require_client_staff_manager(view_func):
         user = request.user
         if not (PermissionService.is_client_role(user) and (
                 PermissionService.has(user, 'perm_idcard_client_list') or
-                PermissionService.has(user, 'perm_manage_client_staff'))):
+                PermissionService.has(user, 'perm_manage_assistant'))):
             if _is_api_request(request):
                 return JsonResponse({
                     'success': False,
@@ -103,4 +103,4 @@ def require_client_staff_manager(view_func):
 
 def _get_client_for_request(user):
     """Helper to get client profile for the logged-in client/client_staff user."""
-    return ClientAccessService.get_client_for_user(user)
+    return OrganisationAccessService.get_organisation_for_user(user)

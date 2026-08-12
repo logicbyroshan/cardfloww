@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from idcards.models import IDCard
+from tables.models import IDCard
 from mediafiles.services.image_fields import ImageFieldsMixin
 from core.services.base import BaseService
 

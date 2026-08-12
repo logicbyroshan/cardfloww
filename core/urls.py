@@ -2,7 +2,7 @@ from django.urls import include, path
 from django.views.decorators.csrf import csrf_exempt
 from . import views
 from exports import views as export_views
-from client import views_api as client_views_api
+from organisation import views_api as client_views_api
 from accounts import views as accounts_views
 
 

@@ -8,8 +8,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
-from client.models import Client
-from client.services_client_core import ClientService
+from organisation.models import Organisation
+from organisation.services_client_core import OrganisationService as ClientService
 from core.models import User
 from core.services.permission_service import PermissionService
 
@@ -32,7 +32,7 @@ def _parse_json_body(request):
         return None
 
 
-def _serialize_guest(client: Client) -> dict:
+def _serialize_guest(organisation: Organisation) -> dict:
     payload = ClientService.serialize(client, include_permissions=False)
     payload['role'] = client.user.role
     payload['role_display'] = client.user.get_role_display() if hasattr(client.user, 'get_role_display') else client.user.role
@@ -51,7 +51,7 @@ def api_pro_user_guest_users(request):
         return guard
 
     guests = (
-        Client.objects
+        Organisation.objects
         .select_related('user')
         .filter(is_guest=True)
         .order_by('-updated_at', '-id')
@@ -75,7 +75,7 @@ def api_pro_user_guest_source_clients(request):
     current_client_id = getattr(getattr(request.user, 'client_profile', None), 'id', None)
 
     clients = (
-        Client.objects
+        Organisation.objects
         .select_related('user')
         .filter(status='active', is_guest=False)
         .order_by('name', 'id')
@@ -87,11 +87,11 @@ def api_pro_user_guest_source_clients(request):
         'success': True,
         'clients': [
             {
-                'id': client.id,
-                'name': client.name,
-                'username': client.user.username,
-                'email': client.user.email,
-                'role': client.user.role,
+                'id': Organisation.id,
+                'name': Organisation.name,
+                'username': Organisation.user.username,
+                'email': Organisation.user.email,
+                'role': Organisation.user.role,
             }
             for client in clients
         ],
@@ -157,7 +157,7 @@ def api_pro_user_guest_user_convert(request):
     if client_id <= 0:
         return JsonResponse({'success': False, 'message': 'A valid client_id is required.'}, status=400)
 
-    client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+    client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
     if getattr(client, 'is_guest', False) or getattr(client.user, 'role', '') == 'guest_prime_manager':
         return JsonResponse({'success': False, 'message': 'This user is already a guest.'}, status=400)
 
@@ -191,7 +191,7 @@ def api_pro_user_guest_user_restore(request):
     if client_id <= 0:
         return JsonResponse({'success': False, 'message': 'A valid client_id is required.'}, status=400)
 
-    client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+    client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
     if not getattr(client, 'is_guest', False) and getattr(client.user, 'role', '') != 'guest_prime_manager':
         return JsonResponse({'success': False, 'message': 'This user is not a guest.'}, status=400)
 

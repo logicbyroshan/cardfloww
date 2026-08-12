@@ -18,7 +18,7 @@ import re
 
 from django.core.management.base import BaseCommand
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from mediafiles.models import CardMedia
 
 
@@ -81,7 +81,7 @@ class Command(BaseCommand):
         client_id = options.get('client_id')
         batch_size = max(1, int(options.get('batch_size') or 500))
 
-        qs = IDCardTable.objects.all().only('id', 'fields', 'group_id')
+        qs = Table.objects.all().only('id', 'fields', 'group_id')
         if table_id:
             qs = qs.filter(id=table_id)
         if client_id:

@@ -158,7 +158,7 @@ class CustomErrorPageTests(TestCase):
             username='admin-error@test.com',
             email='admin-error@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
         request.urlconf = 'config.urls_panel'
 

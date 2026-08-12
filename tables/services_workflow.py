@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Any
 from django.db import transaction
 from django.utils import timezone
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from core.services.base import BaseService, ServiceResult
 from core.services.cache_version_service import CacheVersionService
 from core.services.permission_service import PermissionService
@@ -169,8 +169,8 @@ class WorkflowService:
         if user is None:
             return allowed
 
-        # Client-readonly filter: Client users can only transition approved/download cards BACKWARD
-        is_client = user.role in ('client', 'client_staff')
+        # Client-readonly filter: Organisation users can only transition approved/download cards BACKWARD
+        is_client = PermissionService.is_client_role(user)
 
         # Permission filter
         result = []
@@ -254,7 +254,7 @@ class WorkflowService:
                 elif current == 'download' and target_status in ('approved', 'verified', 'pending'):
                     is_backward = True
 
-                if not is_backward and user.role in ('client', 'client_staff') and current in cls.CLIENT_READONLY_STATUSES:
+                if not is_backward and PermissionService.is_client_role(user) and current in cls.CLIENT_READONLY_STATUSES:
                     return ServiceResult(
                         success=False,
                         message='Cards in approved / download status cannot be modified by client users.'
@@ -346,7 +346,7 @@ class WorkflowService:
     @classmethod
     def bulk_transition(
         cls,
-        table: IDCardTable,
+        table: Table,
         card_ids: List[int],
         target_status: str,
         user=None,
@@ -374,7 +374,7 @@ class WorkflowService:
         # ── 2. Permission check (once, not per-card) ────────────────
         if user and not skip_permission:
             # Client-readonly: reject unless moving backward
-            if user.role in ('client', 'client_staff'):
+            if PermissionService.is_client_role(user):
                 locked_cards_statuses = set(
                     IDCard.objects.filter(table=table, id__in=card_ids, status__in=cls.CLIENT_READONLY_STATUSES)
                     .values_list('status', flat=True)
@@ -561,7 +561,7 @@ class WorkflowService:
     # ── Activity logging helpers ────────────────────────────────────
 
     @staticmethod
-    def _bump_dashboard_cache_versions(table: IDCardTable) -> None:
+    def _bump_dashboard_cache_versions(table: Table) -> None:
         """Invalidate dashboard cache versions for affected scope."""
         try:
             client_id = getattr(getattr(table, 'group', None), 'client_id', None)

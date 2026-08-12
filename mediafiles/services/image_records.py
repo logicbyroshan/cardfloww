@@ -32,7 +32,7 @@ class ImageRecordsMixin:
     def _resolve_uploader_prefix(uploaded_by=None) -> str:
         """Map uploader role to filename prefix: admin='a', client='c', operator='o'."""
         role = str(getattr(uploaded_by, 'role', '') or '').strip().lower()
-        if role in ('client', 'client_staff', 'assistant'):
+        if role in ('assistant'):
             return 'c'
         if role in ('operator', 'operator_staff', 'photographer'):
             return 'o'

@@ -7,7 +7,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from core.services.cache_version_service import CacheVersionService
-from idcards.models import IDCard, IDCardGroup, IDCardTable
+from tables.models import IDCard, Table, Table
 from staff.models import Staff
 
 
@@ -66,7 +66,7 @@ class Command(BaseCommand):
 
         qs = (
             Staff.objects
-            .filter(staff_type="client_staff", client__isnull=False)
+            .filter(staff_type="assistant", client__isnull=False)
             .select_related("client", "user")
             .prefetch_related("assigned_groups")
             .order_by("id")
@@ -148,7 +148,7 @@ class Command(BaseCommand):
             allowed_branches = list(plan.get("allowed_branches") or [])
 
             with transaction.atomic():
-                valid_groups = IDCardGroup.objects.filter(client_id=staff.client_id, id__in=group_ids)
+                valid_groups = Table.objects.filter(client_id=staff.client_id, id__in=group_ids)
                 staff.assigned_groups.set(valid_groups)
                 staff.assigned_table_ids = table_ids
                 staff.assignment_scopes = scopes
@@ -236,7 +236,7 @@ class Command(BaseCommand):
         return True
 
     @staticmethod
-    def _resolve_scope_field_names(table: IDCardTable) -> Tuple[str, str, str]:
+    def _resolve_scope_field_names(table: Table) -> Tuple[str, str, str]:
         class_field = ""
         section_field = ""
         branch_field = ""
@@ -267,7 +267,7 @@ class Command(BaseCommand):
 
         return class_field, section_field, branch_field
 
-    def _collect_table_scope_values(self, table_rows: List[IDCardTable]) -> Dict[int, Dict[str, Set[str]]]:
+    def _collect_table_scope_values(self, table_rows: List[Table]) -> Dict[int, Dict[str, Set[str]]]:
         by_table: Dict[int, Dict[str, Set[str]]] = {}
         field_map: Dict[int, Tuple[str, str, str]] = {}
 
@@ -330,12 +330,12 @@ class Command(BaseCommand):
 
     def _build_backfill_plan(self, staff: Staff) -> Dict[str, object]:
         client = staff.client
-        groups = list(IDCardGroup.objects.filter(client=client).only("id").order_by("id"))
+        groups = list(Table.objects.filter(client=client).only("id").order_by("id"))
         if not groups:
             return {}
 
         tables = list(
-            IDCardTable.objects.filter(group__client=client, deleted_by_client=False)
+            Table.objects.filter(group__client=client, deleted_by_client=False)
             .only("id", "group_id", "fields")
             .order_by("id")
         )

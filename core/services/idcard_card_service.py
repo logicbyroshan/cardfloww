@@ -20,7 +20,7 @@ from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Coalesce, Lower
 from django.utils.timezone import localtime
 
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from tables.models import Table, IDCard
 from .cache_version_service import CacheVersionService
 from .base import BaseService, ServiceResult
 from mediafiles.services import ImageService
@@ -302,7 +302,7 @@ class IDCardCardService(BaseService):
         cls,
         queryset,
         search: str,
-        table: IDCardTable = None,
+        table: Table = None,
         json_field: str = 'field_data',
         id_lookup: str = 'id',
     ):
@@ -485,7 +485,7 @@ class IDCardCardService(BaseService):
     ) -> ServiceResult:
         """List ID Cards for a table with pagination and server-side filtering."""
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
 
             # Base queryset — use .only() to skip fetching the deprecated photo
             # ImageField and other heavy columns not needed for list serialization.
@@ -663,7 +663,7 @@ class IDCardCardService(BaseService):
             return ServiceResult(success=False, message=str(e))
 
     @classmethod
-    def get_status_counts(cls, table: IDCardTable) -> Dict[str, int]:
+    def get_status_counts(cls, table: Table) -> Dict[str, int]:
         """Get count of cards by status for a table"""
         counts = {status: 0 for status in cls.VALID_STATUSES}
         counts['total'] = 0
@@ -687,7 +687,7 @@ class IDCardCardService(BaseService):
         """Get all card IDs for a table (for Select All). Capped at 50,000."""
         MAX_CARD_IDS = 10000
         try:
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
 
             cards_query = IDCard.objects.filter(table=table)
             if status_filter and status_filter in cls.VALID_STATUSES:
@@ -781,7 +781,7 @@ class IDCardCardService(BaseService):
         """Create a new ID Card.
 
         Args:
-            table_id: IDCardTable PK.
+            table_id: Table PK.
             field_data: Dict of field values (text + image paths).
             image_files: Dict of uploaded files keyed by ``image_<field_name>``.
             uploaded_by: User who triggered the upload.
@@ -790,7 +790,7 @@ class IDCardCardService(BaseService):
         """
         try:
             from django.db import transaction
-            table = get_object_or_404(IDCardTable, id=table_id)
+            table = get_object_or_404(Table, id=table_id)
             client = table.group.client
 
             # Uppercase text values only — preserve image paths
@@ -912,7 +912,7 @@ class IDCardCardService(BaseService):
 
             # Atomic block: card creation + media records together
             with transaction.atomic():
-                from idcards.services_workflow import WorkflowService
+                from tables.services_workflow import WorkflowService
                 card = IDCard.objects.create(
                     table=table,
                     field_data=field_data,
@@ -1603,7 +1603,7 @@ class IDCardCardService(BaseService):
         user/request are supplied.
         """
         try:
-            from idcards.services_workflow import WorkflowService
+            from tables.services_workflow import WorkflowService
 
             card = get_object_or_404(IDCard, id=card_id)
             return WorkflowService.transition(

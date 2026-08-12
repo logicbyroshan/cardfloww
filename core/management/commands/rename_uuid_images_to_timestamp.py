@@ -29,7 +29,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from core.services.base import BaseService
-from idcards.models import IDCard
+from tables.models import IDCard
 from mediafiles.models import CardMedia
 from mediafiles.services import ImageService
 from mediafiles.services.image_rename import ImageRenamer

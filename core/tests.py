@@ -1,6 +1,6 @@
 """
 Tests for core app.
-Covers: User model, IDCard/IDCardTable/IDCardGroup models, middleware,
+Covers: User model, IDCard/Table/Table models, middleware,
 permissions, workflow transitions, bulk upload service, global search.
 """
 from django.test import TestCase, SimpleTestCase, RequestFactory, override_settings
@@ -39,16 +39,16 @@ def _create_client_user(email='client@test.com', password='clientpass1'):
     user = User.objects.create_user(
         username=email, email=email, password=password, role='client',
     )
-    from client.models import Client
-    client = Client.objects.create(user=user, name='Test Client')
+    from organisation.models import Organisation
+    client = Organisation.objects.create(user=user, name='Test Client')
     return user, client
 
 
 def _create_table(client_obj, fields=None):
-    """Helper to create a test IDCardTable with a group."""
-    from idcards.models import IDCardGroup, IDCardTable
+    """Helper to create a test Table with a group."""
+    from tables.models import Table
     
-    group = IDCardGroup.objects.create(client=client_obj, name='Test Group')
+    group = Table.objects.create(client=client_obj, name='Test Group')
     
     if fields is None:
         fields = [
@@ -56,7 +56,7 @@ def _create_table(client_obj, fields=None):
             {'name': 'CLASS', 'type': 'text', 'order': 2},
         ]
     
-    table = IDCardTable.objects.create(
+    table = Table.objects.create(
         group=group,
         name='Test Table',
         fields=fields,
@@ -68,7 +68,7 @@ def _create_table(client_obj, fields=None):
 
 def _create_card(table, field_data=None, status='pending'):
     """Helper to create a test IDCard."""
-    from idcards.models import IDCard
+    from tables.models import IDCard
     
     if field_data is None:
         field_data = {'NAME': 'JOHN DOE'}
@@ -131,7 +131,7 @@ class TutorialRoleScopeTests(TestCase):
         from staff.models import Staff
         Staff.objects.create(
             user=self.client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=owner_client,
         )
 
@@ -139,11 +139,11 @@ class TutorialRoleScopeTests(TestCase):
             username='tutorial-admin-staff@test.com',
             email='tutorial-admin-staff@test.com',
             password='testpass123',
-            role='admin_staff',
+            role='operator',
         )
         Staff.objects.create(
             user=self.admin_staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
         )
         self.admin_user = User.objects.create_superuser(
             username='tutorial-admin@test.com',
@@ -176,7 +176,7 @@ class TutorialRoleScopeTests(TestCase):
     def test_admin_staff_sees_admin_staff_tutorial(self):
         self._assert_role_tutorial(
             'tutorial-admin-staff@test.com',
-            'admin_staff',
+            'operator',
             'Verification and Data Rectification',
         )
 
@@ -233,7 +233,7 @@ class IDCardModelTests(TestCase):
         self.assertEqual(card.table.id, self.table.id)
 
     def test_card_default_status(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
         card = IDCard.objects.create(table=self.table, field_data={'NAME': 'X'})
         self.assertEqual(card.status, 'pending')
 
@@ -325,7 +325,7 @@ class IDCardApiUploadTests(TestCase):
         self.assertTrue(data['success'])
         
         # Verify card and images are created
-        from idcards.models import IDCard
+        from tables.models import IDCard
         card = IDCard.objects.get(id=data['card']['id'])
         self.assertEqual(card.field_data['NAME'], 'DUMMY USER')
         self.assertTrue(card.field_data['PHOTO'].endswith('.jpg'))
@@ -333,7 +333,7 @@ class IDCardApiUploadTests(TestCase):
         self.assertNotEqual(card.field_data['PHOTO'], 'NOT_FOUND')
 
     def test_api_update_card_with_images_success(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
         card = IDCard.objects.create(
             table=self.table,
             field_data={'NAME': 'INITIAL', 'PHOTO': '', 'SIGNATURE': ''}
@@ -372,7 +372,7 @@ class WorkflowTransitionTests(TestCase):
         self.group, self.table = _create_table(self.client_obj)
 
     def test_pending_to_verified(self):
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         card = _create_card(self.table, status='pending')
         result = WorkflowService.transition(card, 'verified', self.admin, request=None)
         self.assertTrue(result.success)
@@ -380,7 +380,7 @@ class WorkflowTransitionTests(TestCase):
         self.assertEqual(card.status, 'verified')
 
     def test_invalid_transition_rejected(self):
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         card = _create_card(self.table, status='pending')
         result = WorkflowService.transition(card, 'download', self.admin, request=None)
         self.assertFalse(result.success)
@@ -388,7 +388,7 @@ class WorkflowTransitionTests(TestCase):
         self.assertEqual(card.status, 'pending')
 
     def test_bulk_transition(self):
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         c1 = _create_card(self.table, status='pending')
         c2 = _create_card(self.table, status='pending')
         result = WorkflowService.bulk_transition(
@@ -702,9 +702,9 @@ class GuestUserManagementApiTests(TestCase):
         self.assertEqual(created_client.status, 'active')
 
     def test_source_clients_excludes_current_client_profile(self):
-        from client.models import Client
+        from organisation.models import Organisation
 
-        current_client = Client.objects.create(user=self.admin, name='Admin Client Profile')
+        current_client = Organisation.objects.create(user=self.admin, name='Admin Client Profile')
         other_user, _other_client = _create_client_user('guest-target@test.com', 'clientpass1')
         del other_user
 
@@ -755,7 +755,7 @@ class LegacyStaffApiJsonShapeTests(TestCase):
             username='legacy-staff-user@test.com',
             email='legacy-staff-user@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
         self.staff_profile = Operator.objects.create(user=self.staff_user)
         self.client.login(username='legacy-staff-admin@test.com', password='adminpass1')
@@ -1000,7 +1000,7 @@ class SubdomainRoutingSecurityTests(TestCase):
         self.assertTrue(getattr(request, '_is_panel_subdomain', False))
 
 
-# ── IDCardTable Field Tests ──
+# ── Table Field Tests ──
 class IDCardTableFieldTests(TestCase):
     def setUp(self):
         _, self.client_obj = _create_client_user()
@@ -1397,7 +1397,7 @@ class AssignmentTimelineApiTests(TestCase):
         )
         self.client_staff_profile = Staff.objects.create(
             user=self.client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
         )
 
@@ -1405,13 +1405,13 @@ class AssignmentTimelineApiTests(TestCase):
             username='assignment-admin-staff@test.com',
             email='assignment-admin-staff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
             first_name='Timeline',
             last_name='Operator',
         )
         self.admin_staff_profile = Staff.objects.create(
             user=self.admin_staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
         )
 
         self.client.force_login(self.super_admin)
@@ -1483,7 +1483,7 @@ class AssignmentTimelineApiTests(TestCase):
 
 class ProtectedMediaAuthorizationTests(TestCase):
     def setUp(self):
-        from client.models import Client
+        from organisation.models import Organisation
 
         self.owner_a = User.objects.create_user(
             username='media-owner-a@test.com',
@@ -1497,8 +1497,8 @@ class ProtectedMediaAuthorizationTests(TestCase):
             password='pass1234',
             role='client',
         )
-        self.client_a = Client.objects.create(user=self.owner_a, name='Media Client A')
-        self.client_b = Client.objects.create(user=self.owner_b, name='Media Client B')
+        self.client_a = Organisation.objects.create(user=self.owner_a, name='Media Client A')
+        self.client_b = Organisation.objects.create(user=self.owner_b, name='Media Client B')
 
     def test_media_adareshimg_enforces_client_scope(self):
         with tempfile.TemporaryDirectory() as media_root:
@@ -1548,7 +1548,7 @@ class ProtectedMediaAuthorizationTests(TestCase):
 
 class DashboardAndLogsHardeningTests(TestCase):
     def test_dashboard_team_counts_separate_admin_staff_and_client_staff(self):
-        from client.models import Client
+        from organisation.models import Organisation
         from staff.models import Staff
 
         cache.clear()
@@ -1567,8 +1567,8 @@ class DashboardAndLogsHardeningTests(TestCase):
             password='pass1234',
             role='client',
         )
-        client_a = Client.objects.create(user=client_owner_a, name='Dashboard Client A', status='active')
-        Client.objects.create(user=client_owner_b, name='Dashboard Client B', status='inactive')
+        client_a = Organisation.objects.create(user=client_owner_a, name='Dashboard Client A', status='active')
+        Organisation.objects.create(user=client_owner_b, name='Dashboard Client B', status='inactive')
 
         User.objects.create_user(
             username='dashboard-pro-user@test.com',
@@ -1582,18 +1582,18 @@ class DashboardAndLogsHardeningTests(TestCase):
             username='dashboard-admin-staff-active@test.com',
             email='dashboard-admin-staff-active@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
             is_active=True,
         )
         admin_staff_inactive = User.objects.create_user(
             username='dashboard-admin-staff-inactive@test.com',
             email='dashboard-admin-staff-inactive@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
             is_active=False,
         )
-        Staff.objects.create(user=admin_staff_active, staff_type='admin_staff')
-        Staff.objects.create(user=admin_staff_inactive, staff_type='admin_staff')
+        Staff.objects.create(user=admin_staff_active, staff_type='operator')
+        Staff.objects.create(user=admin_staff_inactive, staff_type='operator')
 
         client_staff_active_a = User.objects.create_user(
             username='dashboard-client-staff-active-a@test.com',
@@ -1616,16 +1616,16 @@ class DashboardAndLogsHardeningTests(TestCase):
             role='client_staff',
             is_active=True,
         )
-        Staff.objects.create(user=client_staff_active_a, staff_type='client_staff', client=client_a)
-        Staff.objects.create(user=client_staff_inactive_a, staff_type='client_staff', client=client_a)
-        Staff.objects.create(user=client_staff_active_b, staff_type='client_staff', client=client_a)
+        Staff.objects.create(user=client_staff_active_a, staff_type='assistant', client=client_a)
+        Staff.objects.create(user=client_staff_inactive_a, staff_type='assistant', client=client_a)
+        Staff.objects.create(user=client_staff_active_b, staff_type='assistant', client=client_a)
 
         self.client.force_login(admin)
         response = self.client.get('/panel/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['overview_clients_count'], Client.objects.filter(is_guest=False).count())
-        self.assertEqual(response.context['overview_guest_users_count'], Client.objects.filter(is_guest=True).count())
+        self.assertEqual(response.context['overview_clients_count'], Organisation.objects.filter(is_guest=False).count())
+        self.assertEqual(response.context['overview_guest_users_count'], Organisation.objects.filter(is_guest=True).count())
         self.assertEqual(response.context['overview_assistents_count'], 3)
 
     def test_dashboard_limit_parser_clamps_values(self):
@@ -1728,10 +1728,10 @@ class SecurityApiRegressionTests(TestCase):
             username='sec-admin-staff@test.com',
             email='sec-admin-staff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
-        self.admin_staff_profile = Staff.objects.create(user=self.admin_staff, staff_type='admin_staff')
-        self.admin_staff_profile.assigned_clients.add(self.client_a)
+        self.admin_staff_profile = Staff.objects.create(user=self.admin_staff, staff_type='operator')
+        self.admin_staff_profile.assigned_organisations.add(self.client_a)
 
     def test_client_role_cannot_access_recent_client_updates_api(self):
         self.client.force_login(self.client_user_a)
@@ -1801,7 +1801,7 @@ class SecurityApiRegressionTests(TestCase):
         self.assertNotIn('__HACK__', self.card_a.field_data)
 
     def test_inline_update_field_normalizes_punctuated_scholar_column(self):
-        from idcards.models import IDCard
+        from tables.models import IDCard
 
         user, client_obj = _create_client_user('scholar-client@test.com', 'clientpass1')
         client_obj.perm_idcard_edit = True
@@ -1864,7 +1864,7 @@ class SecurityApiRegressionTests(TestCase):
         self.assertIn('access denied', unassigned_resp.json().get('message', '').lower())
 
     def test_admin_staff_with_manage_client_permission_can_create_update_but_not_delete_client(self):
-        from client.models import Client
+        from organisation.models import Organisation
 
         self.admin_staff_profile.perm_idcard_client_list = True
         self.admin_staff_profile.save(update_fields=['perm_idcard_client_list'])
@@ -1887,7 +1887,7 @@ class SecurityApiRegressionTests(TestCase):
         self.assertTrue(new_client_id)
 
         self.admin_staff_profile.refresh_from_db()
-        self.assertTrue(self.admin_staff_profile.assigned_clients.filter(id=new_client_id).exists())
+        self.assertTrue(self.admin_staff_profile.assigned_organisations.filter(id=new_client_id).exists())
 
         update_resp = self.client.post(
             f'/panel/api/client/{new_client_id}/update/',
@@ -1910,7 +1910,7 @@ class SecurityApiRegressionTests(TestCase):
         delete_resp = self.client.post(f'/panel/api/client/{new_client_id}/delete/', data=json.dumps({}), content_type='application/json')
         self.assertEqual(delete_resp.status_code, 403)
         self.assertIn('only super admin can delete clients', delete_resp.json().get('message', '').lower())
-        self.assertTrue(Client.objects.filter(id=new_client_id).exists())
+        self.assertTrue(Organisation.objects.filter(id=new_client_id).exists())
 
 
     def test_delete_all_confirmation_locks_after_five_failed_attempts(self):
@@ -1995,7 +1995,7 @@ class SecurityApiRegressionTests(TestCase):
         )
         Staff.objects.create(
             user=client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_a,
             perm_idcard_pending_list=True,
             perm_idcard_updated_at=True,
@@ -2333,7 +2333,7 @@ class SecurityApiRegressionTests(TestCase):
         )
         Staff.objects.create(
             user=client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_a,
         )
 
@@ -2365,7 +2365,7 @@ class SecurityApiRegressionTests(TestCase):
         )
         Staff.objects.create(
             user=client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_a,
         )
 
@@ -2385,7 +2385,7 @@ class SecurityApiRegressionTests(TestCase):
         self.assertIn(self.client_a.id, recent_payload.get('active_assistant_client_ids', []))
 
     def test_recent_client_updates_returns_all_clients_by_default(self):
-        from client.models import Client
+        from organisation.models import Organisation
 
         for idx in range(101):
             user = User.objects.create_user(
@@ -2394,7 +2394,7 @@ class SecurityApiRegressionTests(TestCase):
                 password='pass1234',
                 role='client',
             )
-            Client.objects.create(
+            Organisation.objects.create(
                 user=user,
                 name=f'Recent Client {idx:03d}',
                 status='active',
@@ -2406,11 +2406,11 @@ class SecurityApiRegressionTests(TestCase):
         self.assertEqual(recent_resp.status_code, 200)
         recent_payload = recent_resp.json()
         self.assertTrue(recent_payload.get('success'))
-        self.assertEqual(len(recent_payload.get('clients', [])), Client.objects.count())
+        self.assertEqual(len(recent_payload.get('clients', [])), Organisation.objects.count())
         self.assertGreater(len(recent_payload.get('clients', [])), 100)
 
     def test_manage_client_view_and_edit_endpoints_work(self):
-        from client.models import Client
+        from organisation.models import Organisation
 
         managed_user = User.objects.create_user(
             username='sec-manage-client@test.com',
@@ -2418,7 +2418,7 @@ class SecurityApiRegressionTests(TestCase):
             password='pass1234',
             role='client',
         )
-        managed_client = Client.objects.create(
+        managed_client = Organisation.objects.create(
             user=managed_user,
             name='View Edit Client',
             status='inactive',
@@ -2466,7 +2466,7 @@ class SecurityApiRegressionTests(TestCase):
         )
         Staff.objects.create(
             user=client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_b,
         )
 
@@ -2503,7 +2503,7 @@ class CreateTableFromLegacyXlsTests(TestCase):
         self.client.force_login(self.admin)
 
     def test_create_table_from_legacy_xls_file(self):
-        from idcards.models import IDCardTable
+        from tables.models import Table
 
         class _FakeSheet:
             def __init__(self):
@@ -2545,7 +2545,7 @@ class CreateTableFromLegacyXlsTests(TestCase):
         mocked_open_workbook.assert_called_once()
         mocked_bulk_upload.assert_called_once()
 
-        created_table = IDCardTable.objects.get(id=payload['table_id'])
+        created_table = Table.objects.get(id=payload['table_id'])
         self.assertEqual(created_table.name, 'LEGACY UPLOAD TABLE')
         self.assertEqual([f.get('name') for f in (created_table.fields or [])], ['NAME', 'CLASS'])
 
@@ -2628,7 +2628,7 @@ class ActivityFeedIsolationTests(TestCase):
         )
         Staff.objects.create(
             user=self.client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
         )
 
@@ -3502,7 +3502,7 @@ class ClientMessageApiTests(TestCase):
         )
         Staff.objects.create(
             user=self.client_staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
         )
 
@@ -3510,11 +3510,11 @@ class ClientMessageApiTests(TestCase):
             username='msg-admin-staff@test.com',
             email='msg-admin-staff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
         self.admin_staff_profile = Staff.objects.create(
             user=self.admin_staff,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_client_list=True,
         )
 
@@ -3665,7 +3665,7 @@ class ClientMessageApiTests(TestCase):
             password='pass1234',
             role='client_staff',
         )
-        Staff.objects.create(user=staff2_user, staff_type='client_staff', client=client2)
+        Staff.objects.create(user=staff2_user, staff_type='assistant', client=client2)
 
         self.client.login(username='msg-super@test.com', password='adminpass1')
         response = self.client.post(
@@ -3695,7 +3695,7 @@ class ClientMessageApiTests(TestCase):
 
     def test_group_send_to_all_clients(self):
         from core.models import ClientMessage
-        from client.models import Client
+        from organisation.models import Organisation
 
         _user2, client2 = _create_client_user('msg-client-all@test.com', 'clientpass2')
 
@@ -3715,7 +3715,7 @@ class ClientMessageApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload.get('success'))
-        self.assertEqual(payload.get('sent_count'), Client.objects.count())
+        self.assertEqual(payload.get('sent_count'), Organisation.objects.count())
 
         self.assertEqual(ClientMessage.objects.filter(client=self.client_obj).count(), 1)
         self.assertEqual(ClientMessage.objects.filter(client=client2).count(), 1)
@@ -3799,7 +3799,7 @@ class PoolRetrieveClassChangeFlowTests(TestCase):
         )
         self.staff_profile = Staff.objects.create(
             user=self.staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
             perm_idcard_retrieve=True,
             perm_idcard_pool_list=True,
@@ -4017,7 +4017,7 @@ class ClientStaffEmptyScopeVisibilityTests(TestCase):
         )
         self.staff_profile = Staff.objects.create(
             user=self.staff_user,
-            staff_type='client_staff',
+            staff_type='assistant',
             client=self.client_obj,
             perm_idcard_pending_list=True,
             perm_idcard_pool_list=True,
@@ -4078,9 +4078,9 @@ class DynamicFieldsDefensiveTests(TestCase):
         self.assertEqual(payload['card']['field_data']['NAME'], 'JANE DOE')
 
     def test_client_card_service_get_cards_defensive(self):
-        # Verify that ClientCardService.get_cards handles malformed fields safely
-        from client.services_card import ClientCardService
-        result = ClientCardService.get_cards(self.user, self.table.id, status_filter='pending')
+        # Verify that OrganisationCardService.get_cards handles malformed fields safely
+        from organisation.services_card import OrganisationCardService
+        result = OrganisationCardService.get_cards(self.user, self.table.id, status_filter='pending')
         if not result.success:
             raise ValueError(f"get_cards failed: {result.message}")
         self.assertTrue(result.success)
@@ -4109,28 +4109,28 @@ class ClearPendingPathsApiTests(TestCase):
             username='staff-with-perm@test.com',
             email='staff-with-perm@test.com',
             password='staffpass123',
-            role='admin_staff',
+            role='operator',
         )
         from staff.models import Staff
         staff_with_perm = Staff.objects.create(
             user=self.staff_user_with_perm,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_clear_pending_path=True,
         )
-        staff_with_perm.assigned_clients.add(self.client_obj)
+        staff_with_perm.assigned_organisations.add(self.client_obj)
         
         self.staff_user_no_perm = User.objects.create_user(
             username='staff-no-perm@test.com',
             email='staff-no-perm@test.com',
             password='staffpass123',
-            role='admin_staff',
+            role='operator',
         )
         staff_no_perm = Staff.objects.create(
             user=self.staff_user_no_perm,
-            staff_type='admin_staff',
+            staff_type='operator',
             perm_idcard_clear_pending_path=False,
         )
-        staff_no_perm.assigned_clients.add(self.client_obj)
+        staff_no_perm.assigned_organisations.add(self.client_obj)
 
 
         # Create cards

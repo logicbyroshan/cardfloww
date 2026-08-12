@@ -97,7 +97,7 @@ class WordExporter(WordStylesMixin, WordTablesMixin, WordImagesMixin):
         Export cards to Word format (.docx only).
         
         Args:
-            table: IDCardTable instance
+            table: Table instance
             cards: QuerySet of IDCard instances
             doc_format: Ignored — always outputs .docx (Word 2007+)
             

@@ -2,16 +2,16 @@ import io
 import pandas as pd
 from django.test import TestCase
 from core.models import User
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
 from assistants.services import AssistantService
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from tables.models import Table, IDCard
 
 class AutoCreateAssistantsTests(TestCase):
     def setUp(self):
         # Create a dummy client with permissions set
         self.user = User.objects.create(username='test_admin', email='test@test.com')
-        self.client_obj = Client.objects.create(
+        self.client_obj = Organisation.objects.create(
             name='Test Client Auto Create',
             user=self.user,
             perm_idcard_pending_list=True,
@@ -19,10 +19,10 @@ class AutoCreateAssistantsTests(TestCase):
             perm_mobile_app=True
         )
 
-        # Create dummy IDCardGroup, IDCardTable, IDCard
-        self.group = IDCardGroup.objects.create(client=self.client_obj, name='Test Group')
+        # Create dummy Table, Table, IDCard
+        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
         
-        self.table = IDCardTable.objects.create(
+        self.table = Table.objects.create(
             group=self.group, 
             name='Test Table',
             fields=[{'name': 'Class', 'type': 'text'}, {'name': 'Section', 'type': 'text'}]
@@ -65,7 +65,7 @@ class AutoCreateAssistantsTests(TestCase):
 
     def test_auto_create_fallback_mode_when_no_columns(self):
         # Create a new table with NO Class or Section fields
-        simple_table = IDCardTable.objects.create(
+        simple_table = Table.objects.create(
             group=self.group,
             name='Simple Staff Table',
             fields=[{'name': 'Full Name', 'type': 'text'}, {'name': 'Phone', 'type': 'text'}]
@@ -107,10 +107,10 @@ class AssistantAPIViewPermissionTests(TestCase):
         self.client_user = User.objects.create_user(
             username='client_user@test.com', email='client_user@test.com', password='clientpass1', role='client'
         )
-        self.client_obj = Client.objects.create(name='Test Client Permissions', user=self.client_user)
+        self.client_obj = Organisation.objects.create(name='Test Client Permissions', user=self.client_user)
 
-        self.group = IDCardGroup.objects.create(client=self.client_obj, name='Test Group')
-        self.table = IDCardTable.objects.create(
+        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
+        self.table = Table.objects.create(
             group=self.group, 
             name='Test Table',
             fields=[{'name': 'Class', 'type': 'text'}, {'name': 'Section', 'type': 'text'}]

@@ -50,7 +50,7 @@ def process_bulk_upload(task):
                 'unified_zip_paths': [relative_path, ...],  # Optional
             }
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.base import BaseService
     from mediafiles.services import ImageService
     from core.utils.field_utils import validate_image_bytes
@@ -63,9 +63,9 @@ def process_bulk_upload(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('group__client').get(id=table_id)
         client = table.group.client
-    except IDCardTable.DoesNotExist:
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     
@@ -203,7 +203,7 @@ def process_bulk_upload(task):
                 
                 # Create card object (don't save yet)
                 # Sanitize field_data before bulk_create (which skips save())
-                from idcards.models import sanitize_text_for_storage
+                from tables.models import sanitize_text_for_storage
                 for _k, _v in field_data.items():
                     if isinstance(_v, str):
                         field_data[_k] = sanitize_text_for_storage(_v)

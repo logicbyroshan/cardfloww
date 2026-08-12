@@ -73,7 +73,7 @@ class ImpersonateService:
         except UserModel.DoesNotExist:
             return {'success': False, 'message': 'User not found.'}
 
-        if target_user.role in ('operator', 'admin_staff', 'photographer'):
+        if target_user.role in ('operator', 'photographer'):
             return {'success': False, 'message': 'Cannot impersonate operators or photographers.'}
 
         # Cannot chain impersonations
@@ -205,7 +205,7 @@ class ImpersonateService:
             .filter(is_active=True)
             .select_related('client_profile', 'assistant_profile__client', 'operator_profile')
             .exclude(pk=request.user.pk)
-            .exclude(role__in=['pro_user', 'operator', 'admin_staff', 'photographer'])
+            .exclude(role__in=['pro_user', 'operator', 'photographer'])
             .order_by('role', 'first_name', 'username')
         )
 

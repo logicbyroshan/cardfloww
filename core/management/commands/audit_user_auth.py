@@ -150,7 +150,7 @@ class Command(BaseCommand):
             issues.append(f"- {unusable_count} users have no/unusable passwords. They cannot login.")
         if only_inactive:
             issues.append(f"- {users.count()} users are inactive. Activate them via admin or create_staff API with is_active=True.")
-        if role_filter == 'admin_staff':
+        if role_filter == 'operator':
             admin_inactive = users.filter(is_active=False).count()
             if admin_inactive > 0:
                 issues.append(f"- {admin_inactive} admin_staff are inactive. AdminStaffCreationService creates them inactive by design; activate when ready.")

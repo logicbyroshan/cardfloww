@@ -135,7 +135,7 @@ class ZipExporter:
         Export images as separate ZIP files for each image field.
         
         Args:
-            table: IDCardTable instance
+            table: Table instance
             cards: QuerySet of IDCard instances
             
         Returns:
@@ -1453,7 +1453,7 @@ def export_images_to_disk(
     - Phase 4: Automatically splits when a single ZIP exceeds 1 GB
 
     Args:
-        table: IDCardTable instance
+        table: Table instance
         cards: QuerySet of IDCard instances
         output_dir: Directory to save ZIP files
         status: Status label for filename

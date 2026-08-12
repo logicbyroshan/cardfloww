@@ -11,20 +11,20 @@ from django.db.models import Count, Q
 from core.services.activity_service import ActivityService
 from core.services.cache_version_service import CacheVersionService
 from core.services.session_revalidation import get_user_revalidation_marker
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from tables.models import Table, IDCard
 from reprintcard.models import ReprintRequest
 from core.services.base import BaseService, ServiceResult
 from core.services.permission_service import PermissionService
 
-from .services_access import ClientAccessService
-from .services_card import ClientCardService
+from .services_access import OrganisationAccessService
+from .services_card import OrganisationCardService
 
 logger = logging.getLogger(__name__)
 
 
-class ClientDashboardService(BaseService):
+class OrganisationDashboardService(BaseService):
     """
     Service for client dashboard data.
     """
@@ -38,7 +38,7 @@ class ClientDashboardService(BaseService):
 
     @staticmethod
     def _unexpected_error_result(action: str, exc: Exception) -> ServiceResult:
-        logger.exception('ClientDashboardService.%s failed: %s', action, exc)
+        logger.exception('OrganisationDashboardService.%s failed: %s', action, exc)
         return ServiceResult(success=False, message='An unexpected error occurred. Please try again.')
 
     @staticmethod
@@ -80,8 +80,8 @@ class ClientDashboardService(BaseService):
 
     @classmethod
     def _get_accessible_tables_qs(cls, user, client):
-        tables = IDCardTable.objects.filter(group__client=client, is_active=True)
-        return ClientAccessService.get_scoped_tables_qs(user, client, tables)
+        tables = Table.objects.filter(group__client=client, is_active=True)
+        return OrganisationAccessService.get_scoped_tables_qs(user, client, tables)
 
     @staticmethod
     def _status_template():
@@ -283,7 +283,7 @@ class ClientDashboardService(BaseService):
     def get_reprint_history(cls, user) -> ServiceResult:
         """Return the client's reprint request history."""
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 return ServiceResult(success=False, message='Client profile not found')
 
@@ -318,7 +318,7 @@ class ClientDashboardService(BaseService):
     def get_reprint_stats(cls, user) -> ServiceResult:
         """Return the client's reprint counts for dashboard summaries."""
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 return ServiceResult(success=False, message='Client profile not found')
 
@@ -353,13 +353,13 @@ class ClientDashboardService(BaseService):
         """
         try:
             if not client:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 user_role = getattr(user, 'role', 'unknown')
                 client_profile = getattr(user, 'client_profile', None)
                 staff_profile = getattr(user, 'staff_profile', None)
                 logger.warning(
-                    'ClientDashboardService.get_dashboard_data: Client not found for user_id=%s role=%s has_client_profile=%s has_staff_profile=%s',
+                    'OrganisationDashboardService.get_dashboard_data: Organisation not found for user_id=%s role=%s has_client_profile=%s has_staff_profile=%s',
                     user.pk, user_role, client_profile is not None, staff_profile is not None
                 )
                 return ServiceResult(
@@ -379,7 +379,7 @@ class ClientDashboardService(BaseService):
                     staff = getattr(user, 'staff_profile', None)
 
                     for table in tables:
-                        scoped_qs = ClientCardService._apply_client_staff_row_scope(
+                        scoped_qs = OrganisationCardService._apply_client_staff_row_scope(
                             user,
                             table,
                             IDCard.objects.filter(table_id=table.id),
@@ -417,7 +417,7 @@ class ClientDashboardService(BaseService):
                         .prefetch_related('assigned_groups')
                         .order_by('-id')[:5]
                     )
-                    active_tables = list(IDCardTable.objects.filter(group__client=client, is_active=True)[:10])
+                    active_tables = list(Table.objects.filter(group__client=client, is_active=True)[:10])
                     
                     for s in recent_staff_qs:
                         s.user.assistant_profile = s
@@ -427,13 +427,13 @@ class ClientDashboardService(BaseService):
                         
                         for table in active_tables:
                             cards_qs = IDCard.objects.filter(table_id=table.id)
-                            pending_cnt += ClientCardService._apply_client_staff_row_scope(
+                            pending_cnt += OrganisationCardService._apply_client_staff_row_scope(
                                 s.user, table, cards_qs.filter(status='pending'), ignore_pool_bypass=True
                             ).count()
-                            verified_cnt += ClientCardService._apply_client_staff_row_scope(
+                            verified_cnt += OrganisationCardService._apply_client_staff_row_scope(
                                 s.user, table, cards_qs.filter(status='verified'), ignore_pool_bypass=True
                             ).count()
-                            pool_cnt += ClientCardService._apply_client_staff_row_scope(
+                            pool_cnt += OrganisationCardService._apply_client_staff_row_scope(
                                 s.user, table, cards_qs.filter(status='pool'), ignore_pool_bypass=True
                             ).count()
                         
@@ -499,7 +499,7 @@ class ClientDashboardService(BaseService):
                 recent_activity = ActivityService.get_recent(limit=6, hours=None, user=user)
             except Exception as activity_exc:
                 logger.warning(
-                    'ClientDashboardService.get_dashboard_data: recent activity load failed for user_id=%s role=%s: %s',
+                    'OrganisationDashboardService.get_dashboard_data: recent activity load failed for user_id=%s role=%s: %s',
                     user.pk,
                     getattr(user, 'role', 'unknown'),
                     activity_exc,
@@ -510,9 +510,9 @@ class ClientDashboardService(BaseService):
                 success=True,
                 data={
                     'client': {
-                        'id': client.id,
-                        'name': client.name,
-                        'status': client.status,
+                        'id': Organisation.id,
+                        'name': Organisation.name,
+                        'status': Organisation.status,
                     },
                     'card_counts': counts,
                     'counts': counts,  # Keep for backward compatibility
@@ -527,7 +527,7 @@ class ClientDashboardService(BaseService):
             
         except Exception as e:
             logger.exception(
-                'ClientDashboardService.get_dashboard_data failed for user_id=%s role=%s: %s',
+                'OrganisationDashboardService.get_dashboard_data failed for user_id=%s role=%s: %s',
                 user.pk, getattr(user, 'role', 'unknown'), str(e)
             )
             return cls._unexpected_error_result('get_dashboard_data', e)
@@ -538,7 +538,7 @@ class ClientDashboardService(BaseService):
         Get all groups with card status counts for the client.
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 return ServiceResult(success=False, message='Client profile not found')
 
@@ -561,7 +561,7 @@ class ClientDashboardService(BaseService):
             table_ids = [table.id for table in accessible_tables]
             group_ids = sorted({table.group_id for table in accessible_tables})
 
-            groups = IDCardGroup.objects.filter(
+            groups = Table.objects.filter(
                 client=client,
                 id__in=group_ids,
             ).only('id', 'name', 'is_active', 'created_at')
@@ -579,7 +579,7 @@ class ClientDashboardService(BaseService):
                     )
                     table_status_map = cache.get(table_cache_key)
                     if table_status_map is None:
-                        scoped_qs = ClientCardService._apply_client_staff_row_scope(
+                        scoped_qs = OrganisationCardService._apply_client_staff_row_scope(
                             user,
                             table,
                             IDCard.objects.filter(table_id=table.id),

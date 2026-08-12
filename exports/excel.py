@@ -72,7 +72,7 @@ class ExcelExporter:
         Export cards to Excel format.
         
         Args:
-            table: IDCardTable instance
+            table: Table instance
             cards: QuerySet of IDCard instances
             uppercase_values: Convert values to uppercase
             

@@ -363,9 +363,9 @@ def get_welcome_email_template(
 ):
         """Generate themed credential emails for first welcome and temp-password flows."""
         role_display = {
-                'admin_staff': 'Admin Staff',
+                'operator': 'Admin Staff',
                 'client': 'Client',
-                'client_staff': 'Client Staff',
+                'assistant': 'Assistant',
         }.get(role, role.replace('_', ' ').title())
 
         is_temp = scenario == 'temp_password'

@@ -14,8 +14,8 @@ Usage:
 
 from django.core.management.base import BaseCommand, CommandError
 
-from client.models import Client
-from idcards.models import IDCard
+from organisation.models import Organisation
+from tables.models import IDCard
 
 
 BATCH_SIZE = 500
@@ -48,12 +48,12 @@ class Command(BaseCommand):
 
     def _resolve_client(self, client_id, client_name):
         if client_id:
-            client = Client.objects.filter(id=client_id).first()
+            client = Organisation.objects.filter(id=client_id).first()
             if not client:
                 raise CommandError(f"Client with id={client_id} not found.")
             return client
 
-        matches = list(Client.objects.filter(name__icontains=client_name).order_by("id"))
+        matches = list(Organisation.objects.filter(name__icontains=client_name).order_by("id"))
         if not matches:
             raise CommandError(
                 f'No client found with name containing "{client_name}". '

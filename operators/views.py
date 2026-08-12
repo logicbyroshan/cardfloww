@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 
-from client.models import Client
+from organisation.models import Organisation
 from operators.models import Operator
 from core.services.activity_service import ActivityService
 
@@ -139,7 +139,7 @@ def api_operator_list_create(request):
         phone=data.get('phone', ''),
         designation=data.get('designation', 'Operator'),
         department=data.get('department', ''),
-        assigned_client_ids=data.get('assigned_clients', []),
+        assigned_client_ids=data.get('assigned_organisations', []),
         permission_codenames=data.get('permissions', []),
         password=data.get('password', ''),
     )
@@ -205,7 +205,7 @@ def api_operator_detail(request, operator_id):
             phone=data.get('phone'),
             designation=data.get('designation'),
             department=data.get('department'),
-            assigned_client_ids=data.get('assigned_clients'),
+            assigned_client_ids=data.get('assigned_organisations'),
             permission_codenames=data.get('permissions'),
         )
         
@@ -345,7 +345,7 @@ def api_available_permissions(request):
 @require_http_methods(['GET'])
 def api_available_clients(request):
     """Get list of all clients for assignment to operators (includes inactive)."""
-    clients = Client.objects.all().values('id', 'name', 'status')
+    clients = Organisation.objects.all().values('id', 'name', 'status')
     return JsonResponse({
         'success': True,
         'clients': list(clients),
@@ -425,9 +425,9 @@ def api_client_idcard_groups(request, client_id):
     Example: Get ID card groups for a specific client.
     Enforces both permission AND client access checks.
     """
-    from idcards.models import IDCardGroup
+    from tables.models import Table
     
-    groups = IDCardGroup.objects.filter(client_id=client_id)
+    groups = Table.objects.filter(client_id=client_id)
     
     return JsonResponse({
         'success': True,
@@ -446,7 +446,7 @@ def operator_dashboard(request):
     Operator dashboard with scoped data.
     """
     from django.db.models import Count, Q
-    from idcards.models import IDCard
+    from tables.models import IDCard
     from core.services.permission_service import PermissionService
 
     scope = OperatorClientScopingService.get_scope_context(request.user)

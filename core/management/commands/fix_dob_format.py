@@ -17,7 +17,7 @@ import re
 import logging
 
 from django.core.management.base import BaseCommand
-from idcards.models import IDCard
+from tables.models import IDCard
 
 logger = logging.getLogger(__name__)
 

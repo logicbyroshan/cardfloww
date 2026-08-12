@@ -87,31 +87,6 @@ class Assistant(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # ── Legacy compat ──────────────────────────────────────
-    @property
-    def client(self):
-        return self.organisation
-
-    @client.setter
-    def client(self, value):
-        self.organisation = value
-
-    @property
-    def perm_idcard_client_list(self):
-        return self.perm_organisation_list
-
-    @perm_idcard_client_list.setter
-    def perm_idcard_client_list(self, value):
-        self.perm_organisation_list = value
-
-    @property
-    def perm_manage_client_staff(self):
-        return self.perm_manage_assistants
-
-    @perm_manage_client_staff.setter
-    def perm_manage_client_staff(self, value):
-        self.perm_manage_assistants = value
-
     class Meta:
         ordering = ['-created_at']
 

@@ -116,7 +116,7 @@ class NotificationService:
                 elif target == 'all':
                     push_user_ids = list(User.objects.filter(is_active=True).values_list('id', flat=True))
                 else:
-                    role = 'operator' if target == 'admin_staff' else ('assistant' if target == 'client_staff' else target)
+                    role = 'operator' if target == 'operator' else ('assistant' if target == 'assistant' else target)
                     push_user_ids = list(User.objects.filter(is_active=True, role=role).values_list('id', flat=True))
                 
                 if push_user_ids:
@@ -176,7 +176,7 @@ class NotificationService:
         qs = qs.select_related('created_by')
 
         # Filter by target scope
-        target_role = 'admin_staff' if user.role == 'operator' else user.role
+        target_role = 'operator' if user.role == 'operator' else user.role
         role_filter = Q(target='all') | Q(target=target_role)
         if user.role in ('super_admin',):
             # Super admin sees everything
@@ -228,7 +228,7 @@ class NotificationService:
             & (Q(expires_at__isnull=True) | Q(expires_at__gt=now))
         )
 
-        target_role = 'admin_staff' if user.role == 'operator' else user.role
+        target_role = 'operator' if user.role == 'operator' else user.role
         role_filter = Q(target='all') | Q(target=target_role)
         selected_filter = Q(target='selected', target_users=user)
         qs = qs.filter(role_filter | selected_filter).distinct()
@@ -399,7 +399,7 @@ class NotificationService:
         """Count how many active users match a target scope."""
         if target == 'all':
             return User.objects.filter(is_active=True).count()
-        role = 'operator' if target == 'admin_staff' else ('assistant' if target == 'client_staff' else target)
+        role = 'operator' if target == 'operator' else ('assistant' if target == 'assistant' else target)
         return User.objects.filter(is_active=True, role=role).count()
 
     @classmethod
@@ -542,7 +542,7 @@ class NotificationService:
                     ).exclude(email='').values_list('email', flat=True)
                 )
             else:
-                role = 'operator' if notif.target == 'admin_staff' else ('assistant' if notif.target == 'client_staff' else notif.target)
+                role = 'operator' if notif.target == 'operator' else ('assistant' if notif.target == 'assistant' else notif.target)
                 recipients = list(
                     User.objects.filter(
                         is_active=True, role=role, email__isnull=False

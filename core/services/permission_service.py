@@ -47,7 +47,7 @@ class PermissionService:
     ]
 
     ADMIN_USER_MANAGEMENT_PERMISSIONS = [
-        'perm_manage_client_staff',
+        'perm_manage_assistant',
         'perm_manage_photographer_staff',
     ]
 
@@ -136,7 +136,7 @@ class PermissionService:
         # Panel management (operator-only)
         'perm_manage_panel_backup',
         'perm_manage_panel_email',
-        # 'perm_manage_client_staff' removed to allow client role access
+        # 'perm_manage_assistant' removed to allow client role access
         'perm_idcard_clear_pending_path',
     }
 
@@ -165,7 +165,7 @@ class PermissionService:
 
     # Sensitive permissions that assistant can never hold
     CLIENT_ASSISTANT_BLOCKED_PERMS: set = {
-        'perm_manage_client_staff',       # Assistants cannot manage other staff
+        'perm_manage_assistant',       # Assistants cannot manage other staff
         'perm_manage_photographer_staff', # Assistants cannot manage photographers
         'perm_idcard_setting_add',        # Assistants cannot create new tables
         'perm_idcard_setting_delete',     # Assistants cannot delete tables
@@ -227,11 +227,11 @@ class PermissionService:
         """Check if user is operator."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('operator', 'admin_staff')
+        return getattr(user, 'role', None) == 'operator'
 
     @staticmethod
     def is_admin_staff(user) -> bool:
-        """Check if user is admin staff (operator)."""
+        """Check if user is operator (alias for backward compatibility)."""
         return PermissionService.is_operator(user)
 
     @staticmethod
@@ -242,29 +242,46 @@ class PermissionService:
         return getattr(user, 'role', None) == 'photographer'
 
     @staticmethod
-    def is_client(user) -> bool:
-        """Check if user is a client."""
+    def is_prime_manager(user) -> bool:
+        """Check if user is prime manager."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('client', 'guest_prime_manager')
+        return getattr(user, 'role', None) in ('prime_manager', 'guest_prime_manager')
 
     @staticmethod
-    def is_guest_user(user) -> bool:
-        """Check if user is a guest/sandbox account."""
+    def is_manager(user) -> bool:
+        """Check if user is regular manager."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        return getattr(user, 'role', None) == 'manager'
+
+    @staticmethod
+    def is_client(user) -> bool:
+        """Check if user is prime_manager or manager."""
+        return PermissionService.is_prime_manager(user) or PermissionService.is_manager(user)
+
+    @staticmethod
+    def is_guest_prime_manager(user) -> bool:
+        """Check if user is a guest prime manager account."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
         return getattr(user, 'role', None) == 'guest_prime_manager'
+
+    @staticmethod
+    def is_guest_user(user) -> bool:
+        """Alias for is_guest_prime_manager."""
+        return PermissionService.is_guest_prime_manager(user)
 
     @staticmethod
     def is_assistant(user) -> bool:
         """Check if user is assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('assistant', 'client_staff')  # client_staff compat alias
+        return getattr(user, 'role', None) == 'assistant'
 
     @staticmethod
     def is_client_staff(user) -> bool:
-        """Check if user is client staff (assistant)."""
+        """Alias for is_assistant."""
         return PermissionService.is_assistant(user)
 
     @staticmethod
@@ -272,18 +289,15 @@ class PermissionService:
         """Check if user is super_admin/pro_user, operator, or photographer."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        # Keep this aligned with is_super_admin() so pro_user is never excluded.
-        return PermissionService.is_super_admin(user) or getattr(user, 'role', None) in ('operator', 'admin_staff', 'photographer')
+        return PermissionService.is_super_admin(user) or getattr(user, 'role', None) in ('operator', 'photographer')
 
     @staticmethod
     def is_client_role(user) -> bool:
-        """Check if user is client or assistant."""
+        """Check if user is prime_manager, manager, guest_prime_manager, or assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
         return getattr(user, 'role', None) in (
-            'prime_manager', 'manager', 'guest_prime_manager',  # new names
-            'assistant',                                           # assistant role
-            'client', 'guest_user', 'client_staff',               # legacy compat
+            'prime_manager', 'manager', 'guest_prime_manager', 'assistant'
         )
 
     # ==================== Profile Lookup ====================
@@ -401,9 +415,9 @@ class PermissionService:
         # --- 0. Resolve client object if passed as ID ---
         client_obj = client
         if client_obj is not None and isinstance(client_obj, (int, str)):
-            from client.models import Client
+            from organisation.models import Organisation
             try:
-                client_obj = Client.objects.get(id=client_obj)
+                client_obj = Organisation.objects.get(id=client_obj)
             except (Client.DoesNotExist, ValueError, TypeError):
                 client_obj = None
 
@@ -488,7 +502,7 @@ class PermissionService:
             client_profile = client_obj or getattr(user, 'client_profile', None)
 
             if not client_profile:
-                logger.warning("PermissionService.has: client user %s has no client_profile", user.pk)
+                logger.warning("PermissionService.has: Organisation user %s has no client_profile", user.pk)
                 return False
 
             # Security: if client_obj was provided, it MUST match the user's profile
@@ -506,8 +520,8 @@ class PermissionService:
                 return bool(getattr(client_profile, perm_key, False))
 
             # Client management access is also controlled by the client profile toggle.
-            if perm_key in cls.IDCARD_CLIENT_PERMISSIONS or perm_key == 'perm_manage_client_staff':
-                if perm_key == 'perm_manage_client_staff':
+            if perm_key in cls.IDCARD_CLIENT_PERMISSIONS or perm_key == 'perm_manage_assistant':
+                if perm_key == 'perm_manage_assistant':
                     return bool(getattr(client_profile, 'perm_idcard_client_list', False))
                 if hasattr(client_profile, perm_key):
                     return bool(getattr(client_profile, perm_key, False))
@@ -581,8 +595,8 @@ class PermissionService:
         super_admin → all clients; operator/photographer → assigned clients only; others → none.
         If base_qs is provided, results are intersected with it.
         """
-        from client.models import Client
-        qs = base_qs if base_qs is not None else Client.objects.all()
+        from organisation.models import Organisation
+        qs = base_qs if base_qs is not None else Organisation.objects.all()
         if not user.is_authenticated:
             return qs.none()
         if cls.is_super_admin(user):
@@ -593,7 +607,7 @@ class PermissionService:
         return qs.none()
 
     @classmethod
-    def can_access_client(cls, user, client_id: int) -> bool:
+    def can_access_organisation(cls, user, client_id: int) -> bool:
         """
         Check if user can access a specific client's data.
         Works for all roles.
@@ -648,7 +662,7 @@ class PermissionService:
             else:
                 op = getattr(user, 'operator_profile', None)
                 if op:
-                    ids = list(op.assigned_clients.values_list('id', flat=True))
+                    ids = list(op.assigned_organisations.values_list('id', flat=True))
                 else:
                     ids = []
 
@@ -777,7 +791,7 @@ class PermissionService:
                     context[perm] = True
                 elif active and profile and hasattr(profile, perm):
                     context[perm] = bool(getattr(profile, perm, False))
-                elif active and profile and perm == 'perm_manage_client_staff':
+                elif active and profile and perm == 'perm_manage_assistant':
                     context[perm] = bool(getattr(profile, 'perm_idcard_client_list', False))
                 else:
                     context[perm] = False

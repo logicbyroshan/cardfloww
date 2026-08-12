@@ -14,8 +14,8 @@ django.setup()
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from assistants.models import Assistant
-from client.models import Client
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from organisation.models import Organisation
+from tables.models import Table, IDCard
 
 User = get_user_model()
 
@@ -39,9 +39,9 @@ def repair():
     print("=" * 80)
     
     assistants = Assistant.objects.select_related('user', 'client').prefetch_related('assigned_groups').all()
-    clients = list(Client.objects.select_related('user').all())
+    clients = list(Organisation.objects.select_related('user').all())
     
-    print(f"Found {len(assistants)} Assistant(s) and {len(clients)} Client(s) in the database.\n")
+    print(f"Found {len(assistants)} Assistant(s) and {len(clients)} Organisation(s) in the database.\n")
     
     repaired_count = 0
     skipped_count = 0
@@ -197,12 +197,12 @@ def repair():
                 print(f"  Parsed class: '{parsed_class}' | Parsed section: '{parsed_section}'")
                 
                 # Get groups that are student-related (must contain 'student' or 'STUDENT')
-                student_groups = IDCardGroup.objects.filter(client=target_client, name__icontains='student')
+                student_groups = Table.objects.filter(client=target_client, name__icontains='student')
                 if not student_groups.exists():
-                    student_groups = IDCardGroup.objects.filter(client=target_client)
+                    student_groups = Table.objects.filter(client=target_client)
                 
                 # Get all active tables under student groups
-                tables = IDCardTable.objects.filter(group__in=student_groups, deleted_by_client=False)
+                tables = Table.objects.filter(group__in=student_groups, deleted_by_client=False)
                 
                 table_field_map = {}
                 for table in tables:
@@ -334,7 +334,7 @@ def repair():
                     ast.allowed_sections = list(matched_sections)
                     
                     # Filter assigned groups to ONLY be from student groups
-                    groups = IDCardGroup.objects.filter(tables__id__in=matched_table_ids, id__in=student_groups).distinct()
+                    groups = Table.objects.filter(tables__id__in=matched_table_ids, id__in=student_groups).distinct()
                     ast.assigned_groups.set(groups)
                     
                     scopes = []

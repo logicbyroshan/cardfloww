@@ -15,7 +15,7 @@ import logging
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from idcards.models import IDCard
+from tables.models import IDCard
 from core.services.idcard_card_service import IDCardCardService
 from mediafiles.services import ImageService
 from mediafiles.services.image_fields import ImageFieldsMixin

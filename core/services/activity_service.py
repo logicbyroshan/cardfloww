@@ -484,7 +484,7 @@ class ActivityService:
         name = staff.user.get_full_name() or staff.user.username
 
         parts = []
-        from client.models import Client
+        from organisation.models import Organisation
 
         # 1. Clients
         before_clients = set(before.get('client_ids', []))
@@ -494,13 +494,13 @@ class ActivityService:
             removed = before_clients - after_clients
             client_parts = []
             if added:
-                names = list(Client.objects.filter(id__in=added).values_list('name', flat=True))
+                names = list(Organisation.objects.filter(id__in=added).values_list('name', flat=True))
                 quoted = ', '.join('"' + n + '"' for n in names)
-                client_parts.append('assigned to client(s) ' + quoted)
+                client_parts.append('assigned to Organisation(s) ' + quoted)
             if removed:
-                names = list(Client.objects.filter(id__in=removed).values_list('name', flat=True))
+                names = list(Organisation.objects.filter(id__in=removed).values_list('name', flat=True))
                 quoted = ', '.join('"' + n + '"' for n in names)
-                client_parts.append('unassigned from client(s) ' + quoted)
+                client_parts.append('unassigned from Organisation(s) ' + quoted)
             if client_parts:
                 parts.append('; '.join(client_parts))
 
@@ -768,7 +768,7 @@ class ActivityService:
                 'card_bulk_upload',
                 msg,
                 request=request,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=getattr(table, 'id', None),
                 target_name=table_name or '',
             )
@@ -796,7 +796,7 @@ class ActivityService:
                 'image_reupload',
                 msg,
                 request=request,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=getattr(table, 'id', None),
                 target_name=table_name or '',
             )
@@ -823,7 +823,7 @@ class ActivityService:
                 'card_export',
                 msg,
                 request=request,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=getattr(table, 'id', None),
                 target_name=table_name or '',
             )
@@ -866,7 +866,7 @@ class ActivityService:
             
         try:
             from core.models import ActivityLog
-            from idcards.models import IDCard
+            from tables.models import IDCard
             user = getattr(request, 'user', None)
             ip_address = cls._get_ip(request)
             count = len(card_ids)
@@ -878,7 +878,7 @@ class ActivityService:
             target_name = ''
             target_model = 'IDCard'
             if first_card and first_card.table:
-                target_model = 'IDCardTable'
+                target_model = 'Table'
                 target_id = first_card.table.id
                 target_name = first_card.table.name
             
@@ -969,7 +969,7 @@ class ActivityService:
                 names_str = ', '.join(names[:5]) + ' and ' + str(count - 5) + ' more'
             cls.log(
                 'backup_start',
-                'Backup started for ' + str(count) + ' client(s): ' + names_str + ' (task #' + str(task_id) + ')',
+                'Backup started for ' + str(count) + ' Organisation(s): ' + names_str + ' (task #' + str(task_id) + ')',
                 request=request,
                 target_model='BackupTask',
                 target_id=task_id,
@@ -992,7 +992,7 @@ class ActivityService:
                 names_str = ', '.join(names[:5]) + ' and ' + str(count - 5) + ' more'
             cls.log(
                 'backup_delete',
-                'Backup files deleted for ' + str(count) + ' client(s): ' + names_str + ' (task #' + str(task_id) + ')',
+                'Backup files deleted for ' + str(count) + ' Organisation(s): ' + names_str + ' (task #' + str(task_id) + ')',
                 request=request,
                 target_model='BackupTask',
                 target_id=task_id,
@@ -1029,7 +1029,7 @@ class ActivityService:
         """Log client message send (single client or group)."""
         try:
             if is_group:
-                desc = ('Group client message sent to ' + str(group_client_count) + ' client(s)'
+                desc = ('Group client message sent to ' + str(group_client_count) + ' Organisation(s)'
                         + ', scope: ' + str(scope)
                         + ', ' + str(recipient_count) + ' recipient(s)')
                 target = 'Group Message'
@@ -1071,7 +1071,7 @@ class ActivityService:
                 'reprint_status',
                 msg,
                 user=user,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=getattr(table, 'id', None),
                 target_name=table_name or '',
             )
@@ -1096,7 +1096,7 @@ class ActivityService:
                 'reprint_reject',
                 str(count) + ' reprint request(s) rejected' + pool_part + tbl_part + client_part,
                 user=user,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=getattr(table, 'id', None),
                 target_name=table_name or '',
             )
@@ -1149,7 +1149,7 @@ class ActivityService:
         if user and user.is_authenticated:
             qs = cls._apply_role_filter(qs, user)
             # Always hide admin names for client-side users (defense in depth)
-            if user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+            if user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
                 hide_admin_names = True
         
         if merge_card_activity:
@@ -1404,7 +1404,7 @@ class ActivityService:
         if actor_descriptor != 'System' and actor_descriptor.lower() not in text.lower():
             text = f'{actor_descriptor}: {text}'
 
-        if client_context and client_context.lower() not in text.lower() and actor_role not in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+        if client_context and client_context.lower() not in text.lower() and actor_role not in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
             text = f'{text} | Client: {client_context}'
 
         return _with_merge_suffix(text)
@@ -1421,11 +1421,11 @@ class ActivityService:
 
         if role == 'super_admin':
             return f'Admin "{actor_name}"'
-        if role == 'admin_staff':
+        if role == 'operator':
             return f'Operator "{actor_name}"'
         if role == 'prime_manager':
             return f'Client "{actor_name}"'
-        if role == 'client_staff':
+        if role == 'assistant':
             if client_name:
                 return f'Assistant "{actor_name}" for "{client_name}"'
             return f'Assistant "{actor_name}"'
@@ -1439,9 +1439,9 @@ class ActivityService:
         """Return compact human labels for activity role hints."""
         labels = {
             'super_admin': 'Super Admin',
-            'admin_staff': 'Admin Staff',
+            'operator': 'Admin Staff',
             'client': 'Client',
-            'client_staff': 'Client Staff',
+            'assistant': 'Assistant',
             'pro_user': 'Pro User',
         }
         return labels.get(str(role or '').strip().lower(), '')
@@ -1458,10 +1458,10 @@ class ActivityService:
 
         if target_model == 'client' and target_id:
             try:
-                from client.models import Client
+                from organisation.models import Organisation
 
                 client_name = (
-                    Client.objects
+                    Organisation.objects
                     .filter(id=target_id)
                     .values_list('name', flat=True)
                     .first()
@@ -1477,7 +1477,7 @@ class ActivityService:
                 client_profile = getattr(user, 'client_profile', None)
                 if client_profile and client_profile.name:
                     return client_profile.name
-            if user.role == 'client_staff':
+            if user.role == 'assistant':
                 staff_profile = getattr(user, 'staff_profile', None)
                 client = getattr(staff_profile, 'client', None) if staff_profile else None
                 if client and client.name:
@@ -1519,10 +1519,10 @@ class ActivityService:
                 return str(client_context).strip()
             if target_id:
                 try:
-                    from client.models import Client
+                    from organisation.models import Organisation
 
                     client_name = (
-                        Client.objects
+                        Organisation.objects
                         .filter(id=target_id)
                         .values_list('name', flat=True)
                         .first()
@@ -1892,7 +1892,7 @@ class ActivityService:
         """
         Apply role-based filtering to activity queryset.
         
-        SECURITY: Client/client_staff must NEVER see admin-side activities.
+        SECURITY: Organisation/client_staff must NEVER see admin-side activities.
         
         Role-based visibility:
         - super_admin: All activities
@@ -1913,7 +1913,7 @@ class ActivityService:
         if PermissionService.is_admin_staff(user):
             staff = getattr(user, 'staff_profile', None)
             if staff:
-                client_ids = list(staff.assigned_clients.values_list('id', flat=True))
+                client_ids = list(staff.assigned_organisations.values_list('id', flat=True))
                 if client_ids:
                     return queryset.filter(
                         Q(target_model='Client', target_id__in=client_ids) |
@@ -1934,7 +1934,7 @@ class ActivityService:
                 # instead of first fetching staff user IDs in a separate query.
                 return queryset.filter(
                     Q(user_id=user.pk) |
-                    Q(user__role__in=('client_staff', 'assistant'), user__assistant_profile__client_id=client.id)
+                    Q(user__role__in=('assistant'), user__assistant_profile__client_id=client.id)
                 )
             return queryset.none()
         
@@ -1961,13 +1961,13 @@ class ActivityService:
         
         # Always hide admin identities from client-side users
         if viewing_user and viewing_user.is_authenticated:
-            if viewing_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
-                if actor_role in ('super_admin', 'admin_staff') or entry.user.is_superuser:
+            if viewing_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+                if actor_role in ('super_admin', 'operator') or entry.user.is_superuser:
                     return 'System'
         
         # Explicit hide_admin_names flag (for backward compatibility)
         if hide_admin_names:
-            if actor_role in ('super_admin', 'admin_staff') or entry.user.is_superuser:
+            if actor_role in ('super_admin', 'operator') or entry.user.is_superuser:
                 return 'System'
         
         return actor_name

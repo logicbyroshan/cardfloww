@@ -1,7 +1,7 @@
+﻿"""
+Canonical location: organisation/services_client_core.py
+OrganisationService is the main class. OrganisationCoreService and ClientService are aliases.
 """
-Backward-compatible shim.
-Canonical location: client/services_client_core.py
-
-New code should import directly from client.services_client_core.
-"""
-from client.services_client_core import ClientService  # noqa: F401
+from organisation.services_client_core import OrganisationService  # noqa: F401
+OrganisationCoreService = OrganisationService  # alias
+ClientService = OrganisationService            # compat alias

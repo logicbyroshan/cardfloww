@@ -9,11 +9,11 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from client.models import Client
+from organisation.models import Organisation
 from staff.models import Staff
 from core.models import ActivityLog, BackgroundTask, BackupTask, EmailLog, Notification, NotificationRead
 from core.services.notification_service import NotificationService
-from idcards.models import IDCard, IDCardGroup, IDCardTable
+from tables.models import IDCard, Table, Table
 
 
 User = get_user_model()
@@ -37,16 +37,16 @@ class PanelBaseTestCase(TestCase):
             username='panel-admin-staff@test.com',
             email='panel-admin-staff@test.com',
             password='pass1234',
-            role='admin_staff',
+            role='operator',
         )
-        self.client_profile = Client.objects.create(
+        self.client_profile = Organisation.objects.create(
             user=self.client_user,
             name='Panel Client',
             status='active',
         )
         self.admin_staff_profile = Staff.objects.create(
             user=self.admin_staff_user,
-            staff_type='admin_staff',
+            staff_type='operator',
         )
         cache.clear()
 

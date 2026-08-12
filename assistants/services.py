@@ -10,14 +10,14 @@ from django.db.models import Prefetch
 from django.utils.timezone import localtime
 
 from core.models import User, EmailLog
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
-from idcards.models import IDCardGroup, IDCardTable
+from tables.models import Table
 from core.services.base import BaseService, ServiceResult
 from core.services.cache_version_service import CacheVersionService
 from core.services.permission_service import PermissionService
 from core.utils import send_welcome_email
-from client.services_access import ClientAccessService
+from organisation.services_access import OrganisationAccessService
 from accounts.services import normalize_password_input
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class AssistantService(BaseService):
 
     @staticmethod
     def _resolve_assignment_scope_ids(
-        client: Client,
+        client: Organisation,
         raw_ids: Any,
         id_source: str = 'auto',
     ) -> Tuple[List[int], List[int]]:
@@ -100,11 +100,11 @@ class AssistantService(BaseService):
             source = 'auto'
 
         if source == 'auto':
-            group_count = IDCardGroup.objects.filter(client=client).count()
+            group_count = Table.objects.filter(client=client).count()
             source = 'table' if group_count <= 1 else 'group'
 
         valid_group_ids = set(
-            IDCardGroup.objects.filter(client=client, id__in=normalized_ids)
+            Table.objects.filter(client=client, id__in=normalized_ids)
             .values_list('id', flat=True)
         )
 
@@ -112,7 +112,7 @@ class AssistantService(BaseService):
             return sorted(valid_group_ids), []
 
         valid_table_ids = set(
-            IDCardTable.objects.filter(
+            Table.objects.filter(
                 group__client=client,
                 deleted_by_client=False,
                 id__in=normalized_ids,
@@ -120,7 +120,7 @@ class AssistantService(BaseService):
         )
 
         if valid_table_ids:
-            table_group_ids = IDCardTable.objects.filter(
+            table_group_ids = Table.objects.filter(
                 id__in=valid_table_ids,
             ).values_list('group_id', flat=True)
             valid_group_ids.update(table_group_ids)
@@ -164,7 +164,7 @@ class AssistantService(BaseService):
         return out
 
     @classmethod
-    def _normalize_assignment_scopes(cls, client: Client, raw_scopes: Any) -> List[Dict[str, Any]]:
+    def _normalize_assignment_scopes(cls, client: Organisation, raw_scopes: Any) -> List[Dict[str, Any]]:
         """Validate and normalize per-scope filters sent by assignment chips."""
         if not isinstance(raw_scopes, list):
             return []
@@ -206,14 +206,14 @@ class AssistantService(BaseService):
             })
 
         valid_group_ids = set(
-            IDCardGroup.objects.filter(
+            Table.objects.filter(
                 client=client,
                 id__in=list(requested_group_ids),
             ).values_list('id', flat=True)
         )
 
         valid_table_rows = list(
-            IDCardTable.objects.filter(
+            Table.objects.filter(
                 group__client=client,
                 deleted_by_client=False,
                 id__in=list(requested_table_ids),
@@ -298,7 +298,7 @@ class AssistantService(BaseService):
             return True
         if PermissionService.has(user, 'perm_idcard_client_list'):
             return True
-        if PermissionService.is_client(user) and PermissionService.has(user, 'perm_manage_client_staff'):
+        if PermissionService.is_client(user) and PermissionService.has(user, 'perm_manage_assistant'):
             return True
         return False
 
@@ -316,7 +316,7 @@ class AssistantService(BaseService):
             elif user.is_superuser:
                 client = None
             else:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client:
                     return ServiceResult(success=False, message='Client profile not found')
             
@@ -349,7 +349,7 @@ class AssistantService(BaseService):
             assistant_list = Assistant.objects.filter(
                 **assistant_filters
             ).select_related('user').only(*assistant_only_fields).prefetch_related(
-                Prefetch('assigned_groups', queryset=IDCardGroup.objects.only('id'))
+                Prefetch('assigned_groups', queryset=Table.objects.only('id'))
             )
             
             assistant_data = []
@@ -411,13 +411,13 @@ class AssistantService(BaseService):
         try:
             try:
                 assistant = Assistant.objects.select_related('user', 'client').prefetch_related(
-                    Prefetch('assigned_groups', queryset=IDCardGroup.objects.only('id'))
+                    Prefetch('assigned_groups', queryset=Table.objects.only('id'))
                 ).get(id=assistant_id)
             except Assistant.DoesNotExist:
                 return ServiceResult(success=False, message='Assistant not found')
 
             if user is not None and not user.is_superuser:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
                 if not cls._has_staff_management_access(user):
@@ -514,12 +514,12 @@ class AssistantService(BaseService):
                 client_id = data.get('client_id')
                 if not client_id:
                     return ServiceResult(success=False, message='Client is required to create an assistant.')
-                from client.models import Client
-                client = Client.objects.filter(id=client_id).first()
+                from organisation.models import Organisation
+                client = Organisation.objects.filter(id=client_id).first()
                 if not client:
                     return ServiceResult(success=False, message='Client not found.')
             else:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client:
                     return ServiceResult(success=False, message='Client profile not found')
                 if not cls._has_staff_management_access(user):
@@ -592,7 +592,7 @@ class AssistantService(BaseService):
                 
                 assistant_kwargs = {
                     'user': assistant_user,
-                    'client': client,
+                    'client': Organisation,
                     'department': data.get('department', ''),
                     'designation': data.get('designation', ''),
                     'allowed_classes': [
@@ -662,7 +662,7 @@ class AssistantService(BaseService):
                     resolved_table_ids = sorted(set(resolved_table_ids) | set(scope_table_ids))
 
                 if assigned_groups or normalized_assignment_scopes is not None:
-                    valid_groups = IDCardGroup.objects.filter(
+                    valid_groups = Table.objects.filter(
                         id__in=resolved_group_ids,
                         client=client,
                     )
@@ -785,7 +785,7 @@ class AssistantService(BaseService):
                 except Assistant.DoesNotExist:
                     return ServiceResult(success=False, message='Assistant not found')
             else:
-                client = target_client or ClientAccessService.get_client_for_user(user)
+                client = target_client or OrganisationAccessService.get_organisation_for_user(user)
                 if not client:
                     return ServiceResult(success=False, message='Client profile not found')
                 if not cls._has_staff_management_access(user):
@@ -905,7 +905,7 @@ class AssistantService(BaseService):
                         resolved_group_ids = sorted(set(resolved_group_ids) | set(scope_group_ids))
                         resolved_table_ids = sorted(set(resolved_table_ids) | set(scope_table_ids))
 
-                    valid_groups = IDCardGroup.objects.filter(
+                    valid_groups = Table.objects.filter(
                         id__in=resolved_group_ids,
                         client=client,
                     )
@@ -953,7 +953,7 @@ class AssistantService(BaseService):
                 return ServiceResult(success=False, message='Assistant not found')
 
             if user is not None and not user.is_superuser:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
                 if not cls._has_staff_management_access(user):
@@ -990,7 +990,7 @@ class AssistantService(BaseService):
                 return ServiceResult(success=False, message='Assistant not found')
 
             if user is not None and not user.is_superuser:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
                 if not cls._has_staff_management_access(user):
@@ -1025,7 +1025,7 @@ class AssistantService(BaseService):
                 return ServiceResult(success=False, message='Assistant not found')
 
             if user is not None and not user.is_superuser:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
                 if not PermissionService.has(user, 'perm_set_temp_password'):
@@ -1155,8 +1155,8 @@ class AssistantService(BaseService):
           - group  → all tables inside that group
           - neither → all tables for the client
         """
-        from idcards.models import IDCardTable, IDCard
-        tables = IDCardTable.objects.filter(group__client=client, deleted_by_client=False)
+        from tables.models import Table, IDCard
+        tables = Table.objects.filter(group__client=client, deleted_by_client=False)
         if table:
             tables = tables.filter(id=table.id)
         elif group:

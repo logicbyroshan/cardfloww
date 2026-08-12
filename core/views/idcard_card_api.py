@@ -17,7 +17,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.cache import never_cache
 
-from idcards.models import IDCard
+from tables.models import IDCard
 from mediafiles.utils import normalize_image_bytes_for_storage
 from ..services import IDCardService
 from ..services.base import BaseService
@@ -338,7 +338,7 @@ def _sanitize_client_audit_fields(table, modifier, updated_at, updated_at_iso, m
     """
     raw_modifier = (modifier or '').strip()
     role = modifier_role_map.get(raw_modifier)
-    if role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+    if role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
         # Client-role modifier: show their display name
         return _client_modifier_display_name(table), updated_at, updated_at_iso
     # Admin/admin_staff modifier: hide name and display timestamp but keep ISO timestamp for concurrency tracking
@@ -1276,7 +1276,7 @@ def api_idcard_create(request, table_id):
                 created_card = (result.data or {}).get('card') or {}
                 created_card_id = created_card.get('id')
                 if created_card_id:
-                    from idcards.models import IDCard as _IDCard
+                    from tables.models import IDCard as _IDCard
                     _card_obj = _IDCard.objects.select_related('table__group__client').filter(pk=created_card_id).first()
                     if _card_obj:
                         uploaded_img_fields = list(image_files.keys()) if image_files else []
@@ -1386,7 +1386,7 @@ def api_idcard_history(request, card_id):
 
         if is_client_viewer:
             actor_role = role_map.get(getattr(actor, 'username', ''), '') if actor else ''
-            if actor and actor_role not in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+            if actor and actor_role not in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
                 continue
             actor_name = _client_modifier_display_name(card.table)
 
@@ -1505,7 +1505,7 @@ def api_idcard_update(request, card_id):
                                 return JsonResponse({'success': False, 'message': f'Not authorized. You can only edit cards within assigned sections: {", ".join(allowed_secs)}'}, status=400)
 
         # Block editing if there is an active reprint request for the card (requested or confirmed status)
-        if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+        if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
             from reprintcard.models import ReprintRequest
             if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
                 return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -1657,7 +1657,7 @@ def api_idcard_update_field(request, card_id):
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     # Block editing if there is an active reprint request for the card (requested or confirmed status)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -1769,7 +1769,7 @@ def api_idcard_change_status(request, card_id):
                     }, status=409)
                 return JsonResponse({'success': False, 'message': _POOL_RETRIEVE_SCOPE_MESSAGE}, status=409)
 
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         result = WorkflowService.transition(card, new_status, user=request.user, request=request)
         return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
     except json.JSONDecodeError:
@@ -1879,7 +1879,7 @@ def api_idcard_bulk_status(request, table_id):
                     'message': 'Some selected cards are outside your assigned scope.',
                 }, status=403)
 
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         result = WorkflowService.bulk_transition(
             _tbl, card_ids, new_status, user=request.user, request=request
         )
@@ -1982,7 +1982,7 @@ def api_idcard_bulk_delete(request, table_id):
                 'bulk_delete',
                 action_desc,
                 request=request,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=table_id,
                 target_name=table_name or '',
             )
@@ -2284,7 +2284,7 @@ def api_clear_pending_paths(request, table_id):
                 description=f"Cleared pending/missing paths for {col_desc} on {cleared_count} card(s)",
                 user=request.user,
                 request=request,
-                target_model='IDCardTable',
+                target_model='Table',
                 target_id=table_id,
                 target_name=_tbl.name
             )
@@ -2311,7 +2311,7 @@ def api_idcard_undo_image(request, card_id):
     if err: return err
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -2346,7 +2346,7 @@ def api_idcard_redo_image(request, card_id):
     if err: return err
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)

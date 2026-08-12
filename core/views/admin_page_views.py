@@ -15,11 +15,11 @@ from django.db.models import Count, Exists, OuterRef, Q, Case, When, Value, Bool
 from django.utils import timezone
 from django.utils.timesince import timesince as django_timesince
 
-from client.models import Client
+from organisation.models import Organisation
 from operators.models import Operator
 from staff.models import Staff
 from accounts.services import AuthService
-from idcards.models import IDCardGroup, IDCard, IDCardTable
+from tables.models import Table, IDCard
 from mediafiles.models import CardMedia
 from mediafiles.services.image_thumbnail import ThumbnailService
 from django.core.files.storage import default_storage
@@ -183,7 +183,7 @@ def _build_personal_guide_text(share_url):
         "https://panel.adarshbhopal.in/",
         "",
         "Client section me login kare:",
-        "email id: client.demo@example.com",
+        "email id: Organisation.demo@example.com",
         "pw: Demo@1234",
         "(ye sirf example credentials hain; login ke baad apna password zarur change kare)",
         "",
@@ -346,7 +346,7 @@ def manage_clients(request):
     # Admin staff can always open this page, but the result set remains
     # scoped to their assigned clients.
     clients_qs = (
-        Client.objects
+        Organisation.objects
         .all()
         .select_related('user')
         .annotate(
@@ -460,7 +460,7 @@ def active_client_status_redirect(request, client_id, status):
 @require_http_methods(['GET'])
 def api_client_login_history(request, client_id):
     """Return login/logout timeline for a single client in Manage Clients drawers."""
-    client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
+    client = get_object_or_404(Organisation.objects.select_related('user'), id=client_id)
 
     if not PermissionService.can_access_client(request.user, client.id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
@@ -487,9 +487,9 @@ def api_client_login_history(request, client_id):
     return JsonResponse({
         'success': True,
         'client': {
-            'id': client.id,
-            'name': client.name,
-            'status': client.status,
+            'id': Organisation.id,
+            'name': Organisation.name,
+            'status': Organisation.status,
         },
         'active_devices': len(device_fingerprints),
         'active_surface_counts': device_snapshot.get('surface_counts') or {'desktop': 0, 'mobile': 0},
@@ -506,7 +506,7 @@ def api_client_staff_login_history(request, staff_id):
     can_manage_client_staff = (
         PermissionService.is_super_admin(request.user)
         or PermissionService.has(request.user, 'perm_idcard_client_list')
-        or PermissionService.has(request.user, 'perm_manage_client_staff')
+        or PermissionService.has(request.user, 'perm_manage_assistant')
     )
     if PermissionService.is_admin_staff(request.user) and not can_manage_client_staff:
         return JsonResponse({'success': False, 'message': 'Manage Assistent permission required'}, status=403)
@@ -514,7 +514,7 @@ def api_client_staff_login_history(request, staff_id):
     staff = get_object_or_404(
         Staff.objects.select_related('user', 'client'),
         id=staff_id,
-        staff_type='client_staff',
+        staff_type='assistant',
     )
 
     if staff.client_id and not PermissionService.can_access_client(request.user, staff.client_id):
@@ -564,7 +564,7 @@ def api_client_staff_assignment_timeline(request, staff_id):
     can_manage_client_staff = (
         PermissionService.is_super_admin(request.user)
         or PermissionService.has(request.user, 'perm_idcard_client_list')
-        or PermissionService.has(request.user, 'perm_manage_client_staff')
+        or PermissionService.has(request.user, 'perm_manage_assistant')
     )
     if PermissionService.is_admin_staff(request.user) and not can_manage_client_staff:
         return JsonResponse({'success': False, 'message': 'Manage Assistent permission required'}, status=403)
@@ -572,7 +572,7 @@ def api_client_staff_assignment_timeline(request, staff_id):
     staff = get_object_or_404(
         Staff.objects.select_related('user', 'client'),
         id=staff_id,
-        staff_type='client_staff',
+        staff_type='assistant',
     )
 
     if staff.client_id and not PermissionService.can_access_client(request.user, staff.client_id):
@@ -618,7 +618,7 @@ def api_staff_login_history(request, staff_id):
     staff = get_object_or_404(
         Staff.objects.select_related('user'),
         id=staff_id,
-        staff_type='admin_staff',
+        staff_type='operator',
     )
 
     try:
@@ -663,7 +663,7 @@ def api_staff_assignment_timeline(request, staff_id):
     staff = get_object_or_404(
         Staff.objects.select_related('user'),
         id=staff_id,
-        staff_type='admin_staff',
+        staff_type='operator',
     )
 
     try:
@@ -711,7 +711,7 @@ def idcard_group(request, client_id):
         return redirect('manage_clients')
     
     # Get all tables for this client's groups with status counts
-    tables = IDCardTable.objects.filter(group__client=client).select_related('group', 'group__client').annotate(
+    tables = Table.objects.filter(group__client=client).select_related('group', 'group__client').annotate(
         pending_count=Count('id_cards', filter=Q(id_cards__status='pending')),
         verified_count=Count('id_cards', filter=Q(id_cards__status='verified')),
         pool_count=Count('id_cards', filter=Q(id_cards__status='pool')),
@@ -728,7 +728,7 @@ def idcard_group(request, client_id):
     context = {
         'active_page': 'manage_clients',
         'user_role': get_user_role(request.user),
-        'client': client,
+        'client': Organisation,
         'group': group,
         'tables': tables,
         'can_manage_clients': can_manage_clients,
@@ -912,7 +912,7 @@ def idcard_actions(request, table_id):
     Query params (status, page, per_page, search, class, section, etc.) are
     handled entirely on the frontend.
     """
-    table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     user = request.user
     if not PermissionService.can_access_client(user, table.group.client_id):
         return redirect('manage_clients')
@@ -938,7 +938,7 @@ def group_settings(request, client_id):
     search_query = request.GET.get('search', '').strip()
 
     group = IDCardService.ensure_default_group(client)
-    tables_qs = IDCardTable.objects.filter(group=group).select_related('group').annotate(
+    tables_qs = Table.objects.filter(group=group).select_related('group').annotate(
         total_cards=Count('id_cards')
     ).order_by('-created_at')
 
@@ -961,7 +961,7 @@ def group_settings(request, client_id):
     context = {
         'active_page': 'manage_clients',
         'user_role': get_user_role(request.user),
-        'client': client,
+        'client': Organisation,
         'group': group,
         'tables': page_obj.object_list,
         'page_obj': page_obj,
@@ -1001,10 +1001,10 @@ def settings(request):
 def _resolve_tutorial_scope(user):
     """Return the tutorial content scope key for the logged-in user role."""
     role = str(getattr(user, 'role', '') or '').strip().lower()
-    if role == 'client_staff':
+    if role == 'assistant':
         return 'client_staff'
-    if role == 'admin_staff':
-        return 'admin_staff'
+    if role == 'operator':
+        return 'operator'
     if role in ('super_admin', 'pro_user'):
         return 'admin'
     return 'client'
@@ -1013,9 +1013,9 @@ def _resolve_tutorial_scope(user):
 def _resolve_tutorial_video_url(scope):
     """Resolve role-specific tutorial video URL with client URL fallback."""
     client_url = getattr(django_settings, 'CLIENT_TUTORIAL_VIDEO_URL', 'https://www.youtube.com/')
-    if scope == 'client_staff':
+    if scope == 'assistant':
         return getattr(django_settings, 'CLIENT_STAFF_TUTORIAL_VIDEO_URL', client_url)
-    if scope == 'admin_staff':
+    if scope == 'operator':
         return getattr(django_settings, 'ADMIN_STAFF_TUTORIAL_VIDEO_URL', client_url)
     if scope == 'admin':
         return getattr(django_settings, 'ADMIN_TUTORIAL_VIDEO_URL', client_url)

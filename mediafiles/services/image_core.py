@@ -191,7 +191,7 @@ class ImageCoreMixin:
         Get or create the image folder path for a client.
         
         Args:
-            client: Client model instance
+            client: Organisation model instance
             
         Returns:
             Folder path relative to MEDIA_ROOT (e.g., "adrsh_img/ABCDE12345")
@@ -259,7 +259,7 @@ class ImageCoreMixin:
         
         Args:
             file_content: File content (UploadedFile or bytes)
-            client: Client model instance
+            client: Organisation model instance
             existing_path: Path of existing image (for updates)
             batch_counter: Counter for unique filename generation
             delete_existing_on_update: If True, remove old file+thumbnail immediately

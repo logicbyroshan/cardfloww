@@ -66,7 +66,7 @@ class User(AbstractUser):
         from staff.models import StaffCompatWrapper
         try:
             if hasattr(self, 'operator_profile') and self.operator_profile:
-                return StaffCompatWrapper(self.operator_profile, 'admin_staff')
+                return StaffCompatWrapper(self.operator_profile, 'operator')
         except Exception:
             pass
         try:
@@ -495,7 +495,7 @@ class Notification(models.Model):
     TARGET_CHOICES = [
         ('all', 'All Users'),
         ('super_admin', 'Super Admins'),
-        ('admin_staff', 'Admin Staff / Operators'),
+        ('operator', 'Admin Staff / Operators'),
         ('prime_manager', 'Prime Managers'),
         ('manager', 'Managers'),
         ('assistant', 'Assistants'),
@@ -799,7 +799,7 @@ class BackgroundTask(models.Model):
         try:
             if self.task_type in ("export_zip", "export_pdf", "export_docx", "export_excel"):
                 from core.services.activity_service import ActivityService
-                from idcards.models import IDCardTable
+                from tables.models import Table
 
                 table_id = None
                 table_name = ''
@@ -808,7 +808,7 @@ class BackgroundTask(models.Model):
                     table_id = metadata.get('table_id')
                 if table_id:
                     table_name = (
-                        IDCardTable.objects.filter(id=table_id)
+                        Table.objects.filter(id=table_id)
                         .values_list('name', flat=True)
                         .first()
                     ) or ''

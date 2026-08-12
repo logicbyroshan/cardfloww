@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db import OperationalError, ProgrammingError
-from client.models import Client
+from organisation.models import Organisation
 from assistants.services import AssistantService
 from ..services import ClientService
 from ..services.activity_service import ActivityService
@@ -105,7 +105,7 @@ def _parse_client_id(raw_client_id):
 def _get_admin_manageable_client_staff(user, staff_id):
     staff_obj = (
         Staff.objects
-        .filter(id=staff_id, staff_type='client_staff')
+        .filter(id=staff_id, staff_type='assistant')
         .select_related('user', 'client')
         .first()
     )
@@ -207,11 +207,11 @@ def api_client_create(request):
             try:
                 created_client_id = ((result.data or {}).get('client') or {}).get('id')
                 if created_client_id:
-                    from client.models import Client
-                    created_client = Client.objects.filter(id=created_client_id).first()
+                    from organisation.models import Organisation
+                    created_client = Organisation.objects.filter(id=created_client_id).first()
                     staff = getattr(request.user, 'operator_profile', None)
                     if created_client and staff:
-                        staff.assigned_clients.add(created_client)
+                        staff.assigned_organisations.add(created_client)
             except Exception:
                 logger.warning('Could not auto-assign newly created client to admin_staff user=%s', request.user.pk)
         
@@ -283,10 +283,10 @@ def api_client_delete(request, client_id):
         
     # Get client object with card count annotation
     from django.db.models import Count
-    from client.models import Client
+    from organisation.models import Organisation
     
     try:
-        client_obj = Client.objects.annotate(
+        client_obj = Organisation.objects.annotate(
             card_count=Count('id_card_groups__tables__id_cards', distinct=True)
         ).get(pk=client_id)
         
@@ -324,7 +324,7 @@ def api_client_toggle_status(request, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied. You are not assigned to this client.'}, status=403)
 
     try:
-        client_obj = Client.objects.select_related('user').get(pk=client_id)
+        client_obj = Organisation.objects.select_related('user').get(pk=client_id)
     except Client.DoesNotExist:
         client_obj = None
 
@@ -489,9 +489,9 @@ def api_client_messages(request, client_id):
     if not _check_admin_staff_client_access(request.user, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied. You are not assigned to this client.'}, status=403)
 
-    from client.models import Client
+    from organisation.models import Organisation
 
-    client = Client.objects.filter(id=client_id).select_related('user').first()
+    client = Organisation.objects.filter(id=client_id).select_related('user').first()
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
 
@@ -511,8 +511,8 @@ def api_client_messages(request, client_id):
     return JsonResponse({
         'success': True,
         'client': {
-            'id': client.id,
-            'name': client.name,
+            'id': Organisation.id,
+            'name': Organisation.name,
         },
         'messages': [_serialize_client_message(item) for item in rows],
     })
@@ -565,9 +565,9 @@ def api_client_message_send(request, client_id):
     if visibility_error:
         return JsonResponse({'success': False, 'message': visibility_error}, status=400)
 
-    from client.models import Client
+    from organisation.models import Organisation
 
-    client = Client.objects.filter(id=client_id).select_related('user').first()
+    client = Organisation.objects.filter(id=client_id).select_related('user').first()
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
 
@@ -642,7 +642,7 @@ def api_client_message_targets(request):
     if not _has_manage_client_page_permission(request.user):
         return _manage_client_permission_denied_response()
 
-    from client.models import Client
+    from organisation.models import Organisation
 
     query = (request.GET.get('q') or '').strip()
     try:
@@ -650,7 +650,7 @@ def api_client_message_targets(request):
     except (TypeError, ValueError):
         limit = 400
 
-    qs = Client.objects.select_related('user').order_by('name')
+    qs = Organisation.objects.select_related('user').order_by('name')
     if query:
         qs = qs.filter(name__icontains=query)
 
@@ -717,9 +717,9 @@ def api_client_messages_group_send(request):
         if not selected_ids:
             return JsonResponse({'success': False, 'message': 'Select at least one client'}, status=400)
 
-    from client.models import Client
+    from organisation.models import Organisation
 
-    clients_qs = Client.objects.select_related('user').order_by('name')
+    clients_qs = Organisation.objects.select_related('user').order_by('name')
     if target_mode == 'selected':
         clients_qs = clients_qs.filter(id__in=selected_ids)
 
@@ -743,7 +743,7 @@ def api_client_messages_group_send(request):
     for client in clients:
         recipient_ids = _resolve_client_message_recipients(client, scope)
         if not recipient_ids:
-            skipped_clients.append({'id': client.id, 'name': client.name})
+            skipped_clients.append({'id': Organisation.id, 'name': Organisation.name})
             continue
 
         notif_result = NotificationService.create_notification(
@@ -757,7 +757,7 @@ def api_client_messages_group_send(request):
             send_email=False,
         )
         if not notif_result.success:
-            failed_clients.append({'id': client.id, 'name': client.name})
+            failed_clients.append({'id': Organisation.id, 'name': Organisation.name})
             continue
 
         notif_id = ((notif_result.data or {}).get('notification') or {}).get('id')
@@ -780,7 +780,7 @@ def api_client_messages_group_send(request):
                 return _client_message_table_unavailable_response()
             raise
         _bump_client_message_cache_versions(client.id, recipient_ids)
-        sent_items.append({'id': row.id, 'client_id': client.id, 'client_name': client.name})
+        sent_items.append({'id': row.id, 'client_id': Organisation.id, 'client_name': Organisation.name})
         total_recipients += len(recipient_ids)
 
     if not sent_items:
@@ -802,7 +802,7 @@ def api_client_messages_group_send(request):
 
     return JsonResponse({
         'success': True,
-        'message': f'Message sent to {len(sent_items)} client(s)',
+        'message': f'Message sent to {len(sent_items)} Organisation(s)',
         'sent_count': len(sent_items),
         'recipient_count': total_recipients,
         'skipped_count': len(skipped_clients),

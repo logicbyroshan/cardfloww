@@ -10,12 +10,12 @@ from django.core.paginator import Paginator
 from django.db.models import Exists, OuterRef, Q, Count
 from django.utils import timezone
 
-from idcards.models import IDCardTable
+from tables.models import Table
 from core.services.permission_service import PermissionService
 from core.models import ClientMessage, NotificationRead
 
 from .views_decorators import require_client_user, require_client_admin, require_client_staff_manager
-from .services import ClientAccessService, ClientDashboardService
+from .services import OrganisationAccessService, OrganisationDashboardService
 
 
 # =============================================================================
@@ -28,13 +28,13 @@ def dashboard(request):
     Client Dashboard - shows summary of card data and quick actions.
     """
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     
     if not client:
         return redirect('/panel/auth/login/')
     
     # Get dashboard data
-    result = ClientDashboardService.get_dashboard_data(user)
+    result = OrganisationDashboardService.get_dashboard_data(user)
     
     # Get permission context
     permissions = PermissionService.get_permission_context(user)
@@ -43,7 +43,7 @@ def dashboard(request):
         'user': user,
         'user_name': user.get_full_name() or user.username,
         'user_role': 'Client Admin' if PermissionService.is_client(user) else 'Assistant',
-        'client': client,
+        'client': Organisation,
         'is_client_admin': PermissionService.is_client(user),
         'active_page': 'dashboard',
         **permissions,
@@ -53,7 +53,7 @@ def dashboard(request):
         context.update(result.data)
     
     # Fetch accessible tables for reprint links/dropdown and ID Card Group dashboard section
-    tables_qs = IDCardTable.objects.filter(
+    tables_qs = Table.objects.filter(
         group__client=client,
         deleted_by_client=False,
     ).select_related('group', 'group__client')
@@ -70,9 +70,9 @@ def dashboard(request):
         if PermissionService.is_client_staff(user):
             from django.core.cache import cache
             from core.views.idcard_helpers import _apply_client_staff_row_scope
-            from idcards.models import IDCard
+            from tables.models import IDCard
 
-            tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, tables_qs)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, tables_qs)
             ordered_tables = list(tables_qs.order_by('-updated_at'))
             table_ids = [table.id for table in ordered_tables]
             pool_counts = {
@@ -149,7 +149,7 @@ def card_groups(request):
     View all card groups (ID Card Settings) for the client.
     """
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     
     if not client:
         return redirect('/panel/auth/login/')
@@ -163,14 +163,14 @@ def card_groups(request):
     ):
         return redirect(reverse('client:dashboard'))
     
-    result = ClientDashboardService.get_groups_with_counts(user)
+    result = OrganisationDashboardService.get_groups_with_counts(user)
     permissions = PermissionService.get_permission_context(user)
     
     context = {
         'user': user,
         'user_name': user.get_full_name() or user.username,
         'user_role': 'Client Admin' if PermissionService.is_client(user) else 'Assistant',
-        'client': client,
+        'client': Organisation,
         'is_client_admin': PermissionService.is_client(user),
         'active_page': 'groups',
         'groups': result.data.get('groups', []) if result.success else [],
@@ -186,7 +186,7 @@ def card_table(request, table_id):
     View cards in a specific table.
     """
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     
     if not client:
         return redirect('/panel/auth/login/')
@@ -204,11 +204,11 @@ def card_table(request, table_id):
     
     # Verify access
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
-    except IDCardTable.DoesNotExist:
+        table = Table.objects.select_related('group__client').get(id=table_id)
+    except Table.DoesNotExist:
         return redirect(reverse('client:groups'))
     
-    if not ClientAccessService.can_access_table(user, table):
+    if not OrganisationAccessService.can_access_table(user, table):
         return redirect(reverse('client:groups'))
     
     # Get status filter from query params
@@ -220,7 +220,7 @@ def card_table(request, table_id):
         'user': user,
         'user_name': user.get_full_name() or user.username,
         'user_role': 'Client Admin' if PermissionService.is_client(user) else 'Assistant',
-        'client': client,
+        'client': Organisation,
         'is_client_admin': PermissionService.is_client(user),
         'active_page': 'groups',
         'table': table,
@@ -241,7 +241,7 @@ def print_table(request, table_id):
     and redirect appropriately.
     """
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     if not client:
         return redirect('/panel/auth/login/')
 
@@ -258,14 +258,14 @@ def manage_staff(request):
     Uses same layout as admin manage-staff page.
     """
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     
     if not client:
         return redirect('/panel/auth/login/')
     
     # Check permission: allow either client-list toggle or explicit manage-staff flag
     if not (PermissionService.has_permission(user, 'perm_idcard_client_list')
-            or PermissionService.has_permission(user, 'perm_manage_client_staff')):
+            or PermissionService.has_permission(user, 'perm_manage_assistant')):
         return redirect(reverse('client:dashboard'))
     
     # Get Assistant QuerySet directly for server-side table rendering
@@ -280,7 +280,7 @@ def manage_staff(request):
         'user': user,
         'user_name': user.get_full_name() or user.username,
         'user_role': 'Client Admin' if PermissionService.is_client(user) else 'Assistant',
-        'client': client,
+        'client': Organisation,
         'is_client_admin': PermissionService.is_client(user),
         'active_page': 'staff',
         'staff_list': staff_list,
@@ -294,7 +294,7 @@ def manage_staff(request):
 def messages(request):
     """Read-only client message history page (admin-originated one-way messages)."""
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
 
     if not client:
         return redirect('/panel/auth/login/')
@@ -330,7 +330,7 @@ def messages(request):
         'user': user,
         'user_name': user.get_full_name() or user.username,
         'user_role': 'Client Admin' if PermissionService.is_client(user) else 'Assistant',
-        'client': client,
+        'client': Organisation,
         'is_client_admin': PermissionService.is_client(user),
         'active_page': 'client_messages',
         'messages_page': page_obj,

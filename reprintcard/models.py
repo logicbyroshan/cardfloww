@@ -9,7 +9,7 @@ and all existing migrations remain valid. No data migration needed.
 from django.conf import settings
 from django.db import models
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 
 
 class ReprintRequest(models.Model):
@@ -26,7 +26,7 @@ class ReprintRequest(models.Model):
     ]
 
     card = models.ForeignKey(IDCard, on_delete=models.CASCADE, related_name='reprint_requests')
-    table = models.ForeignKey(IDCardTable, on_delete=models.CASCADE, related_name='reprint_requests')
+    table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='reprint_requests')
     status = models.CharField(max_length=20, choices=REPRINT_STATUS_CHOICES, default='requested', db_index=True)
     reason = models.TextField(blank=True, default='')
     requested_by = models.ForeignKey(

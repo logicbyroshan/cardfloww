@@ -29,9 +29,9 @@ def _resolve_home_url(request) -> str:
     role = str(getattr(user, 'role', '') or '').strip().lower()
     panel_prefix = _panel_prefix(request)
 
-    if role in ('client', 'client_staff'):
-        return f'{panel_prefix}/client/dashboard/' if panel_prefix else '/client/dashboard/'
-    if role in ('super_admin', 'pro_user', 'admin_staff'):
+    if PermissionService.is_client_role(user):
+        return f'{panel_prefix}/organisations/dashboard/' if panel_prefix else '/organisations/dashboard/'
+    if role in ('super_admin', 'pro_user', 'operator'):
         return f'{panel_prefix}/' if panel_prefix else '/'
 
     return '/'

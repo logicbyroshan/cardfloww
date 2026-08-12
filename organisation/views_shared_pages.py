@@ -14,14 +14,14 @@ from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 from django.utils.timezone import localtime
 
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 from core.services import IDCardService
 from core.services.permission_service import PermissionService
 from core.utils.htmx import is_htmx
 from core.views.idcard_helpers import _apply_client_staff_row_scope
 
 from .views_decorators import require_client_user, require_client_admin, _get_client_for_request
-from .services import ClientAccessService
+from .services import OrganisationAccessService
 
 
 # =============================================================================
@@ -51,14 +51,14 @@ def client_idcard_group(request):
     
     # Always render the page — show empty if no permissions
     if has_any_list_perm:
-        tables_qs = IDCardTable.objects.filter(
+        tables_qs = Table.objects.filter(
             group__client=client,
             deleted_by_client=False,   # hide client-soft-deleted tables
         ).select_related('group', 'group__client')
 
         # For client_staff with assigned groups: restrict to those groups only
         if PermissionService.is_client_staff(user):
-            tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, tables_qs)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, tables_qs)
 
             ordered_tables = list(tables_qs.order_by('-updated_at'))
             table_ids = [table.id for table in ordered_tables]
@@ -124,7 +124,7 @@ def client_idcard_group(request):
                 total_cards=Count('id_cards')
             ).order_by('-updated_at')
     else:
-        tables = IDCardTable.objects.none()
+        tables = Table.objects.none()
 
     # Get default group for Create with XLSX button
     group = IDCardService.ensure_default_group(client)
@@ -132,7 +132,7 @@ def client_idcard_group(request):
     context = {
         'active_page': 'idcard_group',
         'user_role': user.get_role_display(),
-        'client': client,
+        'client': Organisation,
         'group': group,
         'tables': tables,
     }
@@ -157,10 +157,10 @@ def client_idcard_actions(request, table_id):
         'perm_idcard_pool_list', 'perm_idcard_reprint_list',
         'perm_reprint_request_list', 'perm_confirmed_list',
     ]
-    table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     
     # Verify table access (client owner or assigned assistant)
-    if not ClientAccessService.can_access_table(user, table):
+    if not OrganisationAccessService.can_access_table(user, table):
         return redirect(reverse('client:idcard_group'))
     
     has_list_perm = any(PermissionService.has_permission(user, p) for p in LIST_PERMISSIONS)
@@ -224,7 +224,7 @@ def client_group_settings(request):
 
     if has_perm:
         group = IDCardService.ensure_default_group(client)
-        tables_qs = IDCardTable.objects.filter(
+        tables_qs = Table.objects.filter(
             group=group,
             deleted_by_client=False,   # hide client-soft-deleted tables
         ).annotate(total_cards=Count('id_cards')).order_by('-updated_at')
@@ -233,7 +233,7 @@ def client_group_settings(request):
             tables_qs = tables_qs.filter(name__icontains=search_query)
     else:
         group = None
-        tables_qs = IDCardTable.objects.none()
+        tables_qs = Table.objects.none()
 
     DEFAULT_PER_PAGE = 10
     PER_PAGE_OPTIONS = [5, 10, 25, 50]
@@ -250,7 +250,7 @@ def client_group_settings(request):
     context = {
         'active_page': 'group_settings',
         'user_role': user.get_role_display(),
-        'client': client,
+        'client': Organisation,
         'group': group,
         'tables': page_obj.object_list,
         'page_obj': page_obj,

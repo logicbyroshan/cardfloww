@@ -41,7 +41,7 @@ class Command(BaseCommand):
         self.stdout.write(f'\n=== backfill_assistant_welcome_emails ({mode}) ===')
 
         unsent_qs = Staff.objects.select_related('user').filter(
-            staff_type='client_staff',
+            staff_type='assistant',
             user__role='client_staff',
             user__welcome_email_sent=False,
         )

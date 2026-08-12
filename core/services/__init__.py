@@ -12,7 +12,7 @@
 #   PermissionService  → all permission decisions
 #   WorkflowService    → all IDCard status transitions   (idcards.services_workflow)
 #   ReprintWorkflowService → all ReprintRequest status transitions
-#   IDCardService      → all IDCard / IDCardTable / IDCardGroup mutations
+#   IDCardService      → all IDCard / Table / Table mutations
 #   ImageService       → all file I/O (save, replace, delete images)
 #   ClientService      → all Client mutations (admin side)
 #   StaffService       → all Staff mutations (admin side)
@@ -24,7 +24,7 @@
 # =============================================================================
 
 from .base import ServiceResult, BaseService
-from .client_service import ClientService
+from .client_service import OrganisationCoreService as ClientService
 from .idcard_service import IDCardService
 from .permission_service import PermissionService
 from .activity_service import ActivityService
@@ -46,7 +46,7 @@ __all__ = [
 # Lazy re-exports for workflow services (avoids circular import)
 def __getattr__(name):
     if name == 'WorkflowService':
-        from idcards.services_workflow import WorkflowService
+        from tables.services_workflow import WorkflowService
         return WorkflowService
     if name == 'ReprintWorkflowService':
         from reprintcard.services import ReprintWorkflowService

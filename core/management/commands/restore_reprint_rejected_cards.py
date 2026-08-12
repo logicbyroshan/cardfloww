@@ -22,10 +22,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from client.models import Client
+from organisation.models import Organisation
 from core.models import ActivityLog
 from core.services.activity_service import ActivityService
-from idcards.models import IDCard, IDCardTable
+from tables.models import IDCard, Table
 
 
 REJECT_TO_POOL_DESCRIPTIONS = [
@@ -169,7 +169,7 @@ class Command(BaseCommand):
 
     def _resolve_client(self, client_id, client_name, auto_yes):
         if client_id:
-            client = Client.objects.filter(id=client_id).first()
+            client = Organisation.objects.filter(id=client_id).first()
             if not client:
                 raise CommandError(f'Client with id={client_id} was not found.')
             self.stdout.write(f'Selected client: {client.id} - {client.name}')
@@ -183,7 +183,7 @@ class Command(BaseCommand):
             if not search:
                 raise CommandError('Client name is required.')
 
-        matches = list(Client.objects.filter(name__icontains=search).order_by('name', 'id'))
+        matches = list(Organisation.objects.filter(name__icontains=search).order_by('name', 'id'))
         if not matches:
             raise CommandError(f'No client found matching "{search}".')
         if len(matches) == 1:
@@ -204,7 +204,7 @@ class Command(BaseCommand):
         return client
 
     def _resolve_table(self, client, table_id, table_name, auto_yes):
-        tables_qs = IDCardTable.objects.filter(group__client=client).order_by('name', 'id')
+        tables_qs = Table.objects.filter(group__client=client).order_by('name', 'id')
         if table_id:
             tables_qs = tables_qs.filter(id=table_id)
         if table_name:

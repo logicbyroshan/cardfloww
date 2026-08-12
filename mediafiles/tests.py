@@ -17,11 +17,11 @@ def _create_test_card():
         username='mfcl@test.com', email='mfcl@test.com',
         password='pass1234', role='client',
     )
-    from client.models import Client
-    client = Client.objects.create(user=user, name='Media Client')
-    from idcards.models import IDCardGroup, IDCardTable, IDCard
-    group = IDCardGroup.objects.create(client=client, name='MF Group')
-    table = IDCardTable.objects.create(
+    from organisation.models import Organisation
+    client = Organisation.objects.create(user=user, name='Media Client')
+    from tables.models import Table, IDCard
+    group = Table.objects.create(client=client, name='MF Group')
+    table = Table.objects.create(
         group=group, name='MF Table',
         fields=[
             {'name': 'NAME', 'type': 'text', 'order': 1},

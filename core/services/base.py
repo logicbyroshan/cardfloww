@@ -405,7 +405,7 @@ class BaseService:
         
         Args:
             field_name: The field name to check
-            table_fields: List of field configs from IDCardTable.fields
+            table_fields: List of field configs from Table.fields
             
         Returns:
             True if field_name corresponds to an image field
@@ -436,7 +436,7 @@ class BaseService:
         
         Args:
             data: Dict of field_name -> value
-            table_fields: List of field configs from IDCardTable.fields
+            table_fields: List of field configs from Table.fields
             
         Returns:
             Dict with text fields uppercased, image fields preserved

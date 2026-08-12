@@ -43,23 +43,23 @@ from operators.models import Operator
 from assistants.models import Assistant
 from core.models import Photographer
 from mediafiles.utils import get_card_photo_url
-from idcards.models import IDCard, IDCardTable
-from client.models import Client
+from tables.models import IDCard, Table
+from organisation.models import Organisation
 
 from staff.models import Staff
 
 
 MAX_REPRINT_ACTION_IDS = 200
 
-from client.services import (
-    ClientAccessService,
-    ClientDashboardService,
-    ClientCardService,
-    ClientImageService,
-    ClientStaffService,
+from organisation.services import (
+    OrganisationAccessService,
+    OrganisationDashboardService,
+    OrganisationCardService,
+    OrganisationImageService,
+    OrganisationStaffService,
 )
 from core.services.permission_service import PermissionService
-from idcards.models import IDCardTable, IDCard, IDCardGroup
+from tables.models import Table, IDCard
 from reprintcard.models import ReprintRequest
 from mediafiles.utils import get_card_photo_url, normalize_uploaded_image
 from accounts.rate_limit import rate_limit, _get_client_ip
@@ -117,7 +117,7 @@ def _has_meaningful_field_value(value):
 
 
 def _get_field_value_case_insensitive(field_data, field_name):
-    return ClientCardService._get_field_value_case_insensitive(field_data, field_name)
+    return OrganisationCardService._get_field_value_case_insensitive(field_data, field_name)
 
 
 def _rel_photo_slot_for_name(name):
@@ -251,7 +251,7 @@ def require_mobile_client(view_func=None, allow_public=False):
 
             # 4. Enforce valid roles
             user = request.user
-            valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
+            valid_roles = ('pro_user', 'super_admin', 'operator', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
             if not hasattr(user, 'role') or user.role not in valid_roles:
                 if is_api_request:
                     return JsonResponse({'success': False, 'message': 'Invalid account role.'}, status=403)
@@ -294,13 +294,13 @@ def _mobile_client_edit_locked_response():
 
 def _can_access_card_with_row_scope(user, card):
     """Enforce card ownership plus client_staff row-level scope restrictions."""
-    if not ClientAccessService.can_access_card(user, card):
+    if not OrganisationAccessService.can_access_card(user, card):
         return False
 
     if not PermissionService.is_client_staff(user):
         return True
 
-    scoped = ClientCardService._apply_client_staff_row_scope(
+    scoped = OrganisationCardService._apply_client_staff_row_scope(
         user,
         card.table,
         IDCard.objects.filter(id=card.id, table_id=card.table_id),
@@ -351,7 +351,7 @@ def _filter_cards_for_client_staff_row_scope(user, cards):
 
     allowed_ids = set()
     for table_id, payload in grouped_by_table.items():
-        scoped_qs = ClientCardService._apply_client_staff_row_scope(
+        scoped_qs = OrganisationCardService._apply_client_staff_row_scope(
             user,
             payload['table'],
             IDCard.objects.filter(table_id=table_id, id__in=payload['card_ids']),
@@ -430,17 +430,17 @@ def _client_ctx(user):
     For admin roles (super_admin/admin_staff) that have no client profile,
     returns a scoped fallback client so PWA views can function.
     """
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     if client is None and PermissionService.is_super_admin(user):
         # Super admin can access all clients â€” pick the first active one
-        from client.models import Client
-        client = Client.objects.filter(status='active').first()
+        from organisation.models import Organisation
+        client = Organisation.objects.filter(status='active').first()
     elif client is None and (PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user)):
         # Admin staff/photographer fallback must stay within assigned-client scope
-        from client.models import Client
+        from organisation.models import Organisation
         accessible_ids = PermissionService.get_accessible_client_ids(user)
         if accessible_ids:
-            client = Client.objects.filter(id__in=accessible_ids, status='active').first()
+            client = Organisation.objects.filter(id__in=accessible_ids, status='active').first()
     perms = PermissionService.get_permission_context(user)
     return client, perms
 
@@ -464,10 +464,10 @@ def _can_manage_client_staff_surface(user):
     if PermissionService.is_super_admin(user):
         return True
     if PermissionService.is_admin_staff(user):
-        return PermissionService.has(user, 'perm_manage_client_staff') or PermissionService.has(user, 'perm_idcard_client_list')
+        return PermissionService.has(user, 'perm_manage_assistant') or PermissionService.has(user, 'perm_idcard_client_list')
     # Clients can manage their own staff only if they have the manage_client_staff permission
     if PermissionService.is_client(user):
-        return PermissionService.has(user, 'perm_manage_client_staff') or PermissionService.has(user, 'perm_idcard_client_list')
+        return PermissionService.has(user, 'perm_manage_assistant') or PermissionService.has(user, 'perm_idcard_client_list')
     return False
 
 
@@ -504,7 +504,7 @@ def _admin_accessible_client_ids(user):
                         ).values_list('client_id', flat=True)
                     )
                 else:
-                    result = list(staff.assigned_clients.values_list('id', flat=True))
+                    result = list(staff.assigned_organisations.values_list('id', flat=True))
     else:
         result = []
 
@@ -690,7 +690,7 @@ def _get_table_filter_metadata(table, table_fields, user=None):
     
     # Apply client_staff row-level scope if applicable
     if user and PermissionService.is_client_staff(user):
-        options_qs = ClientCardService._apply_client_staff_row_scope(
+        options_qs = OrganisationCardService._apply_client_staff_row_scope(
             user, table, options_qs, ignore_pool_bypass=True
         )
 
@@ -913,8 +913,8 @@ def _serialize_mobile_admin_staff(staff):
         'is_active': staff.user.is_active,
         'staff_type': staff.get_staff_type_display(),
         'created_at': staff.created_at.strftime('%d %b %Y'),
-        'assigned_client_ids': [client.id for client in staff.assigned_clients.all()],
-        'assigned_client_names': [client.name for client in staff.assigned_clients.all()],
+        'assigned_client_ids': [client.id for client in staff.assigned_organisations.all()],
+        'assigned_client_names': [client.name for client in staff.assigned_organisations.all()],
     }
     for perm in StaffService.PERMISSION_FIELDS:
         row[perm] = bool(getattr(staff, perm, False))
@@ -925,9 +925,9 @@ def _list_mobile_admin_staff(limit=200):
     """Return admin_staff records for mobile list/details, including permission booleans."""
     queryset = (
         Staff.objects
-        .filter(staff_type='admin_staff')
+        .filter(staff_type='operator')
         .select_related('user')
-        .prefetch_related('assigned_clients')
+        .prefetch_related('assigned_organisations')
         .order_by('-created_at')[:limit]
     )
     return [_serialize_mobile_admin_staff(staff) for staff in queryset]
@@ -945,7 +945,7 @@ def mobile_login(request):
     """
     if request.user.is_authenticated:
         user = request.user
-        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
+        valid_roles = ('pro_user', 'super_admin', 'operator', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
         if not hasattr(user, 'role') or user.role not in valid_roles:
             return redirect('/panel/auth/logout/?next=/app/login/')
         # Separate mobile auth flow: do not auto-enter app unless mobile auth checkpoint passed.
@@ -1009,7 +1009,7 @@ def api_mobile_login(request):
             return JsonResponse({'success': False, 'message': result.get('message', 'Invalid credentials.')}, status=400)
 
         user = result.get('user')
-        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
+        valid_roles = ('pro_user', 'super_admin', 'operator', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
         if not user or getattr(user, 'role', '') not in valid_roles:
             return JsonResponse({'success': False, 'message': 'This account cannot access the mobile app.'}, status=403)
 
@@ -1485,7 +1485,7 @@ def home(request):
     _is_admin_staff = PermissionService.is_admin_staff(user)
     accessible_ids = _admin_accessible_client_ids(user) if _is_admin else None
 
-    result = ClientDashboardService.get_dashboard_data(user, client=client)
+    result = OrganisationDashboardService.get_dashboard_data(user, client=client)
 
     def _compute_mobile_counts_fallback(_user, _client_obj):
         """Direct DB fallback counts to keep mobile stats aligned with desktop."""
@@ -1498,9 +1498,9 @@ def home(request):
             'reprint': 0,
         }
 
-        _tables_qs = IDCardTable.objects.filter(group__client=_client_obj, is_active=True)
+        _tables_qs = Table.objects.filter(group__client=_client_obj, is_active=True)
         if PermissionService.is_client_staff(_user):
-            _tables_qs = ClientAccessService.get_scoped_tables_qs(_user, _client_obj, _tables_qs)
+            _tables_qs = OrganisationAccessService.get_scoped_tables_qs(_user, _client_obj, _tables_qs)
 
         _tables = list(_tables_qs.only('id', 'fields'))
         if not _tables:
@@ -1508,7 +1508,7 @@ def home(request):
 
         if PermissionService.is_client_staff(_user):
             for _table in _tables:
-                _scoped_qs = ClientCardService._apply_client_staff_row_scope(
+                _scoped_qs = OrganisationCardService._apply_client_staff_row_scope(
                     _user,
                     _table,
                     IDCard.objects.filter(table_id=_table.id),
@@ -1531,20 +1531,20 @@ def home(request):
                 _counts[_status] += int(_row.get('n', 0) or 0)
         return _counts
 
-    tables = IDCardTable.objects.filter(
+    tables = Table.objects.filter(
         group__client=client, is_active=True,
     ).select_related('group').order_by('group__name', 'name')
 
     # Restrict client_staff to their assigned groups
     if PermissionService.is_client_staff(user):
-        tables = ClientAccessService.get_scoped_tables_qs(user, client, tables)
+        tables = OrganisationAccessService.get_scoped_tables_qs(user, client, tables)
 
     tables_list = list(tables)  # evaluate once â€” avoids 3 separate DB hits
     first_table = tables_list[0] if tables_list else None
 
     ctx = {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'first_table_id': first_table.id if first_table else None,
         'tables': tables_list,
         'table_count': len(tables_list),
@@ -1553,10 +1553,10 @@ def home(request):
 
     # Admin-specific counts for dashboard management section.
     if _is_admin:
-        from client.models import Client
+        from organisation.models import Organisation
         # from staff.models import Staff (removed)
-        scoped_clients = Client.objects.filter(status='active')
-        scoped_tables = IDCardTable.objects.filter(is_active=True)
+        scoped_clients = Organisation.objects.filter(status='active')
+        scoped_tables = Table.objects.filter(is_active=True)
         scoped_cards = IDCard.objects.all()
         scoped_staff = Staff.objects.all()
         if accessible_ids is not None:
@@ -1565,7 +1565,7 @@ def home(request):
             scoped_cards = scoped_cards.filter(table__group__client_id__in=accessible_ids)
             scoped_staff = scoped_staff.filter(
                 Q(client_id__in=accessible_ids) |
-                Q(staff_type='admin_staff', assigned_clients__id__in=accessible_ids) |
+                Q(staff_type='operator', assigned_clients__id__in=accessible_ids) |
                 Q(staff_type='photographer', photographer_assignments__client_id__in=accessible_ids)
             ).distinct()
 
@@ -1578,7 +1578,7 @@ def home(request):
         ctx.update(_admin_counts)
 
     # â”€â”€ Card status counts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # For client/client_staff: use ClientDashboardService result (already computed).
+    # For client/client_staff: use OrganisationDashboardService result (already computed).
     if _is_admin:
         _gcards = IDCard.objects.all()
         if accessible_ids is not None:
@@ -1651,8 +1651,8 @@ def home(request):
         _cards_scope = _cards_scope.filter(table__group__client_id__in=accessible_ids)
     # For client_staff: restrict activity to their assigned groups only
     if PermissionService.is_client_staff(user):
-        client_ctx = ClientAccessService.get_client_for_user(user)
-        scoped_tables = ClientAccessService.get_scoped_tables_qs(user, client_ctx)
+        client_ctx = OrganisationAccessService.get_organisation_for_user(user)
+        scoped_tables = OrganisationAccessService.get_scoped_tables_qs(user, client_ctx)
         _cards_scope = _cards_scope.filter(table_id__in=scoped_tables.values_list('id', flat=True))
     _recent_acts = []
     for _card in _cards_scope.select_related('table').order_by('-updated_at')[:10]:
@@ -1674,9 +1674,9 @@ def home(request):
     recent_client_updates = []
     try:
         if _is_admin:
-            from client.models import Client as ClientModel
+            from organisation.models import Organisation as OrganisationModel
 
-            base_qs = ClientModel.objects.all()
+            base_qs = OrganisationModel.objects.all()
             clients_qs = (
                 PermissionService.get_accessible_clients(user, base_qs)
                 .annotate(
@@ -1699,8 +1699,8 @@ def home(request):
             if PermissionService.is_client_staff(user):
                 # For staff, we must iterate clients/tables because row-scope is table-specific.
                 # However, for the dashboard top-level, we can at least filter by assigned tables.
-                client_ctx = ClientAccessService.get_client_for_user(user)
-                scoped_tables = ClientAccessService.get_scoped_tables_qs(user, client_ctx)
+                client_ctx = OrganisationAccessService.get_organisation_for_user(user)
+                scoped_tables = OrganisationAccessService.get_scoped_tables_qs(user, client_ctx)
                 _cc_qs = _cc_qs.filter(table_id__in=scoped_tables.values_list('id', flat=True))
 
             _cc_raw = _cc_qs.values('table__group__client_id', 'status').annotate(n=Count('id'))
@@ -1710,7 +1710,7 @@ def home(request):
 
             # 1 query: all active tables for these clients
             _all_tbls = list(
-                IDCardTable.objects
+                Table.objects
                 .filter(group__client_id__in=client_ids, is_active=True)
                 .select_related('group')
                 .order_by('group__client_id', 'group__name', 'name')
@@ -1757,9 +1757,9 @@ def home(request):
                 })
         else:
             # Client/client_staff: group-first rows with expandable tables.
-            _tables_qs = IDCardTable.objects.filter(group__client=client, is_active=True).select_related('group')
+            _tables_qs = Table.objects.filter(group__client=client, is_active=True).select_related('group')
             if PermissionService.is_client_staff(user):
-                _tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, _tables_qs)
+                _tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, _tables_qs)
 
             _tables = list(_tables_qs.order_by('group__name', 'name')[:80])
             _table_ids = [t.id for t in _tables]
@@ -1767,7 +1767,7 @@ def home(request):
 
             _group_map = {
                 g.id: g
-                for g in IDCardGroup.objects.filter(id__in=_group_ids).only('id', 'name')
+                for g in Table.objects.filter(id__in=_group_ids).only('id', 'name')
             }
 
             _gc_map = {}
@@ -1780,7 +1780,7 @@ def home(request):
                     # We have to do this carefully since _apply_client_staff_row_scope is table-specific.
                     # For performance on dashboard, we use a slightly more generic approach if possible,
                     # but here we can just apply it to the whole queryset since all tables belong to the same staff.
-                    _cards_qs = ClientCardService._apply_client_staff_row_scope(user, None, _cards_qs)
+                    _cards_qs = OrganisationCardService._apply_client_staff_row_scope(user, None, _cards_qs)
 
                 _gc_raw = _cards_qs.values('table__group_id', 'status').annotate(n=Count('id'))
                 for _row in _gc_raw:
@@ -1834,9 +1834,9 @@ def home(request):
     reprint_confirmed_total = 0
     try:
         if _is_admin:
-            from client.models import Client as ClientModel
+            from organisation.models import Organisation as OrganisationModel
 
-            base_qs = ClientModel.objects.all()
+            base_qs = OrganisationModel.objects.all()
             clients_qs = (
                 PermissionService.get_accessible_clients(user, base_qs)
                 .annotate(
@@ -1878,7 +1878,7 @@ def home(request):
 
             _table_ids = list(_tr_map.keys())
             _tables = list(
-                IDCardTable.objects
+                Table.objects
                 .filter(id__in=_table_ids, is_active=True)
                 .select_related('group')
                 .order_by('group__client_id', 'group__name', 'name')
@@ -1917,9 +1917,9 @@ def home(request):
                     'allow_client_jump': True,
                 })
         else:
-            _tables_qs = IDCardTable.objects.filter(group__client=client, is_active=True).select_related('group')
+            _tables_qs = Table.objects.filter(group__client=client, is_active=True).select_related('group')
             if PermissionService.is_client_staff(user):
-                _tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, _tables_qs)
+                _tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, _tables_qs)
 
             _tables = list(_tables_qs.order_by('group__name', 'name')[:80])
             _table_ids = [t.id for t in _tables]
@@ -1957,7 +1957,7 @@ def home(request):
 
             _group_map = {
                 g.id: g
-                for g in IDCardGroup.objects.filter(id__in=list(_tables_by_group.keys())).only('id', 'name')
+                for g in Table.objects.filter(id__in=list(_tables_by_group.keys())).only('id', 'name')
             }
             _ordered_group_ids = sorted(
                 list(_tables_by_group.keys()),
@@ -1968,7 +1968,7 @@ def home(request):
                 _grp = _group_map.get(gid)
                 _gt = _group_totals.get(gid, {'requested': 0, 'confirmed': 0})
                 recent_reprint_updates.append({
-                    'client_id': client.id,
+                    'client_id': Organisation.id,
                     'client_name': _grp.name if _grp else f'Group #{gid}',
                     'group_id': gid,
                     'requested': _gt.get('requested', 0),
@@ -1996,14 +1996,14 @@ def clients_list(request):
     if not PermissionService.is_any_admin(user):
         return redirect('mobile_app:home')
 
-    from client.models import Client
-    base_qs = Client.objects.select_related('user').all()
+    from organisation.models import Organisation
+    base_qs = Organisation.objects.select_related('user').all()
 
     # Admin staff: restrict to assigned clients only
     if PermissionService.is_admin_staff(user):
         staff = getattr(user, 'staff_profile', None)
         if staff:
-            assigned_ids = list(staff.assigned_clients.values_list('id', flat=True))
+            assigned_ids = list(staff.assigned_organisations.values_list('id', flat=True))
             base_qs = base_qs.filter(id__in=assigned_ids)
 
     clients = base_qs.annotate(
@@ -2061,10 +2061,10 @@ def client_groups(request, client_id):
     if not PermissionService.can_access_client(user, client_id):
         return redirect('mobile_app:home')
 
-    from client.models import Client
+    from organisation.models import Organisation
     client = get_object_or_404(Client, id=client_id)
 
-    groups = IDCardGroup.objects.filter(client=client).annotate(
+    groups = Table.objects.filter(client=client).annotate(
         table_count=Count('tables'),
         total_cards=Count('tables__id_cards'),
         pending_cards=Count('tables__id_cards', filter=Q(tables__id_cards__status='pending')),
@@ -2073,7 +2073,7 @@ def client_groups(request, client_id):
         download_cards=Count('tables__id_cards', filter=Q(tables__id_cards__status='download')),
     ).order_by('name')
 
-    tables = IDCardTable.objects.filter(group__client=client).select_related('group').annotate(
+    tables = Table.objects.filter(group__client=client).select_related('group').annotate(
         total_cards=Count('id_cards'),
         pending_cards=Count('id_cards', filter=Q(id_cards__status='pending')),
         verified_cards=Count('id_cards', filter=Q(id_cards__status='verified')),
@@ -2083,8 +2083,8 @@ def client_groups(request, client_id):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
-        'client_name': client.name,
+        'client': Organisation,
+        'client_name': Organisation.name,
         'groups': groups,
         'tables': tables,
         'back_to_clients': True,
@@ -2111,7 +2111,7 @@ def table_picker(request, status):
     # Admin roles: show tables across ALL accessible clients so counts
     # match the global aggregates displayed on the home dashboard.
     if PermissionService.is_any_admin(user):
-        tables = IDCardTable.objects.filter(
+        tables = Table.objects.filter(
             is_active=True,
         ).select_related('group__client').annotate(
             status_count=Count('id_cards', filter=Q(id_cards__status=status)),
@@ -2122,7 +2122,7 @@ def table_picker(request, status):
             assigned_client_ids = PermissionService.get_accessible_client_ids(user)
             tables = tables.filter(group__client_id__in=assigned_client_ids) if assigned_client_ids else tables.none()
     else:
-        tables = IDCardTable.objects.filter(
+        tables = Table.objects.filter(
             group__client=client, is_active=True,
         ).select_related('group').annotate(
             status_count=Count('id_cards', filter=Q(id_cards__status=status)),
@@ -2130,7 +2130,7 @@ def table_picker(request, status):
 
     # Restrict client_staff to their assigned groups
     if PermissionService.is_client_staff(user):
-        tables = ClientAccessService.get_scoped_tables_qs(user, client, tables)
+        tables = OrganisationAccessService.get_scoped_tables_qs(user, client, tables)
 
     tables_list = list(tables)  # evaluate once â€” avoids 2 extra DB hits
     if len(tables_list) == 1:
@@ -2138,7 +2138,7 @@ def table_picker(request, status):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'tables': tables_list,
         'status': status,
         'status_display': status.replace('_', ' ').title(),
@@ -2154,13 +2154,13 @@ def card_list(request, table_id, status):
     if not client and not PermissionService.is_any_admin(user):
         return redirect('/app/login/')
 
-    table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     if not PermissionService.can_access_client(user, table.group.client_id):
         return redirect('mobile_app:home')
 
     if PermissionService.is_client_staff(user):
         staff = getattr(user, 'staff_profile', None)
-        if not staff or not ClientAccessService.can_access_table(user, table):
+        if not staff or not OrganisationAccessService.can_access_table(user, table):
             return redirect('mobile_app:home')
 
     status_perm = PermissionService.STATUS_LIST_PERM_MAP.get(status)
@@ -2194,7 +2194,7 @@ def card_list(request, table_id, status):
         ):
             section_field_name = _fname
 
-    # Keep initial server-rendered ordering aligned with api_cards()/ClientCardService.get_cards.
+    # Keep initial server-rendered ordering aligned with api_cards()/OrganisationCardService.get_cards.
     if status == 'download':
         cards_qs = IDCard.objects.filter(table=table, status=status).order_by('-downloaded_at', '-id')
     elif status == 'pool':
@@ -2242,8 +2242,8 @@ def card_list(request, table_id, status):
     if PermissionService.is_client_staff(user):
         staff = getattr(user, 'staff_profile', None)
         if staff:
-            allowed_classes, allowed_sections = ClientCardService._table_scope_filters(staff, table)
-        cards_qs = ClientCardService._apply_client_staff_row_scope(user, table, cards_qs)
+            allowed_classes, allowed_sections = OrganisationCardService._table_scope_filters(staff, table)
+        cards_qs = OrganisationCardService._apply_client_staff_row_scope(user, table, cards_qs)
 
     if selected_class:
         selected_class_norm = normalize_class_value(selected_class)
@@ -2302,7 +2302,7 @@ def card_list(request, table_id, status):
             cards_qs = cards_qs.filter(id__in=matching_photo_ids)
 
     if selected_sort in ('name-asc', 'name-desc'):
-        name_field_name = ClientCardService._get_name_field(table)
+        name_field_name = OrganisationCardService._get_name_field(table)
 
         if name_field_name:
             cards_qs = cards_qs.annotate(_name_sort=Cast(KeyTextTransform(name_field_name, 'field_data'), CharField()))
@@ -2523,7 +2523,7 @@ def card_list(request, table_id, status):
         return ordered
 
     cards = []
-    display_name_field = ClientCardService._get_name_field(table)
+    display_name_field = OrganisationCardService._get_name_field(table)
     for idx, card in enumerate(cards_batch):
         fd = card.field_data or {}
         name = ''
@@ -2602,7 +2602,7 @@ def card_list(request, table_id, status):
     tab_counts = {'pending': 0, 'verified': 0, 'approved': 0, 'download': 0, 'pool': 0}
     _tab_counts_qs = IDCard.objects.filter(table=table)
     if PermissionService.is_client_staff(user):
-        _tab_counts_qs = ClientCardService._apply_client_staff_row_scope(user, table, _tab_counts_qs)
+        _tab_counts_qs = OrganisationCardService._apply_client_staff_row_scope(user, table, _tab_counts_qs)
     
     for _row in _tab_counts_qs.values('status').annotate(n=Count('id')):
         if _row['status'] in tab_counts:
@@ -2708,8 +2708,8 @@ def reprint_lists(request, client_id):
     if not PermissionService.can_access_client(user, client_id):
         return redirect('mobile_app:home')
 
-    from client.models import Client as ClientModel
-    target_client = get_object_or_404(ClientModel, id=client_id)
+    from organisation.models import Organisation as OrganisationModel
+    target_client = get_object_or_404(OrganisationModel, id=client_id)
 
     active_step = (request.GET.get('step') or 'request_list').strip().lower()
     if active_step not in ('request_list', 'confirmed'):
@@ -2720,14 +2720,14 @@ def reprint_lists(request, client_id):
         active_step = 'request_list'
 
     tables_qs = (
-        IDCardTable.objects
+        Table.objects
         .filter(group__client_id=client_id, is_active=True)
         .select_related('group', 'group__client')
         .order_by('group__name', 'name')
     )
 
     if PermissionService.is_client_staff(user):
-        tables_qs = ClientAccessService.get_scoped_tables_qs(user, target_client, tables_qs)
+        tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, target_client, tables_qs)
 
     tables = list(tables_qs)
     table_ids = [t.id for t in tables]
@@ -2796,7 +2796,7 @@ def reprint_table(request, table_id):
     if not (can_request_list or can_confirmed_list):
         return redirect('mobile_app:home')
 
-    table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     if not PermissionService.can_access_client(user, table.group.client_id):
         return redirect('mobile_app:home')
 
@@ -2896,9 +2896,9 @@ def reprint_table(request, table_id):
         table=table, status__in=['requested', 'confirmed'], card__status='download'
     )
     if PermissionService.is_client_staff(user):
-        # We use ClientCardService row scope logic on the card relation
+        # We use OrganisationCardService row scope logic on the card relation
         _counts_qs = _counts_qs.filter(
-            card_id__in=ClientCardService._apply_client_staff_row_scope(
+            card_id__in=OrganisationCardService._apply_client_staff_row_scope(
                 user, table, IDCard.objects.filter(table=table)
             ).values_list('id', flat=True)
         )
@@ -3060,7 +3060,7 @@ def camera_capture(request, table_id, card_id=None):
     if not client:
         return redirect('/app/login/')
 
-    table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     if not PermissionService.can_access_client(user, table.group.client_id):
         return redirect('mobile_app:home')
 
@@ -3077,7 +3077,7 @@ def camera_capture(request, table_id, card_id=None):
     if card_id is None:
         cards_qs = IDCard.objects.filter(table=table).only('id', 'field_data').order_by('id')
         if PermissionService.is_client_staff(user):
-            cards_qs = ClientCardService._apply_client_staff_row_scope(user, table, cards_qs)
+            cards_qs = OrganisationCardService._apply_client_staff_row_scope(user, table, cards_qs)
         cards_qs = cards_qs[:300]
         for card in cards_qs:
             fd = card.field_data or {}
@@ -3086,7 +3086,7 @@ def camera_capture(request, table_id, card_id=None):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'table': table,
         'table_id': table.id,
         'card_id': card_id or 0,
@@ -3128,7 +3128,7 @@ def notifications(request):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'notifications': notifications_payload,
         **perms,
     })
@@ -3148,12 +3148,12 @@ def profile(request):
         'user_phone': getattr(user, 'phone', '') or '',
         'user_role': {
             'super_admin': 'Super Admin',
-            'admin_staff': 'Admin Staff',
+            'operator': 'Admin Staff',
             'client': 'Client Admin',
             'client_staff': 'Assistant'  # compat,
         }.get(getattr(user, 'role', ''), 'User'),
-        'client': client,
-        'client_name': client.name if client else '',
+        'client': Organisation,
+        'client_name': Organisation.name if client else '',
         **perms,
     })
 
@@ -3168,7 +3168,7 @@ def permissions_center(request):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         **perms,
     })
 
@@ -3190,7 +3190,7 @@ def api_card_status(request, card_id):
     apply_class_change = _truthy(data.get('apply_class_change'))
     updated_class = data.get('updated_class', '')
 
-    result = ClientCardService.change_card_status(
+    result = OrganisationCardService.change_card_status(
         request.user, card_id, new_status, request=request,
         apply_class_change=apply_class_change, updated_class=updated_class
     )
@@ -3227,7 +3227,7 @@ def api_bulk_status(request, table_id):
     apply_class_change = _truthy(data.get('apply_class_change'))
     pool_retrieve_class_updates = data.get('pool_retrieve_class_updates') or {}
 
-    result = ClientCardService.bulk_change_status(
+    result = OrganisationCardService.bulk_change_status(
         request.user, table_id, card_ids, new_status, request=request,
         apply_class_change=apply_class_change,
         pool_retrieve_class_updates=pool_retrieve_class_updates
@@ -3427,7 +3427,7 @@ def api_upload_photo(request, table_id):
 @require_http_methods(["GET"])
 def api_card_detail(request, card_id):
     """Get card detail JSON."""
-    result = ClientCardService.get_card_detail(request.user, card_id)
+    result = OrganisationCardService.get_card_detail(request.user, card_id)
     if result.success:
         return JsonResponse({'success': True, 'data': result.data})
     msg = (result.message or '').lower()
@@ -3471,7 +3471,7 @@ def api_cards(request, table_id):
     offset = (page - 1) * per_page
 
     try:
-        result = ClientCardService.get_cards(
+        result = OrganisationCardService.get_cards(
             request.user, table_id,
             status_filter, offset, per_page,
             search or None,
@@ -3505,8 +3505,8 @@ def api_all_card_ids(request, table_id):
     if status_filter not in valid_statuses:
         return JsonResponse({'success': False, 'message': 'Invalid status'}, status=400)
 
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(request.user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(request.user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
 
     perm_map = {
@@ -3546,7 +3546,7 @@ def api_all_card_ids(request, table_id):
     else:
         cards_qs = IDCard.objects.filter(table=table, status=status_filter).order_by('-created_at', '-id')
 
-    cards_qs = ClientCardService._apply_client_staff_row_scope(request.user, table, cards_qs)
+    cards_qs = OrganisationCardService._apply_client_staff_row_scope(request.user, table, cards_qs)
 
     if search:
         cards_qs = IDCardService._apply_search_filter(cards_qs, search, table=table)
@@ -3699,8 +3699,8 @@ def api_filter_options(request, table_id):
     if status_filter not in valid_statuses:
         return JsonResponse({'success': False, 'message': 'Invalid status'}, status=400)
 
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(request.user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(request.user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
 
     perm_map = {
@@ -3746,9 +3746,9 @@ def api_filter_options(request, table_id):
         cards_qs = cards_qs.filter(status=status_filter)
 
     if status_filter != 'pool' and PermissionService.is_client_staff(request.user):
-        cards_qs = ClientCardService._apply_client_staff_row_scope(request.user, table, cards_qs, status_filter=status_filter, ignore_pool_bypass=True)
+        cards_qs = OrganisationCardService._apply_client_staff_row_scope(request.user, table, cards_qs, status_filter=status_filter, ignore_pool_bypass=True)
     else:
-        cards_qs = ClientCardService._apply_client_staff_row_scope(request.user, table, cards_qs, status_filter=status_filter)
+        cards_qs = OrganisationCardService._apply_client_staff_row_scope(request.user, table, cards_qs, status_filter=status_filter)
 
     class_field_name, section_field_name, course_field_name, branch_field_name = (
         IDCardService._get_class_section_course_branch_field_names(table)
@@ -3937,8 +3937,8 @@ def api_filter_options(request, table_id):
 def api_card_add(request, table_id):
     """Add a new card to a table."""
     try:
-        table = get_object_or_404(IDCardTable, id=table_id, is_active=True)
-        if not ClientAccessService.can_access_table(request.user, table):
+        table = get_object_or_404(Table, id=table_id, is_active=True)
+        if not OrganisationAccessService.can_access_table(request.user, table):
             return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
         if not PermissionService.has(request.user, 'perm_idcard_add'):
             return JsonResponse({'success': False, 'message': 'No permission to add cards'}, status=403)
@@ -4011,8 +4011,8 @@ def api_card_add(request, table_id):
 def api_table_download_pdf(request, table_id):
     """Download PDF for all cards in a specific table/status (Mobile Wrapper)."""
     user = request.user
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     
     status = request.GET.get('status', 'pending')
@@ -4212,12 +4212,12 @@ def api_client_groups_detail(request, client_id):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.can_access_client(request.user, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    from client.models import Client
-    from idcards.models import IDCardGroup, IDCardTable
+    from organisation.models import Organisation
+    from tables.models import Table
     get_object_or_404(Client, id=client_id)
-    groups = IDCardGroup.objects.filter(client_id=client_id).order_by('name')
+    groups = Table.objects.filter(client_id=client_id).order_by('name')
     tables_qs = (
-        IDCardTable.objects
+        Table.objects
         .filter(group__client_id=client_id, is_active=True)
         .select_related('group')
         .annotate(
@@ -4289,15 +4289,15 @@ def api_client_groups_detail(request, client_id):
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_group_create(request, client_id):
-    """Create a new IDCardGroup for a client."""
+    """Create a new Table for a client."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.can_access_client(request.user, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_add'):
         return JsonResponse({'success': False, 'message': 'Settings add permission required'}, status=403)
-    from client.models import Client
-    from idcards.models import IDCardGroup
+    from organisation.models import Organisation
+    from tables.models import Table
     target_client = get_object_or_404(Client, id=client_id)
     try:
         data = json.loads(request.body or '{}')
@@ -4306,23 +4306,23 @@ def api_group_create(request, client_id):
     name = str(data.get('name', '') or '').strip()
     if not name:
         return JsonResponse({'success': False, 'message': 'Group name is required'}, status=400)
-    if IDCardGroup.objects.filter(client=target_client, name__iexact=name).exists():
+    if Table.objects.filter(client=target_client, name__iexact=name).exists():
         return JsonResponse({'success': False, 'message': f'A group named "{name}" already exists'}, status=400)
-    group = IDCardGroup.objects.create(client=target_client, name=name)
-    ActivityService.log('group_create', f'Group "{name}" created', request=request, target_model='IDCardGroup', target_id=group.pk, target_name=name)
+    group = Table.objects.create(client=target_client, name=name)
+    ActivityService.log('group_create', f'Group "{name}" created', request=request, target_model='Table', target_id=group.pk, target_name=name)
     return JsonResponse({'success': True, 'message': f'Group "{name}" created', 'group': {'id': group.id, 'name': group.name, 'table_count': 0, 'total_cards': 0, 'tables': []}})
 
 
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_group_update(request, group_id):
-    """Rename an IDCardGroup."""
+    """Rename an Table."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_edit'):
         return JsonResponse({'success': False, 'message': 'Settings edit permission required'}, status=403)
-    from idcards.models import IDCardGroup
-    group = get_object_or_404(IDCardGroup, id=group_id)
+    from tables.models import Table
+    group = get_object_or_404(Table, id=group_id)
     if not PermissionService.can_access_client(request.user, group.client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     try:
@@ -4332,46 +4332,46 @@ def api_group_update(request, group_id):
     name = str(data.get('name', '') or '').strip()
     if not name:
         return JsonResponse({'success': False, 'message': 'Group name is required'}, status=400)
-    if IDCardGroup.objects.filter(client_id=group.client_id, name__iexact=name).exclude(id=group_id).exists():
+    if Table.objects.filter(client_id=group.client_id, name__iexact=name).exclude(id=group_id).exists():
         return JsonResponse({'success': False, 'message': f'A group named "{name}" already exists'}, status=400)
     old_name = group.name
     group.name = name
     group.save(update_fields=['name'])
-    ActivityService.log('group_update', f'Group "{old_name}" renamed to "{name}"', request=request, target_model='IDCardGroup', target_id=group.pk, target_name=name)
+    ActivityService.log('group_update', f'Group "{old_name}" renamed to "{name}"', request=request, target_model='Table', target_id=group.pk, target_name=name)
     return JsonResponse({'success': True, 'message': f'Group renamed to "{name}"', 'group': {'id': group.id, 'name': group.name}})
 
 
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_group_delete(request, group_id):
-    """Delete an IDCardGroup — only if it has no active tables."""
+    """Delete an Table — only if it has no active tables."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_delete'):
         return JsonResponse({'success': False, 'message': 'Settings delete permission required'}, status=403)
-    from idcards.models import IDCardGroup, IDCardTable
-    group = get_object_or_404(IDCardGroup, id=group_id)
+    from tables.models import Table
+    group = get_object_or_404(Table, id=group_id)
     if not PermissionService.can_access_client(request.user, group.client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    active_table_count = IDCardTable.objects.filter(group=group, is_active=True).count()
+    active_table_count = Table.objects.filter(group=group, is_active=True).count()
     if active_table_count > 0:
         return JsonResponse({'success': False, 'message': f'Cannot delete group with {active_table_count} active table(s). Delete or move all tables first.'}, status=400)
     name = group.name
     group.delete()
-    ActivityService.log('group_delete', f'Group "{name}" deleted', request=request, target_model='IDCardGroup', target_name=name)
+    ActivityService.log('group_delete', f'Group "{name}" deleted', request=request, target_model='Table', target_name=name)
     return JsonResponse({'success': True, 'message': f'Group "{name}" deleted'})
 
 
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_table_create(request, group_id):
-    """Create a new IDCardTable under a group."""
+    """Create a new Table under a group."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_add'):
         return JsonResponse({'success': False, 'message': 'Settings add permission required'}, status=403)
-    from idcards.models import IDCardGroup, IDCardTable
-    group = get_object_or_404(IDCardGroup, id=group_id)
+    from tables.models import Table
+    group = get_object_or_404(Table, id=group_id)
     if not PermissionService.can_access_client(request.user, group.client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     try:
@@ -4381,10 +4381,10 @@ def api_table_create(request, group_id):
     name = str(data.get('name', '') or '').strip()
     if not name:
         return JsonResponse({'success': False, 'message': 'Table name is required'}, status=400)
-    if IDCardTable.objects.filter(group=group, name__iexact=name, is_active=True).exists():
+    if Table.objects.filter(group=group, name__iexact=name, is_active=True).exists():
         return JsonResponse({'success': False, 'message': f'A table named "{name}" already exists in this group'}, status=400)
-    table = IDCardTable.objects.create(group=group, name=name, fields=[])
-    ActivityService.log('table_create', f'Table "{name}" created in group "{group.name}"', request=request, target_model='IDCardTable', target_id=table.pk, target_name=name)
+    table = Table.objects.create(group=group, name=name, fields=[])
+    ActivityService.log('table_create', f'Table "{name}" created in group "{group.name}"', request=request, target_model='Table', target_id=table.pk, target_name=name)
     return JsonResponse({
         'success': True, 'message': f'Table "{name}" created',
         'table': {
@@ -4399,13 +4399,13 @@ def api_table_create(request, group_id):
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_table_rename(request, table_id):
-    """Rename an IDCardTable."""
+    """Rename an Table."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_edit'):
         return JsonResponse({'success': False, 'message': 'Settings edit permission required'}, status=403)
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(request.user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(request.user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     try:
         data = json.loads(request.body or '{}')
@@ -4414,25 +4414,25 @@ def api_table_rename(request, table_id):
     name = str(data.get('name', '') or '').strip()
     if not name:
         return JsonResponse({'success': False, 'message': 'Table name is required'}, status=400)
-    if IDCardTable.objects.filter(group=table.group, name__iexact=name, is_active=True).exclude(id=table_id).exists():
+    if Table.objects.filter(group=table.group, name__iexact=name, is_active=True).exclude(id=table_id).exists():
         return JsonResponse({'success': False, 'message': f'A table named "{name}" already exists in this group'}, status=400)
     old_name = table.name
     table.name = name
     table.save(update_fields=['name'])
-    ActivityService.log('table_update', f'Table "{old_name}" renamed to "{name}"', request=request, target_model='IDCardTable', target_id=table.pk, target_name=name)
+    ActivityService.log('table_update', f'Table "{old_name}" renamed to "{name}"', request=request, target_model='Table', target_id=table.pk, target_name=name)
     return JsonResponse({'success': True, 'message': f'Table renamed to "{name}"', 'table': {'id': table.id, 'name': table.name}})
 
 
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_table_delete(request, table_id):
-    """Soft-delete (deactivate) an IDCardTable, or permanently delete if empty."""
+    """Soft-delete (deactivate) an Table, or permanently delete if empty."""
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not PermissionService.has(request.user, 'perm_idcard_setting_delete'):
         return JsonResponse({'success': False, 'message': 'Settings delete permission required'}, status=403)
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(request.user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(request.user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     card_count = IDCard.objects.filter(table=table).count()
     if card_count > 0:
@@ -4440,7 +4440,7 @@ def api_table_delete(request, table_id):
     name = table.name
     group_name = table.group.name if table.group else ''
     table.delete()
-    ActivityService.log('table_delete', f'Table "{name}" deleted from group "{group_name}"', request=request, target_model='IDCardTable', target_name=name)
+    ActivityService.log('table_delete', f'Table "{name}" deleted from group "{group_name}"', request=request, target_model='Table', target_name=name)
     return JsonResponse({'success': True, 'message': f'Table "{name}" deleted'})
 
 
@@ -4448,8 +4448,8 @@ def api_table_delete(request, table_id):
 @require_http_methods(["GET"])
 def api_table_fields_get(request, table_id):
     """Return field definitions for a table."""
-    table = get_object_or_404(IDCardTable, id=table_id)
-    if not ClientAccessService.can_access_table(request.user, table):
+    table = get_object_or_404(Table, id=table_id)
+    if not OrganisationAccessService.can_access_table(request.user, table):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     return JsonResponse({
         'success': True,
@@ -4464,12 +4464,12 @@ def api_table_fields_get(request, table_id):
 @require_mobile_client
 @require_http_methods(["POST"])
 def api_table_update_fields(request, table_id):
-    """Update the column definitions (fields) of an IDCardTable.
+    """Update the column definitions (fields) of an Table.
     Accepts JSON body: { "fields": [{"name": "NAME", "type": "text", "order": 0, "mandatory": false}, ...] }
     """
     try:
-        table = get_object_or_404(IDCardTable, id=table_id)
-        if not ClientAccessService.can_access_table(request.user, table):
+        table = get_object_or_404(Table, id=table_id)
+        if not OrganisationAccessService.can_access_table(request.user, table):
             return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
         # Table schema changes must follow settings permission, not card-value edit permission.
         if not PermissionService.has(request.user, 'perm_idcard_setting_edit'):
@@ -4595,7 +4595,7 @@ def card_detail(request, card_id):
     if not client:
         return redirect('/app/login/')
 
-    result = ClientCardService.get_card_detail(user, card_id)
+    result = OrganisationCardService.get_card_detail(user, card_id)
     if not result.success:
         return redirect('mobile_app:home')
 
@@ -4603,7 +4603,7 @@ def card_detail(request, card_id):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'card': card_data,
         'card_json': json.dumps(card_data, default=str),
         **perms,
@@ -4629,7 +4629,7 @@ def staff_manage(request):
     # For client role, use the service; super_admin sees admin staff only.
     staff_list = []
     if PermissionService.is_client(user):
-        result = ClientStaffService.list_staff(user)
+        result = OrganisationStaffService.list_staff(user)
         if result.success:
             staff_list = result.data.get('staff', [])
     elif PermissionService.is_super_admin(user):
@@ -4637,11 +4637,11 @@ def staff_manage(request):
         staff_list = _list_mobile_admin_staff(limit=200)
 
     # Get groups for assignment dropdown
-    groups = IDCardGroup.objects.filter(client=client).values('id', 'name')
+    groups = Table.objects.filter(client=client).values('id', 'name')
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'staff_list': staff_list,
         'staff_json': staff_list,
         'groups': list(groups),
@@ -4658,15 +4658,15 @@ def groups_overview(request):
     if not client:
         return _mobile_no_client_redirect()
 
-    tables = IDCardTable.objects.filter(group__client=client).select_related('group')
+    tables = Table.objects.filter(group__client=client).select_related('group')
 
     if PermissionService.is_client_staff(user):
-        tables = ClientAccessService.get_scoped_tables_qs(user, client, tables)
+        tables = OrganisationAccessService.get_scoped_tables_qs(user, client, tables)
 
     scoped_table_ids = tables.values('id')
     scoped_group_ids = tables.values('group_id')
 
-    groups = IDCardGroup.objects.filter(id__in=scoped_group_ids).annotate(
+    groups = Table.objects.filter(id__in=scoped_group_ids).annotate(
         table_count=Count('tables', filter=Q(tables__id__in=scoped_table_ids), distinct=True),
         total_cards=Count('tables__id_cards', filter=Q(tables__id__in=scoped_table_ids)),
         pending_cards=Count('tables__id_cards', filter=Q(tables__id__in=scoped_table_ids, tables__id_cards__status='pending')),
@@ -4685,7 +4685,7 @@ def groups_overview(request):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'groups': groups,
         'tables': tables,
         **perms,
@@ -4703,21 +4703,21 @@ def settings_page(request):
     ctx = {
         'user_name': user.get_full_name() or user.username,
         'user_email': user.email or '',
-        'client': client,
+        'client': Organisation,
         **perms,
     }
 
     # Counts (client-scoped)
-    ctx['table_count'] = IDCardTable.objects.filter(group__client=client, is_active=True).count()
-    ctx['group_count'] = IDCardGroup.objects.filter(client=client).count()
+    ctx['table_count'] = Table.objects.filter(group__client=client, is_active=True).count()
+    ctx['group_count'] = Table.objects.filter(client=client).count()
     ctx['total_cards'] = IDCard.objects.filter(table__group__client=client).count()
 
     # Admin-specific counts
     if PermissionService.is_any_admin(user):
-        from client.models import Client
+        from organisation.models import Organisation
         accessible_ids = _admin_accessible_client_ids(user)
-        scoped_clients = Client.objects.filter(status='active')
-        scoped_tables = IDCardTable.objects.filter(is_active=True)
+        scoped_clients = Organisation.objects.filter(status='active')
+        scoped_tables = Table.objects.filter(is_active=True)
         scoped_cards = IDCard.objects.all()
         scoped_staff = Staff.objects.all()
         if accessible_ids is not None:
@@ -4726,7 +4726,7 @@ def settings_page(request):
             scoped_cards = scoped_cards.filter(table__group__client_id__in=accessible_ids)
             scoped_staff = scoped_staff.filter(
                 Q(client_id__in=accessible_ids) |
-                Q(staff_type='admin_staff', assigned_clients__id__in=accessible_ids) |
+                Q(staff_type='operator', assigned_clients__id__in=accessible_ids) |
                 Q(staff_type='photographer', photographer_assignments__client_id__in=accessible_ids)
             ).distinct()
         ctx['admin_client_count'] = scoped_clients.count()
@@ -4758,8 +4758,8 @@ def settings_page(request):
                 _cards_scope.select_related('table', 'table__group').order_by('-updated_at')[:30]
             )
         elif PermissionService.is_client_staff(user):
-            _tables_scope = IDCardTable.objects.filter(group__client=client, is_active=True)
-            _tables_scope = ClientAccessService.get_scoped_tables_qs(user, client, _tables_scope)
+            _tables_scope = Table.objects.filter(group__client=client, is_active=True)
+            _tables_scope = OrganisationAccessService.get_scoped_tables_qs(user, client, _tables_scope)
 
             # Pull a larger candidate set, then apply per-card row scope checks.
             _candidate_cards = (
@@ -4830,10 +4830,10 @@ def search_page(request):
     if raw_table_id.isdigit():
         parsed_table_id = int(raw_table_id)
         if parsed_table_id > 0:
-            scoped_table = IDCardTable.objects.select_related('group').filter(id=parsed_table_id).first()
+            scoped_table = Table.objects.select_related('group').filter(id=parsed_table_id).first()
             if scoped_table and PermissionService.can_access_client(user, scoped_table.group.client_id):
                 if user.role in ('prime_manager', 'manager'):
-                    if ClientAccessService.can_access_table(user, scoped_table):
+                    if OrganisationAccessService.can_access_table(user, scoped_table):
                         table_scope_id = parsed_table_id
                 else:
                     table_scope_id = parsed_table_id
@@ -4887,7 +4887,7 @@ def search_page(request):
 
     return render(request, 'index.html', {
         'user_name': user.get_full_name() or user.username,
-        'client': client,
+        'client': Organisation,
         'query': query,
         'filter_type': filter_type,
         'table_scope_id': table_scope_id,
@@ -4972,7 +4972,7 @@ def api_card_delete(request, card_id):
 def api_staff_list(request):
     """List staff for the client.
     
-    Authorized for 'client' role and 'admin_staff' with manage permission.
+    Authorized for 'client' role and 'operator' with manage permission.
     """
     user = request.user
     
@@ -4982,19 +4982,19 @@ def api_staff_list(request):
 
     if PermissionService.is_client(user) or PermissionService.is_admin_staff(user):
         # admin_staff managing client staff must be in a client context
-        result = ClientStaffService.list_staff(user)
+        result = OrganisationStaffService.list_staff(user)
         if result.success:
             return JsonResponse({'success': True, 'data': result.data})
         return JsonResponse({'success': False, 'message': result.message}, status=400)
     
     elif PermissionService.is_super_admin(user):
-        role = request.GET.get('role', 'admin_staff')
+        role = request.GET.get('role', 'operator')
         from core.services.compat_service import CompatibilityService
         role = CompatibilityService.map_role_to_legacy(role)
-        if role in ('assistant', 'client_staff'):
+        if role in ('assistant'):
             # List all client staff system-wide
             # from accounts.models import Staff (removed)
-            queryset = Staff.objects.filter(staff_type='client_staff').select_related('user', 'client').order_by('-created_at')[:200]
+            queryset = Staff.objects.filter(staff_type='assistant').select_related('user', 'client').order_by('-created_at')[:200]
             staff_data = []
             for s in queryset:
                 staff_data.append({
@@ -5033,18 +5033,18 @@ def api_staff_create(request):
         from core.services.compat_service import CompatibilityService
         role_requested = CompatibilityService.map_role_to_legacy(role_requested)
 
-        if role_requested in ('assistant', 'client_staff'):
+        if role_requested in ('assistant'):
             # Super Admin creating an Assistant (client_staff) for a specific client
             client_id = payload.get('client_id')
             if not client_id:
                 return JsonResponse({'success': False, 'message': 'client_id is required to create an assistant'}, status=400)
             try:
-                from client.models import Client
-                target_client = Client.objects.get(id=int(client_id))
+                from organisation.models import Organisation
+                target_client = Organisation.objects.get(id=int(client_id))
             except Exception:
                 return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
             # Build a minimal fake admin user context scoped to the target client
-            # Use ClientStaffService with a proxy-like call under the target client
+            # Use OrganisationStaffService with a proxy-like call under the target client
             # Build data dict the service expects (same as client self-creating staff)
             staff_data = dict(payload)
             staff_data.pop('role', None)
@@ -5056,7 +5056,7 @@ def api_staff_create(request):
                 return JsonResponse({'success': False, 'message': 'First name is required'}, status=400)
             staff_data['name'] = full_name
             # StaffService.create accepts client= as a keyword argument (Client instance)
-            result = StaffService.create(staff_data, staff_type='client_staff', client=target_client, request=request)
+            result = StaffService.create(staff_data, staff_type='assistant', client=target_client, request=request)
         else:
             # Super Admin creating an Operator (admin_staff)
             first_name = str(payload.pop('first_name', '') or '').strip()
@@ -5065,9 +5065,9 @@ def api_staff_create(request):
             if not full_name:
                 return JsonResponse({'success': False, 'message': 'First name is required'}, status=400)
             payload['name'] = full_name
-            result = StaffService.create(payload, staff_type='admin_staff', request=request)
+            result = StaffService.create(payload, staff_type='operator', request=request)
     else:
-        result = ClientStaffService.create_staff(user, data)
+        result = OrganisationStaffService.create_staff(user, data)
 
     if result.success:
         return JsonResponse({'success': True, 'message': result.message, **(result.data or {})})
@@ -5100,13 +5100,13 @@ def api_staff_update(request, staff_id):
         if PermissionService.is_super_admin(user):
             pw_result = StaffService.set_temp_password(staff_id, temp_pw, request=request)
         else:
-            pw_result = ClientStaffService.set_temp_password(user, staff_id, temp_pw, request=request)
+            pw_result = OrganisationStaffService.set_temp_password(user, staff_id, temp_pw, request=request)
 
         if not pw_result.success:
             return JsonResponse({'success': False, 'message': pw_result.message or 'Failed to set password'}, status=400)
 
     if PermissionService.is_super_admin(user):
-        if not Staff.objects.filter(id=staff_id, staff_type='admin_staff').exists():
+        if not Staff.objects.filter(id=staff_id, staff_type='operator').exists():
             return JsonResponse({'success': False, 'message': 'Staff not found'}, status=404)
 
         payload = dict(data)
@@ -5122,7 +5122,7 @@ def api_staff_update(request, staff_id):
 
         result = StaffService.update(staff_id, payload)
     else:
-        result = ClientStaffService.update_staff(user, staff_id, data)
+        result = OrganisationStaffService.update_staff(user, staff_id, data)
 
     if result.success:
         return JsonResponse({'success': True, 'message': result.message})
@@ -5138,14 +5138,14 @@ def api_staff_toggle(request, staff_id):
         return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
 
     if PermissionService.is_client(user) or PermissionService.is_admin_staff(user):
-        result = ClientStaffService.toggle_staff_status(user, staff_id)
+        result = OrganisationStaffService.toggle_staff_status(user, staff_id)
         if result.success:
             return JsonResponse({'success': True, 'message': result.message, **(result.data or {})})
         return JsonResponse({'success': False, 'message': result.message}, status=400)
     else:
         # Admin toggle â€” directly update the Staff user's is_active
         try:
-            staff = Staff.objects.select_related('user').get(id=staff_id, staff_type='admin_staff')
+            staff = Staff.objects.select_related('user').get(id=staff_id, staff_type='operator')
             staff.user.is_active = not staff.user.is_active
             staff.user.save(update_fields=['is_active'])
             new_state = 'activated' if staff.user.is_active else 'deactivated'
@@ -5167,13 +5167,13 @@ def api_staff_delete(request, staff_id):
 
     if PermissionService.is_client(user) or PermissionService.is_admin_staff(user):
         # admin_staff can delete client staff if they have permission
-        result = ClientStaffService.delete_staff(user, staff_id)
+        result = OrganisationStaffService.delete_staff(user, staff_id)
         if result.success:
             return JsonResponse({'success': True, 'message': result.message})
         return JsonResponse({'success': False, 'message': result.message}, status=400)
     else:
         try:
-            staff = Staff.objects.select_related('user').get(id=staff_id, staff_type='admin_staff')
+            staff = Staff.objects.select_related('user').get(id=staff_id, staff_type='operator')
             staff_id_for_log = staff.id
             name = staff.user.get_full_name() or staff.user.username
             last_active_str = ActivityService._format_last_active(staff.user)
@@ -5201,10 +5201,10 @@ def api_staff_assignable_items(request, staff_id):
     try:
         staff = get_object_or_404(Staff, id=staff_id)
         # For client staff, we need their client context
-        if staff.staff_type == 'admin_staff':
+        if staff.staff_type == 'operator':
             # Operator: return all active clients
-            from client.models import Client
-            clients = Client.objects.filter(status='active').values('id', 'name').order_by('name')
+            from organisation.models import Organisation
+            clients = Organisation.objects.filter(status='active').values('id', 'name').order_by('name')
             return JsonResponse({'success': True, 'clients': list(clients)})
 
         client_id = staff.client_id
@@ -5212,8 +5212,8 @@ def api_staff_assignable_items(request, staff_id):
         if not PermissionService.can_access_client(user, client_id):
             return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
 
-        groups = IDCardGroup.objects.filter(client_id=client_id).values('id', 'name').order_by('name')
-        tables = IDCardTable.objects.filter(group__client_id=client_id, is_active=True).values('id', 'name', 'group_id').order_by('group__name', 'name')
+        groups = Table.objects.filter(client_id=client_id).values('id', 'name').order_by('name')
+        tables = Table.objects.filter(group__client_id=client_id, is_active=True).values('id', 'name', 'group_id').order_by('group__name', 'name')
 
         return JsonResponse({
             'success': True,
@@ -5241,7 +5241,7 @@ def api_staff_assign(request, staff_id):
                 staff = get_object_or_404(Staff, id=staff_id)
                 target_client = staff.client
             # Use update_staff which handles assigned_groups and assigned_table_ids
-            result = ClientStaffService.update_staff(user, staff_id, data, target_client=target_client)
+            result = OrganisationStaffService.update_staff(user, staff_id, data, target_client=target_client)
             if result.success:
                 return JsonResponse({'success': True, 'message': 'Assignments updated successfully'})
             return JsonResponse({'success': False, 'message': result.message}, status=400)
@@ -5272,12 +5272,12 @@ def api_mobile_staff_assignment(request, staff_id):
         staff = get_object_or_404(Staff, id=staff_id)
         
         # operator mode (admin_staff / photographer)
-        is_operator_mode = staff.staff_type in ('admin_staff', 'photographer')
+        is_operator_mode = staff.staff_type in ('operator', 'photographer')
         
         if is_operator_mode:
             # Operator: return all active clients
-            from client.models import Client
-            clients = Client.objects.filter(status='active').order_by('name')
+            from organisation.models import Organisation
+            clients = Organisation.objects.filter(status='active').order_by('name')
             clients_list = [{'id': c.id, 'name': c.name} for c in clients]
             if staff.staff_type == 'photographer':
                 from django.utils import timezone
@@ -5289,13 +5289,13 @@ def api_mobile_staff_assignment(request, staff_id):
                     ).values_list('client_id', flat=True)
                 )
             else:
-                assigned_clients = list(staff.assigned_clients.values_list('id', flat=True))
+                assigned_clients = list(staff.assigned_organisations.values_list('id', flat=True))
             
             return JsonResponse({
                 'success': True,
                 'data': {
                     'clients': clients_list,
-                    'assigned_clients': assigned_clients,
+                    'assigned_organisations': assigned_clients,
                     'groups': [],
                     'tables': [],
                     'assigned_groups': [],
@@ -5310,8 +5310,8 @@ def api_mobile_staff_assignment(request, staff_id):
             return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
 
         # Load client's groups and tables
-        groups = IDCardGroup.objects.filter(client_id=client_id).values('id', 'name').order_by('name')
-        tables = IDCardTable.objects.filter(group__client_id=client_id, deleted_by_client=False).values('id', 'name', 'group_id').order_by('group__name', 'name')
+        groups = Table.objects.filter(client_id=client_id).values('id', 'name').order_by('name')
+        tables = Table.objects.filter(group__client_id=client_id, deleted_by_client=False).values('id', 'name', 'group_id').order_by('group__name', 'name')
         
         assigned_groups = list(staff.assigned_groups.values_list('id', flat=True))
         assigned_tables = [
@@ -5321,8 +5321,8 @@ def api_mobile_staff_assignment(request, staff_id):
         
         # Aggregate distinct classes, sections, branches from this client's card database
         # We build options per group, per table, and globally.
-        from idcards.models import IDCard
-        tables_data = list(IDCardTable.objects.filter(group__client_id=client_id, deleted_by_client=False).values('id', 'group_id', 'fields'))
+        from tables.models import IDCard
+        tables_data = list(Table.objects.filter(group__client_id=client_id, deleted_by_client=False).values('id', 'group_id', 'fields'))
         
         table_fields_meta = {}
         for t in tables_data:
@@ -5495,8 +5495,8 @@ def api_mobile_staff_assignment(request, staff_id):
         }
         
         # Fallback assignment modes
-        from client.models import Client
-        target_client = Client.objects.filter(id=client_id).first()
+        from organisation.models import Organisation
+        target_client = Organisation.objects.filter(id=client_id).first()
         group_count = len(groups)
         inferred_id_source = 'table' if group_count <= 1 else 'group'
         assignment_id_source = 'table' if target_client and getattr(target_client, 'assignment_id_source', '') == 'table' else inferred_id_source
@@ -5533,35 +5533,35 @@ def api_mobile_staff_assignment_update(request, staff_id):
         data = json.loads(request.body)
         
         # React Native sends { group_ids, table_ids, client_ids, assignment_scopes }
-        # We need to translate them to the payload shape expected by ClientStaffService or StaffService
+        # We need to translate them to the payload shape expected by OrganisationStaffService or StaffService
         payload = {
             'assigned_groups': data.get('group_ids', []),
             'assigned_tables': data.get('table_ids', []),
-            'assigned_clients': data.get('client_ids', []),
+            'assigned_organisations': data.get('client_ids', []),
             'assignment_scopes': data.get('assignment_scopes', [])
         }
         
         staff = get_object_or_404(Staff, id=staff_id)
-        if staff.staff_type == 'admin_staff':
+        if staff.staff_type == 'operator':
             # Operator mode
             if not PermissionService.is_super_admin(user):
                 return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
             # StaffService.update takes client_ids key
             operator_payload = {
-                'client_ids': payload['assigned_clients']
+                'client_ids': payload['assigned_organisations']
             }
             result = StaffService.update(staff_id, operator_payload)
         else:
             # Client staff assistant mode
             client_id = staff.client_id
-            from client.models import Client
-            target_client = Client.objects.filter(id=client_id).first()
+            from organisation.models import Organisation
+            target_client = Organisation.objects.filter(id=client_id).first()
             
             req_id_source = data.get('assignment_id_source', '').lower()
             if req_id_source in ('group', 'table'):
                 id_source = req_id_source
             else:
-                group_count = IDCardGroup.objects.filter(client_id=client_id).count()
+                group_count = Table.objects.filter(client_id=client_id).count()
                 id_source = 'table' if group_count <= 1 else 'group'
                 if target_client and getattr(target_client, 'assignment_id_source', '') == 'table':
                     id_source = 'table'
@@ -5571,7 +5571,7 @@ def api_mobile_staff_assignment_update(request, staff_id):
                 'assignment_id_source': id_source,
                 'assignment_scopes': payload['assignment_scopes']
             }
-            result = ClientStaffService.update_staff(user, staff_id, client_staff_payload, target_client=target_client)
+            result = OrganisationStaffService.update_staff(user, staff_id, client_staff_payload, target_client=target_client)
 
         if result.success:
             return JsonResponse({'success': True, 'message': 'Assignments updated successfully'})
@@ -5656,7 +5656,7 @@ def api_messages_list(request):
         from django.db.models import Exists, OuterRef, Q as _Q
         
         user = request.user
-        client = ClientAccessService.get_client_for_user(user)
+        client = OrganisationAccessService.get_organisation_for_user(user)
         if not client:
             return JsonResponse({'success': True, 'data': []})
 
@@ -5743,8 +5743,8 @@ def api_tables_list(request):
         status = (request.GET.get('status') or '').strip().lower()
         
         # 1. Get accessible tables
-        from idcards.models import IDCardTable
-        tables_qs = IDCardTable.objects.filter(is_active=True, deleted_by_client=False)
+        from tables.models import Table
+        tables_qs = Table.objects.filter(is_active=True, deleted_by_client=False)
         
         if not PermissionService.is_super_admin(user):
             # For non-superadmins, we must restrict by client or assigned IDs
@@ -5762,7 +5762,7 @@ def api_tables_list(request):
                 tables_qs = tables_qs.filter(group__client=client)
 
         if PermissionService.is_client_staff(user):
-            tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, tables_qs)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, tables_qs)
             if not tables_qs.exists():
                 return JsonResponse({'success': True, 'data': [], 'tables': [], 'count': 0})
 
@@ -5782,7 +5782,7 @@ def api_tables_list(request):
         tables_list = list(tables_qs.select_related('group', 'group__client').order_by('name'))
         for t in tables_list:
             if is_staff:
-                card_qs = ClientCardService._apply_client_staff_row_scope(user, t, IDCard.objects.filter(table_id=t.id))
+                card_qs = OrganisationCardService._apply_client_staff_row_scope(user, t, IDCard.objects.filter(table_id=t.id))
                 if status and status not in ('all', 'total'):
                     t_status_count = card_qs.filter(status=status).count()
                     if t_status_count == 0:
@@ -5812,8 +5812,8 @@ def api_groups_list(request):
     try:
         user = request.user
         # 1. Get accessible tables
-        from idcards.models import IDCardTable, IDCardGroup
-        tables_qs = IDCardTable.objects.filter(is_active=True, deleted_by_client=False)
+        from tables.models import Table
+        tables_qs = Table.objects.filter(is_active=True, deleted_by_client=False)
         
         if not PermissionService.is_super_admin(user):
             # For non-superadmins, we must restrict by client or assigned IDs
@@ -5831,7 +5831,7 @@ def api_groups_list(request):
                 tables_qs = tables_qs.filter(group__client=client)
 
         if PermissionService.is_client_staff(user):
-            tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, tables_qs)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, tables_qs)
             if not tables_qs.exists():
                 return JsonResponse({'success': True, 'data': {'groups': [], 'tables': []}})
 
@@ -5848,7 +5848,7 @@ def api_groups_list(request):
                     
             tables_annotated = []
             for t in tables_list:
-                table_cards_qs = ClientCardService._apply_client_staff_row_scope(
+                table_cards_qs = OrganisationCardService._apply_client_staff_row_scope(
                     user,
                     t,
                     IDCard.objects.filter(table_id=t.id)
@@ -5888,7 +5888,7 @@ def api_groups_list(request):
 
         # 2. Get groups that contain at least one accessible table
         accessible_group_ids = {t.group_id for t in tables_annotated}
-        groups = IDCardGroup.objects.filter(id__in=accessible_group_ids).order_by('name')
+        groups = Table.objects.filter(id__in=accessible_group_ids).order_by('name')
 
         groups_data = []
         for g in groups:
@@ -5936,15 +5936,15 @@ def api_settings_data(request):
             return JsonResponse({'success': False, 'message': 'No client context'}, status=400)
 
         d = {}
-        d['table_count'] = IDCardTable.objects.filter(group__client=client, is_active=True).count()
-        d['group_count'] = IDCardGroup.objects.filter(client=client).count()
+        d['table_count'] = Table.objects.filter(group__client=client, is_active=True).count()
+        d['group_count'] = Table.objects.filter(client=client).count()
         d['total_cards'] = IDCard.objects.filter(table__group__client=client).count()
 
         if PermissionService.is_any_admin(user):
-            from client.models import Client as _Client
+            from organisation.models import Organisation as _Client
             accessible_ids = _admin_accessible_client_ids(user)
             _c = _Client.objects.filter(status='active')
-            _t = IDCardTable.objects.filter(is_active=True)
+            _t = Table.objects.filter(is_active=True)
             _cd = IDCard.objects.all()
             _st = Staff.objects.all()
             if accessible_ids is not None:
@@ -5953,7 +5953,7 @@ def api_settings_data(request):
                 _cd = _cd.filter(table__group__client_id__in=accessible_ids)
                 _st = _st.filter(
                     Q(client_id__in=accessible_ids) | 
-                    Q(staff_type='admin_staff', assigned_clients__id__in=accessible_ids) |
+                    Q(staff_type='operator', assigned_clients__id__in=accessible_ids) |
                     Q(staff_type='photographer', photographer_assignments__client_id__in=accessible_ids)
                 ).distinct()
             d['admin_client_count'] = _c.count()
@@ -5998,7 +5998,7 @@ def api_dashboard_data(request):
         from django.core.cache import cache
         from core.services.cache_version_service import CacheVersionService
         from core.services.activity_service import ActivityService
-        from client.models import Client
+        from organisation.models import Organisation
         from core.models import User
         from django.db.models import Max
 
@@ -6038,15 +6038,15 @@ def api_dashboard_data(request):
             # Get accessible clients
             if PermissionService.is_super_admin(user):
                 # Super admins see EVERYTHING (active or not) to match system-wide data visibility
-                clients_qs = Client.objects.all()
+                clients_qs = Organisation.objects.all()
             else:  # admin_staff or photographer
                 accessible_ids = PermissionService.get_accessible_client_ids(user) or []
-                clients_qs = Client.objects.filter(id__in=accessible_ids)
+                clients_qs = Organisation.objects.filter(id__in=accessible_ids)
 
             if is_photographer:
                 # Fetch active tables for assigned clients
                 tables_qs = (
-                    IDCardTable.objects
+                    Table.objects
                     .filter(group__client_id__in=accessible_ids, deleted_by_client=False, is_active=True)
                     .select_related('group')
                 )
@@ -6092,8 +6092,8 @@ def api_dashboard_data(request):
                     'captured': global_captured,
                     'uncaptured': global_uncaptured,
                     'client_count': len(accessible_ids),
-                    'operator_count': User.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count(),
-                    'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff', 'prime_manager', 'manager'), is_active=True).count(),
+                    'operator_count': User.objects.filter(role__in=('operator'), is_active=True).count(),
+                    'assistant_count': User.objects.filter(role__in=('assistant', 'prime_manager', 'manager'), is_active=True).count(),
                 }
                 
                 ordered_clients = list(clients_qs.annotate(
@@ -6131,7 +6131,7 @@ def api_dashboard_data(request):
                         })
                     
                     clients_data.append({
-                        'id': client.id,
+                        'id': Organisation.id,
                         'name': getattr(client, 'business_name', client.name),
                         'captured': c_counts['captured'],
                         'uncaptured': c_counts['uncaptured'],
@@ -6171,8 +6171,8 @@ def api_dashboard_data(request):
                 'pool': global_counts_agg.get('pool', 0),
                 'total': global_counts_agg.get('total', 0),
                 'client_count': clients_qs.count(),
-                'operator_count': User.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count(),
-                'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff', 'prime_manager', 'manager'), is_active=True).count(),
+                'operator_count': User.objects.filter(role__in=('operator'), is_active=True).count(),
+                'assistant_count': User.objects.filter(role__in=('assistant', 'prime_manager', 'manager'), is_active=True).count(),
             }
             
             clients_data = []
@@ -6194,7 +6194,7 @@ def api_dashboard_data(request):
  
             # Tables with per-table counts
             tables_qs = (
-                IDCardTable.objects
+                Table.objects
                 .filter(group__client_id__in=client_ids, deleted_by_client=False)
                 .annotate(
                     cnt_p=Count('id_cards', filter=Q(id_cards__status='pending')),
@@ -6246,7 +6246,7 @@ def api_dashboard_data(request):
                     })
  
                 clients_data.append({
-                    'id': client.id,
+                    'id': Organisation.id,
                     'name': getattr(client, 'business_name', client.name),
                     'pending': client_counts.get('pending', 0),
                     'verified': client_counts.get('verified', 0),
@@ -6299,11 +6299,11 @@ def api_dashboard_data(request):
             # For assistant, explicitly compute access FIRST to avoid stale cache overriding security.
             is_staff_empty = False
             if is_staff:
-                scoped_qs = ClientAccessService.get_scoped_tables_qs(user, client)
+                scoped_qs = OrganisationAccessService.get_scoped_tables_qs(user, client)
                 if not scoped_qs.exists():
                     # STRICT BYPASS: Assistant has no assignments, return empty immediately
                     cached_data = {
-                        'client_id': client.id,
+                        'client_id': Organisation.id,
                         'client_name': getattr(client, 'business_name', client.name),
                         'pending': 0, 'verified': 0, 'approved': 0,
                         'download': 0, 'pool': 0, 'total': 0,
@@ -6322,14 +6322,14 @@ def api_dashboard_data(request):
                 return JsonResponse({'success': True, 'data': cached_data})
             
             # Get accessible tables
-            tables_qs = IDCardTable.objects.filter(group__client=client, is_active=True, deleted_by_client=False)
+            tables_qs = Table.objects.filter(group__client=client, is_active=True, deleted_by_client=False)
             if is_staff:
-                tables_qs = ClientAccessService.get_scoped_tables_qs(user, client, tables_qs)
+                tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, tables_qs)
             
             scoped_table_ids = list(tables_qs.values_list('id', flat=True))
             
             counts = {
-                'client_id': client.id,
+                'client_id': Organisation.id,
                 'client_name': getattr(client, 'business_name', client.name),
                 'pending': 0, 'verified': 0, 'approved': 0, 'download': 0, 'pool': 0, 'total': 0
             }
@@ -6346,7 +6346,7 @@ def api_dashboard_data(request):
                         
                 # Scoped counts table-by-table for assistant (except pool)
                 for t in tables_list:
-                    table_cards_qs = ClientCardService._apply_client_staff_row_scope(
+                    table_cards_qs = OrganisationCardService._apply_client_staff_row_scope(
                         user,
                         t,
                         IDCard.objects.filter(table_id=t.id)
@@ -6476,7 +6476,7 @@ def api_reprint_data(request, client_id):
             if not is_admin:
                 return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
             # Global view for admin
-            tables_qs = IDCardTable.objects.filter(is_active=True).select_related('group', 'group__client').order_by('group__name', 'name')
+            tables_qs = Table.objects.filter(is_active=True).select_related('group', 'group__client').order_by('group__name', 'name')
             if PermissionService.is_admin_staff(user):
                 accessible_ids = PermissionService.get_accessible_client_ids(user)
                 if accessible_ids:
@@ -6486,11 +6486,11 @@ def api_reprint_data(request, client_id):
         else:
             if not PermissionService.can_access_client(user, client_id):
                 return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-            tables_qs = IDCardTable.objects.filter(group__client_id=client_id, is_active=True).select_related('group', 'group__client').order_by('group__name', 'name')
+            tables_qs = Table.objects.filter(group__client_id=client_id, is_active=True).select_related('group', 'group__client').order_by('group__name', 'name')
 
         if PermissionService.is_client_staff(user):
-            client_ctx = ClientAccessService.get_client_for_user(user)
-            tables_qs = ClientAccessService.get_scoped_tables_qs(user, client_ctx, tables_qs)
+            client_ctx = OrganisationAccessService.get_organisation_for_user(user)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client_ctx, tables_qs)
 
         tables = list(tables_qs)
         table_ids = [t.id for t in tables]
@@ -6722,14 +6722,14 @@ def api_search(request):
         if scoped_table_id <= 0:
             return JsonResponse({'success': False, 'message': 'Invalid table scope.'}, status=400)
 
-        scoped_table = IDCardTable.objects.select_related('group').filter(id=scoped_table_id).first()
+        scoped_table = Table.objects.select_related('group').filter(id=scoped_table_id).first()
         if not scoped_table:
             return JsonResponse({'success': False, 'message': 'Table not found.'}, status=404)
 
         if not PermissionService.can_access_client(user, scoped_table.group.client_id):
             return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
-        if user.role in ('prime_manager', 'manager') and not ClientAccessService.can_access_table(user, scoped_table):
+        if user.role in ('prime_manager', 'manager') and not OrganisationAccessService.can_access_table(user, scoped_table):
             return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
         base_qs = base_qs.filter(table_id=scoped_table_id)
@@ -6817,7 +6817,7 @@ def api_impersonate_users(request):
     # To maintain desktop parity, we remove the strict `perm_mobile_app` restriction.
     mobile_allowed_ids = set(user_ids)
 
-    from idcards.models import IDCard
+    from tables.models import IDCard
     from django.db.models import Count, Max
 
     # Bulk fetch counts for all mobile-allowed IDs in one query
@@ -6857,18 +6857,18 @@ def api_clients_list(request):
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
 
-    from client.models import Client
+    from organisation.models import Organisation
     
     # Fetch all clients based on permissions
     if PermissionService.is_super_admin(request.user):
-        clients_qs = Client.objects.select_related('user').all().order_by('name')
+        clients_qs = Organisation.objects.select_related('user').all().order_by('name')
     else:  # admin_staff (operators) or photographer
         accessible_ids = PermissionService.get_accessible_client_ids(request.user) or []
-        clients_qs = Client.objects.filter(id__in=accessible_ids).select_related('user').order_by('name')
+        clients_qs = Organisation.objects.filter(id__in=accessible_ids).select_related('user').order_by('name')
     
     client_ids = list(clients_qs.values_list('id', flat=True))
 
-    from idcards.models import IDCard
+    from tables.models import IDCard
     from django.db.models import Count
 
     is_photographer = PermissionService.is_photographer(request.user)
@@ -6881,8 +6881,8 @@ def api_clients_list(request):
             counts_map[cid] = {'captured': 0, 'uncaptured': 0}
         
         # Fetch active tables for client_ids to build mapping
-        from idcards.models import IDCardTable
-        tables_qs = IDCardTable.objects.filter(group__client_id__in=client_ids).values('id', 'group__client_id')
+        from tables.models import Table
+        tables_qs = Table.objects.filter(group__client_id__in=client_ids).values('id', 'group__client_id')
         table_to_client_map = {t['id']: t['group__client_id'] for t in tables_qs}
 
         assigned_cards_qs = IDCard.objects.filter(
@@ -6964,7 +6964,7 @@ def api_impersonate_start(request):
     if not target:
         return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
 
-    valid_mobile_roles = {'pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer', 'client', 'client_staff'}
+    valid_mobile_roles = {'pro_user', 'super_admin', 'operator', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer'}
     if getattr(target, 'role', '') not in valid_mobile_roles:
         return JsonResponse({'success': False, 'message': 'Target user cannot access the mobile app.'}, status=400)
 
@@ -7016,7 +7016,7 @@ def api_impersonate_stop(request):
 @require_http_methods(['POST'])
 def api_client_toggle(request, client_id):
     """Toggle a client between active / inactive."""
-    from client.models import Client
+    from organisation.models import Organisation
     if not PermissionService.is_any_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Admin access required'}, status=403)
     if not _can_manage_clients_surface(request.user):
@@ -7032,7 +7032,7 @@ def api_client_toggle(request, client_id):
             client.status = 'active'
             label = 'activated'
         client.save(update_fields=['status'])
-        return JsonResponse({'success': True, 'message': f'{client.name} {label}', 'new_status': client.status})
+        return JsonResponse({'success': True, 'message': f'{client.name} {label}', 'new_status': Organisation.status})
     except Exception as exc:
         logger.exception('api_client_toggle error: %s', exc)
         return JsonResponse({'success': False, 'message': 'An error occurred. Please try again.'}, status=500)
@@ -7042,7 +7042,7 @@ def api_client_toggle(request, client_id):
 @require_http_methods(['POST'])
 def api_client_delete(request, client_id):
     """Permanently delete a client (super_admin only)."""
-    from client.models import Client
+    from organisation.models import Organisation
     if not PermissionService.is_super_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Only super admin can delete clients'}, status=403)
     try:
@@ -7072,10 +7072,10 @@ def api_client_tables(request, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     if not PermissionService.can_access_client(request.user, client_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    from client.models import Client
+    from organisation.models import Organisation
     get_object_or_404(Client, id=client_id)
     tables_qs = (
-        IDCardTable.objects
+        Table.objects
         .filter(group__client_id=client_id, is_active=True)
         .select_related('group')
         .annotate(
@@ -7158,11 +7158,11 @@ def api_client_create(request):
         try:
             created_client_id = ((result.data or {}).get('client') or {}).get('id')
             if created_client_id:
-                from client.models import Client
-                created_client = Client.objects.filter(id=created_client_id).first()
+                from organisation.models import Organisation
+                created_client = Organisation.objects.filter(id=created_client_id).first()
                 staff = getattr(request.user, 'staff_profile', None)
                 if created_client and staff:
-                    staff.assigned_clients.add(created_client)
+                    staff.assigned_organisations.add(created_client)
         except Exception:
             logger.warning('Could not auto-assign newly created client to admin_staff user=%s', request.user.pk)
 
@@ -7209,7 +7209,7 @@ def api_client_update(request, client_id):
         except Exception as validation_error:
             return JsonResponse({'success': False, 'message': '; '.join(validation_error.messages)}, status=400)
             
-        from client.services_client_core import ClientService
+        from organisation.services_client_core import OrganisationService as ClientService
         pw_result = ClientService.set_temp_password(client_id, temp_pw, request=request)
         if not pw_result.success:
             return JsonResponse({'success': False, 'message': pw_result.message or 'Failed to set password'}, status=400)
@@ -7697,10 +7697,10 @@ def api_photographer_sync(request):
     if not accessible_ids:
         return JsonResponse({'success': True, 'clients': []})
         
-    clients = Client.objects.filter(id__in=accessible_ids)
+    clients = Organisation.objects.filter(id__in=accessible_ids)
     
     tables_qs = (
-        IDCardTable.objects
+        Table.objects
         .filter(group__client_id__in=accessible_ids, deleted_by_client=False, is_active=True)
         .select_related('group')
     )

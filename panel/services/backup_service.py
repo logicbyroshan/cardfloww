@@ -81,7 +81,7 @@ def _process_backup(task_id: int):
     school/client.
     """
     from core.models import BackupTask
-    from client.models import Client
+    from organisation.models import Organisation
 
     try:
         task = BackupTask.objects.get(pk=task_id)
@@ -98,7 +98,7 @@ def _process_backup(task_id: int):
 
     try:
         clients = (
-            Client.objects
+            Organisation.objects
             .filter(pk__in=client_ids)
             .prefetch_related('id_card_groups__tables')
             .order_by('name')
@@ -177,7 +177,7 @@ def _build_client_in_zip(zf: zipfile.ZipFile, client) -> bool:
 
     Returns True if at least one file was written.
     """
-    from idcards.models import IDCardTable
+    from tables.models import Table
 
     groups = list(client.id_card_groups.all())
     if not groups:
@@ -187,7 +187,7 @@ def _build_client_in_zip(zf: zipfile.ZipFile, client) -> bool:
     wrote_any = False
 
     for group in groups:
-        tables = getattr(group, 'tables', IDCardTable.objects.filter(group=group)).all()
+        tables = getattr(group, 'tables', Table.objects.filter(group=group)).all()
         for table in tables:
             wrote = _write_table_to_zip(zf, safe_name, table)
             if wrote:
@@ -198,7 +198,7 @@ def _build_client_in_zip(zf: zipfile.ZipFile, client) -> bool:
 
 def _write_table_to_zip(zf: zipfile.ZipFile, client_folder: str, table) -> bool:
     """Write one table's data into the ZIP (XLSX per status + images)."""
-    from idcards.models import IDCard
+    from tables.models import IDCard
     from exports.utils import get_text_fields, get_image_fields
 
     all_cards = list(IDCard.objects.filter(table=table).order_by('id'))

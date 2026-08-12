@@ -61,7 +61,7 @@ def _protected_media_serve(request, path, document_root=None):
         if not PermissionService.is_super_admin(request.user):
             # For card photos, enforce client ownership by folder code.
             if rel_path.startswith('adarshimg/'):
-                from client.models import Client
+                from organisation.models import Organisation
 
                 parts = rel_path.split('/')
                 folder_code = ''
@@ -70,7 +70,7 @@ def _protected_media_serve(request, path, document_root=None):
                 elif len(parts) >= 2:
                     folder_code = parts[1]
 
-                client = Client.objects.filter(image_folder_code=folder_code).only('id').first() if folder_code else None
+                client = Organisation.objects.filter(image_folder_code=folder_code).only('id').first() if folder_code else None
                 if not client or not PermissionService.can_access_client(request.user, client.id):
                     return HttpResponse(status=404)
 
@@ -164,38 +164,29 @@ if getattr(settings, 'DEBUG', False) and not _running_tests():
 # re-open urlpatterns list continuation
 urlpatterns += [
 
-    # ==================== API COMPATIBILITY (ROOT /api/*) ====================
-
     # ==================== ADMIN PANEL (/panel/) ====================
-    # All internal/admin routes live under /panel/
     path('panel/auth/', include('accounts.urls')),
-    path('panel/organisations/', include('client.urls')),     # NEW slug (was: panel/client/)
+    path('panel/organisations/', include('organisation.urls')),
     path('panel/assistants/', include('assistants.urls')),
     path('panel/exports/', include('exports.urls')),
     path('panel/images/', include('mediafiles.urls')),
     path('panel/operators/', include('operators.urls')),
-    path('panel/tables/', include('idcards.urls')),           # NEW slug (was: panel/work/)
+    path('panel/tables/', include('tables.urls')),
     path('panel/reprint/', include('reprintcard.urls')),
     path('panel/staff/', include('staff.urls')),
     path('panel/stats/', include('stats.urls')),
     path('panel/', include('core.urls')),
 
-    # ── Backward-compat panel slugs (keep until frontend fully updated) ──────
-    path('panel/client/', include('client.urls')),            # DEPRECATED → panel/organisations/
-    path('panel/work/', include('idcards.urls')),              # DEPRECATED → panel/tables/
-
-    # ── Backward-compat root mounts (for deployments still hitting without /panel) ──
+    # ── Root mounts (no /panel prefix) ──────────────────────────
     path('', include(('accounts.urls', 'accounts'), namespace='accounts_root')),
     path('auth/', include(('accounts.urls', 'accounts'), namespace='accounts_auth_root')),
-    path('organisations/', include(('client.urls', 'client'), namespace='organisations_root')),      # NEW
-    path('client/', include(('client.urls', 'client'), namespace='client_root')),                   # DEPRECATED
+    path('organisations/', include(('organisation.urls', 'organisation'), namespace='organisations_root')),
     path('assistants/', include(('assistants.urls', 'assistants'), namespace='assistants_root')),
     path('exports/', include(('exports.urls', 'exports'), namespace='exports_root')),
     path('images/', include(('mediafiles.urls', 'mediafiles'), namespace='mediafiles_root')),
     path('operators/', include(('operators.urls', 'operators'), namespace='operators_root')),
     path('staff/', include(('staff.urls', 'staff'), namespace='staff_root')),
-    path('tables/', include(('idcards.urls', 'idcards'), namespace='tables_root')),                 # NEW
-    path('work/', include(('idcards.urls', 'idcards'), namespace='idcards_root')),                  # DEPRECATED
+    path('tables/', include(('tables.urls', 'tables'), namespace='tables_root')),
     path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
     path('', include('core.urls')),

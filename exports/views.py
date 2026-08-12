@@ -21,7 +21,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 
-from idcards.models import IDCardTable
+from tables.models import Table
 from core.services.permission_service import PermissionService, api_require_any_authenticated
 from accounts.rate_limit import rate_limit
 
@@ -169,7 +169,7 @@ def _get_card_ids_from_request(request, table_id: int = None) -> Optional[List[i
     # fetch ALL card IDs for the requested status from the database,
     # respecting any active search/class/section filters.
     if not card_ids and table_id:
-        from idcards.models import IDCard, IDCardTable
+        from tables.models import IDCard, Table
         from core.services import IDCardService
         status = _get_status_from_request(request)
         # Extract optional filters from JSON body
@@ -203,7 +203,7 @@ def _get_card_ids_from_request(request, table_id: int = None) -> Optional[List[i
                 _get_class_section_course_branch_field_names,
             )
 
-            table = IDCardTable.objects.select_related('group').filter(id=table_id).first()
+            table = Table.objects.select_related('group').filter(id=table_id).first()
             if not table:
                 return None
 
@@ -505,7 +505,7 @@ def _check_export_permission(request, skip_status_check=False):
     # Keep export access aligned with status list permissions.
     status = _get_status_from_request(request)
     if status:
-        is_client_role = request.user.role in ('client', 'client_staff') or getattr(request.user, 'role', '') == 'guest_prime_manager'
+        is_client_role = request.user.PermissionService.is_client_role(user) or getattr(request.user, 'role', '') == 'guest_prime_manager'
         if not (skip_status_check and is_client_role):
             required_perm = PermissionService.STATUS_LIST_PERM_MAP.get(status)
             if required_perm and not PermissionService.has(request.user, required_perm):
@@ -516,7 +516,7 @@ def _check_export_permission(request, skip_status_check=False):
     
     # Block client/client_staff from exporting approved or download status cards
     # (skipped for PDF exports — clients can download PDF on all statuses)
-    if not skip_status_check and request.user.role in ('client', 'client_staff'):
+    if not skip_status_check and request.user.PermissionService.is_client_role(user):
         if status in ('approved', 'download'):
             return JsonResponse({
                 'success': False,
@@ -622,7 +622,7 @@ def _log_export_failure(request, export_type, message, table_id=None, table_name
         resolved_table_id = table_id
         if not resolved_table_name and table_id:
             resolved_table_name = (
-                IDCardTable.objects.filter(id=table_id)
+                Table.objects.filter(id=table_id)
                 .values_list('name', flat=True)
                 .first()
             ) or ''
@@ -924,11 +924,11 @@ def api_export_docx(request, table_id: int) -> HttpResponse:
     # Apply class filter if enabled
     if class_filter_enabled and selected_classes:
         from core.views.idcard_helpers import _get_class_section_course_branch_field_names
-        from idcards.models import IDCardTable, IDCard
+        from tables.models import Table, IDCard
         from core.utils.field_utils import normalize_class_value
 
         try:
-            table = IDCardTable.objects.get(id=table_id)
+            table = Table.objects.get(id=table_id)
             class_field, _, _, _ = _get_class_section_course_branch_field_names(table)
             if class_field:
                 cards_qs = IDCard.objects.filter(id__in=card_ids)
@@ -941,7 +941,7 @@ def api_export_docx(request, table_id: int) -> HttpResponse:
                         if norm in selected_classes_set:
                             filtered_card_ids.append(card.id)
                 card_ids = filtered_card_ids
-        except IDCardTable.DoesNotExist:
+        except Table.DoesNotExist:
             pass
 
     if not card_ids:
@@ -1379,7 +1379,7 @@ def api_export_images(request, table_id: int) -> JsonResponse:
             from core.services.background_worker import ensure_exports_directory
             from .zip import export_images_to_disk as _export_images_disk
 
-            table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+            table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
             cards_qs = service.get_scoped_cards(table, card_ids)
             output_dir = ensure_exports_directory()
             disk_result = _export_images_disk(
@@ -1519,7 +1519,7 @@ def api_download_all_cards(request, table_id: int) -> JsonResponse:
     """
     
     # Block client/client_staff from download-all (contains approved/download data)
-    if request.user.is_authenticated and request.user.role in ('client', 'client_staff'):
+    if request.user.is_authenticated and request.user.PermissionService.is_client_role(user):
         return JsonResponse({
             'success': False,
             'message': 'This feature is not available for your account'
@@ -1536,7 +1536,7 @@ def api_download_all_cards(request, table_id: int) -> JsonResponse:
         return scope_error
     
     try:
-        table = get_object_or_404(IDCardTable.objects.select_related('group__client'), id=table_id)
+        table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
     except Exception:
         return JsonResponse({'success': False, 'message': 'Table not found'}, status=404)
     

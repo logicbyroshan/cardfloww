@@ -20,7 +20,7 @@ from django.db import transaction
 from django.conf import settings
 from django.core.cache import cache as django_cache
 
-from idcards.models import IDCardGroup, IDCard, IDCardTable
+from tables.models import Table, IDCard
 from ..services import IDCardService
 from mediafiles.services import ImageService
 from ..services.base import BaseService
@@ -30,7 +30,7 @@ from ..services.permission_service import (
     api_require_any_authenticated,
     api_require_permission,
 )
-from idcards.services_workflow import WorkflowService
+from tables.services_workflow import WorkflowService
 from ..utils.upload_security import validate_zip_safety
 
 # Logger for this module
@@ -107,7 +107,7 @@ def _table_is_assigned_to_staff(staff, table):
     """Allow table if assigned by table ID OR by owning group ID.
 
     Returns False when staff has no assignments — unassigned staff must not
-    see any table data (matches ClientAccessService.can_access_table policy).
+    see any table data (matches OrganisationAccessService.can_access_table policy).
     """
     assigned_table_ids = set(_normalized_assigned_table_ids(staff))
     assigned_group_ids = set(_assigned_group_ids_for_access(staff))
@@ -214,9 +214,9 @@ def invalidate_class_variant_cache(table_id):
     """Best-effort cleanup for legacy class-variant cache keys."""
     # Class variants are now computed live; this keeps backward compatibility
     # with any leftover cache keys from older deployments.
-    from idcards.models import IDCardTable
+    from tables.models import Table
     try:
-        table = IDCardTable.objects.select_related().get(id=table_id)
+        table = Table.objects.select_related().get(id=table_id)
         class_field, _ = _get_class_section_field_names(table)
         if class_field:
             django_cache.delete(f'class_variants_map:{table_id}:{class_field}')
@@ -298,7 +298,7 @@ def _build_class_filter_q(qs, class_filter, class_field_name):
 def _get_class_section_field_names(table):
     """Extract class and section field names from a table's field definitions.
 
-    Matches by type OR by name (mirrors IDCardTable.has_class_field / has_section_field).
+    Matches by type OR by name (mirrors Table.has_class_field / has_section_field).
     Returns (class_field_name, section_field_name) — either may be None.
     """
     class_field, section_field, _course_field, _branch_field = _get_class_section_course_branch_field_names(table)
@@ -380,7 +380,7 @@ def _get_distinct_field_values_cached(table, field_key, variants):
         return cached
 
     # Query distinct values from the database
-    from idcards.models import IDCard
+    from tables.models import IDCard
     from django.db.models.fields.json import KeyTextTransform
     from django.db.models.functions import Cast, Coalesce
     from django.db.models import CharField, Value
@@ -560,7 +560,7 @@ def _check_client_scope_by_group(user, group_id):
     
     Delegates to PermissionService.can_access_client() (single authority).
     """
-    group = get_object_or_404(IDCardGroup, id=group_id)
+    group = get_object_or_404(Table, id=group_id)
     if not PermissionService.can_access_client(user, group.client_id):
         return None, _access_denied_response()
     if PermissionService.is_client_staff(user):
@@ -572,7 +572,7 @@ def _check_client_scope_by_group(user, group_id):
         has_group_assignment = group.id in assigned_group_ids
         has_group_table = False
         if assigned_table_ids:
-            has_group_table = IDCardTable.objects.filter(
+            has_group_table = Table.objects.filter(
                 id__in=assigned_table_ids,
                 group_id=group.id,
                 deleted_by_client=False,
@@ -587,7 +587,7 @@ def _check_client_scope_by_table(user, table_id):
     
     Delegates to PermissionService.can_access_client() (single authority).
     """
-    table = get_object_or_404(IDCardTable.objects.select_related('group'), id=table_id)
+    table = get_object_or_404(Table.objects.select_related('group'), id=table_id)
     if not PermissionService.can_access_client(user, table.group.client_id):
         return None, _access_denied_response()
     if PermissionService.is_client_staff(user):
@@ -631,7 +631,7 @@ def _client_readonly_response():
 
 def _is_client_readonly(user, card_status):
     """Return True when client/client_staff tries to modify a card in a locked status."""
-    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff') and card_status in _CLIENT_READONLY_STATUSES
+    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant') and card_status in _CLIENT_READONLY_STATUSES
 
 
 def _client_edit_locked_response():
@@ -644,7 +644,7 @@ def _client_edit_locked_response():
 
 def _is_client_edit_locked(user, card_status):
     """Return True when client/client_staff tries to edit a card in an edit-locked status."""
-    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff') and card_status in _CLIENT_EDIT_LOCK_STATUSES
+    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant') and card_status in _CLIENT_EDIT_LOCK_STATUSES
 
 
 # ==================== FIELD HELPERS (canonical: core.utils.field_utils) ====================

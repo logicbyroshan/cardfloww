@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from ..services.permission_service import api_require_super_admin
 from operators.services import OperatorCreationService
 from ..services.activity_service import ActivityService
-from client.models import Client
+from organisation.models import Organisation
 from operators.models import Operator
 from accounts.rate_limit import rate_limit
 from mediafiles.utils import normalize_uploaded_image
@@ -82,7 +82,7 @@ def _admin_staff_assignment_snapshot(staff_obj):
             'scope_count': 0,
         }
     return {
-        'client_ids': list(staff_obj.assigned_clients.values_list('id', flat=True)),
+        'client_ids': list(staff_obj.assigned_organisations.values_list('id', flat=True)),
         'group_ids': [],
         'table_ids': [],
         'classes': [],
@@ -96,7 +96,7 @@ def _map_perm_fields_to_codenames(data):
     codenames = set()
     mapping = {
         'perm_idcard_client_list': ['can_view_clients'],
-        'perm_manage_client_staff': ['can_view_clients'],
+        'perm_manage_assistant': ['can_view_clients'],
         'perm_idcard_setting_list': ['can_view_idcard_settings'],
         'perm_idcard_setting_add': ['can_add_idcard_settings'],
         'perm_idcard_setting_edit': ['can_edit_idcard_settings'],
@@ -167,7 +167,7 @@ def serialize_operator_compat(operator: Operator, include_permissions: bool = Tr
         'address': '',
         'department': operator.department or '',
         'designation': operator.designation or '',
-        'staff_type': 'admin_staff',
+        'staff_type': 'operator',
         'status': 'active' if user.is_active else 'inactive',
         'profile_image_url': None,
         'created_at': operator.created_at.strftime('%d-%m-%Y %H:%M') if operator.created_at else '',
@@ -180,7 +180,7 @@ def serialize_operator_compat(operator: Operator, include_permissions: bool = Tr
             data[perm] = getattr(operator, perm, False)
             
     data['assigned_client_ids'] = list(
-        operator.assigned_clients.values_list('id', flat=True)
+        operator.assigned_organisations.values_list('id', flat=True)
     )
     return data
 
@@ -210,7 +210,7 @@ def api_staff_create(request):
         first_name = name_parts[0] if name_parts else ''
         last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
 
-        assigned_clients = data.get('assigned_clients', [])
+        assigned_clients = data.get('assigned_organisations', [])
         assigned_client_ids = []
         for c in assigned_clients:
             if isinstance(c, dict) and 'id' in c:
@@ -261,7 +261,7 @@ def api_staff_create(request):
                         Operator.objects
                         .filter(id=created_staff_id)
                         .select_related('user')
-                        .prefetch_related('assigned_clients')
+                        .prefetch_related('assigned_organisations')
                         .first()
                     )
                     if created_staff:
@@ -318,7 +318,7 @@ def api_staff_update(request, staff_id):
             Operator.objects
             .filter(id=real_id)
             .select_related('user')
-            .prefetch_related('assigned_clients')
+            .prefetch_related('assigned_organisations')
             .first()
         )
         if not before_staff:
@@ -345,7 +345,7 @@ def api_staff_update(request, staff_id):
         first_name = name_parts[0] if name_parts else ''
         last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
 
-        assigned_clients = data.get('assigned_clients', [])
+        assigned_clients = data.get('assigned_organisations', [])
         assigned_client_ids = []
         for c in assigned_clients:
             if isinstance(c, dict) and 'id' in c:
@@ -398,7 +398,7 @@ def api_staff_update(request, staff_id):
                     Operator.objects
                     .filter(id=real_id)
                     .select_related('user')
-                    .prefetch_related('assigned_clients')
+                    .prefetch_related('assigned_organisations')
                     .first()
                 )
                 if refreshed:
@@ -477,7 +477,7 @@ def api_staff_toggle_status(request, staff_id):
 @api_require_super_admin
 def api_active_clients_list(request):
     """API endpoint to get list of active clients for staff assignment dropdown"""
-    clients = Client.objects.filter(status='active', is_guest=False).order_by('name').values('id', 'name')
+    clients = Organisation.objects.filter(status='active', is_guest=False).order_by('name').values('id', 'name')
     return JsonResponse({
         'success': True,
         'clients': list(clients)
@@ -488,7 +488,7 @@ def api_active_clients_list(request):
 @api_require_super_admin
 def api_all_clients_for_assignment(request):
     """API endpoint to get ALL clients (active + inactive) for staff assignment dropdown."""
-    clients = Client.objects.filter(is_guest=False).order_by('status', 'name').values('id', 'name', 'status')
+    clients = Organisation.objects.filter(is_guest=False).order_by('status', 'name').values('id', 'name', 'status')
     return JsonResponse({
         'success': True,
         'clients': list(clients)

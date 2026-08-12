@@ -1,7 +1,7 @@
 import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from client.models import Client
+from organisation.models import Organisation
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class Command(BaseCommand):
         # Count some related data for display
         total_tables = client.groups.count() if hasattr(client, 'groups') else 0 # Assuming related name 'groups' or similar
         # Wait, let's just count from IDCard
-        from idcards.models import IDCard
+        from tables.models import IDCard
         total_cards = IDCard.objects.filter(table__group__client=client).count()
         
         self.stdout.write(f"This client has approximately {total_cards} ID Cards.")
@@ -83,7 +83,7 @@ class Command(BaseCommand):
                         cursor.execute("DELETE FROM core_guestassignment_assigned_clients WHERE client_id = %s", [client.id])
                         
                 if 'cardprint_printrequest' in tables:
-                    from idcards.models import IDCard
+                    from tables.models import IDCard
                     card_ids = list(IDCard.objects.filter(table__group__client=client).values_list('id', flat=True))
                     if card_ids:
                         with connection.cursor() as cursor:
@@ -108,7 +108,7 @@ class Command(BaseCommand):
 
     def _resolve_client(self, *, client_id, client_name, exact):
         if client_id:
-            client = Client.objects.select_related('user').filter(id=client_id).first()
+            client = Organisation.objects.select_related('user').filter(id=client_id).first()
             if not client:
                 raise CommandError(f"No client found with id={client_id}")
             return client
@@ -117,9 +117,9 @@ class Command(BaseCommand):
             raise CommandError("Provide either --client-id or --client-name")
 
         if exact:
-            matches = Client.objects.select_related('user').filter(name__iexact=client_name)
+            matches = Organisation.objects.select_related('user').filter(name__iexact=client_name)
         else:
-            matches = Client.objects.select_related('user').filter(name__icontains=client_name)
+            matches = Organisation.objects.select_related('user').filter(name__icontains=client_name)
 
         count = matches.count()
         if count == 0:

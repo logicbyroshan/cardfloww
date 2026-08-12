@@ -2,7 +2,7 @@ import sys
 from django.core.management.base import BaseCommand
 from django.contrib.sessions.models import Session
 from django.utils import timezone
-from client.models import Client
+from organisation.models import Organisation
 from staff.models import Staff
 from accounts.services import normalize_password_input
 
@@ -13,13 +13,13 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('--- Client Staff Password Reset Tool ---'))
         
         # 1. List all clients
-        clients = list(Client.objects.all().order_by('name'))
+        clients = list(Organisation.objects.all().order_by('name'))
         if not clients:
             self.stdout.write(self.style.ERROR('No clients found in the system.'))
             return
             
         for i, client in enumerate(clients, 1):
-            staff_count = Staff.objects.filter(client=client, staff_type='client_staff').count()
+            staff_count = Staff.objects.filter(client=client, staff_type='assistant').count()
             self.stdout.write(f"{i}. {client.name} (ID: {client.id}) - {staff_count} assistants")
             
         # 2. Get user input
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING(f"\nYou selected: {selected_client.name}"))
         
         # 3. Find client staff and reset
-        assistants = Staff.objects.filter(client=selected_client, staff_type='client_staff').select_related('user')
+        assistants = Staff.objects.filter(client=selected_client, staff_type='assistant').select_related('user')
         
         if not assistants.exists():
             self.stdout.write(self.style.ERROR(f"No assistants found for client: {selected_client.name}"))

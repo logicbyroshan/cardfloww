@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from core.models import User, Photographer, PhotographerAssignment
 from operators.models import Operator
 from assistants.models import Assistant
-from client.models import Client
+from organisation.models import Organisation
 
 class StaffCompatWrapper:
     def __init__(self, delegate, staff_type):
@@ -34,9 +34,9 @@ class StaffCompatWrapper:
         except Exception:
             pass
 
-        if self.staff_type == 'admin_staff':
+        if self.staff_type == 'operator':
             return self.delegate.id + 100000
-        elif self.staff_type == 'client_staff':
+        elif self.staff_type == 'assistant':
             return self.delegate.id + 200000
         else:
             return self.delegate.id + 300000
@@ -54,7 +54,7 @@ class StaffCompatWrapper:
         return self.delegate.user_id
 
     @property
-    def client(self):
+    def Organisation(self):
         if hasattr(self.delegate, 'client'):
             return self.delegate.client
         return None
@@ -78,27 +78,27 @@ class StaffCompatWrapper:
         return getattr(self.delegate, 'designation', '')
 
     def get_staff_type_display(self):
-        if self.staff_type == 'admin_staff':
+        if self.staff_type == 'operator':
             return 'Admin Staff'
-        elif self.staff_type == 'client_staff':
+        elif self.staff_type == 'assistant':
             return 'Client Staff'
         else:
             return 'Photographer'
 
     @property
     def assigned_clients(self):
-        if hasattr(self.delegate, 'assigned_clients'):
-            return self.delegate.assigned_clients
+        if hasattr(self.delegate, 'assigned_organisations'):
+            return self.delegate.assigned_organisations
         if self.staff_type == 'photographer':
             class AssignedClientsWrapper:
                 def __init__(self, photographer):
                     self.photographer = photographer
                 def all(self):
                     client_ids = self.photographer.photographer_assignments.values_list('client_id', flat=True)
-                    return Client.objects.filter(id__in=client_ids)
+                    return Organisation.objects.filter(id__in=client_ids)
                 def values_list(self, *args, **kwargs):
                     client_ids = self.photographer.photographer_assignments.values_list('client_id', flat=True)
-                    return Client.objects.filter(id__in=client_ids).values_list(*args, **kwargs)
+                    return Organisation.objects.filter(id__in=client_ids).values_list(*args, **kwargs)
                 def add(self, *clients):
                     from core.models import PhotographerAssignment
                     for c in clients:
@@ -115,7 +115,7 @@ class StaffCompatWrapper:
                     for c in clients:
                         PhotographerAssignment.objects.create(photographer=self.photographer, client=c)
             return AssignedClientsWrapper(self.delegate)
-        return Client.objects.none()
+        return Organisation.objects.none()
 
     def __getattr__(self, name):
         if 'delegate' not in self.__dict__:
@@ -153,7 +153,7 @@ class StaffCompatWrapper:
     def __hash__(self):
         return hash(self.delegate)
 
-    def can_access_client(self, client_id: int) -> bool:
+    def can_access_organisation(self, client_id: int) -> bool:
         from core.services.permission_service import PermissionService
         return PermissionService.can_access_client(self.user, client_id)
 
@@ -225,10 +225,10 @@ class StaffCompatQuerySet:
                         filtered = [item for item in filtered if item.delegate.id == (val_int - 300000) and item.staff_type == 'photographer']
                     elif val_int >= 200000:
                         # Assistant (client_staff)
-                        filtered = [item for item in filtered if item.delegate.id == (val_int - 200000) and item.staff_type == 'client_staff']
+                        filtered = [item for item in filtered if item.delegate.id == (val_int - 200000) and item.staff_type == 'assistant']
                     elif val_int >= 100000:
                         # Operator (admin_staff)
-                        filtered = [item for item in filtered if item.delegate.id == (val_int - 100000) and item.staff_type == 'admin_staff']
+                        filtered = [item for item in filtered if item.delegate.id == (val_int - 100000) and item.staff_type == 'operator']
                     else:
                         filtered = [item for item in filtered if item.delegate.id == val_int]
                 else:
@@ -298,7 +298,7 @@ class StaffCompatManager:
     def all(self):
         items = []
         for o in Operator.objects.all():
-            items.append(StaffCompatWrapper(o, 'admin_staff'))
+            items.append(StaffCompatWrapper(o, 'operator'))
         for a in Assistant.objects.all():
             items.append(StaffCompatWrapper(a, 'client_staff'))
         for p in Photographer.objects.all():
@@ -327,16 +327,16 @@ class StaffCompatManager:
         return self.all().distinct(*args, **kwargs)
 
     def create(self, **kwargs):
-        staff_type = kwargs.get('staff_type', 'admin_staff')
+        staff_type = kwargs.get('staff_type', 'operator')
         user = kwargs.get('user')
-        if staff_type == 'admin_staff':
+        if staff_type == 'operator':
             op = Operator.objects.create(user=user)
             for k, v in list(kwargs.items()):
                 if k not in ('user', 'staff_type', 'id', 'pk') and hasattr(op, k):
                     setattr(op, k, v)
             op.save()
-            return StaffCompatWrapper(op, 'admin_staff')
-        elif staff_type == 'client_staff':
+            return StaffCompatWrapper(op, 'operator')
+        elif staff_type == 'assistant':
             client = kwargs.get('client')
             client_id = kwargs.get('client_id')
             if not client_id and client:

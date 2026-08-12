@@ -53,7 +53,7 @@ class CompatibilityService:
     def map_role_to_legacy(role: str) -> str:
         """Map new internal roles to legacy client role strings."""
         if role == 'operator':
-            return 'admin_staff'
+            return 'operator'
         if role == 'assistant':
             return 'client_staff'
         return role
@@ -61,9 +61,9 @@ class CompatibilityService:
     @staticmethod
     def map_role_from_legacy(role: str) -> str:
         """Map incoming legacy roles to new internal database role strings."""
-        if role == 'admin_staff':
+        if role == 'operator':
             return 'operator'
-        if role == 'client_staff':
+        if role == 'assistant':
             return 'assistant'
         return role
 
@@ -88,9 +88,9 @@ class CompatibilityService:
     @staticmethod
     def encode_id(real_id: int, role: str) -> int:
         """Wraps a database ID with offsets to maintain uniqueness for legacy clients."""
-        if role in ('operator', 'admin_staff'):
+        if role in ('operator'):
             return real_id + 100000
-        if role in ('assistant', 'client_staff'):
+        if role in ('assistant'):
             return real_id + 200000
         return real_id
 

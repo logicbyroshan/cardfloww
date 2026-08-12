@@ -310,7 +310,7 @@ class PdfExporter:
         Export cards to PDF format.
 
         Args:
-            table: IDCardTable instance
+            table: Table instance
             cards: QuerySet of IDCard instances
             status: Status label for filename
             template_id: Optional ExportTemplate ID for footer text

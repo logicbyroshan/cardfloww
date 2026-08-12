@@ -13,17 +13,17 @@ from django.db.models import CharField, Value, IntegerField, Case, When
 
 from core.services import IDCardService
 from core.models import User
-from client.models import Client
+from organisation.models import Organisation
 from assistants.models import Assistant
-from idcards.models import IDCardGroup, IDCardTable, IDCard
+from tables.models import Table, IDCard
 from core.services.base import BaseService, ServiceResult
 from core.services.permission_service import PermissionService
 from mediafiles.utils import get_card_photo_url
 
-from .services_access import ClientAccessService
+from .services_access import OrganisationAccessService
 
 
-class ClientCardService(BaseService):
+class OrganisationCardService(BaseService):
     """
     Service for client card data access.
     Clients can view and manage cards within their tables.
@@ -467,11 +467,11 @@ class ClientCardService(BaseService):
         """
         try:
             if not client:
-                client = ClientAccessService.get_client_for_user(user)
+                client = OrganisationAccessService.get_organisation_for_user(user)
             if not client:
                 return ServiceResult(success=False, message='Client profile not found')
             
-            tables = IDCardTable.objects.filter(
+            tables = Table.objects.filter(
                 group__client=client
             ).select_related('group').annotate(
                 total_cards=Count('id_cards'),
@@ -543,17 +543,17 @@ class ClientCardService(BaseService):
         Supports cursor-based pagination (preferred) and offset (legacy).
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client and not PermissionService.is_any_admin(user):
                 return ServiceResult(success=False, message='Client profile not found')
             
             # Get table and verify ownership
             try:
-                table = IDCardTable.objects.get(id=table_id)
-            except IDCardTable.DoesNotExist:
+                table = Table.objects.get(id=table_id)
+            except Table.DoesNotExist:
                 return ServiceResult(success=False, message='Table not found')
             
-            if not ClientAccessService.can_access_table(user, table):
+            if not OrganisationAccessService.can_access_table(user, table):
                 return ServiceResult(success=False, message='Access denied')
             
             status_filter = (status_filter or '').strip().lower()
@@ -927,7 +927,7 @@ class ClientCardService(BaseService):
         Get details of a specific card.
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client and not PermissionService.is_any_admin(user):
                 return ServiceResult(success=False, message='Client profile not found')
 
@@ -941,7 +941,7 @@ class ClientCardService(BaseService):
                 return ServiceResult(success=False, message='Card not found')
             
             # Verify ownership
-            if not ClientAccessService.can_access_card(user, card):
+            if not OrganisationAccessService.can_access_card(user, card):
                 return ServiceResult(success=False, message='Access denied')
 
             scoped_card = cls._apply_client_staff_row_scope(
@@ -1063,7 +1063,7 @@ class ClientCardService(BaseService):
         fields, image gate, client-readonly guard, activity logging.
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client and not PermissionService.is_any_admin(user):
                 return ServiceResult(success=False, message='Client profile not found')
             
@@ -1074,7 +1074,7 @@ class ClientCardService(BaseService):
                 return ServiceResult(success=False, message='Card not found')
             
             # Verify ownership
-            if not ClientAccessService.can_access_card(user, card):
+            if not OrganisationAccessService.can_access_card(user, card):
                 return ServiceResult(success=False, message='Access denied')
 
             is_pool_retrieve = (
@@ -1136,7 +1136,7 @@ class ClientCardService(BaseService):
                         return ServiceResult(success=False, message=_POOL_RETRIEVE_SCOPE_MESSAGE)
             
             # Delegate entirely to WorkflowService (handles permissions + all guards)
-            from idcards.services_workflow import WorkflowService
+            from tables.services_workflow import WorkflowService
             return WorkflowService.transition(card, new_status, user=user, request=request)
             
         except Exception as e:
@@ -1154,17 +1154,17 @@ class ClientCardService(BaseService):
         fields, image gate, client-readonly guard, activity logging.
         """
         try:
-            client = ClientAccessService.get_client_for_user(user)
+            client = OrganisationAccessService.get_organisation_for_user(user)
             if not client and not PermissionService.is_any_admin(user):
                 return ServiceResult(success=False, message='Client profile not found')
             
             # Verify table ownership
             try:
-                table = IDCardTable.objects.get(id=table_id)
-            except IDCardTable.DoesNotExist:
+                table = Table.objects.get(id=table_id)
+            except Table.DoesNotExist:
                 return ServiceResult(success=False, message='Table not found')
             
-            if not ClientAccessService.can_access_table(user, table):
+            if not OrganisationAccessService.can_access_table(user, table):
                 return ServiceResult(success=False, message='Access denied')
 
             is_pool_retrieve = (
@@ -1276,7 +1276,7 @@ class ClientCardService(BaseService):
                 return ServiceResult(success=False, message='Some selected cards are outside assigned scope')
             
             # Delegate entirely to WorkflowService (handles permissions + all guards)
-            from idcards.services_workflow import WorkflowService
+            from tables.services_workflow import WorkflowService
             return WorkflowService.bulk_transition(table, card_ids, new_status, user=user, request=request)
             
         except Exception as e:

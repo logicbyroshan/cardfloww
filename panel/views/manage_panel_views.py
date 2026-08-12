@@ -20,8 +20,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.models import User, Notification, EmailLog
-from idcards.models import IDCard
-from client.models import Client
+from tables.models import IDCard
+from organisation.models import Organisation
 from core.services.activity_service import ActivityService
 from core.services.permission_service import (
     PermissionService,
@@ -95,7 +95,7 @@ def manage_panel(request):
         'django_version': django.get_version(),
         'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         'environment': 'Development' if django_settings.DEBUG else 'Production',
-        'total_clients': Client.objects.count(),
+        'total_clients': Organisation.objects.count(),
         'total_cards': IDCard.objects.count(),
         'active_tasks': 0,
         'total_notifications': Notification.objects.filter(is_active=True).count(),
@@ -110,15 +110,15 @@ def manage_panel(request):
 
     user_counts = User.objects.filter(is_active=True).aggregate(
         total=Count('id'),
-        admin_staff=Count('id', filter=Q(role__in=('admin_staff', 'operator'))),
+        admin_staff=Count('id', filter=Q(role__in=('operator'))),
         guest_users=Count('id', filter=Q(role='guest_prime_manager')),
         organisations=Count('id', filter=Q(role__in=('prime_manager', 'manager', 'client'))),
-        assistants=Count('id', filter=Q(role__in=('assistant', 'client_staff'))),
+        assistants=Count('id', filter=Q(role__in=('assistant'))),
     )
     context['can_manage_panel_backup'] = PermissionService.has(request.user, 'perm_manage_panel_backup')
     context['can_manage_panel_email'] = PermissionService.has(request.user, 'perm_manage_panel_email')
     context['total_users'] = user_counts['total']
-    context['total_admin_staff'] = user_counts['admin_staff']
+    context['total_admin_staff'] = user_counts['operator']
     context['total_guest_users'] = user_counts['guest_users']
     context['total_organisations'] = user_counts['organisations']
     context['total_assistants'] = user_counts['assistants']

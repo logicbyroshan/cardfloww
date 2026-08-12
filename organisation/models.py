@@ -334,6 +334,6 @@ class Organisation(models.Model):
 
 
 # ── Backward compatibility aliases ─────────────────────────────────────
-# Old code that references `Client` or `from client.models import Client`
+# Old code that references `Client` or `from organisation.models import Organisation`
 # will continue to work during the transition period.
 Client = Organisation

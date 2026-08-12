@@ -102,7 +102,7 @@ def process_export_zip(task):
             - status: str (optional)
             - image_fields: list (optional, defaults to all)
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.background_worker import ensure_exports_directory
     from mediafiles.services import ImageService
     from exports.utils import get_image_fields, clean_filename, is_valid_image_path, sort_cards_for_export
@@ -115,8 +115,8 @@ def process_export_zip(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
-    except IDCardTable.DoesNotExist:
+        table = Table.objects.select_related('group__client').get(id=table_id)
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     
@@ -294,7 +294,7 @@ def process_export_pdf(task):
     
     CRITICAL: PDF is generated to a temp file, not in memory.
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.background_worker import ensure_exports_directory
     from exports.pdf import PdfExporter
     from exports.utils import generate_export_filename, sort_cards_for_export
@@ -307,8 +307,8 @@ def process_export_pdf(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
-    except IDCardTable.DoesNotExist:
+        table = Table.objects.select_related('group__client').get(id=table_id)
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     
@@ -429,7 +429,7 @@ def process_export_docx(task):
     """
     Export cards to DOCX file on disk.
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.background_worker import ensure_exports_directory
     from exports.word import WordExporter
     from exports.utils import generate_export_filename, sort_cards_for_export
@@ -442,8 +442,8 @@ def process_export_docx(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
-    except IDCardTable.DoesNotExist:
+        table = Table.objects.select_related('group__client').get(id=table_id)
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     
@@ -589,7 +589,7 @@ def process_export_excel(task):
     """
     Export cards to Excel file on disk.
     """
-    from idcards.models import IDCardTable, IDCard
+    from tables.models import Table, IDCard
     from core.services.background_worker import ensure_exports_directory
     from exports.excel import ExcelExporter
     from exports.utils import generate_export_filename, sort_cards_for_export
@@ -602,8 +602,8 @@ def process_export_excel(task):
         return
     
     try:
-        table = IDCardTable.objects.select_related('group__client').get(id=table_id)
-    except IDCardTable.DoesNotExist:
+        table = Table.objects.select_related('group__client').get(id=table_id)
+    except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
     

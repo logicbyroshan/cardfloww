@@ -23,9 +23,9 @@ from django.conf import settings
 from django.db import transaction
 from django.core.files.storage import default_storage
 
-from idcards.models import IDCard
+from tables.models import IDCard
 from ..services.base import BaseService
-from idcards.services_workflow import WorkflowService
+from tables.services_workflow import WorkflowService
 from core.utils.field_utils import (
     validate_image_bytes,
 )
@@ -327,8 +327,8 @@ def process_data_rows(*, rows, header_to_field, image_ref_columns, image_fields,
         image_ref_columns: Mapping of image field name to column index/header
         image_fields: List of image field names
         all_table_fields: Full table field definitions
-        table: IDCardTable instance
-        client: Client instance
+        table: Table instance
+        client: Organisation instance
         zip_photos_by_field: Dict of {field_name: DiskBackedImageStore}
         unified_zip_photos: DiskBackedImageStore for unified ZIPs
         request_user: User making the request

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 
-from client.models import Client
+from organisation.models import Organisation
 from core.models import BackgroundTask
 from stats.models import StatsSnapshot
 
@@ -28,7 +28,7 @@ class StatisticsTests(TestCase):
         self.client_user.save()
 
         # Create client profile
-        Client.objects.create(
+        Organisation.objects.create(
             user=self.client_user,
             name='Stats Test Client',
             status='active'

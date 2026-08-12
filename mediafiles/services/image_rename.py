@@ -69,9 +69,9 @@ class ImageRenamer:
         candidate = str(upload_prefix or '').strip().lower()
         if candidate in cls.VALID_UPLOAD_PREFIXES:
             return candidate
-        if candidate in ('admin', 'staff', 'system', 'admin_staff'):
+        if candidate in ('admin', 'staff', 'system', 'operator'):
             return 'a'
-        if candidate in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
+        if candidate in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
             return 'c'
         if candidate in ('operator', 'operator_staff'):
             return 'o'

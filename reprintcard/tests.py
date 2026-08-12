@@ -11,8 +11,8 @@ User = get_user_model()
 
 class ReprintRequestModelTests(TestCase):
 	def test_reprint_request_string_representation(self):
-		from client.models import Client
-		from idcards.models import IDCardGroup, IDCardTable, IDCard
+		from organisation.models import Organisation
+		from tables.models import Table, IDCard
 		from reprintcard.models import ReprintRequest
 
 		owner = User.objects.create_user(
@@ -21,9 +21,9 @@ class ReprintRequestModelTests(TestCase):
 			password='pass1234',
 			role='client',
 		)
-		client = Client.objects.create(user=owner, name='Model Client')
-		group = IDCardGroup.objects.create(client=client, name='Model Group')
-		table = IDCardTable.objects.create(
+		client = Organisation.objects.create(user=owner, name='Model Client')
+		group = Table.objects.create(client=client, name='Model Group')
+		table = Table.objects.create(
 			group=group,
 			name='Model Table',
 			fields=[{'name': 'Name', 'type': 'text'}],
@@ -38,8 +38,8 @@ class ReprintRequestModelTests(TestCase):
 
 class ReprintWorkflowServiceTests(TestCase):
 	def setUp(self):
-		from client.models import Client
-		from idcards.models import IDCardGroup, IDCardTable, IDCard
+		from organisation.models import Organisation
+		from tables.models import Table, IDCard
 		from reprintcard.models import ReprintRequest
 
 		self.owner = User.objects.create_user(
@@ -48,9 +48,9 @@ class ReprintWorkflowServiceTests(TestCase):
 			password='pass1234',
 			role='client',
 		)
-		self.client_obj = Client.objects.create(user=self.owner, name='Service Client')
-		self.group = IDCardGroup.objects.create(client=self.client_obj, name='Service Group')
-		self.table = IDCardTable.objects.create(
+		self.client_obj = Organisation.objects.create(user=self.owner, name='Service Client')
+		self.group = Table.objects.create(client=self.client_obj, name='Service Group')
+		self.table = Table.objects.create(
 			group=self.group,
 			name='Service Table',
 			fields=[
@@ -253,7 +253,7 @@ class ReprintWorkflowServiceTests(TestCase):
 		self.assertTrue(
 			ActivityLog.objects.filter(
 				action='reprint_status',
-				target_model='IDCardTable',
+				target_model='Table',
 				target_id=self.table.id,
 			).exists()
 		)
@@ -261,8 +261,8 @@ class ReprintWorkflowServiceTests(TestCase):
 
 class ReprintApiIntegrationTests(TestCase):
 	def setUp(self):
-		from client.models import Client
-		from idcards.models import IDCardGroup, IDCardTable, IDCard
+		from organisation.models import Organisation
+		from tables.models import Table, IDCard
 		from staff.models import Staff
 		from reprintcard.models import ReprintRequest
 
@@ -281,7 +281,7 @@ class ReprintApiIntegrationTests(TestCase):
 			password='pass1234',
 			role='client',
 		)
-		self.client_obj = Client.objects.create(
+		self.client_obj = Organisation.objects.create(
 			user=self.client_user,
 			name='Reprint Client',
 			perm_idcard_download_list=True,
@@ -294,13 +294,13 @@ class ReprintApiIntegrationTests(TestCase):
 			password='pass1234',
 			role='client',
 		)
-		self.other_client = Client.objects.create(
+		self.other_client = Organisation.objects.create(
 			user=self.other_client_user,
 			name='Other Reprint Client',
 		)
 
-		self.group = IDCardGroup.objects.create(client=self.client_obj, name='Reprint Group')
-		self.table = IDCardTable.objects.create(
+		self.group = Table.objects.create(client=self.client_obj, name='Reprint Group')
+		self.table = Table.objects.create(
 			group=self.group,
 			name='Reprint Table',
 			fields=[
@@ -337,27 +337,27 @@ class ReprintApiIntegrationTests(TestCase):
 			username='assigned-staff@test.com',
 			email='assigned-staff@test.com',
 			password='pass1234',
-			role='admin_staff',
+			role='operator',
 		)
 		self.assigned_staff = Staff.objects.create(
 			user=self.assigned_staff_user,
-			staff_type='admin_staff',
+			staff_type='operator',
 			perm_idcard_download_list=True,
 			perm_idcard_reprint_list=True,
 			perm_reprint_request_list=True,
 			perm_confirmed_list=True,
 		)
-		self.assigned_staff.assigned_clients.add(self.client_obj)
+		self.assigned_staff.assigned_organisations.add(self.client_obj)
 
 		self.unassigned_staff_user = User.objects.create_user(
 			username='unassigned-staff@test.com',
 			email='unassigned-staff@test.com',
 			password='pass1234',
-			role='admin_staff',
+			role='operator',
 		)
 		Staff.objects.create(
 			user=self.unassigned_staff_user,
-			staff_type='admin_staff',
+			staff_type='operator',
 		)
 
 	def _url(self, name, table_id=None):
@@ -570,9 +570,9 @@ class ReprintApiIntegrationTests(TestCase):
 		self.assertIn('must be an object', response.json().get('message', '').lower())
 
 	def test_reprint_request_create_inline_edit_ignores_image_fields(self):
-		from idcards.models import IDCardTable, IDCard
+		from tables.models import Table, IDCard
 
-		image_table = IDCardTable.objects.create(
+		image_table = Table.objects.create(
 			group=self.group,
 			name='Inline Image Safe Table',
 			fields=[
@@ -646,9 +646,9 @@ class ReprintApiIntegrationTests(TestCase):
 		self.assertEqual(create_response.json().get('status'), 'ok')
 
 	def test_reprint_list_normalizes_legacy_mediafiles_image_paths(self):
-		from idcards.models import IDCardTable, IDCard
+		from tables.models import Table, IDCard
 
-		legacy_table = IDCardTable.objects.create(
+		legacy_table = Table.objects.create(
 			group=self.group,
 			name='Legacy Image Table',
 			fields=[
@@ -678,10 +678,10 @@ class ReprintApiIntegrationTests(TestCase):
 		self.assertEqual(photo_field.get('value'), 'mediafiles/cards/alpha.jpg')
 
 	def test_reprint_list_relation_photo_media_type_fallback(self):
-		from idcards.models import IDCardTable, IDCard
+		from tables.models import Table, IDCard
 		from mediafiles.models import CardMedia
 
-		rel_table = IDCardTable.objects.create(
+		rel_table = Table.objects.create(
 			group=self.group,
 			name='Relation Photo Fallback Table',
 			fields=[
@@ -720,10 +720,10 @@ class ReprintApiIntegrationTests(TestCase):
 		self.assertEqual(rel_field.get('value'), 'mediafiles/cards/rel-fallback.jpg')
 
 	def test_request_list_normalizes_legacy_mediafiles_image_paths(self):
-		from idcards.models import IDCardTable, IDCard
+		from tables.models import Table, IDCard
 		from reprintcard.models import ReprintRequest
 
-		legacy_table = IDCardTable.objects.create(
+		legacy_table = Table.objects.create(
 			group=self.group,
 			name='Legacy Requested Image Table',
 			fields=[
@@ -759,10 +759,10 @@ class ReprintApiIntegrationTests(TestCase):
 		self.assertEqual(photo_field.get('value'), 'mediafiles/cards/beta.jpg')
 
 	def test_request_list_reads_image_value_when_field_key_format_differs(self):
-		from idcards.models import IDCardTable, IDCard
+		from tables.models import Table, IDCard
 		from reprintcard.models import ReprintRequest
 
-		table = IDCardTable.objects.create(
+		table = Table.objects.create(
 			group=self.group,
 			name='Key Format Table',
 			fields=[

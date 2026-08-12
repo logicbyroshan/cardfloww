@@ -22,7 +22,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 
 from core.services.base import BaseService
-from idcards.models import IDCard
+from tables.models import IDCard
 from mediafiles.services import ImageService
 
 

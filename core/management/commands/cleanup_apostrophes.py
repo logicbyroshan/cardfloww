@@ -1,8 +1,8 @@
 import logging
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from client.models import Client
-from idcards.models import IDCard, IDCardTable
+from organisation.models import Organisation
+from tables.models import IDCard, Table
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("Client name cannot be empty."))
             return
 
-        clients = Client.objects.filter(name__icontains=client_name)
+        clients = Organisation.objects.filter(name__icontains=client_name)
         if not clients.exists():
             self.stdout.write(self.style.ERROR(f"No client found matching '{client_name}'"))
             return
@@ -52,7 +52,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Selected Client: {client.name}"))
 
         # 2. Get Table
-        tables = IDCardTable.objects.filter(group__client=client)
+        tables = Table.objects.filter(group__client=client)
         if not tables.exists():
             self.stdout.write(self.style.ERROR(f"No ID Card Tables found for client '{client.name}'"))
             return

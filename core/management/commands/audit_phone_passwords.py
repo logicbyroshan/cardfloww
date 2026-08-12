@@ -23,7 +23,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--role',
             type=str,
-            choices=['pro_user', 'super_admin', 'admin_staff', 'client', 'client_staff'],
+            choices=['pro_user', 'super_admin', 'operator'],
             help='Filter by role',
         )
         parser.add_argument(

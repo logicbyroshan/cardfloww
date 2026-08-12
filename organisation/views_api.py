@@ -15,7 +15,7 @@ from django.views.decorators.http import require_http_methods
 from accounts.rate_limit import rate_limit
 from assistants.models import Assistant
 from assistants.services import AssistantService
-from .services_staff import ClientStaffService
+from .services_staff import OrganisationStaffService
 
 from core.models import ClientMessage, NotificationRead
 from core.services.permission_service import PermissionService
@@ -25,10 +25,10 @@ from core.services.session_revalidation import get_user_revalidation_marker
 
 from .views_decorators import require_client_user, require_client_admin, require_client_staff_manager
 from .services import (
-    ClientAccessService,
-    ClientDashboardService,
-    ClientCardService,
-    ClientImageService,
+    OrganisationAccessService,
+    OrganisationDashboardService,
+    OrganisationCardService,
+    OrganisationImageService,
 )
 
 
@@ -138,7 +138,7 @@ def api_dashboard_data(request):
     """
     API: Get dashboard summary data.
     """
-    result = ClientDashboardService.get_dashboard_data(request.user)
+    result = OrganisationDashboardService.get_dashboard_data(request.user)
     
     if result.success:
         return JsonResponse({
@@ -158,14 +158,14 @@ def api_reprint_history(request):
     """
     API: Return reprint history for the client dashboard.
 
-    This wraps ClientDashboardService.get_reprint_history so templates
+    This wraps OrganisationDashboardService.get_reprint_history so templates
     and client-side code can fetch a single consolidated endpoint.
     """
     if not PermissionService.has_permission(request.user, 'perm_reprint_request_list'):
         return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
 
     try:
-        result = ClientDashboardService.get_reprint_history(request.user)
+        result = OrganisationDashboardService.get_reprint_history(request.user)
         if result.success:
             return JsonResponse({'success': True, 'data': result.data})
         return JsonResponse({'success': False, 'message': result.message}, status=400)
@@ -190,7 +190,7 @@ def api_groups_list(request):
             'message': 'Permission denied'
         }, status=403)
 
-    result = ClientDashboardService.get_groups_with_counts(request.user)
+    result = OrganisationDashboardService.get_groups_with_counts(request.user)
 
     if result.success:
         return JsonResponse({
@@ -209,7 +209,7 @@ def api_groups_list(request):
 def api_messages_drawer(request):
     """API: Return client message history payload for the right-side drawer."""
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found.'}, status=403)
 
@@ -314,7 +314,7 @@ def api_staff_list_create(request):
     API: List client staff (GET) or Create new staff (POST).
     """
     if request.method == 'GET':
-        result = ClientStaffService.list_staff(request.user)
+        result = OrganisationStaffService.list_staff(request.user)
         if result.success:
             return JsonResponse({
                 'success': True,
@@ -357,7 +357,7 @@ def api_staff_list_create(request):
             }, status=400)
     
     data = _normalize_staff_assignment_payload(data)
-    result = ClientStaffService.create_staff(request.user, data)
+    result = OrganisationStaffService.create_staff(request.user, data)
     
     if result.success:
         staff_id = (result.data or {}).get('staff_id')
@@ -405,7 +405,7 @@ def api_staff_detail(request, staff_id):
     """
     raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
     if request.method == 'GET':
-        result = ClientStaffService.get_staff_detail(request.user, staff_id)
+        result = OrganisationStaffService.get_staff_detail(request.user, staff_id)
         
         if result.success:
             return JsonResponse({
@@ -478,7 +478,7 @@ def api_staff_detail(request, staff_id):
             logger.exception('Failed to log incoming staff update payload for staff_id=%s', raw_id)
         data = _normalize_staff_assignment_payload(data)
         
-        result = ClientStaffService.update_staff(request.user, staff_id, data)
+        result = OrganisationStaffService.update_staff(request.user, staff_id, data)
         
         if result.success:
             try:
@@ -522,7 +522,7 @@ def api_staff_detail(request, staff_id):
     except Exception:
         logger.exception('Failed to resolve staff name before delete for staff_id=%s', raw_id)
 
-    result = ClientStaffService.delete_staff(request.user, staff_id)
+    result = OrganisationStaffService.delete_staff(request.user, staff_id)
     
     if result.success:
         try:
@@ -549,7 +549,7 @@ def api_staff_toggle_status(request, staff_id):
     """
     raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
     try:
-        result = ClientStaffService.toggle_staff_status(request.user, staff_id)
+        result = OrganisationStaffService.toggle_staff_status(request.user, staff_id)
         
         if result.success:
             is_active = result.data.get('is_active', False)
@@ -608,7 +608,7 @@ def api_staff_set_temp_password(request, staff_id):
     except Exception as validation_error:
         return JsonResponse({'success': False, 'message': '; '.join(validation_error.messages)}, status=400)
 
-    result = ClientStaffService.set_temp_password(
+    result = OrganisationStaffService.set_temp_password(
         request.user,
         staff_id,
         new_password,
@@ -654,20 +654,20 @@ def api_client_groups_list(request):
     default group with multiple tables, return table entries so the UI can
     present meaningful assignment choices.
     """
-    from idcards.models import IDCardGroup  # local import: group listing
-    from idcards.models import IDCardTable
+    from tables.models import Table  # local import: group listing
+    from tables.models import Table
     
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=400)
     
-    groups_qs = IDCardGroup.objects.filter(client=client).order_by('name')
+    groups_qs = Table.objects.filter(client=client).order_by('name')
     group_count = groups_qs.count()
     for_auto_create = request.GET.get('for_auto_create') == 'true'
 
     if group_count <= 1 and not for_auto_create:
-        tables_qs = IDCardTable.objects.filter(
+        tables_qs = Table.objects.filter(
             group__client=client,
             deleted_by_client=False,
         ).order_by('name').values('id', 'name', 'group_id')
@@ -704,11 +704,11 @@ def api_class_section_options(request):
     API: Get distinct class and section values from all cards of this client.
     Used in staff drawer for class/section filter assignment.
     """
-    from idcards.models import IDCard, IDCardTable
-    from idcards.models import IDCardGroup
+    from tables.models import IDCard, Table
+    from tables.models import Table
 
     user = request.user
-    client = ClientAccessService.get_client_for_user(user)
+    client = OrganisationAccessService.get_organisation_for_user(user)
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=400)
 
@@ -719,7 +719,7 @@ def api_class_section_options(request):
 
     resolved_id_source = id_source
     if resolved_id_source == 'auto':
-        group_count = IDCardGroup.objects.filter(client=client).count()
+        group_count = Table.objects.filter(client=client).count()
         resolved_id_source = 'table' if group_count <= 1 else 'group'
 
     group_ids = []
@@ -733,14 +733,14 @@ def api_class_section_options(request):
     # Accepts either:
     # - group IDs (legacy behavior), or
     # - table IDs (client fallback assignment mode).
-    tables_qs = IDCardTable.objects.filter(group__client=client, deleted_by_client=False)
+    tables_qs = Table.objects.filter(group__client=client, deleted_by_client=False)
 
     if group_ids:
         valid_group_ids = set(
-            IDCardGroup.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
         )
         valid_table_ids = set(
-            IDCardTable.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
         )
 
         if resolved_id_source == 'table':
@@ -956,7 +956,7 @@ def api_tables_list(request):
             'message': 'Permission denied'
         }, status=403)
 
-    result = ClientCardService.get_tables_for_client(request.user)
+    result = OrganisationCardService.get_tables_for_client(request.user)
     
     if result.success:
         return JsonResponse({
@@ -996,7 +996,7 @@ def api_cards_list(request, table_id):
     per_page = max(1, min(per_page, 200))
     offset = (page - 1) * per_page
     
-    result = ClientCardService.get_cards(
+    result = OrganisationCardService.get_cards(
         request.user,
         table_id,
         status_filter if status_filter else None,
@@ -1046,7 +1046,7 @@ def api_card_detail(request, card_id):
     """
     API: Get details of a specific card.
     """
-    result = ClientCardService.get_card_detail(request.user, card_id)
+    result = OrganisationCardService.get_card_detail(request.user, card_id)
     
     if result.success:
         return JsonResponse({
@@ -1077,7 +1077,7 @@ def api_card_change_status(request, card_id):
     
     new_status = data.get('status', '')
     
-    result = ClientCardService.change_card_status(request.user, card_id, new_status, request=request)
+    result = OrganisationCardService.change_card_status(request.user, card_id, new_status, request=request)
     
     if result.success:
         return JsonResponse({
@@ -1121,7 +1121,7 @@ def api_cards_bulk_status(request, table_id):
             'message': 'No valid card IDs provided'
         }, status=400)
     
-    result = ClientCardService.bulk_change_status(
+    result = OrganisationCardService.bulk_change_status(
         request.user,
         table_id,
         card_ids,
@@ -1167,7 +1167,7 @@ def api_upload_images(request, table_id):
         }, status=400)
     
     try:
-        result = ClientImageService.upload_images(request.user, table_id, images)
+        result = OrganisationImageService.upload_images(request.user, table_id, images)
         
         if result.success:
             return JsonResponse({
