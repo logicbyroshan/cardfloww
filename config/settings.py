@@ -148,17 +148,22 @@ INSTALLED_APPS = [
     'channels',
     'core',
     'accounts',
-    'client',
+    # ── New domain apps (replacing old names) ──────────────
+    'organisation',      # replaces 'client'
+    'managers',          # replaces 'assistants'
+    'tables',            # replaces 'idcards' (merged IDCardGroup+IDCardTable → Table)
+    # ── Legacy apps kept temporarily during transition ─────
+    'client',            # TODO: remove after all imports updated
+    'assistants',        # TODO: remove after all imports updated
+    'idcards',           # TODO: remove after all imports updated
+    # ──────────────────────────────────────────────────────
     'exports',
     'mediafiles',
     'staff',
     'operators',
-    'assistants',
     'stats',
-    'idcards',
     'reprintcard',
     'panel',
-    # 'officework',  # Removed - app not found
     'mobile_api',
     'desktop_app',
     'web_app',

@@ -1,105 +1,13 @@
-from django.db import models
-from django.conf import settings
-from client.models import Client
+"""
+assistants/models.py — DEPRECATED
 
+This module is kept for backward compatibility only.
+All new code should import from `managers.models` instead.
 
-class Assistant(models.Model):
-    """
-    Assistant model (formerly Client Staff)
-    client controls which client they belong to.
-    """
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assistant_profile')
-    client = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True, related_name='assistants')
-    
-    assigned_groups = models.ManyToManyField(
-        'core.IDCardGroup', blank=True, related_name='assigned_assistants',
-        help_text='ID Card groups this assistant can manage. Empty = all groups.'
-    )
-    assigned_table_ids = models.JSONField(
-        default=list,
-        blank=True,
-        help_text='Optional table IDs this assistant can access. Empty = no table-level restriction.'
-    )
-    allowed_classes = models.JSONField(
-        default=list, blank=True,
-        help_text='Allowed class values. Empty list = all classes.'
-    )
-    allowed_sections = models.JSONField(
-        default=list, blank=True,
-        help_text='Allowed section values. Empty list = all sections.'
-    )
-    allowed_branches = models.JSONField(
-        default=list, blank=True,
-        help_text='Allowed branch values (colleges). Empty list = all branches.'
-    )
-    assignment_scopes = models.JSONField(
-        default=list,
-        blank=True,
-        help_text='Per-scope class/section/branch filters for assistant assignments.'
-    )
-    
-    department = models.CharField(max_length=100, blank=True, null=True)
-    designation = models.CharField(max_length=100, blank=True, null=True)
-    
-    # ID Card Client List Permission
-    perm_idcard_client_list = models.BooleanField(default=False)
-    perm_manage_client_staff = models.BooleanField(default=False)
-    
-    # ID Card Setting Permissions
-    perm_idcard_setting_list = models.BooleanField(default=False)
-    perm_idcard_setting_add = models.BooleanField(default=False)
-    perm_idcard_setting_edit = models.BooleanField(default=False)
-    perm_idcard_setting_delete = models.BooleanField(default=False)
-    perm_idcard_setting_status = models.BooleanField(default=False)
-    
-    # ID Card List Permissions
-    perm_idcard_pending_list = models.BooleanField(default=False)
-    perm_idcard_verified_list = models.BooleanField(default=False)
-    perm_idcard_pool_list = models.BooleanField(default=False)
-    perm_idcard_approved_list = models.BooleanField(default=False)
-    perm_idcard_download_list = models.BooleanField(default=False)
-    perm_idcard_reprint_list = models.BooleanField(default=False)
-    perm_reprint_request_list = models.BooleanField(default=False)
-    perm_confirmed_list = models.BooleanField(default=False)
-    
-    # ID Card Action Permissions
-    perm_idcard_add = models.BooleanField(default=False)
-    perm_idcard_edit = models.BooleanField(default=False)
-    perm_idcard_delete = models.BooleanField(default=False)
-    perm_idcard_info = models.BooleanField(default=False)
-    perm_idcard_approve = models.BooleanField(default=False)
-    perm_idcard_verify = models.BooleanField(default=False)
-    perm_idcard_updated_at = models.BooleanField(default=False)
-    perm_idcard_delete_from_pool = models.BooleanField(default=False)
-    perm_idcard_clear_pending_path = models.BooleanField(default=False)
-    perm_reupload_idcard_image = models.BooleanField(default=False)
-    perm_idcard_retrieve = models.BooleanField(default=False)
-    
-    # ID Card Bulk Action Permissions
-    perm_idcard_bulk_upload = models.BooleanField(default=False)
-    perm_idcard_bulk_download = models.BooleanField(default=False)
-    perm_idcard_download_image_rename_mode = models.BooleanField(default=False)
-    perm_idcard_download_image_generate_mode = models.BooleanField(default=False)
-    perm_idcard_bulk_reupload = models.BooleanField(default=False)
-    perm_idcard_upgrade_all = models.BooleanField(default=False)
-    
-    # Mobile App (PWA) Permission
-    perm_mobile_app = models.BooleanField(default=False)
-    
-    # Manage Panel Permissions
-    perm_manage_panel_backup = models.BooleanField(default=False)
-    perm_manage_panel_email = models.BooleanField(default=False)
-    
-    # Pro Features
-    perm_pro_user_options = models.BooleanField(default=False)
-    perm_pro_log_deletion_guard = models.BooleanField(default=False)
-    perm_pro_data_deletion_guard = models.BooleanField(default=False)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+Migration path:
+    Old: from assistants.models import Assistant
+    New: from managers.models import Manager
+"""
+from managers.models import Manager, Assistant
 
-    class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user.get_full_name() or self.user.username} - Assistant"
+__all__ = ['Assistant', 'Manager']

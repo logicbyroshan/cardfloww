@@ -564,7 +564,7 @@ class ClientMessage(models.Model):
         ('temporary', 'Temporary'),
     ]
 
-    client = models.ForeignKey('core.Client', on_delete=models.CASCADE, related_name='client_messages')
+    client = models.ForeignKey('core.Organisation', on_delete=models.CASCADE, related_name='org_messages')
     sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sent_client_messages')
     message = models.TextField()
     scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='client_only', db_index=True)
@@ -594,7 +594,7 @@ class ClientMessage(models.Model):
         ]
 
     def __str__(self):
-        return f"ClientMessage(client={self.client_id}, scope={self.scope})"
+        return f"OrgMessage(organisation={self.client_id}, scope={self.scope})"
 
     @property
     def is_temporary(self):
@@ -1202,7 +1202,7 @@ class ClientPresenceSession(models.Model):
         db_index=True,
     )
     client = models.ForeignKey(
-        'core.Client',
+        'core.Organisation',
         on_delete=models.CASCADE,
         related_name='presence_sessions',
         db_index=True,
@@ -1215,8 +1215,8 @@ class ClientPresenceSession(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
-        verbose_name = 'Client Presence Session'
-        verbose_name_plural = 'Client Presence Sessions'
+        verbose_name = 'Organisation Presence Session'
+        verbose_name_plural = 'Organisation Presence Sessions'
         unique_together = ('session_key', 'tab_id')
         indexes = [
             models.Index(fields=['client', 'closed_at', 'last_seen_at'], name='clpres_client_live_idx'),
@@ -1267,7 +1267,7 @@ class Photographer(models.Model):
 
 class PhotographerAssignment(models.Model):
     photographer = models.ForeignKey(Photographer, on_delete=models.CASCADE, related_name='photographer_assignments')
-    client = models.ForeignKey('core.Client', on_delete=models.CASCADE, related_name='photographer_assignments')
+    client = models.ForeignKey('core.Organisation', on_delete=models.CASCADE, related_name='photographer_assignments')
     expires_at = models.DateTimeField(null=True, blank=True)
     # Specific table IDs this photographer can see for this client.
     # Empty list = all tables are accessible (default / unrestricted).

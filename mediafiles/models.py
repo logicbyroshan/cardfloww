@@ -77,7 +77,7 @@ class CardMedia(models.Model):
     # Core relationships
     # Using string references to avoid circular imports
     card = models.ForeignKey(
-        'core.IDCard',
+        'tables.IDCard',
         on_delete=models.CASCADE,
         related_name='media_files',
         null=True,
@@ -85,18 +85,18 @@ class CardMedia(models.Model):
         help_text='Associated ID card (null for template images)'
     )
     group = models.ForeignKey(
-        'core.IDCardGroup',
+        'tables.Table',
         on_delete=models.CASCADE,
-        related_name='media_files',
+        related_name='template_media_files',
         null=True,
         blank=True,
-        help_text='Associated ID card group (for template images)'
+        help_text='Associated Table (for template images)'
     )
     client = models.ForeignKey(
-        'core.Client',
+        'core.Organisation',
         on_delete=models.CASCADE,
         related_name='media_files',
-        help_text='Client owner for data scoping'
+        help_text='Organisation owner for data scoping'
     )
     
     # Media file
