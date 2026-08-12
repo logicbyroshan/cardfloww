@@ -160,7 +160,12 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
       >
         <div className="logo-flare-container">
           <img
-            src="/cardflow_logo_brand.png"
+            src="/static/cardflow_logo_brand.png"
+            onError={(e) => {
+              if (!e.target.src.endsWith('/cardflow_logo_brand.png')) {
+                e.target.src = '/cardflow_logo_brand.png';
+              }
+            }}
             alt="CardFlow"
             style={{
               maxHeight: '34px',

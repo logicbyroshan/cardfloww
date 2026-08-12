@@ -18,7 +18,12 @@ export default function WatermarkLogo() {
       }}
     >
       <img
-        src="/favicon.png"
+        src="/static/favicon.png"
+        onError={(e) => {
+          if (!e.target.src.endsWith('/favicon.png')) {
+            e.target.src = '/favicon.png';
+          }
+        }}
         alt="CardFlow Watermark"
         style={{ maxWidth: '280px', width: '35vw', maxHeight: '280px', objectFit: 'contain' }}
       />
