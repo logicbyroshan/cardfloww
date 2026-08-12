@@ -616,7 +616,7 @@ class PermissionTests(TestCase):
         from core.services.permission_service import PermissionService
 
         guest_user, _guest_client = _create_client_user('guest-mobile@test.com', 'clientpass1')
-        guest_user.role = 'guest_user'
+        guest_user.role = 'guest_prime_manager'
         guest_user.save(update_fields=['role'])
 
         self.assertTrue(PermissionService.has(guest_user, 'perm_mobile_app'))
@@ -693,7 +693,7 @@ class GuestUserManagementApiTests(TestCase):
         self.assertTrue(data['success'])
 
         created_user = User.objects.get(username='demo-guest')
-        self.assertEqual(created_user.role, 'guest_user')
+        self.assertEqual(created_user.role, 'guest_prime_manager')
         self.assertTrue(created_user.is_active)
         self.assertTrue(created_user.email.endswith('@noemail.local'))
 
@@ -730,7 +730,7 @@ class GuestUserManagementApiTests(TestCase):
         client_profile.refresh_from_db()
         user.refresh_from_db()
         self.assertTrue(client_profile.is_guest)
-        self.assertEqual(user.role, 'guest_user')
+        self.assertEqual(user.role, 'guest_prime_manager')
 
         restore_response = self.client.post(
             '/panel/api/pro-user/guest-users/restore/',

@@ -227,7 +227,7 @@ def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, clie
         return reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'client_staff' else reverse('manage_staff')
 
     if action in ('login', 'logout'):
-        if actor_role == 'client':
+        if actor_role == 'prime_manager':
             return reverse('manage_clients')
         if actor_role == 'client_staff':
             return reverse('manage_client_staff')

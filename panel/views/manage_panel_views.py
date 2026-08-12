@@ -111,7 +111,7 @@ def manage_panel(request):
     user_counts = User.objects.filter(is_active=True).aggregate(
         total=Count('id'),
         admin_staff=Count('id', filter=Q(role__in=('admin_staff', 'operator'))),
-        guest_users=Count('id', filter=Q(role='guest_user')),
+        guest_users=Count('id', filter=Q(role='guest_prime_manager')),
         client_staff=Count('id', filter=Q(role__in=('client_staff', 'assistant'))),
     )
     context['can_manage_panel_backup'] = PermissionService.has(request.user, 'perm_manage_panel_backup')

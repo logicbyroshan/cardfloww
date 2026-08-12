@@ -176,7 +176,7 @@ class NotificationService:
         qs = qs.select_related('created_by')
 
         # Filter by target scope
-        target_role = 'admin_staff' if user.role == 'operator' else ('client_staff' if user.role == 'assistant' else user.role)
+        target_role = 'admin_staff' if user.role == 'operator' else user.role
         role_filter = Q(target='all') | Q(target=target_role)
         if user.role in ('super_admin',):
             # Super admin sees everything
@@ -228,7 +228,7 @@ class NotificationService:
             & (Q(expires_at__isnull=True) | Q(expires_at__gt=now))
         )
 
-        target_role = 'admin_staff' if user.role == 'operator' else ('client_staff' if user.role == 'assistant' else user.role)
+        target_role = 'admin_staff' if user.role == 'operator' else user.role
         role_filter = Q(target='all') | Q(target=target_role)
         selected_filter = Q(target='selected', target_users=user)
         qs = qs.filter(role_filter | selected_filter).distinct()

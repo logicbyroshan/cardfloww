@@ -121,7 +121,7 @@ def api_pro_user_guest_user_create(request):
         'state': str(body.get('state') or '').strip(),
         'pincode': str(body.get('pincode') or '').strip(),
         'status': 'active',
-        'role': 'guest_user',
+        'role': 'guest_prime_manager',
         'is_active': True,
     }
 
@@ -158,7 +158,7 @@ def api_pro_user_guest_user_convert(request):
         return JsonResponse({'success': False, 'message': 'A valid client_id is required.'}, status=400)
 
     client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
-    if getattr(client, 'is_guest', False) or getattr(client.user, 'role', '') == 'guest_user':
+    if getattr(client, 'is_guest', False) or getattr(client.user, 'role', '') == 'guest_prime_manager':
         return JsonResponse({'success': False, 'message': 'This user is already a guest.'}, status=400)
 
     try:
@@ -192,7 +192,7 @@ def api_pro_user_guest_user_restore(request):
         return JsonResponse({'success': False, 'message': 'A valid client_id is required.'}, status=400)
 
     client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
-    if not getattr(client, 'is_guest', False) and getattr(client.user, 'role', '') != 'guest_user':
+    if not getattr(client, 'is_guest', False) and getattr(client.user, 'role', '') != 'guest_prime_manager':
         return JsonResponse({'success': False, 'message': 'This user is not a guest.'}, status=400)
 
     try:

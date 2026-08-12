@@ -184,8 +184,8 @@ def register_revalidation_signals() -> None:
     )
     m2m_changed.connect(
         _on_profile_m2m_changed,
-        sender=Assistant.assigned_tables.through,
-        dispatch_uid='pvm_reval_manager_assigned_tables_m2m',
+        sender=Assistant.assigned_groups.through,
+        dispatch_uid='pvm_reval_assistant_assigned_groups_m2m',
         weak=False,
     )
 

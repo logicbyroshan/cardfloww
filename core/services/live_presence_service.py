@@ -78,7 +78,7 @@ class LiveClientPresenceService:
     def resolve_client_id_for_user(cls, user):
         role = str(getattr(user, 'role', '') or '').lower()
 
-        if role == 'client':
+        if role == 'prime_manager':
             return (
                 Client.objects.filter(
                     user_id=user.id,

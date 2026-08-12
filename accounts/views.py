@@ -191,7 +191,7 @@ class LogoutView(View):
                     return redirect('/panel/?pro_logout_blocked=1')
 
             # Sandbox Cleanup
-            if getattr(request.user, 'role', '') == 'guest_user' and request.user.username.startswith('guestclone_'):
+            if getattr(request.user, 'role', '') == 'guest_prime_manager' and request.user.username.startswith('guestclone_'):
                 from client.services_sandbox import SandboxService
                 SandboxService.cleanup_clone(request.user.id)
 
@@ -340,7 +340,7 @@ class LoginAPIView(View):
                 user = result['user']
                 
                 # Clone guest user for strict session sandbox isolation
-                if getattr(user, 'role', '') == 'guest_user':
+                if getattr(user, 'role', '') == 'guest_prime_manager':
                     from client.services_sandbox import SandboxService
                     user = SandboxService.create_session_clone(user)
                     result['user'] = user
@@ -719,7 +719,7 @@ class ProUserAuditUsersAPIView(APILoginRequiredMixin, View):
         users = []
         for entry in users_qs[:300]:
             client_name = ''
-            if entry.role == 'client':
+            if entry.role == 'prime_manager':
                 client_profile = getattr(entry, 'client_profile', None)
                 client_name = getattr(client_profile, 'name', '') or ''
             elif entry.role == 'assistant':

@@ -72,21 +72,21 @@ def api_check_maintenance(request):
     if not user.is_authenticated:
         return JsonResponse({'active': False})
     
-    if user.role == 'client':
-        from client.models import Client
+    if user.role in ('prime_manager', 'manager', 'guest_prime_manager'):
+        from organisation.models import Organisation
         try:
-            client = Client.objects.get(user=user)
-            return JsonResponse({'active': client.status == 'active'})
-        except Client.DoesNotExist:
+            org = Organisation.objects.get(user=user)
+            return JsonResponse({'active': org.status == 'active'})
+        except Organisation.DoesNotExist:
             return JsonResponse({'active': False})
     elif user.role == 'assistant':
         from assistants.models import Assistant
         try:
-            assistant = Assistant.objects.select_related('client').get(user=user)
-            return JsonResponse({'active': assistant.client and assistant.client.status == 'active'})
+            assistant = Assistant.objects.select_related('organisation').get(user=user)
+            return JsonResponse({'active': assistant.organisation and assistant.organisation.status == 'active'})
         except Assistant.DoesNotExist:
             return JsonResponse({'active': False})
-    
+
     return JsonResponse({'active': True})
 
 
@@ -97,7 +97,7 @@ def api_auth_me(request):
     if not user.is_authenticated:
         return JsonResponse({'authenticated': False}, status=200)
 
-    role = getattr(user, 'role', 'admin') or ('admin' if user.is_superuser else 'client')
+    role = getattr(user, 'role', 'admin') or ('admin' if user.is_superuser else 'prime_manager')
     return JsonResponse({
         'authenticated': True,
         'user': {

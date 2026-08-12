@@ -451,7 +451,7 @@ class LoginViewTests(TestCase):
             username='guest-limit@example.com',
             email='guest-limit@example.com',
             password='testpass123',
-            role='guest_user',
+            role='guest_prime_manager',
         )
 
         from accounts.models import UserDeviceSession
@@ -509,7 +509,7 @@ class LoginViewTests(TestCase):
             username='guest-mobile@example.com',
             email='guest-mobile@example.com',
             password='testpass123',
-            role='guest_user',
+            role='guest_prime_manager',
         )
         Client.objects.create(
             user=guest_user,
@@ -1559,7 +1559,7 @@ class GuestSandboxDatabaseTests(TestCase):
             username='guest-test-sandbox@example.com',
             email='guest-test-sandbox@example.com',
             password='testpass123',
-            role='guest_user',
+            role='guest_prime_manager',
         )
         self.client_profile = Client.objects.create(
             user=self.guest_user,

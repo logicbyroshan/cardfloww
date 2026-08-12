@@ -520,7 +520,7 @@ class PermissionValidationMiddleware:
         if not fresh_user.is_active:
             logger.warning("PVM_DEBUG: User %s (ID: %d) is now inactive", user.username, user.pk)
             return self._force_logout(request, 'Your account has been deactivated.')
-        if fresh_user.role == 'client':
+        if fresh_user.role == 'prime_manager':
             return self._validate_client_access(request, fresh_user)
         elif fresh_user.role in ('assistant', 'client_staff'):
             return self._validate_assistant_access(request, fresh_user)
@@ -1206,7 +1206,7 @@ class GuestSandboxMiddleware:
         guest_db = None
         user = getattr(request, 'user', None)
         
-        if user and user.is_authenticated and getattr(user, 'role', '') == 'guest_user':
+        if user and user.is_authenticated and getattr(user, 'role', '') == 'guest_prime_manager':
             session_key = getattr(request.session, 'session_key', '') or ''
             if not session_key:
                 try:

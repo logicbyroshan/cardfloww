@@ -505,7 +505,7 @@ def _check_export_permission(request, skip_status_check=False):
     # Keep export access aligned with status list permissions.
     status = _get_status_from_request(request)
     if status:
-        is_client_role = request.user.role in ('client', 'client_staff') or getattr(request.user, 'role', '') == 'guest_user'
+        is_client_role = request.user.role in ('client', 'client_staff') or getattr(request.user, 'role', '') == 'guest_prime_manager'
         if not (skip_status_check and is_client_role):
             required_perm = PermissionService.STATUS_LIST_PERM_MAP.get(status)
             if required_perm and not PermissionService.has(request.user, required_perm):

@@ -155,14 +155,14 @@ class ClientService(BaseService):
                 return ServiceResult(success=False, message='Name is required')
 
             role = str(data.get('role', 'client') or 'client').strip().lower()
-            if role not in {'client', 'guest_user'}:
-                role = 'client'
+            if role not in {'client', 'guest_prime_manager'}:
+                role = 'prime_manager'
 
             username_input = str(data.get('username') or '').strip()
             raw_email = str(data.get('email') or '').strip().lower()
             email_was_provided = bool(raw_email)
             if not raw_email:
-                if role != 'guest_user':
+                if role != 'guest_prime_manager':
                     return ServiceResult(success=False, message='Email is required')
                 username_seed = username_input or name or 'guest'
                 safe_username = ''.join(ch if ch.isalnum() or ch in ('-', '_', '.') else '_' for ch in username_seed.lower()).strip('._-') or 'guest'
@@ -176,7 +176,7 @@ class ClientService(BaseService):
 
             email = raw_email
 
-            if role == 'guest_user' and username_input:
+            if role == 'guest_prime_manager' and username_input:
                 username = username_input.lower().replace('.', '_')
             else:
                 username = email.split('@')[0].lower().replace('.', '_')
@@ -216,7 +216,7 @@ class ClientService(BaseService):
                 return ServiceResult(success=False, message='Email is required')
 
             # Guest users should come up active by default so they can sign in immediately.
-            create_as_active = cls.parse_bool(data.get('is_active', role == 'guest_user'))
+            create_as_active = cls.parse_bool(data.get('is_active', role == 'guest_prime_manager'))
             
             with transaction.atomic():
 
@@ -236,7 +236,7 @@ class ClientService(BaseService):
                 client_kwargs = {
                     'user': user,
                     'name': name,
-                    'is_guest': role == 'guest_user',
+                    'is_guest': role == 'guest_prime_manager',
                     'city': data.get('city', ''),
                     'state': data.get('state', ''),
                     'pincode': data.get('pincode', ''),
@@ -264,7 +264,7 @@ class ClientService(BaseService):
 
                 # Queue welcome email only when it is actually needed:
                 # - active now, a real email exists, and this is not a guest sandbox
-                if create_as_active and email_was_provided and role != 'guest_user':
+                if create_as_active and email_was_provided and role != 'guest_prime_manager':
                     EmailLog.objects.create(
                         recipient_name=name or 'Client',
                         recipient_email=email,
@@ -275,7 +275,7 @@ class ClientService(BaseService):
 
             # Send welcome email in background thread if created as active.
             # This prevents the API response from being blocked by SMTP.
-            if create_as_active and email_was_provided and role != 'guest_user':
+            if create_as_active and email_was_provided and role != 'guest_prime_manager':
                 _user_pk = user.pk
                 _email = email
                 _name = name
@@ -314,7 +314,7 @@ class ClientService(BaseService):
             message = 'Client created successfully!'
             if create_as_active:
                 if email_was_provided:
-                    if role != 'guest_user':
+                    if role != 'guest_prime_manager':
                         message += ' Welcome email queued for delivery.'
                 else:
                     message += ' No email provided, so welcome email was skipped.'
@@ -326,7 +326,7 @@ class ClientService(BaseService):
                 message=message,
                 data={
                     'client': cls.serialize(client, include_permissions=False),
-                    'email_sent': create_as_active and email_was_provided and role != 'guest_user',
+                    'email_sent': create_as_active and email_was_provided and role != 'guest_prime_manager',
                 }
             )
 
@@ -340,13 +340,13 @@ class ClientService(BaseService):
             client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
             user = client.user
 
-            if client.is_guest or user.role == 'guest_user':
+            if client.is_guest or user.role == 'guest_prime_manager':
                 return ServiceResult(success=False, message='This account is already a guest user.')
 
             with transaction.atomic():
                 client.is_guest = True
                 client.status = 'active'
-                user.role = 'guest_user'
+                user.role = 'guest_prime_manager'
                 user.is_active = True
                 user.save(update_fields=['role', 'is_active'])
                 client.save(update_fields=['is_guest', 'status', 'updated_at'])
@@ -367,13 +367,13 @@ class ClientService(BaseService):
             client = get_object_or_404(Client.objects.select_related('user'), id=client_id)
             user = client.user
 
-            if not client.is_guest and user.role != 'guest_user':
+            if not client.is_guest and user.role != 'guest_prime_manager':
                 return ServiceResult(success=False, message='This account is already a normal client.')
 
             with transaction.atomic():
                 client.is_guest = False
                 client.status = 'active'
-                user.role = 'client'
+                user.role = 'prime_manager'
                 user.is_active = True
                 user.save(update_fields=['role', 'is_active'])
                 client.save(update_fields=['is_guest', 'status', 'updated_at'])

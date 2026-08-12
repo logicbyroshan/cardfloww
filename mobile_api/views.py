@@ -251,7 +251,7 @@ def require_mobile_client(view_func=None, allow_public=False):
 
             # 4. Enforce valid roles
             user = request.user
-            valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'client', 'guest_user', 'assistant', 'client_staff', 'photographer')
+            valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
             if not hasattr(user, 'role') or user.role not in valid_roles:
                 if is_api_request:
                     return JsonResponse({'success': False, 'message': 'Invalid account role.'}, status=403)
@@ -281,7 +281,7 @@ def _get_notification_count(user):
 
 def _is_mobile_client_edit_locked(user, card_status):
     """Client/client_staff cannot edit cards in specific locked statuses on mobile."""
-    return getattr(user, 'role', '') in ('client', 'client_staff') and card_status in MOBILE_CLIENT_EDIT_LOCK_STATUSES
+    return getattr(user, 'role', '') in ('prime_manager', 'manager') and card_status in MOBILE_CLIENT_EDIT_LOCK_STATUSES
 
 
 def _mobile_client_edit_locked_response():
@@ -945,7 +945,7 @@ def mobile_login(request):
     """
     if request.user.is_authenticated:
         user = request.user
-        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'client', 'guest_user', 'assistant', 'client_staff', 'photographer')
+        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
         if not hasattr(user, 'role') or user.role not in valid_roles:
             return redirect('/panel/auth/logout/?next=/app/login/')
         # Separate mobile auth flow: do not auto-enter app unless mobile auth checkpoint passed.
@@ -1009,7 +1009,7 @@ def api_mobile_login(request):
             return JsonResponse({'success': False, 'message': result.get('message', 'Invalid credentials.')}, status=400)
 
         user = result.get('user')
-        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'client', 'guest_user', 'assistant', 'client_staff', 'photographer')
+        valid_roles = ('pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer')
         if not user or getattr(user, 'role', '') not in valid_roles:
             return JsonResponse({'success': False, 'message': 'This account cannot access the mobile app.'}, status=403)
 
@@ -1042,7 +1042,7 @@ def api_mobile_login(request):
 
             # Guest users are allowed up to 20 concurrent mobile sessions.
             # Keep the legacy handoff behavior for other roles only.
-            if getattr(user, 'role', '') != 'guest_user':
+            if getattr(user, 'role', '') != 'guest_prime_manager':
                 AuthService.revoke_active_sessions_for_user(
                     user.id,
                     surface='mobile',
@@ -4832,7 +4832,7 @@ def search_page(request):
         if parsed_table_id > 0:
             scoped_table = IDCardTable.objects.select_related('group').filter(id=parsed_table_id).first()
             if scoped_table and PermissionService.can_access_client(user, scoped_table.group.client_id):
-                if user.role in ('client', 'client_staff'):
+                if user.role in ('prime_manager', 'manager'):
                     if ClientAccessService.can_access_table(user, scoped_table):
                         table_scope_id = parsed_table_id
                 else:
@@ -6729,7 +6729,7 @@ def api_search(request):
         if not PermissionService.can_access_client(user, scoped_table.group.client_id):
             return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
-        if user.role in ('client', 'client_staff') and not ClientAccessService.can_access_table(user, scoped_table):
+        if user.role in ('prime_manager', 'manager') and not ClientAccessService.can_access_table(user, scoped_table):
             return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
         base_qs = base_qs.filter(table_id=scoped_table_id)

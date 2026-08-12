@@ -213,7 +213,7 @@ class ImpersonateService:
         for u in users:
             name = f"{u.first_name} {u.last_name}".strip() or u.username
             client_name = ''
-            if u.role == 'client':
+            if u.role == 'prime_manager':
                 client_profile = getattr(u, 'client_profile', None)
                 client_name = getattr(client_profile, 'name', '') or ''
             elif u.role == 'assistant':

@@ -24,7 +24,7 @@ class StatisticsTests(TestCase):
             password='testpass123',
             email='stats-client@test.com'
         )
-        self.client_user.role = 'client'
+        self.client_user.role = 'prime_manager'
         self.client_user.save()
 
         # Create client profile

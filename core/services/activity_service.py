@@ -1423,7 +1423,7 @@ class ActivityService:
             return f'Admin "{actor_name}"'
         if role == 'admin_staff':
             return f'Operator "{actor_name}"'
-        if role == 'client':
+        if role == 'prime_manager':
             return f'Client "{actor_name}"'
         if role == 'client_staff':
             if client_name:
@@ -1473,7 +1473,7 @@ class ActivityService:
 
         user = getattr(entry, 'user', None)
         if user:
-            if user.role == 'client':
+            if user.role == 'prime_manager':
                 client_profile = getattr(user, 'client_profile', None)
                 if client_profile and client_profile.name:
                     return client_profile.name

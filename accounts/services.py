@@ -32,7 +32,7 @@ ROLE_MAPPING = {
     'super_admin': 'super_admin',
     'operator': 'operator',
     'client': 'client',
-    'guest_user': 'guest_user',
+    'guest_prime_manager': 'guest_prime_manager',
     'assistant': 'assistant',
 }
 
@@ -42,7 +42,7 @@ GROUP_NAMES = {
     'super_admin': 'SUPER_ADMIN',
     'operator': 'OPERATOR',
     'client': 'CLIENT',
-    'guest_user': 'GUEST_USER',
+    'guest_prime_manager': 'guest_prime_manager',
     'assistant': 'ASSISTANT',
 }
 
@@ -54,7 +54,7 @@ DASHBOARD_URLS = {
     'super_admin': '/panel/',
     'operator': '/panel/',
     'client': '/panel/client/dashboard/',
-    'guest_user': '/panel/client/dashboard/',
+    'guest_prime_manager': '/panel/client/dashboard/',
     'assistant': '/panel/client/dashboard/',
 }
 
@@ -78,7 +78,7 @@ _ROLE_SURFACE_LIMITS = {
     'client': {'desktop': 1, 'mobile': 1},
     'assistant': {'desktop': 1, 'mobile': 1},
     # Guest users can use the same account on up to 20 devices per surface.
-    'guest_user': {'desktop': 20, 'mobile': 20},
+    'guest_prime_manager': {'desktop': 20, 'mobile': 20},
     # PRO and ADMIN have effectively no limit (9999).
     'operator': {'desktop': 9999, 'mobile': 9999},
     'super_admin': {'desktop': 9999, 'mobile': 9999},
@@ -1206,7 +1206,7 @@ class RoleService:
             'operator': 'Operator',
             'admin_staff': 'Operator',
             'client': 'Client Admin',
-            'guest_user': 'Guest Sandbox User',
+            'guest_prime_manager': 'Guest Sandbox User',
             'assistant': 'Assistant',
             'client_staff': 'Assistant',
             'photographer': 'Photographer',

@@ -39,14 +39,15 @@ class User(AbstractUser):
         ('pro_user', 'Pro User'),
         ('super_admin', 'Super Admin'),
         ('operator', 'Operator'),
-        ('client', 'Client'),
-        ('guest_user', 'Guest User'),
+        ('prime_manager', 'Prime Manager'),     # org owner — auto-created with Organisation
+        ('manager', 'Manager'),                  # regular manager under org (up to 4)
+        ('guest_prime_manager', 'Guest Prime Manager'),  # guest version of prime_manager
         ('assistant', 'Assistant'),
         ('photographer', 'Photographer'),
     ]
-    
+
     phone = models.CharField(max_length=15, blank=True, null=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='client', db_index=True)
+    role = models.CharField(max_length=30, choices=ROLE_CHOICES, default='prime_manager', db_index=True)
     # DEPRECATED: profile_image removed - use frontend placeholder avatars instead
     # profile_image field removed in Phase 1 refactor
     is_active = models.BooleanField(default=True)
@@ -69,8 +70,8 @@ class User(AbstractUser):
         except Exception:
             pass
         try:
-            if hasattr(self, 'assistant_profile') and self.assistant_profile:
-                return StaffCompatWrapper(self.assistant_profile, 'client_staff')
+            if hasattr(self, 'manager_profile') and self.manager_profile:
+                return StaffCompatWrapper(self.manager_profile, 'manager')
         except Exception:
             pass
         try:
@@ -152,15 +153,26 @@ class User(AbstractUser):
     @property
     def is_photographer(self):
         return self.role == 'photographer'
-    
-    @property
-    def is_client(self):
-        return self.role in ('client', 'guest_user')
 
     @property
-    def is_guest_user(self):
-        return self.role == 'guest_user'
-    
+    def is_prime_manager(self):
+        """True for org owners — the single account created with the Organisation."""
+        return self.role in ('prime_manager', 'guest_prime_manager')
+
+    @property
+    def is_guest_prime_manager(self):
+        return self.role == 'guest_prime_manager'
+
+    @property
+    def is_manager(self):
+        """True for regular managers under an org (up to 4 per org)."""
+        return self.role == 'manager'
+
+    @property
+    def is_any_manager(self):
+        """True for both prime_manager and manager roles."""
+        return self.role in ('prime_manager', 'manager', 'guest_prime_manager')
+
     @property
     def is_assistant(self):
         return self.role == 'assistant'
@@ -169,11 +181,21 @@ class User(AbstractUser):
     def is_admin_staff(self):
         return self.is_operator
 
+    # ── Legacy compat aliases ──────────────────────
+    @property
+    def is_client(self):
+        """Deprecated: use is_prime_manager"""
+        return self.is_prime_manager
+
+    @property
+    def is_guest_user(self):
+        """Deprecated: use is_guest_prime_manager"""
+        return self.is_guest_prime_manager
+
     @property
     def is_client_staff(self):
+        """Deprecated: use is_assistant or is_manager"""
         return self.is_assistant
-
-
 
 
 class SystemSettings(models.Model):
@@ -473,9 +495,10 @@ class Notification(models.Model):
     TARGET_CHOICES = [
         ('all', 'All Users'),
         ('super_admin', 'Super Admins'),
-        ('admin_staff', 'Admin Staff'),
-        ('client', 'Clients'),
-        ('client_staff', 'Client Staff'),
+        ('admin_staff', 'Admin Staff / Operators'),
+        ('prime_manager', 'Prime Managers'),
+        ('manager', 'Managers'),
+        ('assistant', 'Assistants'),
         ('selected', 'Selected Users'),
     ]
     CATEGORY_ICONS = {

@@ -246,14 +246,14 @@ class PermissionService:
         """Check if user is a client."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('client', 'guest_user')
+        return getattr(user, 'role', None) in ('client', 'guest_prime_manager')
 
     @staticmethod
     def is_guest_user(user) -> bool:
         """Check if user is a guest/sandbox account."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) == 'guest_user'
+        return getattr(user, 'role', None) == 'guest_prime_manager'
 
     @staticmethod
     def is_assistant(user) -> bool:
@@ -280,7 +280,7 @@ class PermissionService:
         """Check if user is client or assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('client', 'guest_user', 'assistant', 'client_staff')
+        return getattr(user, 'role', None) in ('client', 'guest_prime_manager', 'assistant', 'client_staff')
 
     # ==================== Profile Lookup ====================
 

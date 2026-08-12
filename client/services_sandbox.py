@@ -41,7 +41,7 @@ class SandboxService:
                     first_name=original_user.first_name,
                     last_name=original_user.last_name,
                     phone=original_user.phone,
-                    role='guest_user',
+                    role='guest_prime_manager',
                     is_active=True
                 )
                 
