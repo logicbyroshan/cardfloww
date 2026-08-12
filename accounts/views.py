@@ -197,18 +197,10 @@ class LogoutView(View):
 
             ActivityService.log_logout(request, request.user)
         logout(request)
-        # Respect ?next= or POST body next (e.g. from PWA logout)
-        # S7: use Django's safe-redirect helper ÔÇö blocks //evil.com, /\evil.com, etc.
-        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-            login_url = reverse('accounts:login') + '?next=' + next_url
-            if is_ajax:
-                return JsonResponse({'success': True, 'redirect': login_url})
-            return redirect(login_url)
-        # Redirect back into the panel when no explicit destination is set.
-        target_url = reverse('accounts:login')
+        login_url = reverse('accounts:login')
         if is_ajax:
-            return JsonResponse({'success': True, 'redirect': target_url})
-        return redirect(target_url)
+            return JsonResponse({'success': True, 'redirect': login_url})
+        return redirect(login_url)
 
 
 # =============================================================================

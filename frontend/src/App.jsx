@@ -198,6 +198,19 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Clean URL query parameters (such as ?next=...) to keep browser address bar 100% clean
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search) {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('next')) {
+        urlParams.delete('next');
+        const cleanSearch = urlParams.toString();
+        const cleanUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }, []);
+
   // Initialize Lenis smooth scroll safely on .page-content container
   useEffect(() => {
     if (bootState !== BOOT.AUTH) return;
