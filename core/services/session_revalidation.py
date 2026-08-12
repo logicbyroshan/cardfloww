@@ -109,10 +109,13 @@ def register_revalidation_signals() -> None:
             affected.extend(
                 Assistant.objects.filter(organisation_id=instance.pk).values_list('user_id', flat=True)
             )
-            affected.extend(
-                Operator.objects.filter(assigned_organisations=instance)
-                .values_list('user_id', flat=True)
-            )
+            try:
+                affected.extend(
+                    Operator.objects.filter(assigned_organisations=instance)
+                    .values_list('user_id', flat=True)
+                )
+            except Exception:
+                pass
             bump_users_revalidation(affected)
             _bump_admin_dashboard_versions()
             _bump_dashboard_versions_for_client(getattr(instance, 'pk', None))

@@ -82,6 +82,7 @@ class Table(models.Model):
     is_active = models.BooleanField(default=True)
     deleted_by_manager = models.BooleanField(
         default=False,
+        db_column='deleted_by_client',
         help_text='True when the prime manager soft-deletes this table.',
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -148,6 +149,7 @@ class Table(models.Model):
 
     class Meta:
         app_label = 'tables'
+        db_table = 'core_idcardtable'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['organisation', 'is_active']),
@@ -254,6 +256,7 @@ class IDCard(models.Model):
 
     class Meta:
         app_label = 'tables'
+        db_table = 'core_idcard'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['table', 'status']),

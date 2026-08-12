@@ -86,6 +86,7 @@ class Organisation(models.Model):
         max_length=20,
         choices=ORG_TYPE_CHOICES,
         default='school',
+        db_column='client_type',
         db_index=True,
         help_text='Type of organisation: school, college, company, or other',
     )
@@ -103,8 +104,7 @@ class Organisation(models.Model):
     state = models.CharField(max_length=100, blank=True, null=True)
     pincode = models.CharField(max_length=10, blank=True, null=True)
 
-    # ── Permissions ──────────────────────────────────────────
-    perm_organisation_list = models.BooleanField(default=False)
+    perm_organisation_list = models.BooleanField(default=False, db_column='perm_idcard_client_list')
 
     perm_idcard_setting_list = models.BooleanField(default=False)
     perm_idcard_setting_add = models.BooleanField(default=False)

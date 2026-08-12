@@ -1,4 +1,4 @@
-﻿"""
+"""
 Canonical location: organisation/services_client_core.py
 OrganisationService is the main class. OrganisationCoreService and ClientService are aliases.
 """

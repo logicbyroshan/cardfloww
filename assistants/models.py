@@ -18,6 +18,7 @@ class Assistant(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
+        db_column='client_id',
         related_name='assistants',
     )
 
@@ -38,9 +39,8 @@ class Assistant(models.Model):
     department = models.CharField(max_length=100, blank=True, null=True)
     designation = models.CharField(max_length=100, blank=True, null=True)
 
-    # ── Permissions ─────────────────────────────────────────
-    perm_organisation_list = models.BooleanField(default=False)
-    perm_manage_assistants = models.BooleanField(default=False)
+    perm_organisation_list = models.BooleanField(default=False, db_column='perm_idcard_client_list')
+    perm_manage_assistants = models.BooleanField(default=False, db_column='perm_manage_client_staff')
 
     perm_idcard_setting_list = models.BooleanField(default=False)
     perm_idcard_setting_add = models.BooleanField(default=False)
