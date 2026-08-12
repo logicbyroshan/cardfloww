@@ -184,21 +184,26 @@ export default function ManageFeaturesView({ addToast }) {
 
   const handleImpersonate = async (user) => {
     try {
-      await impersonateApi.start(user.rawId || user.id);
-      setImpersonatingUser(user);
-      addToast?.(`Now impersonating ${user.name} (${user.role})`, 'info');
-    } catch (_) {
-      setImpersonatingUser(user);
-      addToast?.(`Now impersonating ${user.name} (${user.role})`, 'info');
+      const res = await impersonateApi.start(user.rawId || user.id);
+      addToast?.(res?.message || `Now impersonating ${user.name} (${user.role})`, 'success');
+      if (window.__refreshAuthUser) {
+        await window.__refreshAuthUser();
+      }
+    } catch (err) {
+      addToast?.(err?.response?.data?.message || err?.message || 'Failed to start impersonation', 'error');
     }
   };
 
   const handleStopImpersonate = async () => {
     try {
       await impersonateApi.stop();
-    } catch (_) {}
-    setImpersonatingUser(null);
-    addToast?.('Returned to Super Admin session', 'success');
+      addToast?.('Returned to Super Admin session', 'success');
+      if (window.__refreshAuthUser) {
+        await window.__refreshAuthUser();
+      }
+    } catch (err) {
+      addToast?.(err?.response?.data?.message || err?.message || 'Failed to stop impersonation', 'error');
+    }
   };
 
   /* Impersonate filtered */

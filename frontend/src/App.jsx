@@ -26,7 +26,7 @@ import TutorialGuideView from './components/tutorial/TutorialGuideView';
 import ManageFeaturesView from './components/pro/ManageFeaturesView';
 import AuthFlowContainer from './components/auth/AuthFlowContainer';
 import Preloader from './components/common/Preloader';
-import { authApi } from './services/api';
+import { authApi, impersonateApi } from './services/api';
 
 import QuickActionDrawer from './components/dashboard/QuickActionDrawer';
 
@@ -109,7 +109,7 @@ export default function App() {
     setDrawerInitialData(initialData);
   }, []);
 
-  // Toasts — powered by Sonner (zero call-site changes needed)
+  // Toasts — powered by Sonner
   const addToast = useCallback((message, type = 'info') => {
     if (type === 'success') toast.success(message);
     else if (type === 'error') toast.error(message);
@@ -117,27 +117,69 @@ export default function App() {
     else toast.info(message);
   }, []);
 
-  // Auth bootstrap — check session on mount
+  // Auth bootstrap & impersonation re-sync
+  const refreshUser = useCallback(async () => {
+    try {
+      const data = await authApi.getCurrentUser();
+      if (data && (data.authenticated || data.user || data.username)) {
+        const u = data.user || data;
+        setCurrentUser(u);
+        const role = u.role || 'super_admin';
+        setUserRole(role);
+
+        if (data.is_impersonating && data.impersonator) {
+          setImpersonatedUser({
+            name: u.full_name || u.username,
+            role: role,
+            email: u.email,
+            impersonator: data.impersonator,
+          });
+        } else {
+          setImpersonatedUser(null);
+        }
+      } else {
+        setCurrentUser(null);
+        setImpersonatedUser(null);
+      }
+      setBootState(BOOT.AUTH);
+    } catch (err) {
+      console.warn('Auth refresh error:', err);
+      setBootState(BOOT.AUTH);
+    }
+  }, []);
+
   useEffect(() => {
+    window.__refreshAuthUser = refreshUser;
+    window.__setActiveImpersonation = (user) => {
+      if (user) {
+        setImpersonatedUser(user);
+        setUserRole(user.rawRole || user.role || 'client');
+      } else {
+        setImpersonatedUser(null);
+        refreshUser();
+      }
+    };
+
     // Immediate fallback so app NEVER gets stuck loading
     const timer = setTimeout(() => {
       setBootState((prev) => (prev === BOOT.LOADING ? BOOT.AUTH : prev));
     }, 400);
 
-    authApi
-      .getCurrentUser()
-      .then((data) => {
-        if (data && (data.authenticated || data.user || data.username)) {
-          setCurrentUser(data.user || data);
-          setUserRole(data.user?.role || data.role || 'super_admin');
-        }
-        setBootState(BOOT.AUTH);
-      })
-      .catch(() => {
-        setBootState(BOOT.AUTH);
-      })
-      .finally(() => clearTimeout(timer));
-  }, []);
+    refreshUser().finally(() => clearTimeout(timer));
+  }, [refreshUser]);
+
+  const handleExitImpersonation = async () => {
+    try {
+      await impersonateApi.stop();
+      addToast('Impersonation session ended. Returned to Super Admin.', 'success');
+      await refreshUser();
+      setActiveTab('dashboard');
+    } catch (err) {
+      addToast('Impersonation session ended.', 'info');
+      await refreshUser();
+      setActiveTab('dashboard');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -236,10 +278,7 @@ export default function App() {
               </span>
             </div>
             <button
-              onClick={() => {
-                window.__setActiveImpersonation?.(null);
-                addToast('Impersonation session ended. Returned to Super Admin.', 'success');
-              }}
+              onClick={handleExitImpersonation}
               style={{
                 background: '#ffffff',
                 color: '#dc2626',

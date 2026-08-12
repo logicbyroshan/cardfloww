@@ -159,10 +159,10 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
       addToast?.(`Table "${tableName || file.name}" created successfully!`, 'success');
       onSuccess?.();
       onClose();
-    } catch {
-      addToast?.(`Table "${tableName || file.name}" created successfully!`, 'success');
-      onSuccess?.();
-      onClose();
+    } catch (err) {
+      console.error('Table creation from XLSX failed:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create table from XLSX.';
+      addToast?.(msg, 'error');
     } finally {
       setIsProcessing(false);
     }

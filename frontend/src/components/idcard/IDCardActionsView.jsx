@@ -641,11 +641,10 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
       addToast?.('Excel file & data imported successfully', 'success');
       onSuccess?.();
       onClose();
-    } catch {
-      setProgress(100);
-      addToast?.('Excel file & data imported successfully', 'success');
-      onSuccess?.();
-      onClose();
+    } catch (err) {
+      console.error('Bulk XLSX upload failed:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to import Excel file & data.';
+      addToast?.(msg, 'error');
     } finally {
       setUploading(false);
     }

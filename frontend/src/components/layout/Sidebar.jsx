@@ -19,7 +19,7 @@ import {
   Menu items and sections match the Django template 1-to-1.
 */
 
-// Role-gated nav structure — mirrors the Django template logic
+// Role-gated nav structure — mirrors original role boundaries
 const NAV_CONFIG = {
   super_admin: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
@@ -53,7 +53,6 @@ const NAV_CONFIG = {
       items: [{ id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal }],
     },
   ],
-
   client: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
@@ -75,35 +74,51 @@ const NAV_CONFIG = {
       items: [{ id: 'cards', label: 'Table Group', Icon: ShieldCheck }],
     },
   ],
+  photographer: [
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+    {
+      section: 'ID Card Management',
+      items: [{ id: 'cards', label: 'Table Group', Icon: Camera }],
+    },
+  ],
 };
 
 const ROLE_COLORS = {
   super_admin: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
+  pro_user: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
   operator: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
+  admin_staff: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
   client: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
   assistant: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
+  client_staff: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
+  photographer: { bg: 'linear-gradient(145deg, #d97706, #b45309)', color: '#fef3c7' },
 };
 
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
+  pro_user: 'Pro Admin',
   operator: 'Operator',
-  client: 'Client',
-  assistant: 'Assistant',
   admin_staff: 'Operator',
+  client: 'Client Admin',
+  assistant: 'Assistant',
   client_staff: 'Assistant',
+  photographer: 'Photographer',
 };
 
-const APP_VERSION = 'v4.19.01';
+const APP_VERSION = 'v5.0.0';
 
 export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_admin', currentUser, onLogout }) {
+  const normalizedRole = String(userRole || '').toLowerCase();
   const roleKey =
-    userRole === 'admin'
+    normalizedRole === 'admin' || normalizedRole === 'pro_user'
       ? 'super_admin'
-      : userRole === 'admin_staff'
+      : normalizedRole === 'admin_staff'
         ? 'operator'
-        : userRole === 'client_staff'
+        : normalizedRole === 'client_staff'
           ? 'assistant'
-          : userRole;
+          : NAV_CONFIG[normalizedRole]
+            ? normalizedRole
+            : 'super_admin';
   const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.super_admin;
 
   const displayName = currentUser?.first_name
