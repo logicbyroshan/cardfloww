@@ -24,7 +24,8 @@
     "react-dom": "^19.2.7",
     "react-loading-skeleton": "^3.5.0",
     "recharts": "^3.10.1",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

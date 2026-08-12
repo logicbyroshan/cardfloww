@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -563,24 +564,29 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
         let headers = [];
         let rowCount = 0;
 
-        if (window.XLSX) {
-          const wb = window.XLSX.read(buf, { type: 'array' });
-          const firstSheet = wb.SheetNames[0];
-          const ws = wb.Sheets[firstSheet];
-          const jsonRows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
-          if (jsonRows.length > 0) {
-            headers = (jsonRows[0] || []).map((h) => String(h || '').trim()).filter(Boolean);
-            rowCount = Math.max(0, jsonRows.length - 1);
+        try {
+          const wb = XLSX.read(buf, { type: 'array' });
+          const firstSheetName = wb.SheetNames[0];
+          if (firstSheetName) {
+            const ws = wb.Sheets[firstSheetName];
+            const jsonRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            if (jsonRows.length > 0) {
+              headers = (jsonRows[0] || []).map((h) => String(h || '').trim()).filter(Boolean);
+              rowCount = jsonRows.slice(1).filter((r) => Array.isArray(r) && r.some((c) => String(c || '').trim() !== '')).length;
+            }
           }
-        } else {
-          const text = new TextDecoder('utf-8').decode(buf.slice(0, 10000));
-          const lines = text.split(/\r?\n/).filter((l) => l.trim());
-          if (lines.length > 0) {
-            headers = lines[0]
-              .split(/[,;\t]/)
-              .map((h) => h.replace(/^["']|["']$/g, '').trim())
-              .filter(Boolean);
-            rowCount = Math.max(0, lines.length - 1);
+        } catch (xlsxErr) {
+          console.warn('XLSX upload parse warning:', xlsxErr);
+          if (selectedFile.name.toLowerCase().endsWith('.csv')) {
+            const text = new TextDecoder('utf-8').decode(buf);
+            const lines = text.split(/\r?\n/).filter((l) => l.trim());
+            if (lines.length > 0) {
+              headers = lines[0]
+                .split(/[,;\t]/)
+                .map((h) => h.replace(/^["']|["']$/g, '').trim())
+                .filter(Boolean);
+              rowCount = Math.max(0, lines.length - 1);
+            }
           }
         }
 

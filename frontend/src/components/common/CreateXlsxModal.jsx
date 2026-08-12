@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import {
   FileSpreadsheet,
   X,
@@ -50,7 +51,6 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
       setTableName(derived);
     }
 
-    // Try parsing Excel/CSV client-side with window.XLSX if available
     try {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -58,25 +58,32 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
         let headers = [];
         let rowsCount = 0;
 
-        if (window.XLSX) {
-          const wb = window.XLSX.read(buf, { type: 'array' });
-          const firstSheet = wb.SheetNames[0];
-          const ws = wb.Sheets[firstSheet];
-          const jsonRows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
-          if (jsonRows.length > 0) {
-            headers = (jsonRows[0] || []).map((h) => String(h || '').trim()).filter(Boolean);
-            rowsCount = Math.max(0, jsonRows.length - 1);
+        try {
+          // Parse spreadsheet array buffer using XLSX
+          const wb = XLSX.read(buf, { type: 'array' });
+          const firstSheetName = wb.SheetNames[0];
+          if (firstSheetName) {
+            const ws = wb.Sheets[firstSheetName];
+            const jsonRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            if (jsonRows.length > 0) {
+              headers = (jsonRows[0] || []).map((h) => String(h || '').trim()).filter(Boolean);
+              // Count rows that contain at least one non-empty cell
+              rowsCount = jsonRows.slice(1).filter((r) => Array.isArray(r) && r.some((c) => String(c || '').trim() !== '')).length;
+            }
           }
-        } else {
-          // Fallback simple CSV text parse
-          const text = new TextDecoder('utf-8').decode(buf.slice(0, 10000));
-          const lines = text.split(/\r?\n/).filter((l) => l.trim());
-          if (lines.length > 0) {
-            headers = lines[0]
-              .split(/[,;\t]/)
-              .map((h) => h.replace(/^["']|["']$/g, '').trim())
-              .filter(Boolean);
-            rowsCount = Math.max(0, lines.length - 1);
+        } catch (xlsxErr) {
+          console.warn('XLSX parser fallback check:', xlsxErr);
+          // If CSV, fallback to text parsing
+          if (selectedFile.name.toLowerCase().endsWith('.csv')) {
+            const text = new TextDecoder('utf-8').decode(buf);
+            const lines = text.split(/\r?\n/).filter((l) => l.trim());
+            if (lines.length > 0) {
+              headers = lines[0]
+                .split(/[,;\t]/)
+                .map((h) => h.replace(/^["']|["']$/g, '').trim())
+                .filter(Boolean);
+              rowsCount = Math.max(0, lines.length - 1);
+            }
           }
         }
 
@@ -102,23 +109,20 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
           setFields(parsedFields);
           setDataRowCount(rowsCount);
         } else {
+          addToast?.('No headers found in the uploaded file.', 'error');
           setFields([
             { name: 'FULL NAME', type: 'text', mandatory: true },
             { name: 'CLASS', type: 'text', mandatory: false },
             { name: 'SECTION', type: 'text', mandatory: false },
             { name: 'PHOTO', type: 'photo', mandatory: false },
           ]);
-          setDataRowCount(1);
+          setDataRowCount(0);
         }
       };
       reader.readAsArrayBuffer(selectedFile);
-    } catch {
-      setFields([
-        { name: 'FULL NAME', type: 'text', mandatory: true },
-        { name: 'CLASS', type: 'text', mandatory: false },
-        { name: 'SECTION', type: 'text', mandatory: false },
-        { name: 'PHOTO', type: 'photo', mandatory: false },
-      ]);
+    } catch (err) {
+      console.error('File reading failed:', err);
+      addToast?.('Failed to read spreadsheet file.', 'error');
     }
   };
 

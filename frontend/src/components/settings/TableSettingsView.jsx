@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { createPortal } from 'react-dom';
 import {
   Plus,
@@ -1697,20 +1698,19 @@ function CreateWithXlsxDrawer({ groupId, orgName, onClose, onSave, addToast }) {
     if (!f) return;
     setFile(f);
     setFileName(f.name);
-    addToast?.(`File selected: ${f.name}`, 'info');
-    // Parse headers client-side via SheetJS if available, else skip
     try {
-      if (window.XLSX) {
-        const buf = await f.arrayBuffer();
-        const wb = window.XLSX.read(buf, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = window.XLSX.utils.sheet_to_json(ws, { header: 1 });
+      const buf = await f.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const firstSheetName = wb.SheetNames[0];
+      if (firstSheetName) {
+        const ws = wb.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
         const headers = (rows[0] || []).filter(Boolean).map(String);
         setParsedHeaders(headers);
         addToast?.(`Parsed ${headers.length} column headers from ${f.name}`, 'success');
       }
-    } catch {
-      /* SheetJS not loaded — server will parse */
+    } catch (parseErr) {
+      console.warn('XLSX header parse warning:', parseErr);
     }
   };
 
