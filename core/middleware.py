@@ -214,6 +214,7 @@ class PermissionValidationMiddleware:
         '/media/',
         '/favicon.ico',
         '/api/health/',
+        '/api/auth/',
         '/api/mobile/',
         '/robots.txt',
         '/sitemap.xml',
