@@ -119,62 +119,6 @@ def _result_error_status(message: str, fallback: int = 400) -> int:
     return fallback
 
 
-@login_required
-@require_http_methods(["GET"])
-def manage_assistants(request):
-    """
-    Render the admin-side assistant management page.
-    """
-    user = request.user
-    can_manage = PermissionService.is_super_admin(user) or PermissionService.has(user, 'perm_manage_assistant')
-    if not can_manage:
-        return HttpResponseForbidden("Access Denied")
-
-    # Heal missing assistant profiles
-    from core.models import User as CoreUser
-    users_without_profile = CoreUser.objects.filter(role__in=['assistant'], assistant_profile__isnull=True)
-    if users_without_profile.exists():
-        default_client = Organisation.objects.first()
-        for u in users_without_profile:
-            Assistant.objects.get_or_create(user=u, defaults={'client': default_client})
-
-    if PermissionService.is_super_admin(user):
-        clients = Organisation.objects.all().order_by('name')
-        staff_list = Assistant.objects.all().select_related('user', 'client').order_by('-created_at')
-    else:
-        operator = getattr(user, 'operator_profile', None)
-        if operator:
-            clients = operator.assigned_organisations.all().order_by('name')
-            staff_list = Assistant.objects.filter(client__in=clients).select_related('user', 'client').order_by('-created_at')
-        else:
-            clients = Organisation.objects.none()
-            staff_list = Assistant.objects.none()
-    
-    context = {
-        'active_page': 'manage_assistants',
-        'breadcrumb_label': 'Manage Assistant',
-        'clients': clients,
-        'staff_list': staff_list,
-        'is_super_admin': PermissionService.is_super_admin(user),
-        'perm_idcard_client_list': True,
-        'perm_manage_assistant': True,
-        'perm_idcard_pending_list': True,
-        'perm_idcard_verified_list': True,
-        'perm_idcard_approved_list': True,
-        'perm_idcard_download_list': True,
-        'perm_idcard_pool_list': True,
-        'perm_idcard_bulk_download': True,
-        'perm_idcard_add': True,
-        'perm_idcard_edit': True,
-        'perm_idcard_delete': True,
-        'perm_idcard_info': True,
-        'perm_idcard_verify': True,
-        'perm_idcard_created_at': True,
-        'perm_idcard_updated_at': True,
-        'perm_idcard_retrieve': True,
-        'perm_mobile_app': True,
-    }
-    return render(request, 'index.html', context)
 
 
 

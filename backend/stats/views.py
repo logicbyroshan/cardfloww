@@ -52,18 +52,6 @@ def _estimate_activity_from_logs(start_time, end_time):
     return da, ma
 
 
-@login_required
-def statistics_page(request):
-    """Render the main statistics dashboard for pro users and super admins."""
-    if not PermissionService.can_use_pro_user_options(request.user):
-        return redirect('dashboard')
-
-    context = {
-        'active_page': 'impersonate',
-        'pro_tab': 'statistics',
-        'user_role': _get_user_role(request.user),
-    }
-    return render(request, 'index.html', context)
 
 
 def _get_active_device_counts():

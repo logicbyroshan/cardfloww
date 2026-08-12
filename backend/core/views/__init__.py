@@ -2,7 +2,6 @@
 # Import all views from sub-modules to maintain backward compatibility
 
 from .auth import (
-    login_view,
     logout_view,
     inactive_view,
     maintenance_view,
@@ -20,20 +19,11 @@ from .auth import (
     api_user_audit_users,
     api_user_audit_history,
     api_user_audit_actions,
-    admin_staff_dashboard,
-    client_dashboard,
-    client_staff_dashboard,
 )
 
 from .base import (
     get_user_role,
     super_admin_required,
-    login_as_user_page,
-    pro_user_activity_logs_page,
-    pro_user_activity_logs_detail_page,
-    pro_user_guest_users_page,
-    pro_user_batch_jobs_page,
-    dashboard,
     api_presence_track,
     api_live_client_presence,
     api_global_search,
@@ -46,27 +36,15 @@ from .base import (
     api_debug_workflow,
     api_debug_image_integrity,
     api_card_allowed_transitions,
-    manage_staff,
-    manage_client_staff,
-    manage_clients,
-    active_clients,
-    active_client_status_redirect,
     api_staff_login_history,
     api_client_login_history,
     api_client_staff_login_history,
     api_staff_assignment_timeline,
     api_client_staff_assignment_timeline,
-    idcard_group,
-    idcard_actions,
-    group_settings,
-    manage_panel,
     api_email_logs,
     api_email_resend,
     api_email_send_new,
     api_email_compose_defaults,
-    settings,
-    tutorial,
-    tutorial_personal_guide,
     tutorial_personal_guide_download,
     api_export_settings_get,
     api_export_settings_update,
@@ -76,7 +54,6 @@ from .base import (
     api_export_template_update,
     api_export_template_delete,
     api_activity_logs,
-    notifications_page,
 )
  
 
@@ -170,7 +147,6 @@ from .monitoring_api import (
 )
 
 from .backup_api import (
-    backup_select_clients,
     api_backup_initiate,
     api_backup_start,
     api_backup_status,

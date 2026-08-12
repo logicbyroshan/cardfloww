@@ -15,41 +15,6 @@ app_name = 'client'
 
 urlpatterns = [
     # ==========================================================================
-    # PAGE VIEWS
-    # ==========================================================================
-    
-    # Client Dashboard
-    path('dashboard/', views.dashboard, name='dashboard'),
-    
-    # Card Groups (legacy, kept for backward compat)
-    path('groups/', views.card_groups, name='groups'),
-    
-    # Cards in a Table (legacy, kept for backward compat)
-    path('table/<int:table_id>/cards/', views.card_table, name='cards'),
-
-    # Print route used by integration tests; redirects to the client group page.
-    path('table/<int:table_id>/print/', views.print_table, name='print_table'),
-    
-    # Staff Management (Client Admin only)
-    path('staff/', views.manage_staff, name='staff'),
-
-    # One-way admin messages (read-only for client/client staff)
-    path('messages/', views.messages, name='messages'),
-    
-    # --- Shared admin-template pages (client context) ---
-    # ID Card Group (shows all tables with status counts)
-    path('idcard-group/', views.client_idcard_group, name='idcard_group'),
-    
-    # Group Settings (manage tables in the group)
-    path('group-settings/', views.client_group_settings, name='group_settings'),
-    
-    # ID Card Actions (shows cards, status tabs)
-    path('table/<int:table_id>/actions/', views.client_idcard_actions, name='idcard_actions'),
-
-    # Shared reprint workflow page used from the download list action bar.
-    path('table/<int:table_id>/reprint/', views.reprint_cards, name='reprint_cards'),
-    
-    # ==========================================================================
     # API ENDPOINTS - Dashboard
     # ==========================================================================
     

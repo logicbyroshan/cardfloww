@@ -79,41 +79,6 @@ def _resolve_media_file(file_path: str):
     return candidate
 
 
-# ─── Page views ──────────────────────────────────────────────────────────
-
-@login_required
-@require_permission('perm_manage_panel_backup', redirect_url='/panel/')
-def backup_select_clients(request):
-    """Page: shows all clients with sort/filter for backup selection."""
-    task_id = request.GET.get('task')
-    if not task_id:
-        return render(request, 'index.html', {'error': 'No backup task specified.'})
-
-    task = get_object_or_404(BackupTask, pk=task_id, created_by=request.user, status='pending')
-
-    sort = request.GET.get('sort', 'most_data')
-    clients_qs = Organisation.objects.filter(status='active').annotate(
-        total_cards=Count('id_card_groups__tables__id_cards'),
-        total_tables=Count('id_card_groups__tables', distinct=True),
-    )
-
-    if sort == 'most_data':
-        clients_qs = clients_qs.order_by('-total_cards', '-created_at')
-    elif sort == 'latest':
-        clients_qs = clients_qs.order_by('-created_at')
-    elif sort == 'oldest':
-        clients_qs = clients_qs.order_by('created_at')
-    elif sort == 'name':
-        clients_qs = clients_qs.order_by('name')
-    else:
-        clients_qs = clients_qs.order_by('-total_cards')
-
-    return render(request, 'index.html', {
-        'task': task,
-        'clients': clients_qs,
-        'current_sort': sort,
-        'is_super_admin': PermissionService.is_super_admin(request.user),
-    })
 
 
 # ─── API endpoints ───────────────────────────────────────────────────────

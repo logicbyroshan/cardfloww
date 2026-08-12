@@ -4,10 +4,6 @@ Operators App URL Configuration
 from django.urls import path
 
 from .views import (
-    # Page views
-    operators_management_page,
-    operator_dashboard,
-    
     # Operator CRUD API
     api_operator_list_create,
     api_operator_detail,
@@ -31,12 +27,6 @@ from .views import (
 app_name = 'operators'
 
 urlpatterns = [
-    # ==========================================================================
-    # PAGE VIEWS
-    # ==========================================================================
-    path('manage/', operators_management_page, name='manage'),
-    path('dashboard/', operator_dashboard, name='dashboard'),
-    
     # ==========================================================================
     # OPERATOR CRUD API (Super Admin only)
     # ==========================================================================

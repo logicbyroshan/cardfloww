@@ -71,59 +71,6 @@ def _can_access_manage_panel(user) -> bool:
     )
 
 
-# ── Notifications page (all authenticated users) ─────────────────────────
-
-@login_required
-def notifications_page(request):
-    """Full notifications page for all authenticated users."""
-    return render(request, 'index.html', {'active_page': 'notifications'})
-
-
-# ── Manage Panel ─────────────────────────────────────────────────────────
-
-@require_any_admin
-def manage_panel(request):
-    """Manage Panel page — notifications, backups, logs, monitoring."""
-    if not _can_access_manage_panel(request.user):
-        return redirect('/panel/')
-
-    import sys
-    import django
-
-    context = {
-        'active_page': 'manage_panel',
-        'django_version': django.get_version(),
-        'python_version': f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
-        'environment': 'Development' if django_settings.DEBUG else 'Production',
-        'total_clients': Organisation.objects.count(),
-        'total_cards': IDCard.objects.count(),
-        'active_tasks': 0,
-        'total_notifications': Notification.objects.filter(is_active=True).count(),
-        'email_backend': getattr(django_settings, 'EMAIL_BACKEND', 'SMTP').split('.')[-1].replace('Backend', ''),
-        'email_from': getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'Not configured'),
-        'debug_mode': django_settings.DEBUG,
-        'activity_log_clear_enabled': bool(getattr(django_settings, 'ACTIVITY_LOG_MANUAL_CLEAR_ENABLED', False)),
-        'activity_log_clear_confirm_phrase': str(
-            getattr(django_settings, 'ACTIVITY_LOG_CLEAR_CONFIRM_PHRASE', 'DELETE ALL LOGS')
-        ),
-    }
-
-    user_counts = User.objects.filter(is_active=True).aggregate(
-        total=Count('id'),
-        admin_staff=Count('id', filter=Q(role__in=('operator'))),
-        guest_users=Count('id', filter=Q(role='guest_prime_manager')),
-        organisations=Count('id', filter=Q(role__in=('prime_manager', 'manager', 'client'))),
-        assistants=Count('id', filter=Q(role__in=('assistant'))),
-    )
-    context['can_manage_panel_backup'] = PermissionService.has(request.user, 'perm_manage_panel_backup')
-    context['can_manage_panel_email'] = PermissionService.has(request.user, 'perm_manage_panel_email')
-    context['total_users'] = user_counts['total']
-    context['total_admin_staff'] = user_counts['operator']
-    context['total_guest_users'] = user_counts['guest_users']
-    context['total_organisations'] = user_counts['organisations']
-    context['total_assistants'] = user_counts['assistants']
-    context['total_client_staff'] = user_counts['assistants']  # compat alias
-    return render(request, 'index.html', context)
 
 
 # ── Email Logs API ────────────────────────────────────────────────────────

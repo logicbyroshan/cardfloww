@@ -1185,3 +1185,24 @@ def api_upload_images(request, table_id):
         import logging as _logging
         _logging.getLogger(__name__).exception("Image upload error")
         return JsonResponse({'success': False, 'message': 'An error occurred. Please try again.'}, status=500)
+
+
+@require_client_admin
+@require_http_methods(["POST"])
+def client_api_create_table_from_xlsx(request):
+    """
+    Client wrapper for the Create-from-XLSX API.
+    Auto-detects the client's default group, then delegates to the core view.
+    """
+    user = request.user
+    client = _get_client_for_request(user)
+    if not client:
+        return JsonResponse({'success': False, 'message': 'Client not found.'}, status=403)
+
+    if not PermissionService.has_permission(user, 'perm_idcard_setting_add'):
+        return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
+
+    from core.services.idcard_service import IDCardService
+    group = IDCardService.ensure_default_group(client)
+    from core.views.idcard_api import api_create_table_from_xlsx
+    return api_create_table_from_xlsx(request, group.id)

@@ -3,18 +3,14 @@ Authentication Views - BACKWARD COMPATIBILITY
 This module re-exports from accounts.views for backward compatibility.
 All new code should import directly from accounts.views.
 """
-# BACKWARD COMPATIBILITY: Re-export auth views from accounts app
+# BACKWARD COMPATIBILITY: Re-export auth API views from accounts app
 from accounts.views import (
-    LoginPageView,
     LogoutView,
     CheckEmailAPIView,
     LoginAPIView,
     ForgotPasswordAPIView,
     VerifyOTPAPIView,
     ResetPasswordAPIView,
-    StaffDashboardView,
-    ClientAdminDashboardView,
-    ClientStaffDashboardView,
     ImpersonateStartAPIView,
     ImpersonateStopAPIView,
     ImpersonateListAPIView,
@@ -24,16 +20,12 @@ from accounts.views import (
 )
 
 # Backward compatible function names (map old names to new implementations)
-login_view = LoginPageView.as_view()
 logout_view = LogoutView.as_view()
 api_check_email = CheckEmailAPIView.as_view()
 api_login = LoginAPIView.as_view()
 api_forgot_password = ForgotPasswordAPIView.as_view()
 api_verify_otp = VerifyOTPAPIView.as_view()
 api_reset_password = ResetPasswordAPIView.as_view()
-admin_staff_dashboard = StaffDashboardView.as_view()
-client_dashboard = ClientAdminDashboardView.as_view()
-client_staff_dashboard = ClientStaffDashboardView.as_view()
 api_impersonate_start = ImpersonateStartAPIView.as_view()
 api_impersonate_stop = ImpersonateStopAPIView.as_view()
 api_impersonate_users = ImpersonateListAPIView.as_view()

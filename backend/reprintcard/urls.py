@@ -9,9 +9,6 @@ from . import views
 app_name = 'reprintcard'
 
 urlpatterns = [
-    # Page view
-    path('table/<int:table_id>/', views.reprint_cards, name='reprint_cards'),
-
     # API endpoints
     path('api/table/<int:table_id>/request/', views.api_reprint_request_create, name='api_reprint_request_create'),
     path('api/table/<int:table_id>/request-list/', views.api_request_list, name='api_request_list'),

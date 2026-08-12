@@ -48,59 +48,6 @@ def _parse_json_object(request):
     return data, None
 
 
-# =============================================================================
-# PAGE VIEWS
-# =============================================================================
-
-@login_required
-@require_super_admin
-def operators_management_page(request):
-    """
-    Operator management page for Super Admin.
-    Handles both full page load and HTMX partial refresh.
-    """
-    # Heal missing operator profiles
-    from core.models import User as CoreUser
-    users_without_profile = CoreUser.objects.filter(role='operator', operator_profile__isnull=True)
-    if users_without_profile.exists():
-        for u in users_without_profile:
-            Operator.objects.get_or_create(user=u)
-
-    search_query = request.GET.get('search', '').strip()
-    status_filter = request.GET.get('status', '').strip()
-
-    qs = Operator.objects.select_related('user').order_by('-created_at')
-
-    if search_query:
-        from django.db.models import Q as _Q
-        qs = qs.filter(
-            _Q(user__first_name__icontains=search_query) |
-            _Q(user__last_name__icontains=search_query) |
-            _Q(user__email__icontains=search_query) |
-            _Q(user__phone__icontains=search_query)
-        )
-
-    if status_filter == 'active':
-        qs = qs.filter(user__is_active=True)
-    elif status_filter == 'inactive':
-        qs = qs.filter(user__is_active=False)
-
-    staff_list = list(qs)
-
-    context = {
-        'page_title': 'Manage Operators',
-        'active_page': 'manage_staff',
-        'staff_list': staff_list,
-        'search_query': search_query,
-        'status_filter': status_filter,
-        'page_obj': None,
-        'per_page': len(staff_list),
-    }
-
-    if request.headers.get('HX-Request'):
-        return render(request, 'index.html', context)
-
-    return render(request, 'index.html', context)
 
 
 # =============================================================================
@@ -438,48 +385,3 @@ def api_client_idcard_groups(request, client_id):
 # =============================================================================
 # UTILITY VIEWS
 # =============================================================================
-
-@login_required
-@require_any_admin
-def operator_dashboard(request):
-    """
-    Operator dashboard with scoped data.
-    """
-    from django.db.models import Count, Q
-    from tables.models import IDCard
-    from core.services.permission_service import PermissionService
-
-    scope = OperatorClientScopingService.get_scope_context(request.user)
-    permissions = OperatorPermissionService.get_user_permissions(request.user)
-
-    user = request.user
-    is_scoped = PermissionService.is_operator(user)
-    card_qs = IDCard.objects.all()
-    if is_scoped:
-        accessible_ids = PermissionService.get_accessible_client_ids(user)
-        card_qs = card_qs.filter(table__group__client_id__in=accessible_ids)
-    
-    card_stats = card_qs.aggregate(
-        total=Count('id', filter=Q(status__in=['pending', 'verified', 'approved', 'download'])),
-        pending=Count('id', filter=Q(status='pending')),
-        verified=Count('id', filter=Q(status='verified')),
-        approved=Count('id', filter=Q(status='approved')),
-        downloaded=Count('id', filter=Q(status='download')),
-    )
-
-    recent_activities = ActivityService.get_recent(limit=15, user=user)
-
-    context = {
-        'page_title': 'Operator Dashboard',
-        'active_page': 'dashboard',
-        'scope': scope,
-        'permissions': permissions,
-        'total_id_cards': card_stats['total'],
-        'pending_cards': card_stats['pending'],
-        'verified_cards': card_stats['verified'],
-        'approved_cards': card_stats['approved'],
-        'downloaded_cards': card_stats['downloaded'],
-        'recent_activities': recent_activities,
-    }
-
-    return render(request, 'index.html', context)

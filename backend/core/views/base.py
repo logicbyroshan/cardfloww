@@ -30,12 +30,6 @@ from .base_helpers import (                          # noqa: F401
 
 # ── Dashboard views ─────────────────────────────────────────────────────
 from .dashboard_views import (                       # noqa: F401
-    login_as_user_page,
-    pro_user_activity_logs_page,
-    pro_user_activity_logs_detail_page,
-    pro_user_guest_users_page,
-    pro_user_batch_jobs_page,
-    dashboard,
     api_presence_track,
     api_live_client_presence,
     api_dashboard_card_stats,
@@ -47,29 +41,15 @@ from .dashboard_views import (                       # noqa: F401
 
 # ── Admin page views ──────────────────────────────────────────────────
 from .admin_page_views import (                      # noqa: F401
-    manage_staff,
-    manage_client_staff,
-    manage_clients,
-    active_clients,
-    active_client_status_redirect,
     api_staff_login_history,
     api_client_login_history,
     api_client_staff_login_history,
     api_staff_assignment_timeline,
     api_client_staff_assignment_timeline,
-    idcard_group,
-    build_idcard_actions_context,
-    idcard_actions,
-    group_settings,
-    notifications_page,
-    manage_panel,
     api_email_logs,
     api_email_resend,
     api_email_send_new,
     api_email_compose_defaults,
-    settings,
-    tutorial,
-    tutorial_personal_guide,
     tutorial_personal_guide_download,
 )
 

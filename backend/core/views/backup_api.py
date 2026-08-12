@@ -8,7 +8,6 @@ This shim re-exports everything so that existing imports in
 """
 
 from panel.views.backup_views import (  # noqa: F401
-    backup_select_clients,
     api_backup_generate_code,
     api_backup_initiate,
     api_backup_start,

@@ -2,16 +2,13 @@
 # Re-exports all panel views for use by panel/urls.py
 
 from .manage_panel_views import (
-    manage_panel,
     api_email_logs,
     api_email_resend,
     api_email_send_new,
     api_email_compose_defaults,
-    notifications_page,
 )
 
 from .backup_views import (
-    backup_select_clients,
     api_backup_generate_code,
     api_backup_initiate,
     api_backup_start,

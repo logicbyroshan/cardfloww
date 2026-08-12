@@ -50,41 +50,8 @@ def _truthy(value):
 
 
 # =============================================================================
-# PAGE VIEWS (Template-based)
+# AUTH & CSRF VIEWS
 # =============================================================================
-
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class LoginPageView(View):
-    """
-    Serve the React SPA shell for the login route.
-    @ensure_csrf_cookie ensures the csrftoken cookie is set on GET
-    so subsequent AJAX POSTs can read it for the X-CSRFToken header.
-    """
-
-    def get(self, request):
-        # If user is already authenticated, redirect to dashboard
-        if request.user.is_authenticated:
-            # Respect ?next= param (e.g. from PWA ÔåÆ login redirect)
-            next_url = request.GET.get('next', '')
-            # S7: use Django's safe-redirect helper ÔÇö blocks //evil.com, /\evil.com, etc.
-            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-                return redirect(next_url)
-            redirect_url = AuthService.get_dashboard_url(request.user)
-            return redirect(redirect_url)
-
-        ua = request.META.get('HTTP_USER_AGENT', '')
-        is_mobile_ua = bool(re.search(r'Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini', ua, re.I))
-        if is_mobile_ua:
-            # Preserve next_url if present so mobile users return to the correct app state
-            next_url = request.GET.get('next', '')
-            target = '/app/login/?install=1'
-            if next_url:
-                from urllib.parse import quote
-                target += '&next=' + quote(next_url)
-            return redirect(target)
-        
-        return render(request, 'index.html')
-
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class GetCSRFTokenView(View):
@@ -96,99 +63,38 @@ class GetCSRFTokenView(View):
         return JsonResponse({'success': True})
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class SecureCredentialVaultView(View):
-    """
-    Render the React SPA for the Secure Credential Vault page.
-    The SPA handles the email prompt and credential reveal flow via POST.
-    """
-
-    def get(self, request, token):
-        # Serve the SPA shell; the SPA reads ?token= from the URL and handles the vault UI.
-        return render(request, 'index.html', {'token': token})
-        
-    def post(self, request, token):
-        try:
-            from core.utils.secure_credentials import verify_credential_token
-            data = json.loads(request.body)
-            email = data.get('email', '').strip()
-            
-            if not email:
-                return JsonResponse({'success': False, 'message': 'Email address is required.'}, status=400)
-                
-            password = verify_credential_token(token, email)
-            
-            if not password:
-                return JsonResponse({
-                    'success': False, 
-                    'message': 'Invalid token, incorrect email, or this secure link has already expired.'
-                }, status=403)
-                
-            return JsonResponse({'success': True, 'password': password})
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON data'}, status=400)
-        except Exception as e:
-            logger.exception("Secure Vault error: %s", e)
-            return JsonResponse({'success': False, 'message': 'An unexpected error occurred.'}, status=500)
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(View):
     """Handle user logout.
     
     CSRF-exempt because logout only destroys the caller's own session.
-    This prevents 403 errors when users click 'Logout' with a stale
-    CSRF token (the most common user-facing error).
-    Django's own LogoutView is also csrf_exempt for the same reason.
+    Returns JSON response for API clients.
     """
     
     def get(self, request):
-        # GET requests redirect to login ÔÇö do NOT perform logout on GET
-        # (prevents CSRF logout via <img src="/logout/"> attacks)
-        return redirect('accounts:login')
+        return JsonResponse({'success': False, 'message': 'Use POST to log out.'}, status=405)
     
     def post(self, request):
         from .services_impersonate import ImpersonateService
-        # Detect AJAX/fetch requests to return JSON instead of 302
-        is_ajax = (
-            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
-            request.content_type == 'application/json' or
-            request.GET.get('format') == 'json'
-        )
+        is_ajax = True
         next_url = request.POST.get('next', '') or request.GET.get('next', '')
 
         # If this session is impersonating, stopping logout returns control to Pro User.
         if request.user.is_authenticated and ImpersonateService.is_impersonating(request):
             result = ImpersonateService.stop(request, next_url=next_url)
             if result.get('success'):
-                redirect_url = result.get('redirect_url') or '/panel/'
-                # Respect safe next URL for mobile surface handoff.
-                if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-                    redirect_url = next_url
-
-                # If we are returning to mobile app after stop-impersonation,
-                # keep the mobile auth checkpoint alive for the restored Pro session.
-                if redirect_url.startswith('/app/'):
-                    request.session['mobile_auth_ok'] = True
-                    request.session['_auth_login_surface'] = 'mobile'
-                    request.session['_auth_browser_fp'] = AuthService.browser_fingerprint_from_request(request)
-                    request.session['selected_role'] = getattr(request.user, 'role', '')
-
-                if is_ajax:
-                    return JsonResponse({'success': True, 'redirect': redirect_url})
-                return redirect(redirect_url)
+                redirect_url = result.get('redirect_url') or '/'
+                return JsonResponse({'success': True, 'redirect': redirect_url})
 
         if request.user.is_authenticated:
             # Pro User cannot logout the final active session.
             if getattr(request.user, 'role', '') == 'pro_user':
                 active_sessions = AuthService.count_active_sessions_for_user(request.user.id, stop_after=2)
                 if active_sessions <= 1:
-                    if is_ajax:
-                        return JsonResponse({
-                            'success': False,
-                            'message': 'Pro User must remain logged in on at least one active session.'
-                        }, status=400)
-                    return redirect('/panel/?pro_logout_blocked=1')
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Pro User must remain logged in on at least one active session.'
+                    }, status=400)
 
             # Sandbox Cleanup
             if getattr(request.user, 'role', '') == 'guest_prime_manager' and request.user.username.startswith('guestclone_'):
@@ -197,63 +103,7 @@ class LogoutView(View):
 
             ActivityService.log_logout(request, request.user)
         logout(request)
-        login_url = reverse('accounts:login')
-        if is_ajax:
-            return JsonResponse({'success': True, 'redirect': login_url})
-        return redirect(login_url)
-
-
-# =============================================================================
-# DASHBOARD VIEWS
-# =============================================================================
-
-class BaseDashboardView(LoginRequiredMixin, View):
-    """Base dashboard view with login requirement."""
-    login_url = '/panel/auth/login/'
-    template_name = None
-    allowed_roles = []
-    
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect(self.login_url)
-        
-        # Check role access if roles are specified
-        if self.allowed_roles and request.user.role not in self.allowed_roles:
-            # Redirect to appropriate dashboard
-            correct_url = AuthService.get_dashboard_url(request.user)
-            return redirect(correct_url)
-        
-        return super().dispatch(request, *args, **kwargs)
-    
-    def get_context_data(self):
-        """Get common context data for dashboards."""
-        return {
-            'user': self.request.user,
-            'user_role': RoleService.get_role_display_name(self.request.user.role),
-            'dashboard_urls': DASHBOARD_URLS,
-            'active_page': 'dashboard',
-        }
-
-
-class StaffDashboardView(BaseDashboardView):
-    """DEPRECATED ÔÇö redirects to /panel/."""
-    allowed_roles = ['operator']
-    def get(self, request):
-        return redirect('/panel/')
-
-
-class ClientAdminDashboardView(BaseDashboardView):
-    """DEPRECATED ÔÇö redirects to /panel/client/dashboard/."""
-    allowed_roles = ['client']
-    def get(self, request):
-        return redirect('/panel/client/dashboard/')
-
-
-class ClientStaffDashboardView(BaseDashboardView):
-    """DEPRECATED ÔÇö redirects to /panel/client/dashboard/."""
-    allowed_roles = ['client_staff']
-    def get(self, request):
-        return redirect('/panel/client/dashboard/')
+        return JsonResponse({'success': True, 'message': 'Logged out successfully.'})
 
 
 # =============================================================================

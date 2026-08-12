@@ -4,9 +4,6 @@ from . import views
 app_name = 'assistants'
 
 urlpatterns = [
-    # Page view
-    path('', views.manage_assistants, name='manage_assistants'),
-    
     # API endpoints
     path('api/staff/', views.api_staff_list_create, name='api_staff_list'),
     path('api/staff/bulk-delete/', views.api_staff_bulk_delete, name='api_staff_bulk_delete'),

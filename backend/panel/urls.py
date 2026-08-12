@@ -14,15 +14,11 @@ from django.urls import path
 from panel import views
 
 urlpatterns = [
-    # ── Manage Panel page ─────────────────────────────────────────────
-    path('manage-panel/', views.manage_panel, name='manage_panel_app'),
+    # ── Manage Panel API ──────────────────────────────────────────────
     path('api/email-logs/', views.api_email_logs, name='api_email_logs_app'),
     path('api/email-resend/<int:log_id>/', views.api_email_resend, name='api_email_resend_app'),
     path('api/email-send/', views.api_email_send_new, name='api_email_send_new_app'),
     path('api/email-compose-defaults/', views.api_email_compose_defaults, name='api_email_compose_defaults_app'),
-
-    # ── Notifications page (all users) ───────────────────────────────
-    path('notifications/', views.notifications_page, name='notifications_page_app'),
 
     # ── User-facing notification APIs ─────────────────────────────────
     path('api/notifications/list/', views.api_notifications_list, name='api_notifications_list_app'),
@@ -37,7 +33,6 @@ urlpatterns = [
     path('api/notifications/admin/target-users/', views.api_panel_target_users, name='api_panel_target_users_app'),
 
     # ── Backup ────────────────────────────────────────────────────────
-    path('backup/select-clients/', views.backup_select_clients, name='backup_select_clients_app'),
     path('api/backup/generate-code/', views.api_backup_generate_code, name='api_backup_generate_code_app'),
     path('api/backup/initiate/', views.api_backup_initiate, name='api_backup_initiate_app'),
     path('api/backup/start/', views.api_backup_start, name='api_backup_start_app'),
