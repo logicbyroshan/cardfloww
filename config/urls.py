@@ -169,28 +169,33 @@ urlpatterns += [
     # ==================== ADMIN PANEL (/panel/) ====================
     # All internal/admin routes live under /panel/
     path('panel/auth/', include('accounts.urls')),
-    path('panel/client/', include('client.urls')),
+    path('panel/organisations/', include('client.urls')),     # NEW slug (was: panel/client/)
     path('panel/assistants/', include('assistants.urls')),
     path('panel/exports/', include('exports.urls')),
     path('panel/images/', include('mediafiles.urls')),
     path('panel/operators/', include('operators.urls')),
-    path('panel/work/', include('idcards.urls')),
+    path('panel/tables/', include('idcards.urls')),           # NEW slug (was: panel/work/)
     path('panel/reprint/', include('reprintcard.urls')),
     path('panel/staff/', include('staff.urls')),
     path('panel/stats/', include('stats.urls')),
     path('panel/', include('core.urls')),
 
-    # Backward-compatible root mounts for deployments that still hit the app
-    # without the /panel prefix.
+    # ── Backward-compat panel slugs (keep until frontend fully updated) ──────
+    path('panel/client/', include('client.urls')),            # DEPRECATED → panel/organisations/
+    path('panel/work/', include('idcards.urls')),              # DEPRECATED → panel/tables/
+
+    # ── Backward-compat root mounts (for deployments still hitting without /panel) ──
     path('', include(('accounts.urls', 'accounts'), namespace='accounts_root')),
     path('auth/', include(('accounts.urls', 'accounts'), namespace='accounts_auth_root')),
-    path('client/', include(('client.urls', 'client'), namespace='client_root')),
+    path('organisations/', include(('client.urls', 'client'), namespace='organisations_root')),      # NEW
+    path('client/', include(('client.urls', 'client'), namespace='client_root')),                   # DEPRECATED
     path('assistants/', include(('assistants.urls', 'assistants'), namespace='assistants_root')),
     path('exports/', include(('exports.urls', 'exports'), namespace='exports_root')),
     path('images/', include(('mediafiles.urls', 'mediafiles'), namespace='mediafiles_root')),
     path('operators/', include(('operators.urls', 'operators'), namespace='operators_root')),
     path('staff/', include(('staff.urls', 'staff'), namespace='staff_root')),
-    path('work/', include(('idcards.urls', 'idcards'), namespace='idcards_root')),
+    path('tables/', include(('idcards.urls', 'idcards'), namespace='tables_root')),                 # NEW
+    path('work/', include(('idcards.urls', 'idcards'), namespace='idcards_root')),                  # DEPRECATED
     path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
     path('', include('core.urls')),
