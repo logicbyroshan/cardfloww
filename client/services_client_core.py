@@ -75,10 +75,16 @@ class ClientService(BaseService):
     
     @classmethod
     def serialize(cls, client: Client, include_permissions: bool = True) -> Dict[str, Any]:
-        """Serialize Client instance to dict"""
+        """Serialize Client/Organisation instance to dict"""
+        prime_manager_name = client.user.get_full_name() or client.user.username
         data = {
             'id': client.id,
+            'organisation_id': client.id,
             'name': client.name,
+            'organisation_name': client.name,
+            'prime_manager': prime_manager_name,
+            'prime_manager_id': client.user.id,
+            'role_title': 'Guest Prime Manager' if client.is_guest else 'Prime Manager',
             'is_guest': bool(getattr(client, 'is_guest', False)),
             'email': cls._public_email(client.user.email),
             'phone': client.user.phone or '',

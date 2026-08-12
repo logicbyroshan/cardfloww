@@ -837,11 +837,16 @@ class OperatorCreationService:
                     'phone': operator.user.phone or '',
                     'designation': operator.designation or '',
                     'department': operator.department or '',
-                    'is_active': operator.user.is_active,
-                    'assigned_clients': [
-                        {'id': c.id, 'name': c.name}
+                    'role_title': 'Operator',
+                    'assigned_organisations': [
+                        {'id': c.id, 'name': c.name, 'organisation_id': c.id, 'organisation_name': c.name}
                         for c in assigned
                     ],
+                    'assigned_clients': [
+                        {'id': c.id, 'name': c.name, 'organisation_id': c.id, 'organisation_name': c.name}
+                        for c in assigned
+                    ],
+                    'assigned_organisations_count': len(assigned),
                     'assigned_clients_count': len(assigned),
                     'permissions_count': perm_counts_by_user.get(operator.user_id, 0),
                     'created_at': operator.created_at.isoformat(),

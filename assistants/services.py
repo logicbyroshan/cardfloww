@@ -359,8 +359,11 @@ class AssistantService(BaseService):
                     'id': assistant.id,
                     'user_id': assistant.user.id,
                     'client_id': assistant.client_id,
+                    'organisation_id': assistant.client_id,
                     'client_name': assistant.client.name if assistant.client else '-',
+                    'organisation_name': assistant.client.name if assistant.client else '-',
                     'name': assistant.user.get_full_name() or assistant.user.username,
+                    'role_title': 'Manager',
                     'email': cls._public_email(assistant.user.email),
                     'phone': assistant.user.phone or '',
                     'department': assistant.department or '',
@@ -392,8 +395,11 @@ class AssistantService(BaseService):
                 }
             
             return ServiceResult(success=True, data={
-                'staff': assistant_data,  # Keep key 'staff' for API contract compatibility with frontend
-                'client_permissions': client_permissions
+                'managers': assistant_data,
+                'assistants': assistant_data,
+                'staff': assistant_data,  # Keep key for backward compatibility
+                'client_permissions': client_permissions,
+                'organisation_permissions': client_permissions,
             })
             
         except Exception as e:

@@ -1201,11 +1201,14 @@ class RoleService:
     def get_role_display_name(role):
         """Get human-readable role name."""
         role_display = {
-            'pro_user': 'Pro User',
+            'pro_user': 'Pro Admin',
             'super_admin': 'Super Admin',
-            'admin_staff': 'Admin Staff',
-            'client': 'Client',
-            'guest_user': 'Guest User',
-            'client_staff': 'Client Staff',
+            'operator': 'Operator',
+            'admin_staff': 'Operator',
+            'client': 'Client Admin',
+            'guest_user': 'Guest Sandbox User',
+            'assistant': 'Assistant',
+            'client_staff': 'Assistant',
+            'photographer': 'Photographer',
         }
-        return role_display.get(role, role)
+        return role_display.get(role, str(role).title())
