@@ -10,6 +10,7 @@ from .auth import (
     api_check_email,
     api_login,
     api_auth_me,
+    api_auth_logout,
     api_forgot_password,
     api_verify_otp,
     api_reset_password,

@@ -161,23 +161,13 @@ if getattr(settings, 'DEBUG', False) and not _running_tests():
         _path('sentry-debug/', _trigger_error),
     ]
 
-# re-open urlpatterns list continuation
+# All canonical REST API endpoints mounted at root (no /panel/ prefix).
 urlpatterns += [
 
-    # ==================== ADMIN PANEL (/panel/) ====================
-    path('panel/auth/', include('accounts.urls')),
-    path('panel/organisations/', include('organisation.urls')),
-    path('panel/assistants/', include('assistants.urls')),
-    path('panel/exports/', include('exports.urls')),
-    path('panel/images/', include('mediafiles.urls')),
-    path('panel/operators/', include('operators.urls')),
-    path('panel/tables/', include('tables.urls')),
-    path('panel/reprint/', include('reprintcard.urls')),
-    path('panel/staff/', include('staff.urls')),
-    path('panel/stats/', include('stats.urls')),
-    path('panel/', include('core.urls')),
-
-    # ── Root mounts (no /panel prefix) ──────────────────────────
+    # ==================== CORE REST API (no /panel/ prefix) ====================
+    # All REST API endpoints are mounted at their canonical /api/* paths.
+    # The /panel/ prefixed aliases are removed — all clients use /api/* directly.
+    path('', include('core.urls')),
     path('', include(('accounts.urls', 'accounts'), namespace='accounts_root')),
     path('auth/', include(('accounts.urls', 'accounts'), namespace='accounts_auth_root')),
     path('organisations/', include(('organisation.urls', 'organisation'), namespace='organisations_root')),
@@ -189,9 +179,10 @@ urlpatterns += [
     path('tables/', include(('tables.urls', 'tables'), namespace='tables_root')),
     path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
-    path('', include('core.urls')),
 
     # ==================== MOBILE APP DOWNLOAD LANDING (/app/*) ====================
+    # Kept as HTML — web fallback for mobile users who scan QR codes and
+    # don't have the native app installed. This is the only HTML served by Django.
     path('app/', core_views.mobile_download_page, name='mobile_download_page'),
     path('app/<path:dummy>/', core_views.mobile_download_page),
 
@@ -212,6 +203,7 @@ urlpatterns += [
     path('media/<path:path>', _protected_media_serve, {'document_root': settings.MEDIA_ROOT}),
 ]
 
+# JSON error handlers — never return HTML for API clients
 handler400 = 'core.views.errors.error_400'
 handler403 = 'core.views.errors.error_403'
 handler404 = 'core.views.errors.error_404'

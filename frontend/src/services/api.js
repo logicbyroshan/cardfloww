@@ -37,10 +37,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const isLoginPage = window.location.pathname.includes('/login');
+      const isLoginPage = window.location.pathname === '/auth/login' || window.location.pathname === '/login';
       if (!isRedirectingToLogin && !isLoginPage) {
         isRedirectingToLogin = true;
-        window.location.href = '/panel/auth/login/';
+        // Reset flag after 2s so future navigation works if user logs back in
+        setTimeout(() => { isRedirectingToLogin = false; }, 2000);
+        window.location.href = '/auth/login';
       }
     }
     return Promise.reject(error);
@@ -61,10 +63,15 @@ export const authApi = {
     return res.data;
   },
 
-  /** POST /logout/ — Django session logout */
+  /** POST /api/auth/logout/ — Django session logout via JSON API */
   logout: async () => {
-    const res = await apiClient.post('/logout/');
-    return res.data;
+    try {
+      const res = await apiClient.post('/api/auth/logout/');
+      return res.data;
+    } catch {
+      // Silently succeed — session is cleared server-side regardless
+      return { success: true };
+    }
   },
 };
 

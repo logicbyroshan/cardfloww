@@ -125,53 +125,28 @@ def csrf_failure(request, reason=''):
     """
     from django.http import JsonResponse
 
-    is_ajax = (
-        request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-        or request.headers.get('HX-Request') == 'true'
-        or (request.content_type or '') == 'application/json'
-    )
+    # Backend is pure REST API — always return JSON for CSRF failures on API paths.
+    is_app_path = str(getattr(request, 'path', '') or '').startswith('/app/')
+    if is_app_path:
+        # For mobile app web views, show a friendly page
+        from django.shortcuts import render as _render
+        return _render(request, 'mobile_download.html', {}, status=403)
 
-    # Determine login URL based on routing context
-    panel_prefix = _panel_prefix(request)
-    login_url = f'{panel_prefix}/auth/login/'
-
-    # Determine message based on requested logic
     current_path = str(getattr(request, 'path', '') or '')
-    is_login_path = '/auth/login/' in current_path or '/app/login/' in current_path
-    message = 'Security token expired. Please refresh.' if is_login_path else 'Session expired. Please log in again.'
-
-    if is_ajax:
-        return JsonResponse({
-            'success': False,
-            'message': message,
-            'redirect': login_url,
-            'force_logout': True,
-        }, status=403)
-    
-    # If session expired on a page load, just redirect to login
-    return redirect(login_url)
-
-    # User is still authenticated but CSRF token is stale/missing —
-    # show the error page with a helpful message.
-    if is_ajax:
-        return JsonResponse({
-            'success': False,
-            'message': 'Security token expired. Please refresh the page and try again.',
-        }, status=403)
-
-    return _render_error(
-        request,
-        status_code=403,
-        title='Security Check Failed',
-        heading='Request Expired',
-        message='Your session may have expired. Please refresh and try again.',
-    )
+    message = 'Security token expired. Please refresh the page.' if '/auth/login/' in current_path else 'Session expired. Please log in again.'
+    return JsonResponse({
+        'success': False,
+        'message': message,
+        'force_logout': True,
+    }, status=403)
 
 
 def mobile_download_page(request, dummy=None):
     """
-    Mobile users trying to access the admin panel are redirected to the
-    React SPA, which shows the appropriate mobile-block overlay.
+    Mobile app download landing page for /app/* routes.
+    Served as HTML (the only HTML Django serves besides mobile_api views).
+    Shows a download link for the CardFlow Android app.
     """
-    return render(request, 'index.html', {}, status=200)
+    from django.shortcuts import render as _render
+    return _render(request, 'mobile_download.html', {})
 

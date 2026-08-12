@@ -6,55 +6,52 @@ This document provides a comprehensive technical breakdown of the **CardFlow Pla
 
 ## 1. High-Level Architectural Topology
 
-CardFlow is architected as a hybrid enterprise platform combining a robust **Django REST/Service backend**, a modern **React 19 SPA web control panel**, an **ASGI WebSocket real-time communication layer**, and an **Expo / React Native companion mobile app**.
+CardFlow is architected as a **fully decoupled** enterprise platform:
+
+- **Backend** (`backend/`): Pure REST API hub. **Never serves any HTML pages.** All business logic, authentication, and data processing.
+- **Frontend** (`frontend/`): React 19 SPA. Handles **100% of all UI pages** including login, dashboard, and all admin views.
+- **Mobile App** (`mobile_api/`): React Native companion app; communicates via `/api/mobile/*`.
 
 ```text
-                               ┌────────────────────────────────────────┐
-                               │           Client Interfaces            │
-                               │  - React 19 SPA Web Control Panel       │
-                               │  - Android / iOS Mobile Companion App  │
-                               └───────────────────┬────────────────────┘
-                                                   │ HTTPS / WSS
-                                                   ▼
-                               ┌────────────────────────────────────────┐
-                               │         Nginx Reverse Proxy            │
-                               │   - TLS termination & SSL redirect     │
-                               │   - Static file caching (WhiteNoise)   │
-                               └─────────┬────────────────────┬─────────┘
-                                         │                    │
-                          HTTP / REST    │                    │ WSS / WebSockets
-                                         ▼                    ▼
-                        ┌────────────────────────┐  ┌───────────────────┐
-                        │ Gunicorn (Django WSGI) │  │ Daphne (ASGI)     │
-                        │ - Service Controllers  │  │ - WebSocket Layer │
-                        │ - Security Middleware  │  │ - Real-Time Push  │
-                        └───────────┬────────────┘  └─────────┬─────────┘
-                                    │                         │
-                                    └────────────┬────────────┘
-                                                 │
-                                                 ▼
-                 ┌───────────────────────────────────────────────────────────────┐
-                 │                       Core Subsystems                         │
-                 ├───────────────────────┬───────────────────────┬───────────────┤
-                 │   PostgreSQL / SQLite │     Redis Cache       │  Celery Task  │
-                 │   - Relational Data   │  - Rate Limiting      │  - Worker     │
-                 │   - Card Schemas      │  - Field Value Cache  │  - Bulk Jobs  │
-                 └───────────────────────┴───────────────────────┴───────────────┘
+             ┌───────────────────────────────────────────────────────┐
+             │                  Client Interfaces                     │
+             │  • React 19 SPA — cardflow.in     (all UI pages)      │
+             │  • Android / iOS Mobile App        (native app)        │
+             └────────────────────┬─────────────────┬────────────────┘
+                                  │                 │
+                   HTTPS (port 443/80)              │ HTTPS (port 443/80)
+                                  │                 │
+            ┌─────────────────────▼──┐  ┌───────────▼──────────────┐
+            │   Nginx → React Build  │  │ Nginx → Django Gunicorn  │
+            │   cardflow.in          │  │ privatexyz.cardflow.in   │
+            │   /static (Vite dist)  │  │ /api/* (REST API only)   │
+            └────────────────────────┘  │ /media/* (uploads)       │
+                                        │ /app/* (mobile download) │
+                                        └──────────────────────────┘
 ```
+
+### Deployment URLs
+| Layer | Dev URL | Production URL |
+|:------|:--------|:---------------|
+| React SPA (Frontend) | `http://localhost:5173` | `https://cardflow.in` |
+| Django REST API (Backend) | `http://localhost:8000` | `https://privatexyz.cardflow.in` |
+| Media Files | `http://localhost:8000/media/` | `https://privatexyz.cardflow.in/media/` |
 
 ---
 
 ## 2. Core Subsystem Responsibilities
 
-### 2.1 Backend Core (`backend/`)
-- **Django 5.2.12**: Core ORM, user management, REST APIs, and service controllers encapsulated inside `backend/` (`backend/core/`, `backend/config/`, `backend/accounts/`, `backend/organisation/`, etc.).
-- **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`). Views remain thin, delegating all operations to services.
-- **Domain Split Routing**: Supports subdomain isolation between the public web landing page and administrative control panel.
+### 2.1 Backend Core (`backend/`) — **Pure REST API**
+- **Django 5.2.12**: Core ORM, user management, JSON REST APIs, and service controllers.
+- **API-Only Policy**: The backend **never renders HTML pages** (except `/app/*` mobile download and Django debug mode). Every response is JSON.
+- **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`). Views remain thin.
+- **Auth via CSRF+Session**: Browser SPA uses Django session cookies + CSRF tokens. Mobile app uses token-based auth (`/api/mobile/`).
 
-### 2.2 Modern React Web SPA (`frontend/`)
-- **React 19 & Vite**: High-performance SPA frontend located inside `frontend/` built for high-density tabular data editing, interactive status pipelines, and real-time dashboard analytics.
-- **Smooth Scrolling & Notifications**: Lenis smooth scrolling engine (`@studio-freight/lenis`) and Sonner toast notification pipeline (`sonner`).
-- **Iconography & Styling**: Uses Lucide icons (`lucide-react`) and Vanilla CSS design tokens with custom HSL palette rules.
+### 2.2 Modern React Web SPA (`frontend/`) — **All UI Pages**
+- **React 19 & Vite**: High-performance SPA. Handles **all routes** including auth (login, forgot password), dashboard, client management, ID card actions.
+- **CSRF Boot**: On app load, fetches `GET /api/auth/csrf/` to obtain the CSRF cookie before any POST request.
+- **API Communication**: All backend calls use `/api/*` endpoints proxied by Vite dev server. In production, the SPA is served from a CDN/Nginx and calls `https://privatexyz.cardflow.in/api/*` directly.
+- **401 Handling**: On any 401 response from the API, the SPA automatically redirects to `/auth/login` (handled in `api.js`).
 
 ### 2.3 ASGI WebSocket & Real-Time Layer (`desktop_app/`, `channels`)
 - **Django Channels (ASGI)**: Handles bi-directional WebSockets for real-time print status pushes, desktop PWA tokens, and active session telemetries.

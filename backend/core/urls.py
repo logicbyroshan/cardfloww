@@ -7,12 +7,9 @@ from accounts import views as accounts_views
 
 
 urlpatterns = [
-    # ==================== AUTHENTICATION ====================
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('inactive/', views.inactive_view, name='inactive'),
-    path('maintenance/', views.maintenance_view, name='maintenance'),
-    path('maintenance/system/', views.system_maintenance_page, name='system_maintenance_page'),
+    # ==================== AUTHENTICATION API ====================
+    # NOTE: login/logout pages are handled by the React SPA at /auth/login, /auth/logout.
+    # Django only provides JSON API endpoints here.
     path('api/auth/check-maintenance/', views.api_check_maintenance, name='api_check_maintenance'),
     path('api/maintenance/status/', views.api_system_maintenance_check, name='api_system_maintenance_check'),
     path('api/maintenance/toggle/', views.api_maintenance_toggle, name='api_maintenance_toggle'),
@@ -20,6 +17,7 @@ urlpatterns = [
     path('api/auth/login/', csrf_exempt(views.api_login), name='api_login'),
     path('api/auth/csrf/', accounts_views.GetCSRFTokenView.as_view(), name='api_get_csrf_token'),
     path('api/auth/me/', views.api_auth_me, name='api_auth_me'),
+    path('api/auth/logout/', views.api_auth_logout, name='api_auth_logout'),
     path('api/auth/forgot-password/', csrf_exempt(views.api_forgot_password), name='api_forgot_password'),
     path('api/auth/verify-otp/', csrf_exempt(views.api_verify_otp), name='api_verify_otp'),
     path('api/auth/reset-password/', csrf_exempt(views.api_reset_password), name='api_reset_password'),
@@ -29,80 +27,23 @@ urlpatterns = [
     path('api/auth/user-audit/users/', csrf_exempt(views.api_user_audit_users), name='api_user_audit_users'),
     path('api/auth/user-audit/history/', csrf_exempt(views.api_user_audit_history), name='api_user_audit_history'),
     path('api/auth/user-audit/actions/', csrf_exempt(views.api_user_audit_actions), name='api_user_audit_actions'),
-    
-    # Role-specific Dashboards
-    path('admin-staff-dashboard/', views.admin_staff_dashboard, name='admin_staff_dashboard'),
-    path('client-dashboard/', views.client_dashboard, name='client_dashboard'),
-    path('client-staff-dashboard/', views.client_staff_dashboard, name='client_staff_dashboard'),
-    
-    # Dashboard (Super Admin)
-    path('', views.dashboard, name='dashboard'),
-    
-    # Global Search API
+
+    # ==================== DASHBOARD API ====================
     path('api/global-search/', views.api_global_search, name='api_global_search'),
-
-    # Dashboard live card stats API
     path('api/dashboard-card-stats/', views.api_dashboard_card_stats, name='api_dashboard_card_stats'),
-    
-    # Recent Client Updates API
     path('api/recent-client-updates/', views.api_recent_client_updates, name='api_recent_client_updates'),
-
-    # Live working client presence APIs
     path('api/presence/track/', views.api_presence_track, name='api_presence_track'),
     path('api/presence/live-count/', views.api_live_client_presence, name='api_live_client_presence'),
-
-
-    
-    # Recent Activity API
     path('api/recent-activity/', views.api_recent_activity, name='api_recent_activity'),
-    
-    # Reprint Overview API
     path('api/reprint-overview/', views.api_reprint_overview, name='api_reprint_overview'),
-    
-    # Staff Management
-    path('manage-staff/', views.manage_staff, name='manage_staff'),
-    path('manage-photographers/', views.manage_photographers, name='manage_photographers'),
-    # Keep a named route for legacy references; the view redirects to `manage_staff`.
-    path('manage-client-staff/', views.manage_client_staff, name='manage_client_staff'),
 
-    # Client Management
-    path('manage-clients/', views.manage_clients, name='manage_clients'),
-
-    # Legacy Active Clients backlinks (redirect to Manage Clients)
-    path('active-clients/', views.active_clients, name='active_clients'),
-    path('client/<int:client_id>/status/<str:status>/', views.active_client_status_redirect, name='active_client_status_redirect'),
-    
-    # ID Card Group for a client (shows all tables with status counts)
-    path('client/<int:client_id>/groups/', views.idcard_group, name='idcard_group'),
-
-    # ID Card Actions for a table (shows cards, can filter by status)
-    path('table/<int:table_id>/cards/', views.idcard_actions, name='idcard_actions'),
-    
-    # Group Settings for a client (manage tables)
-    path('client/<int:client_id>/settings/', views.group_settings, name='group_settings'),
-
-    # NOTE: Reprint Cards moved to 'reprintcard' app — see config/urls.py
-
-    # ==================== SERVICES ==
-
-    # User Options (Pro User only)
-    path('login-as-user/', views.login_as_user_page, name='login_as_user'),
-
-    # Backward-compatible deep-history list URL (redirects to User Options)
-    path('pro-user/activity-logs/', views.pro_user_activity_logs_page, name='pro_user_activity_logs'),
-    path('pro-user/guest-users/', views.pro_user_guest_users_page, name='pro_user_guest_users'),
-    path('pro-user/batch-jobs/', views.pro_user_batch_jobs_page, name='pro_user_batch_jobs'),
-    path('pro-user/activity-logs/<int:user_id>/', views.pro_user_activity_logs_detail_page, name='pro_user_activity_logs_detail'),
-    
-    # Manage Panel
-    path('manage-panel/', views.manage_panel, name='manage_panel'),
+    # ==================== EMAIL & PANEL API ====================
     path('api/email-logs/', views.api_email_logs, name='api_email_logs'),
     path('api/email-resend/<int:log_id>/', views.api_email_resend, name='api_email_resend'),
     path('api/email-send/', views.api_email_send_new, name='api_email_send_new'),
     path('api/email-compose-defaults/', views.api_email_compose_defaults, name='api_email_compose_defaults'),
-    
-    # ==================== BACKUP ====================
-    path('backup/select-clients/', views.backup_select_clients, name='backup_select_clients'),
+
+    # ==================== BACKUP API ====================
     path('api/backup/generate-code/', views.api_backup_generate_code, name='api_backup_generate_code'),
     path('api/backup/initiate/', views.api_backup_initiate, name='api_backup_initiate'),
     path('api/backup/start/', views.api_backup_start, name='api_backup_start'),
@@ -110,33 +51,22 @@ urlpatterns = [
     path('api/backup/status/<int:task_id>/', views.api_backup_status, name='api_backup_status'),
     path('api/backup/<int:task_id>/delete-now/', views.api_backup_delete_now, name='api_backup_delete_now'),
     path('api/backup/download/<int:task_id>/', views.api_backup_download, name='api_backup_download'),
-    
-    # Notifications Page (all authenticated users)
-    path('notifications/', views.notifications_page, name='notifications_page'),
 
-    # ==================== NOTIFICATION APIs ====================
-    # User-facing notifications
+    # ==================== NOTIFICATION API ====================
     path('api/notifications/list/', views.api_notifications_list, name='api_notifications_list'),
     path('api/notifications/unread-count/', views.api_notifications_unread_count, name='api_notifications_unread_count'),
     path('api/notifications/<int:notification_id>/read/', views.api_notification_mark_read, name='api_notification_mark_read'),
     path('api/notifications/mark-all-read/', views.api_notifications_mark_all_read, name='api_notifications_mark_all_read'),
     path('api/notifications/client-messages/unread/', views.api_client_message_strip, name='api_client_message_strip'),
-    # Admin notification management
     path('api/notifications/admin/list/', views.api_panel_notifications_list, name='api_panel_notifications_list'),
     path('api/notifications/admin/create/', views.api_panel_notification_create, name='api_panel_notification_create'),
     path('api/notifications/admin/<int:notification_id>/delete/', views.api_panel_notification_delete, name='api_panel_notification_delete'),
     path('api/notifications/admin/target-users/', views.api_panel_target_users, name='api_panel_target_users'),
 
-    # Client Tutorial (all authenticated users; content is client-oriented)
-    path('tutorial/', views.tutorial, name='tutorial'),
-    path('tutorial/personal-guide/', views.tutorial_personal_guide, name='tutorial_personal_guide'),
-    path('tutorial/personal-guide/download/', views.tutorial_personal_guide_download, name='tutorial_personal_guide_download'),
-
-    # System Settings
-    path('settings/', views.settings, name='settings'),
-    
     # ==================== API ENDPOINTS ====================
     # Client App Dashboard, Group, & Staff APIs (for React SPA)
+
+    # ==================== CLIENT & ORGANISATION API ====================
     path('api/dashboard/', client_views_api.api_dashboard_data, name='api_client_dashboard'),
     path('api/reprint-history/', client_views_api.api_reprint_history, name='api_client_reprint_history'),
     path('api/groups/', client_views_api.api_groups_list, name='api_client_groups'),
@@ -145,13 +75,14 @@ urlpatterns = [
     path('api/tables/', client_views_api.api_tables_list, name='api_client_tables'),
     path('api/messages/drawer/', client_views_api.api_messages_drawer, name='api_client_messages_drawer'),
 
-    # Client Staff Management APIs (for React SPA)
+    # Client Staff Management APIs
     path('api/client-staff/', client_views_api.api_staff_list_create, name='api_client_staff_list_create'),
     path('api/client-staff/<int:staff_id>/', client_views_api.api_staff_detail, name='api_client_staff_detail'),
     path('api/client-staff/<int:staff_id>/toggle-status/', client_views_api.api_staff_toggle_status, name='api_client_staff_toggle_status'),
     path('api/client-staff/<int:staff_id>/set-temp-password/', client_views_api.api_staff_set_temp_password, name='api_client_staff_set_temp_password'),
 
     # Client APIs
+
     path('api/client/create/', views.api_client_create, name='api_client_create'),
     path('api/clients/create/', views.api_client_create, name='api_clients_create'),
     path('api/client/<int:client_id>/', views.api_client_get, name='api_client_get'),

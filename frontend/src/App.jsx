@@ -343,7 +343,14 @@ export default function App() {
       setBootState((prev) => (prev === BOOT.LOADING ? BOOT.AUTH : prev));
     }, 400);
 
-    refreshUser().finally(() => clearTimeout(timer));
+    // Prefetch CSRF cookie before auth check, then check auth state.
+    // GET /api/auth/csrf/ has @ensure_csrf_cookie so Django sets csrftoken
+    // cookie immediately. Without this, POST requests (login) fail with 403.
+    fetch('/api/auth/csrf/', { credentials: 'include' })
+      .catch(() => {}) // Non-fatal: CSRF may already be set from a prior session
+      .finally(() => {
+        refreshUser().finally(() => clearTimeout(timer));
+      });
   }, [refreshUser]);
 
   const handleExitImpersonation = async () => {
@@ -365,6 +372,9 @@ export default function App() {
     } catch (_) {}
     setBootState(BOOT.UNAUTH);
     setCurrentUser(null);
+    setImpersonatedUser(null);
+    setUserRole('super_admin');
+    setActiveTab('dashboard');
   };
 
   // ── Loading splash ──────────────────────────────────────────────────────────

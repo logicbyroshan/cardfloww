@@ -1,11 +1,9 @@
 """
 Accounts URL Configuration
 
-URL patterns for authentication and password reset.
-
-NOTE: The primary auth API routes are in core/urls.py (/panel/api/auth/...)
-which are the ones used by the login template. These accounts/ routes are
-kept only for the login/logout page views and the dashboard redirect.
+URL patterns for authentication and password reset API endpoints.
+All UI pages (login, logout, password reset) are handled by the React SPA frontend.
+Django only provides JSON API endpoints here.
 """
 from django.urls import path
 from . import views
@@ -15,31 +13,16 @@ app_name = 'accounts'
 
 urlpatterns = [
     # ==========================================================================
-    # PAGE VIEWS (Template-based)
+    # CSRF token acquisition (sets csrftoken cookie — required before any POST)
     # ==========================================================================
-    
-    # Login page (multi-step: email → password)
-    path('login/', views.LoginPageView.as_view(), name='login'),
-    
-    # CSRF token acquisition
     path('csrf/', views.GetCSRFTokenView.as_view(), name='get_csrf_token'),
-    
-    # Logout
-    path('logout/', views.LogoutView.as_view(), name='logout'),
-    
-    # Redirect to appropriate dashboard
-    path('dashboard/', views.redirect_to_dashboard, name='dashboard_redirect'),
-    
-    # Secure Credential Vault (opened via email link)
-    path('secure-view/<str:token>/', views.SecureCredentialVaultView.as_view(), name='secure_credential_vault'),
-    
-    
+
     # ==========================================================================
-    # API ENDPOINTS (JSON responses for AJAX)
-    # Canonical routes are at /panel/api/auth/ via core/urls.py
-    # These /panel/auth/api/auth/ aliases kept for backward compatibility.
+    # API ENDPOINTS (JSON responses)
+    # Canonical routes are at /api/auth/ via core/urls.py.
+    # These aliases are kept for app namespace routing compatibility.
     # ==========================================================================
-    
+
     path('api/auth/check-email/', views.CheckEmailAPIView.as_view(), name='api_check_email'),
     path('api/auth/login/', views.LoginAPIView.as_view(), name='api_login'),
     path('api/auth/me/', views.AuthMeAPIView.as_view(), name='api_auth_me'),
@@ -67,4 +50,3 @@ urlpatterns = [
     # Session refresh (silent keepalive for active users)
     path('api/auth/session-refresh/', api_session_refresh, name='api_session_refresh'),
 ]
-

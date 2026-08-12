@@ -109,6 +109,25 @@ def api_auth_me(request):
         }
     })
 
+def api_auth_logout(request):
+    """JSON logout endpoint for the React SPA.
+
+    Always returns JSON so the SPA never gets a redirect/HTML response.
+    CSRF-exempt because logout only destroys the caller's own session.
+    """
+    from django.http import JsonResponse
+    from django.contrib.auth import logout as django_logout
+    # Support both GET (for quick links) and POST (preferred)
+    if request.method not in ('POST', 'GET'):
+        return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+    if request.user.is_authenticated:
+        django_logout(request)
+    return JsonResponse({'success': True, 'message': 'Logged out successfully.'})
+
+from django.views.decorators.csrf import csrf_exempt as _csrf_exempt
+api_auth_logout = _csrf_exempt(api_auth_logout)
+
+
 
 __all__ = [
     'login_view',
@@ -116,6 +135,7 @@ __all__ = [
     'api_check_email',
     'api_login',
     'api_auth_me',
+    'api_auth_logout',
     'api_forgot_password',
     'api_verify_otp',
     'api_reset_password',

@@ -233,8 +233,14 @@ class PermissionValidationMiddleware:
     
     @staticmethod
     def _is_panel_path(request):
-        """Check if the current request is a panel route."""
-        return request.path.startswith('/panel/')
+        """Check if the current request is a panel API route (not static/media/mobile/app)."""
+        path = request.path
+        # Always exempt: static files, media, health, mobile API, app download pages
+        exempt_prefixes = ('/static/', '/media/', '/api/health/', '/api/mobile/', '/app/', '/favicon.ico', '/robots.txt', '/sitemap.xml')
+        if path.startswith(exempt_prefixes):
+            return False
+        # All other paths need auth (includes /api/* panel routes)
+        return True
     
     def __call__(self, request):
         # Skip for exempt URLs
@@ -245,10 +251,14 @@ class PermissionValidationMiddleware:
         if not hasattr(request, 'user'):
             return self.get_response(request)
         
-        # Safety net: redirect unauthenticated users away from panel routes
+        # Backend is pure REST API — return 401 JSON for any unauthenticated request
+        # to a non-public path. The React SPA handles the login UI.
         if not request.user.is_authenticated:
             if self._is_panel_path(request):
-                return redirect(f'{prefix}/auth/login/')
+                return JsonResponse(
+                    {'authenticated': False, 'message': 'Authentication required.'},
+                    status=401
+                )
             return self.get_response(request)
 
         # Fast fail-closed for users deactivated since their last request.
@@ -810,26 +820,16 @@ class SessionIdleTimeoutMiddleware:
         self._max_age = getattr(django_settings, 'SESSION_ABSOLUTE_MAX_AGE', 60 * 60 * 24 * 90)
 
     def _force_logout(self, request, reason):
-        """Log user out and redirect to login with a consistent response."""
+        """Log user out and return JSON 401 — backend is pure REST API, no HTML redirects."""
         username = getattr(request.user, 'username', 'unknown')
         logger.info("SessionExpiry: user=%s reason=%s", username, reason)
         logout(request)
-
-        prefix = '' if getattr(request, '_is_panel_subdomain', False) else '/panel'
-        login_url = f'{prefix}/auth/login/'
-
-        is_ajax = (
-            request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-            or request.headers.get('HX-Request') == 'true'
-            or request.content_type == 'application/json'
-        )
-        if is_ajax:
-            return JsonResponse({
-                'success': False,
-                'message': 'Session expired. Please log in again.',
-                'redirect': login_url,
-            }, status=401)
-        return redirect(login_url)
+        return JsonResponse({
+            'success': False,
+            'authenticated': False,
+            'message': 'Session expired. Please log in again.',
+            'reason': reason,
+        }, status=401)
 
     def _resolve_user_idle_timeout_seconds(self, request):
         """
