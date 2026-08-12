@@ -631,7 +631,7 @@ def _client_readonly_response():
 
 def _is_client_readonly(user, card_status):
     """Return True when client/client_staff tries to modify a card in a locked status."""
-    return user.role in ('client', 'client_staff') and card_status in _CLIENT_READONLY_STATUSES
+    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff') and card_status in _CLIENT_READONLY_STATUSES
 
 
 def _client_edit_locked_response():
@@ -644,7 +644,7 @@ def _client_edit_locked_response():
 
 def _is_client_edit_locked(user, card_status):
     """Return True when client/client_staff tries to edit a card in an edit-locked status."""
-    return user.role in ('client', 'client_staff') and card_status in _CLIENT_EDIT_LOCK_STATUSES
+    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff') and card_status in _CLIENT_EDIT_LOCK_STATUSES
 
 
 # ==================== FIELD HELPERS (canonical: core.utils.field_utils) ====================

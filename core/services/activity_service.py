@@ -1149,7 +1149,7 @@ class ActivityService:
         if user and user.is_authenticated:
             qs = cls._apply_role_filter(qs, user)
             # Always hide admin names for client-side users (defense in depth)
-            if user.role in ('client', 'client_staff'):
+            if user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
                 hide_admin_names = True
         
         if merge_card_activity:
@@ -1404,7 +1404,7 @@ class ActivityService:
         if actor_descriptor != 'System' and actor_descriptor.lower() not in text.lower():
             text = f'{actor_descriptor}: {text}'
 
-        if client_context and client_context.lower() not in text.lower() and actor_role not in ('client', 'client_staff'):
+        if client_context and client_context.lower() not in text.lower() and actor_role not in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
             text = f'{text} | Client: {client_context}'
 
         return _with_merge_suffix(text)
@@ -1961,7 +1961,7 @@ class ActivityService:
         
         # Always hide admin identities from client-side users
         if viewing_user and viewing_user.is_authenticated:
-            if viewing_user.role in ('client', 'client_staff'):
+            if viewing_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
                 if actor_role in ('super_admin', 'admin_staff') or entry.user.is_superuser:
                     return 'System'
         

@@ -520,7 +520,7 @@ class PermissionValidationMiddleware:
         if not fresh_user.is_active:
             logger.warning("PVM_DEBUG: User %s (ID: %d) is now inactive", user.username, user.pk)
             return self._force_logout(request, 'Your account has been deactivated.')
-        if fresh_user.role == 'prime_manager':
+        if fresh_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'guest_user'):
             return self._validate_client_access(request, fresh_user)
         elif fresh_user.role in ('assistant', 'client_staff'):
             return self._validate_assistant_access(request, fresh_user)

@@ -227,9 +227,9 @@ def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, clie
         return reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'client_staff' else reverse('manage_staff')
 
     if action in ('login', 'logout'):
-        if actor_role == 'prime_manager':
+        if actor_role in ('prime_manager', 'manager', 'guest_prime_manager', 'client'):
             return reverse('manage_clients')
-        if actor_role == 'client_staff':
+        if actor_role in ('assistant', 'client_staff'):
             return reverse('manage_client_staff')
         if actor_role in ('admin_staff', 'super_admin'):
             return reverse('manage_staff')
@@ -1042,33 +1042,34 @@ def api_global_search(request):
         )
         
         # Scope by role
-        is_client_role = user.role in ('client', 'client_staff')
+        _manager_roles = ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'client_staff', 'assistant')
+        is_client_role = user.role in _manager_roles
         if PermissionService.is_super_admin(user):
             pass  # super_admin sees all
-        elif user.role in ('client', 'client_staff'):
+        elif PermissionService.is_client_role(user):
             from client.services import ClientAccessService
             client = ClientAccessService.get_client_for_user(user)
             if client:
-                base_cards = base_cards.filter(table__group__client=client)
+                base_cards = base_cards.filter(table__organisation=client)
             else:
                 base_cards = base_cards.none()
         else:
-            # Admin staff sees only assigned clients — use PermissionService
+            # Admin staff sees only assigned organisations — use PermissionService
             accessible_ids = PermissionService.get_accessible_client_ids(user)
             if accessible_ids:
-                base_cards = base_cards.filter(table__group__client_id__in=accessible_ids)
+                base_cards = base_cards.filter(table__organisation_id__in=accessible_ids)
             else:
                 base_cards = base_cards.none()
 
         if scoped_table_id:
-            scoped_table = IDCardTable.objects.select_related('group').only('id', 'group__client_id').filter(id=scoped_table_id).first()
+            scoped_table = IDCardTable.objects.only('id', 'organisation_id').filter(id=scoped_table_id).first()
             if not scoped_table:
                 return JsonResponse({'success': False, 'message': 'Table not found.'}, status=404)
 
-            if not PermissionService.can_access_client(user, scoped_table.group.client_id):
+            if not PermissionService.can_access_client(user, scoped_table.organisation_id):
                 return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
-            if user.role in ('client', 'client_staff'):
+            if PermissionService.is_client_role(user):
                 from client.services import ClientAccessService
                 if not ClientAccessService.can_access_table(user, scoped_table):
                     return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
@@ -1124,7 +1125,7 @@ def api_global_search(request):
             display_field_by_table[table_id] = display_field_name
             image_fields_by_table[table_id] = image_field_names
 
-        is_client_role = user.role in ('client', 'client_staff')
+        is_client_role = PermissionService.is_client_role(user)
         route_name = 'client:idcard_actions' if is_client_role else 'idcard_actions'
         route_prefix_by_table = {}
 

@@ -916,7 +916,7 @@ def api_create_reupload_task(request, table_id):
         return folder_access_err
     
     # Client/client_staff cannot reupload for tables with locked cards
-    if request.user.role in ('client', 'client_staff'):
+    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
         has_locked = IDCard.objects.filter(
             table_id=table_id,
             status__in=_CLIENT_READONLY_STATUSES

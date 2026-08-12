@@ -260,7 +260,7 @@ class PermissionService:
         """Check if user is assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('assistant', 'client_staff')
+        return getattr(user, 'role', None) in ('assistant', 'client_staff')  # client_staff compat alias
 
     @staticmethod
     def is_client_staff(user) -> bool:
@@ -280,7 +280,11 @@ class PermissionService:
         """Check if user is client or assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('client', 'guest_prime_manager', 'assistant', 'client_staff')
+        return getattr(user, 'role', None) in (
+            'prime_manager', 'manager', 'guest_prime_manager',  # new names
+            'assistant',                                           # assistant role
+            'client', 'guest_user', 'client_staff',               # legacy compat
+        )
 
     # ==================== Profile Lookup ====================
 

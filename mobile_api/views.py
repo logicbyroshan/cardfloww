@@ -3150,7 +3150,7 @@ def profile(request):
             'super_admin': 'Super Admin',
             'admin_staff': 'Admin Staff',
             'client': 'Client Admin',
-            'client_staff': 'Client Staff',
+            'client_staff': 'Assistant'  # compat,
         }.get(getattr(user, 'role', ''), 'User'),
         'client': client,
         'client_name': client.name if client else '',
@@ -4991,7 +4991,7 @@ def api_staff_list(request):
         role = request.GET.get('role', 'admin_staff')
         from core.services.compat_service import CompatibilityService
         role = CompatibilityService.map_role_to_legacy(role)
-        if role == 'client_staff':
+        if role in ('assistant', 'client_staff'):
             # List all client staff system-wide
             # from accounts.models import Staff (removed)
             queryset = Staff.objects.filter(staff_type='client_staff').select_related('user', 'client').order_by('-created_at')[:200]
@@ -5033,7 +5033,7 @@ def api_staff_create(request):
         from core.services.compat_service import CompatibilityService
         role_requested = CompatibilityService.map_role_to_legacy(role_requested)
 
-        if role_requested == 'client_staff':
+        if role_requested in ('assistant', 'client_staff'):
             # Super Admin creating an Assistant (client_staff) for a specific client
             client_id = payload.get('client_id')
             if not client_id:
@@ -6093,7 +6093,7 @@ def api_dashboard_data(request):
                     'uncaptured': global_uncaptured,
                     'client_count': len(accessible_ids),
                     'operator_count': User.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count(),
-                    'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff'), is_active=True).count(),
+                    'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff', 'prime_manager', 'manager'), is_active=True).count(),
                 }
                 
                 ordered_clients = list(clients_qs.annotate(
@@ -6172,7 +6172,7 @@ def api_dashboard_data(request):
                 'total': global_counts_agg.get('total', 0),
                 'client_count': clients_qs.count(),
                 'operator_count': User.objects.filter(role__in=('operator', 'admin_staff'), is_active=True).count(),
-                'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff'), is_active=True).count(),
+                'assistant_count': User.objects.filter(role__in=('assistant', 'client_staff', 'prime_manager', 'manager'), is_active=True).count(),
             }
             
             clients_data = []
@@ -6964,7 +6964,7 @@ def api_impersonate_start(request):
     if not target:
         return JsonResponse({'success': False, 'message': 'User not found.'}, status=404)
 
-    valid_mobile_roles = {'pro_user', 'super_admin', 'operator', 'admin_staff', 'client', 'assistant', 'client_staff', 'photographer'}
+    valid_mobile_roles = {'pro_user', 'super_admin', 'operator', 'admin_staff', 'prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'photographer', 'client', 'client_staff'}
     if getattr(target, 'role', '') not in valid_mobile_roles:
         return JsonResponse({'success': False, 'message': 'Target user cannot access the mobile app.'}, status=400)
 

@@ -112,14 +112,17 @@ def manage_panel(request):
         total=Count('id'),
         admin_staff=Count('id', filter=Q(role__in=('admin_staff', 'operator'))),
         guest_users=Count('id', filter=Q(role='guest_prime_manager')),
-        client_staff=Count('id', filter=Q(role__in=('client_staff', 'assistant'))),
+        organisations=Count('id', filter=Q(role__in=('prime_manager', 'manager', 'client'))),
+        assistants=Count('id', filter=Q(role__in=('assistant', 'client_staff'))),
     )
     context['can_manage_panel_backup'] = PermissionService.has(request.user, 'perm_manage_panel_backup')
     context['can_manage_panel_email'] = PermissionService.has(request.user, 'perm_manage_panel_email')
     context['total_users'] = user_counts['total']
     context['total_admin_staff'] = user_counts['admin_staff']
     context['total_guest_users'] = user_counts['guest_users']
-    context['total_client_staff'] = user_counts['client_staff']
+    context['total_organisations'] = user_counts['organisations']
+    context['total_assistants'] = user_counts['assistants']
+    context['total_client_staff'] = user_counts['assistants']  # compat alias
     return render(request, 'index.html', context)
 
 

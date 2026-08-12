@@ -71,7 +71,7 @@ class ImageRenamer:
             return candidate
         if candidate in ('admin', 'staff', 'system', 'admin_staff'):
             return 'a'
-        if candidate in ('client', 'assistant', 'client_staff'):
+        if candidate in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant', 'client', 'client_staff'):
             return 'c'
         if candidate in ('operator', 'operator_staff'):
             return 'o'
