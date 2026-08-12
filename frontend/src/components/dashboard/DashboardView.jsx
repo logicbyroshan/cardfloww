@@ -183,51 +183,20 @@ function StatCardsRow({ stats, loading, onNavigate, userRole = 'super_admin' }) 
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px', flexShrink: 0 }}>
-              <div
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '6px',
-                  background: bg,
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Icon size={15} />
-              </div>
-
-              {/* Daily Growth Indicator for Admin & Operator */}
-              {isAdminOrOperator && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    padding: '1px 4px',
-                    borderRadius: '6px',
-                    background: isPositive ? '#dcfce7' : isNegative ? '#fee2e2' : '#f1f5f9',
-                    color: isPositive ? '#15803d' : isNegative ? '#b91c1c' : '#64748b',
-                    border: `1px solid ${isPositive ? '#bbf7d0' : isNegative ? '#fca5a5' : '#e2e8f0'}`,
-                    whiteSpace: 'nowrap',
-                    lineHeight: 1,
-                  }}
-                  title={`${growthVal >= 0 ? '+' : ''}${growthVal} cards today`}
-                >
-                  {isPositive ? (
-                    <TrendingUp size={9} />
-                  ) : isNegative ? (
-                    <TrendingDown size={9} />
-                  ) : (
-                    <Minus size={9} />
-                  )}
-                  <span>{growthVal >= 0 ? `+${growthVal}` : growthVal}</span>
-                </div>
-              )}
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '6px',
+                background: bg,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Icon size={15} />
             </div>
           </button>
         );

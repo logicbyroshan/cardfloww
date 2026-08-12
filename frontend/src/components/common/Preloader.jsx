@@ -75,7 +75,7 @@ export default function Preloader({ onFinished }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#06080e',
+        background: 'linear-gradient(135deg, #0b1329 0%, #002b66 50%, #1e1e2e 100%)',
         opacity: isFadeOut ? 0 : 1,
         transform: isFadeOut ? 'scale(1.04)' : 'scale(1)',
         filter: isFadeOut ? 'blur(10px)' : 'blur(0px)',
@@ -91,11 +91,11 @@ export default function Preloader({ onFinished }) {
           position: 'absolute',
           inset: 0,
           backgroundImage: `
-            linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
+            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
           `,
-          backgroundSize: '40px 40px',
-          opacity: 0.8,
+          backgroundSize: '48px 48px',
+          opacity: 0.6,
           pointerEvents: 'none',
         }}
       />
@@ -105,13 +105,13 @@ export default function Preloader({ onFinished }) {
         <div
           style={{
             position: 'absolute',
-            top: '20%',
-            left: '30%',
-            width: '400px',
-            height: '400px',
+            top: '15%',
+            left: '25%',
+            width: '450px',
+            height: '450px',
             borderRadius: '50%',
             background:
-              'radial-gradient(circle, rgba(37, 99, 235, 0.35) 0%, rgba(99, 102, 241, 0.15) 50%, transparent 70%)',
+              'radial-gradient(circle, rgba(0, 180, 255, 0.4) 0%, rgba(37, 99, 235, 0.2) 50%, transparent 70%)',
             filter: 'blur(80px)',
             animation: 'preloaderPulseGlow 4s ease-in-out infinite alternate',
           }}
@@ -119,13 +119,13 @@ export default function Preloader({ onFinished }) {
         <div
           style={{
             position: 'absolute',
-            bottom: '20%',
-            right: '30%',
-            width: '450px',
-            height: '450px',
+            bottom: '15%',
+            right: '25%',
+            width: '500px',
+            height: '500px',
             borderRadius: '50%',
             background:
-              'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, rgba(6, 182, 212, 0.15) 50%, transparent 70%)',
+              'radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(6, 182, 212, 0.2) 50%, transparent 70%)',
             filter: 'blur(90px)',
             animation: 'preloaderPulseGlow 5s ease-in-out infinite alternate-reverse',
           }}
@@ -141,87 +141,69 @@ export default function Preloader({ onFinished }) {
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          padding: '40px 50px',
+          padding: '40px 48px',
           borderRadius: '24px',
-          background: 'rgba(15, 23, 42, 0.55)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
-          maxWidth: '420px',
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          boxShadow: '0 30px 70px -15px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+          maxWidth: '440px',
           width: '90%',
           animation: 'preloaderCardAppear 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}
       >
-        {/* Animated Logo Shield Wrapper */}
+        {/* Animated Brand Logo Container */}
         <div
           style={{
             position: 'relative',
-            width: '96px',
-            height: '96px',
-            marginBottom: '24px',
+            width: '120px',
+            height: '60px',
+            marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            background: 'rgba(255, 255, 255, 0.06)',
+            borderRadius: '16px',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            padding: '8px 16px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
           }}
         >
-          {/* Outer Rotating Conic Ring */}
-          <div
+          <img
+            src="/static/cardflow_logo_brand.png"
+            onError={(e) => {
+              if (!e.target.src.endsWith('/favicon.png')) {
+                e.target.src = '/static/favicon.png';
+              }
+            }}
+            alt="CardFlow Logo"
             style={{
-              position: 'absolute',
-              inset: '-5px',
-              borderRadius: '50%',
-              background: 'conic-gradient(from 0deg, #2563eb, #8b5cf6, #06b6d4, #3b82f6, #2563eb)',
-              opacity: 0.85,
-              filter: 'blur(4px)',
-              animation: 'spin 3s linear infinite',
+              maxHeight: '40px',
+              maxWidth: '100px',
+              width: '100%',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 2px 8px rgba(0, 180, 255, 0.5))',
             }}
           />
-
-          {/* Inner Glossy Sphere Container */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: '50%',
-              background: 'linear-gradient(145deg, #0b1329 0%, #060913 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              boxShadow: 'inset 0 2px 10px rgba(59, 130, 246, 0.3), 0 8px 24px rgba(0, 0, 0, 0.6)',
-            }}
-          >
-            <img
-              src="/Cardflow 1.png"
-              alt="CardFlow Logo"
-              style={{
-                width: '60px',
-                height: '60px',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 4px 12px rgba(37,99,235,0.7))',
-                animation: 'preloaderLogoFloat 3s ease-in-out infinite',
-              }}
-            />
-          </div>
         </div>
 
         {/* Title */}
         <h1
           style={{
-            fontFamily: '"Saira Semi Condensed", sans-serif',
-            fontSize: '26px',
+            fontFamily: "'Saira Semi Condensed', sans-serif",
+            fontSize: '24px',
             fontWeight: 800,
             background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #93c5fd 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            letterSpacing: '0.06em',
-            margin: '0 0 6px 0',
+            letterSpacing: '0.05em',
+            margin: '0 0 4px 0',
             textTransform: 'uppercase',
             lineHeight: 1.2,
           }}
         >
-          CardFlow ID System
+          CardFlow System
         </h1>
 
         {/* Tagline Badge */}
@@ -232,14 +214,14 @@ export default function Preloader({ onFinished }) {
             gap: '6px',
             padding: '3px 12px',
             borderRadius: '20px',
-            background: 'rgba(37, 99, 235, 0.15)',
-            border: '1px solid rgba(59, 130, 246, 0.35)',
-            color: '#bfdbfe',
-            fontSize: '10px',
+            background: 'rgba(0, 180, 255, 0.15)',
+            border: '1px solid rgba(0, 180, 255, 0.35)',
+            color: '#7dd3fc',
+            fontSize: '11px',
             fontWeight: 700,
-            letterSpacing: '0.1em',
+            letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            marginBottom: '28px',
+            marginBottom: '24px',
           }}
         >
           <span
@@ -247,11 +229,11 @@ export default function Preloader({ onFinished }) {
               width: '6px',
               height: '6px',
               borderRadius: '50%',
-              background: '#3b82f6',
-              boxShadow: '0 0 8px #3b82f6',
+              background: '#00b4ff',
+              boxShadow: '0 0 8px #00b4ff',
             }}
           />
-          Enterprise ID Card Suite
+          Enterprise ID Card Management
         </div>
 
         {/* Progress Track & Counter */}
