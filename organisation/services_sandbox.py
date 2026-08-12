@@ -67,23 +67,12 @@ class SandboxService:
                     setattr(cloned_client, perm, getattr(original_client, perm, False))
                 cloned_client.save()
                 
-                # Clone IDCardGroups and their Tables
-                for group in Table.objects.filter(client=original_client):
-                    # Get original tables before cloning the group
-                    original_tables = list(Table.objects.filter(group=group))
-                    
-                    # Duplicate the group
-                    group_clone = Table.objects.get(id=group.id)
-                    group_clone.pk = None
-                    group_clone.client = cloned_client
-                    group_clone.save()
-                    
-                    # Clone tables for this group
-                    for table in original_tables:
-                        table_clone = Table.objects.get(id=table.id)
-                        table_clone.pk = None
-                        table_clone.group = group_clone
-                        table_clone.save()
+                # Clone Tables
+                for table in Table.objects.filter(organisation=original_client):
+                    table_clone = Table.objects.get(id=table.id)
+                    table_clone.pk = None
+                    table_clone.organisation = cloned_client
+                    table_clone.save()
                 
                 logger.info("Created guest sandbox clone: %s (from user %s)", clone_username, original_user.id)
                 return cloned_user
