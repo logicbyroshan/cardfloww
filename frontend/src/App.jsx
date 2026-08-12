@@ -30,10 +30,154 @@ import { authApi, impersonateApi } from './services/api';
 
 import QuickActionDrawer from './components/dashboard/QuickActionDrawer';
 
-import { UserCog, X } from 'lucide-react';
+import { UserCog, X, Smartphone, Download } from 'lucide-react';
 import Lenis from 'lenis';
 
 const BOOT = { LOADING: 'loading', AUTH: 'auth', UNAUTH: 'unauth' };
+
+function MobileAppFallback({ onForceDesktop }) {
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        width: '100vw',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e1e2e 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        color: '#ffffff',
+        fontFamily: "'Saira Semi Condensed', sans-serif",
+        textAlign: 'center',
+        boxSizing: 'border-box',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 999999,
+      }}
+    >
+      <div style={{ marginBottom: '24px' }}>
+        <img
+          src="/static/cardflow_logo_brand.png"
+          onError={(e) => {
+            if (!e.target.src.endsWith('/cardflow_logo_brand.png')) {
+              e.target.src = '/cardflow_logo_brand.png';
+            }
+          }}
+          alt="CardFlow"
+          style={{ height: '44px', objectFit: 'contain' }}
+        />
+      </div>
+
+      <div
+        style={{
+          maxWidth: '460px',
+          width: '100%',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: '16px',
+          padding: '32px 24px',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        <div
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #0050d2 0%, #00b4ff 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 20px',
+            boxShadow: '0 8px 24px rgba(0, 180, 255, 0.35)',
+          }}
+        >
+          <Smartphone size={32} color="#ffffff" />
+        </div>
+
+        <h2
+          style={{
+            fontSize: '22px',
+            fontWeight: 700,
+            marginBottom: '12px',
+            color: '#ffffff',
+            letterSpacing: '-0.3px',
+          }}
+        >
+          Please Download the CardFlow Mobile App
+        </h2>
+
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#94a3b8',
+            lineHeight: '1.5',
+            marginBottom: '24px',
+          }}
+        >
+          The CardFlow Desktop Portal is optimized for desktop displays (1000px – 2000px). For mobile devices and screens below 1000px, please download the official CardFlow Mobile App.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+          <a
+            href="/static/app/cardflow-mobile-latest.apk"
+            download
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              padding: '12px 20px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '14px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+            }}
+          >
+            <Download size={18} />
+            <span>Download Android App (.APK)</span>
+          </a>
+
+          <button
+            onClick={onForceDesktop}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '8px',
+              background: 'transparent',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#cbd5e1',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = '#ffffff';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.color = '#cbd5e1';
+            }}
+          >
+            Continue to Desktop Web View Anyway (Force Mode)
+          </button>
+        </div>
+
+        <div style={{ fontSize: '11px', color: '#64748b' }}>
+          Desktop Optimization Bounds: 1000px – 2000px Width
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   const [bootState, setBootState] = useState(BOOT.LOADING);
@@ -45,6 +189,14 @@ export default function App() {
   const [idcardActionsState, setIdcardActionsState] = useState(null); // { tableId, status }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState('all');
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [forceDesktop, setForceDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize Lenis smooth scroll safely on .page-content container
   useEffect(() => {
@@ -234,6 +386,11 @@ export default function App() {
         }}
       />
     );
+  }
+
+  // ── Mobile Screen Boundary Gate (< 1000px) ──────────────────────────────
+  if (windowWidth < 1000 && !forceDesktop) {
+    return <MobileAppFallback onForceDesktop={() => setForceDesktop(true)} />;
   }
 
   // ── App Shell ───────────────────────────────────────────────────────────────
