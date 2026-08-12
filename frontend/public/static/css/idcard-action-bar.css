@@ -1,0 +1,602 @@
+/* ==========================================
+   ID CARD ACTION BAR — Action bar, buttons, tabs
+   Split from idcard-actions.css
+   ========================================== */
+
+/* ==========================================
+   ACTION BUTTONS BAR (Top Section)
+   ========================================== */
+
+.action-buttons-bar {
+    background: var(--color-white);
+    border: none;
+    border-bottom: 1px solid var(--color-gray-200);
+    border-radius: 0;
+    padding: 4px 10px;
+    margin-bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+/* Pool Danger Zone - far right */
+.pool-danger-zone {
+    margin-left: auto;
+    padding-left: 10px;
+    border-left: 2px solid var(--color-red-100);
+}
+
+/* Navigation Group - right aligned */
+.action-nav-group {
+    margin-left: auto;
+    padding-left: 10px;
+    border-left: 1px solid var(--color-gray-200);
+}
+
+.action-nav-group .btn.action-btn {
+    text-decoration: none;
+}
+
+.action-nav-group.reprint-links {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.action-nav-group.reprint-links .reprint-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 7px;
+}
+
+.action-nav-group.reprint-links .reprint-nav-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.24);
+    color: var(--color-white);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    font-size: var(--ui-font-size-xs, 11px);
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* When both nav group and danger zone exist (pool list) */
+.pool-danger-zone ~ .action-nav-group,
+.action-nav-group + .pool-danger-zone {
+    margin-left: 0;
+}
+
+/* Danger Zone Button Style */
+.btn.action-btn.btn-danger-zone {
+    background: linear-gradient(135deg, var(--color-red-800) 0%, var(--color-red-800) 100%) !important;
+    color: var(--color-white) !important;
+    border: 2px solid var(--color-red-300) !important;
+    animation: danger-pulse 2s ease-in-out infinite;
+}
+
+.btn.action-btn.btn-danger-zone:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--color-red-800) 0%, #450a0a 100%) !important;
+    transform: scale(1.02);
+}
+
+.btn.action-btn.btn-danger-zone:disabled {
+    opacity: 0.5;
+    animation: none;
+}
+
+@keyframes danger-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0); }
+}
+
+.action-buttons-group .btn.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 28px;
+}
+
+/* Action bar direct buttons (not inside .action-buttons-group) */
+.action-bar .btn.action-btn {
+    border-radius: 4px;
+}
+
+.action-buttons-group .btn.action-btn i {
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.action-buttons-group .btn.action-btn:disabled {
+    opacity: 1;
+    background: var(--color-gray-300) !important;
+    color: var(--color-gray-500) !important;
+    cursor: not-allowed;
+}
+
+/* Button colors — uses variables.css tokens (single source of truth)
+   .btn-blue, .btn-green, .btn-red, .btn-purple
+   are already defined globally in variables.css.
+   Only the scoped sizing context needs to be here. */
+
+.action-buttons-group .btn.btn-blue,
+.action-buttons-group .btn.btn-green,
+.action-buttons-group .btn.btn-red,
+.action-buttons-group .btn.btn-purple,
+.action-buttons-group .btn.btn-amber {
+    color: var(--text-white);
+    border: none;
+}
+
+/* Gray variant for View buttons inside action-buttons-group */
+.action-buttons-group .btn.btn-gray {
+    background: var(--gray-500);
+    color: var(--text-white);
+    border: none;
+}
+
+.action-buttons-group .btn.btn-gray:hover:not(:disabled) {
+    background: var(--gray-600);
+}
+
+/* Keep white text on colored buttons when disabled */
+.action-buttons-group .btn.btn-blue:disabled,
+.action-buttons-group .btn.btn-green:disabled,
+.action-buttons-group .btn.btn-red:disabled,
+.action-buttons-group .btn.btn-purple:disabled,
+.action-buttons-group .btn.btn-amber:disabled,
+.action-buttons-group .btn.btn-gray:disabled {
+    color: var(--text-white);
+}
+
+/* ==========================================
+   BUTTON GROUPS IN ACTION BAR
+   ========================================== */
+
+.action-bar {
+    justify-content: space-between;
+}
+
+.btn-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0;
+}
+
+/* ==========================================
+   BUTTON COLORS — .action-bar scope
+   ========================================== */
+.action-bar .btn.btn-blue {
+    background: var(--color-blue);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-blue:hover:not(:disabled) {
+    background: var(--color-blue-dark);
+}
+.action-bar .btn.btn-green {
+    background: var(--color-success);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-green:hover:not(:disabled) {
+    background: var(--color-success-dark);
+}
+.action-bar .btn.btn-red {
+    background: var(--color-danger);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-red:hover:not(:disabled) {
+    background: var(--color-danger-dark);
+}
+.action-bar .btn.btn-purple {
+    background: var(--purple);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-purple:hover:not(:disabled) {
+    background: var(--color-purple-dark);
+}
+.action-bar .btn.btn-gray {
+    background: var(--color-gray-500);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-gray:hover:not(:disabled) {
+    background: var(--color-gray-600);
+}
+.action-bar .btn.btn-amber {
+    background: var(--color-warning);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-amber:hover:not(:disabled) {
+    background: var(--color-warning-dark);
+}
+.action-bar .btn.btn-orange {
+    background: #f97316;
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-orange:hover:not(:disabled) {
+    background: var(--color-orange-600);
+}
+.action-bar .btn.btn-danger-zone {
+    background: var(--color-red-700);
+    color: var(--color-white) !important;
+    border: none;
+}
+.action-bar .btn.btn-danger-zone:hover:not(:disabled) {
+    background: var(--color-red-800);
+}
+.action-bar .btn:not(.btn-danger-zone):disabled {
+    opacity: 1;
+    background: var(--color-gray-300) !important;
+    color: var(--color-gray-500) !important;
+    cursor: not-allowed;
+    box-shadow: none !important;
+}
+
+/* ==========================================
+   ACTION BUTTON STYLES
+   (Legacy block — now defers to .action-buttons-group rules
+    and .action-bar .btn.btn-* color rules above)
+   ========================================== */
+
+.action-bar .btn.action-btn {
+    padding: 4px 8px;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 28px;
+    border: none;  /* Override base .btn 1px transparent border that creates visual gaps */
+}
+
+.action-bar .btn.action-btn i {
+    font-size: var(--ui-font-size-md, 13px);
+}
+
+.action-bar .btn.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-bar .btn.action-btn::after {
+    display: none;
+}
+
+/* Legacy btn-edit/view/delete/warning/success/info/primary/secondary classes — REMOVED.
+   Action bar uses .btn-blue, .btn-green, .btn-red, .btn-purple, .btn-gray, .btn-amber
+   defined in the "BUTTON COLORS — .action-bar scope" section above. */
+
+/* Action Tabs in Topbar */
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-left: 0;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.action-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* No separator between tabs — just gap */
+.action-tabs .action-tab + .action-tab::before {
+    display: none;
+}
+
+.tab-arrow {
+    display: none; /* Phase 6: Remove > arrows */
+}
+
+.action-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 400;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.action-tab .tab-label {
+    opacity: 0.9;
+}
+
+.action-tab .tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: var(--ui-font-size-xs, 11px);
+    font-weight: 500;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Pending Tab - Yellow */
+.pending-tab {
+    background: var(--color-amber-100);
+    color: var(--color-amber-800);
+    border: 1px solid var(--color-amber-300);
+}
+
+.pending-tab:hover {
+    background: var(--color-amber-200);
+}
+
+.pending-tab .tab-count {
+    background: var(--color-warning);
+    color: var(--color-white);
+}
+
+.pending-tab.active {
+    background: var(--color-warning);
+    color: var(--color-white);
+    border-color: var(--color-warning-dark);
+    box-shadow: 0 2px 8px rgba(var(--yellow-rgb), 0.4);
+}
+
+.pending-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-warning);
+}
+
+/* Verified Tab - Green */
+.verified-tab {
+    background: var(--color-emerald-100);
+    color: var(--color-emerald-800);
+    border: 1px solid var(--color-emerald-300);
+}
+
+.verified-tab:hover {
+    background: var(--color-emerald-200);
+}
+
+.verified-tab .tab-count {
+    background: var(--color-emerald-500);
+    color: var(--color-white);
+}
+
+.verified-tab.active {
+    background: var(--color-emerald-500);
+    color: var(--color-white);
+    border-color: var(--color-emerald-600);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.verified-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-emerald-500);
+}
+
+/* Pool Tab - Red */
+.pool-tab {
+    background: var(--color-red-100);
+    color: var(--color-red-800);
+    border: 1px solid var(--color-red-300);
+}
+
+.pool-tab:hover {
+    background: var(--color-red-200);
+}
+
+.pool-tab .tab-count {
+    background: var(--color-danger);
+    color: var(--color-white);
+}
+
+.pool-tab.active {
+    background: var(--color-danger);
+    color: var(--color-white);
+    border-color: var(--color-danger-dark);
+    box-shadow: 0 2px 8px rgba(var(--red-rgb), 0.4);
+}
+
+.pool-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-danger);
+}
+
+/* Approved Tab - Blue */
+.approved-tab {
+    background: var(--color-blue-100);
+    color: var(--color-blue-700);
+    border: 1px solid var(--color-blue-300);
+}
+
+.approved-tab:hover {
+    background: var(--color-blue-200);
+}
+
+.approved-tab .tab-count {
+    background: var(--color-blue);
+    color: var(--color-white);
+}
+
+.approved-tab.active {
+    background: var(--color-blue);
+    color: var(--color-white);
+    border-color: var(--color-blue-dark);
+    box-shadow: 0 2px 8px rgba(var(--blue-rgb), 0.4);
+}
+
+.approved-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-blue);
+}
+
+/* Download Tab - Gray */
+.download-tab {
+    background: var(--color-gray-100);
+    color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-300);
+}
+
+.download-tab:hover {
+    background: var(--color-gray-200);
+}
+
+.download-tab .tab-count {
+    background: var(--color-gray-500);
+    color: var(--color-white);
+}
+
+.download-tab.active {
+    background: var(--color-gray-500);
+    color: var(--color-white);
+    border-color: var(--color-gray-600);
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.4);
+}
+
+.download-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-gray-500);
+}
+
+/* Reprint Request/Confirmed tabs */
+.reprint-confirm-tab {
+    background: var(--color-amber-100);
+    color: var(--color-amber-800);
+    border: 1px solid var(--color-amber-300);
+}
+
+.reprint-confirm-tab:hover {
+    background: var(--color-amber-200);
+}
+
+.reprint-confirm-tab .tab-count {
+    background: var(--color-warning);
+    color: var(--color-white);
+}
+
+.reprint-confirm-tab.active {
+    background: var(--color-warning);
+    color: var(--color-white);
+    border-color: var(--color-warning-dark);
+    box-shadow: 0 2px 8px rgba(var(--yellow-rgb), 0.4);
+}
+
+.reprint-confirm-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-warning);
+}
+
+.reprint-pool-tab {
+    background: var(--color-indigo-100);
+    color: var(--color-indigo-700);
+    border: 1px solid var(--color-indigo-300);
+}
+
+.reprint-pool-tab:hover {
+    background: var(--color-indigo-200);
+}
+
+.reprint-pool-tab .tab-count {
+    background: var(--color-indigo-500);
+    color: var(--color-white);
+}
+
+.reprint-pool-tab.active {
+    background: var(--color-indigo-500);
+    color: var(--color-white);
+    border-color: var(--color-indigo-600);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.reprint-pool-tab.active .tab-count {
+    background: var(--color-white);
+    color: var(--color-indigo-500);
+}
+
+/* Compact datetime filter controls (shared across print/reprint lists) */
+.reprint-datetime-filter-group {
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+.reprint-datetime-filter-group .datetime-label {
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.reprint-datetime-filter-group .datetime-input {
+    height: 28px !important;
+    line-height: 28px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.reprint-datetime-filter-group .btn.btn-sm {
+    height: 28px;
+    min-height: 28px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+/* Confirmed list datetime filter: remove extra padding/min-height density */
+.confirmed-datetime-filter-group {
+    padding: 0;
+    min-height: 0;
+}
+
+.confirmed-datetime-filter-group .btn.btn-sm {
+    min-height: 0;
+    padding: 0 6px;
+}
+
+/* Strict button consistency overrides */
+.action-buttons-group .btn.action-btn,
+.action-bar .btn.action-btn {
+    height: 30px;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.reprint-datetime-filter-group .btn.btn-sm,
+.confirmed-datetime-filter-group .btn.btn-sm {
+    height: 30px;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}

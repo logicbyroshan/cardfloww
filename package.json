@@ -1,5 +1,11 @@
 {
+  "name": "cardflow-monorepo",
+  "private": true,
   "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:frontend": "cd frontend && npm run build",
+    "dev:backend": "cd backend && python manage.py runserver 8000",
+    "check:backend": "cd backend && python manage.py check",
     "dev:app": "cd android_app && npx expo start -c",
     "prod:app": "cd android_app && npx expo export",
     "build:apk": "cd android_app/android && gradlew assembleRelease",

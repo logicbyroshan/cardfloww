@@ -1,0 +1,683 @@
+/* ID Card Group Page Specific Styles */
+
+/* Base table head styling */
+.idcard-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%);
+}
+
+.idcard-table th {
+    color: var(--color-white);
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px;
+    white-space: nowrap;
+    text-align: left;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.idcard-table td {
+    padding: 12px 12px;
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+}
+
+/* Override generic row selection cursor — double-click opens pending list */
+.idcard-table tbody tr[data-table-id] {
+    cursor: pointer;
+    user-select: auto;
+}
+.idcard-table tbody tr:nth-child(odd) {
+    background: var(--color-gray-50);
+}
+.idcard-table tbody tr:nth-child(even) {
+    background: var(--color-white);
+}
+.idcard-table tbody tr:hover {
+    background: var(--color-gray-100);
+}
+
+/* Ensure bulk/action buttons always show pointer cursor */
+.idcard-table .bulk-btn,
+.idcard-table .list-btn {
+    cursor: pointer !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* Editable cell input style */
+.idcard-table td input[type="text"] {
+    font-size: var(--ui-font-size-base, 14px);
+    border: 1px solid var(--color-gray-300);
+    padding: 1px 3px;
+    border-radius: 2px;
+    width: 90%;
+    background: var(--color-white);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s;
+}
+
+.idcard-table td input[type="text"]:focus-visible {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.15);
+}
+
+/* Override table layout for ID Card Group page */
+.idcard-table table {
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+    font-family: var(--ui-font-family-sans);
+}
+
+/* Name column */
+.idcard-table th:nth-child(1),
+.idcard-table td:nth-child(1) {
+  width: auto;
+  min-width: 220px;
+    white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+    font-weight: 400;
+    font-size: var(--ui-font-size-base, 14px);
+    text-align: left;
+    padding-left: 10px;
+}
+
+/* Action column */
+.idcard-table th:nth-child(2),
+.idcard-table td:nth-child(2) {
+  width: 1%;
+  min-width: max-content;
+  white-space: nowrap;
+    text-align: center;
+}
+
+/* Bulk Action column */
+.idcard-table th:nth-child(3),
+.idcard-table td:nth-child(3) {
+  width: 1%;
+  min-width: max-content;
+  white-space: nowrap;
+    text-align: center;
+}
+
+/* Keep action button groups on one line and let table scroll horizontally if needed */
+.idcard-table .action-cell,
+.idcard-table .bulk-action-cell {
+  white-space: nowrap;
+}
+
+.idcard-table td.action-cell,
+.idcard-table td.bulk-action-cell {
+  padding: 8px 10px !important;
+}
+
+.idcard-table .action-cell .action-buttons,
+.idcard-table .bulk-action-cell .bulk-action-buttons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+/* List Buttons - Compact */
+.list-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    min-width: 100px;
+    text-decoration: none;
+}
+
+/* Hide icons in list buttons */
+.list-btn i {
+    display: none;
+}
+
+/* Count Badge - fits up to 4 digits */
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 8px;
+    font-size: var(--ui-font-size-xs, 11px);
+    font-weight: 500;
+    margin-left: 4px;
+    text-align: center;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+/* Pending Button - Yellow/Amber (waiting status) */
+.pending-btn {
+    background: var(--color-amber-100);
+    color: var(--color-amber-800);
+    border: 1px solid var(--color-amber-300);
+}
+
+.pending-btn:hover {
+    background: var(--color-amber-200);
+}
+
+.pending-btn .count-badge {
+    background: var(--color-warning);
+    color: var(--color-white);
+}
+
+/* Verified Button - Green (success status) */
+.verified-btn {
+    background: var(--color-emerald-100);
+    color: var(--color-emerald-800);
+    border: 1px solid var(--color-emerald-300);
+}
+
+.verified-btn:hover {
+    background: var(--color-emerald-200);
+}
+
+.verified-btn .count-badge {
+    background: var(--color-emerald-500);
+    color: var(--color-white);
+}
+
+/* Pool Button - Red (deleted/removed status) */
+.pool-btn {
+    background: var(--color-red-100);
+    color: var(--color-red-800);
+    border: 1px solid var(--color-red-300);
+}
+
+.pool-btn:hover {
+    background: var(--color-red-200);
+}
+
+.pool-btn .count-badge {
+    background: var(--color-danger);
+    color: var(--color-white);
+}
+
+/* Approved Button - Blue (approved status) */
+.approved-btn {
+    background: var(--color-blue-100);
+    color: var(--color-blue-700);
+    border: 1px solid var(--color-blue-300);
+}
+
+.approved-btn:hover {
+    background: var(--color-blue-200);
+}
+
+.approved-btn .count-badge {
+    background: var(--color-blue);
+    color: var(--color-white);
+}
+
+/* Download Button - Gray/Neutral (action) */
+.download-btn {
+    background: var(--color-gray-100);
+    color: var(--color-gray-700) !important;
+    border: 1px solid var(--color-gray-300);
+}
+
+.download-btn:hover {
+    background: var(--color-gray-200);
+}
+
+.download-btn .count-badge {
+    background: var(--color-gray-500);
+    color: var(--color-white);
+}
+
+/* Reprint Status Button - Cyan/Teal (for status list) */
+.reprint-btn {
+    background: #cffafe;
+    color: var(--color-cyan-700);
+    border: 1px solid #67e8f9;
+}
+
+.reprint-btn:hover {
+    background: #a5f3fc;
+}
+
+.reprint-btn .count-badge {
+    background: var(--teal);
+    color: var(--color-white);
+}
+
+/* Bulk Buttons - Compact */
+.bulk-btn {
+    display: inline-flex;
+    align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  min-width: 100px;
+}
+
+/* Hide icons in bulk buttons */
+.bulk-btn i {
+    display: none;
+}
+
+/* Reupload Button - Orange/Amber */
+.reupload-btn {
+  background: #ffedd5;
+  color: var(--color-orange-600);
+  border: 1px solid #fdba74;
+}
+
+.reupload-btn:hover {
+  background: #fed7aa;
+}
+
+/* Download All ID Card Button - Indigo */
+.download-all-btn {
+  background: var(--color-indigo-100);
+  color: #312e81;
+  border: 1px solid var(--color-indigo-300);
+}
+
+.download-all-btn:hover {
+  background: var(--color-indigo-200);
+}
+
+/* Delete All ID Cards Button - Red */
+.delete-all-btn {
+  background: var(--color-red-100);
+  color: var(--color-red-800);
+  border: 1px solid var(--color-red-300);
+}
+
+.delete-all-btn:hover {
+  background: var(--color-red-200);
+}
+
+/* Reprint ID Card Bulk Action Button - Cyan/Teal */
+.reprint-btn-action {
+    background: var(--teal);
+    color: var(--color-white);
+    border: none;
+}
+
+.reprint-btn-action:hover {
+    background: var(--color-teal-dark);
+}
+
+/* Upgrade All Class Button - Green */
+.upgrade-class-btn {
+  background: var(--color-green-100);
+  color: var(--color-green-800);
+  border: 1px solid var(--color-green-300);
+}
+
+.upgrade-class-btn:hover {
+  background: var(--color-emerald-200);
+}
+
+/* Disabled state for bulk buttons (e.g. no class column) */
+.bulk-btn:disabled,
+.bulk-btn[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (min-width: 1000px) and (max-width: 1200px) {
+  .idcard-table th:nth-child(1),
+  .idcard-table td:nth-child(1) {
+    min-width: 180px;
+    font-size: var(--ui-font-size-md, 13px);
+  }
+    
+    .list-btn {
+    padding: 4px 8px;
+        font-size: var(--ui-font-size-md, 13px);
+    min-width: 90px;
+    }
+    
+    .count-badge {
+        min-width: 24px;
+        height: 10px;
+      font-size: var(--ui-font-size-5xs, 6px);
+        padding: 0 2px;
+    }
+    
+    .bulk-btn {
+      padding: 4px 8px;
+        font-size: var(--ui-font-size-md, 13px);
+      min-width: 90px;
+    }
+}
+
+@media (min-width: 1201px) and (max-width: 1400px) {
+    .list-btn {
+    padding: 4px 8px;
+        font-size: var(--ui-font-size-md, 13px);
+    min-width: 95px;
+    }
+    
+    .count-badge {
+        min-width: 26px;
+        height: 11px;
+        font-size: var(--ui-font-size-md, 13px);
+    }
+    
+    .bulk-btn {
+      padding: 4px 8px;
+        font-size: var(--ui-font-size-md, 13px);
+      min-width: 95px;
+    }
+}
+
+@media (min-width: 1000px) and (max-width: 1366px) {
+    .page-content {
+        padding: 18px;
+    }
+
+    .groups-container {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+}
+
+/* Transition for count badges */
+.count-badge {
+    transition: all 0.15s ease;
+}
+
+/* ===========================================
+   CLIENT GROUPS PAGE STYLES
+   (moved from inline <style> in client/groups.html)
+   =========================================== */
+
+.page-content {
+    padding: 24px;
+  }
+  
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  
+  .page-header h1 {
+    font-size: var(--ui-font-size-4xl, 24px);
+    font-weight: 700;
+    color: var(--text-primary, var(--color-gray-50));
+  }
+  
+  .groups-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  .group-card {
+    background: var(--card-bg, #1e2030);
+    border-radius: 12px;
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .group-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    border-color: rgba(72, 187, 120, 0.3);
+  }
+  
+  .group-card-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.05));
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .group-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(72, 187, 120, 0.15);
+    color: var(--color-green-500);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--ui-font-size-3xl, 20px);
+  }
+  
+  .group-info {
+    flex: 1;
+  }
+  
+  .group-info h3 {
+    font-size: var(--ui-font-size-xl, 16px);
+    font-weight: 600;
+    color: var(--text-primary, var(--color-gray-50));
+    margin-bottom: 4px;
+  }
+  
+  .group-info .group-meta {
+    font-size: var(--ui-font-size-md, 13px);
+    color: var(--text-secondary, var(--color-slate-400));
+  }
+  
+  .group-card-body {
+    padding: 16px 20px;
+  }
+  
+  .group-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .group-stat {
+    text-align: center;
+    padding: 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+  }
+  
+  .group-stat .value {
+    font-size: var(--ui-font-size-3xl, 20px);
+    font-weight: 700;
+    color: var(--text-primary, var(--color-gray-50));
+  }
+  
+  .group-stat .label {
+    font-size: var(--ui-font-size-xs, 11px);
+    color: var(--text-secondary, var(--color-slate-400));
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .group-card-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border-color, rgba(255,255,255,0.05));
+    display: flex;
+    gap: 12px;
+  }
+  
+  .group-card-footer .btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .group-card-footer .btn-primary {
+    background: linear-gradient(135deg, var(--color-green-500), var(--color-green-600));
+    color: white;
+  }
+  
+  .group-card-footer .btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-green-600), #2f855a);
+  }
+  
+  .group-card-footer .btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-secondary, var(--color-slate-400));
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+  }
+  
+  .group-card-footer .btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-primary, var(--color-gray-50));
+  }
+  
+  .tables-accordion {
+    margin-top: 12px;
+    border-top: 1px solid var(--border-color, rgba(255,255,255,0.05));
+    padding-top: 12px;
+  }
+  
+  .tables-toggle {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border-color, rgba(255,255,255,0.1));
+    border-radius: 8px;
+    color: var(--text-secondary, var(--color-slate-400));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--ui-font-size-md, 13px);
+    transition: all 0.2s;
+  }
+  
+  .tables-toggle:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary, var(--color-gray-50));
+  }
+  
+  .tables-toggle i.chevron {
+    transition: transform 0.2s;
+  }
+  
+  .tables-toggle.expanded i.chevron {
+    transform: rotate(180deg);
+  }
+  
+  .tables-list {
+    display: none;
+    padding: 12px 0 0 0;
+  }
+  
+  .tables-list.show {
+    display: block;
+  }
+  
+  .table-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  
+  .table-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .table-item:hover {
+    background: rgba(255,255,255,0.05);
+  }
+  
+  .table-item .table-name {
+    font-size: var(--ui-font-size-md, 13px);
+    color: var(--text-primary, var(--color-gray-50));
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .table-item .table-count {
+    font-size: var(--ui-font-size-sm, 12px);
+    color: var(--text-secondary, var(--color-slate-400));
+    background: rgba(72, 187, 120, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+  
+  .table-item .view-btn {
+    padding: 6px 12px;
+    background: rgba(72, 187, 120, 0.1);
+    border: none;
+    border-radius: 6px;
+    color: var(--color-green-500);
+    cursor: pointer;
+    font-size: var(--ui-font-size-sm, 12px);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .table-item .view-btn:hover {
+    background: rgba(72, 187, 120, 0.2);
+  }
+
+/* Strict button consistency overrides */
+.list-btn,
+.bulk-btn {
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.group-card-footer .btn {
+    min-height: 34px;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+.table-item .view-btn {
+    min-height: 30px;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+

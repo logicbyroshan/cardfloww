@@ -26,6 +26,8 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 
 # =============================================================================
@@ -560,7 +562,17 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static', BASE_DIR / 'frontend' / 'dist']
+_frontend_dist = BASE_DIR.parent / 'frontend' / 'dist'
+if not _frontend_dist.exists():
+    _frontend_dist = BASE_DIR.parent / 'Frontend' / 'dist'
+if not _frontend_dist.exists():
+    _frontend_dist = BASE_DIR / 'frontend' / 'dist'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+if _frontend_dist.exists():
+    STATICFILES_DIRS.append(_frontend_dist)
 
 # Whitenoise for serving static files in production
 # CompressedManifest version: content-hashes filenames (app.js → app.abc123.js)

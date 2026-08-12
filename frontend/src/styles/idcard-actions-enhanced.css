@@ -1,0 +1,939 @@
+/* ==========================================
+   ID CARD ACTIONS - ENHANCED UI STYLES
+   Additional styling improvements for better UX
+   ========================================== */
+
+/* ==========================================
+   ACTION BAR IMPROVEMENTS
+   ========================================== */
+
+/* Note: .action-divider styles are now in common.css */
+
+/* Enhanced Button Styles - Small consistent size */
+.action-buttons-group .btn.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 28px;
+}
+
+.action-buttons-group .btn.action-btn::before {
+    display: none;
+}
+
+.action-buttons-group .btn.action-btn:hover:not(:disabled) {
+    filter: none;
+}
+
+.action-buttons-group .btn.action-btn:active:not(:disabled) {
+    filter: brightness(0.95);
+}
+
+.action-buttons-group .btn.action-btn i {
+    font-size: var(--ui-font-size-md, 13px);
+}
+
+/* Blue buttons - flat solid */
+.action-buttons-group .btn.btn-blue {
+    background: var(--color-blue);
+    color: var(--color-white);
+}
+
+.action-buttons-group .btn.btn-blue:hover:not(:disabled) {
+    background: var(--color-blue-dark);
+}
+
+/* Green buttons - flat solid */
+.action-buttons-group .btn.btn-green {
+    background: var(--color-success);
+    color: var(--color-white);
+}
+
+.action-buttons-group .btn.btn-green:hover:not(:disabled) {
+    background: var(--color-success-dark);
+}
+
+/* Red buttons - flat solid */
+.action-buttons-group .btn.btn-red {
+    background: var(--color-danger);
+    color: var(--color-white);
+}
+
+.action-buttons-group .btn.btn-red:hover:not(:disabled) {
+    background: var(--color-danger-dark);
+}
+
+/* Danger button - for permanent delete */
+.action-buttons-group .btn.btn-danger {
+    background: linear-gradient(135deg, var(--color-red-700) 0%, var(--color-red-800) 100%);
+    color: var(--color-white);
+    animation: pulse-danger 2s infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: none; }
+}
+
+/* Disabled state */
+.action-buttons-group .btn.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ==========================================
+   SEARCH AND FILTER BAR IMPROVEMENTS
+   ========================================== */
+
+/* Removed: .search-filter-bar — handled by tailwind-input.css */
+
+/* Search Box Enhancement - Override for idcard page */
+.idcard-actions-page .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 200px;
+    background: var(--bg-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 6px;
+    padding: 0;
+}
+
+.idcard-actions-page .search-box .search-icon {
+    position: absolute;
+    left: 8px;
+    color: var(--gray-400);
+    font-size: var(--ui-font-size-base, 14px);
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.idcard-actions-page .search-box .search-input {
+    width: 100%;
+    padding: 3px 34px 3px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-md, 13px);
+    transition: all 0.2s ease;
+    background: transparent;
+}
+
+/* Search clear button — vertical centering fix (absolute inside relative search-box) */
+.idcard-actions-page .search-box .search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    color: var(--gray-400, var(--color-gray-400));
+    background: var(--color-gray-100);
+    border: none;
+    padding: 0;
+    border-radius: 8px;
+    line-height: 1;
+    z-index: 2;
+}
+.idcard-actions-page .search-box .search-clear-btn:hover {
+    color: var(--color-gray-500);
+    background: var(--color-gray-200);
+}
+.idcard-actions-page .search-box .search-clear-btn.visible {
+    display: flex;
+}
+
+.idcard-actions-page .search-box:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.1);
+}
+
+/* Removed: handled by tailwind-input.css */
+
+.search-box:focus-within .search-icon {
+    color: var(--primary);
+}
+
+/* Removed: handled by tailwind-input.css */
+
+/* Removed: handled by tailwind-input.css */
+
+/* Removed: handled by tailwind-input.css */
+
+/* ==========================================
+   TABLE IMPROVEMENTS
+   ========================================== */
+
+/* Removed: .table-wrapper — handled by tailwind-input.css */
+
+.idcard-actions-page .idcard-table {
+    overflow-x: auto;
+    overflow-y: auto;
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-slate-400) var(--color-slate-200);
+}
+
+/* Visible scrollbar — both axes */
+.idcard-table::-webkit-scrollbar {
+    width: 8px;
+    height: 10px;
+}
+
+.idcard-table::-webkit-scrollbar-track {
+    background: var(--color-slate-100);
+    border-radius: 0;
+}
+
+.idcard-table::-webkit-scrollbar-thumb {
+    background: var(--color-slate-400);
+    border-radius: 4px;
+    border: 1px solid var(--color-slate-100);
+}
+
+.idcard-table::-webkit-scrollbar-thumb:hover {
+    background: var(--color-slate-500);
+}
+
+.idcard-table::-webkit-scrollbar-corner {
+    background: var(--color-slate-100);
+}
+
+/* Table fills available width first; only scrolls horizontally if content truly cannot fit */
+.idcard-actions-page .idcard-table table {
+    min-width: 100%;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+/* Sticky header — stays at top while scrolling */
+.idcard-table thead {
+    background: linear-gradient(135deg, var(--color-blue) 0%, var(--color-indigo-600) 100%);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+/* Cover the scrollbar track beside the header row */
+.idcard-table thead tr::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -8px;
+    width: 8px;
+    height: 100%;
+    background: inherit;
+    z-index: 21;
+}
+
+/* Per-status table header gradients — matches tab color theme */
+.idcard-actions-page[data-status="pending"] .idcard-table thead {
+    background: linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-dark) 50%, var(--color-amber-700) 100%);
+}
+.idcard-actions-page[data-status="verified"] .idcard-table thead {
+    background: linear-gradient(135deg, var(--color-emerald-500) 0%, var(--color-emerald-600) 50%, var(--color-emerald-700) 100%);
+}
+.idcard-actions-page[data-status="approved"] .idcard-table thead {
+    background: linear-gradient(135deg, var(--color-blue) 0%, var(--color-blue-dark) 50%, var(--color-blue-700) 100%);
+}
+.idcard-actions-page[data-status="download"] .idcard-table thead {
+    background: linear-gradient(135deg, var(--color-gray-500) 0%, var(--color-gray-600) 50%, var(--color-gray-700) 100%);
+}
+.idcard-actions-page[data-status="pool"] .idcard-table thead {
+    background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 50%, var(--color-red-700) 100%);
+}
+
+.idcard-table thead th {
+    padding: 4px 1px;
+    font-size: var(--ui-font-size-base, 14px);
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-white);
+    border: 1px solid rgba(255,255,255,0.15);
+    white-space: normal;
+    vertical-align: middle;
+}
+
+/* When table has many columns (16+), allow word-wrap on headers */
+.idcard-table.compact-mode thead th {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    hyphens: none;
+}
+
+.idcard-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.idcard-table tbody tr:hover {
+    background: var(--color-slate-50);
+}
+
+.idcard-table tbody tr.selected {
+    background: var(--color-blue-50);
+}
+
+.idcard-table tbody td {
+    padding: 2px 4px;
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-gray-700);
+    vertical-align: middle;
+}
+
+/* Editable cells */
+.editable-cell {
+    position: relative;
+    cursor: text;
+}
+
+.editable-cell:hover {
+    background: rgba(var(--blue-rgb), 0.05);
+}
+
+.editable-cell::after {
+    content: '\f303';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: var(--ui-font-size-md, 13px);
+    color: var(--color-blue);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.editable-cell:hover::after {
+    opacity: 0.5;
+}
+
+/* Row Action Buttons - Text only, proper size */
+.row-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 3px 10px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 500;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--color-slate-100);
+    color: var(--color-slate-600);
+    height: 26px;
+    white-space: nowrap;
+}
+
+.row-action-btn i {
+    display: none;
+}
+
+.row-action-btn:hover {
+    background: var(--color-slate-200);
+    color: var(--color-slate-800);
+}
+
+.row-action-btn.verify-row-btn,
+.row-action-btn.approve-row-btn {
+    background: var(--color-success);
+    color: var(--color-white);
+}
+
+.row-action-btn.verify-row-btn:hover,
+.row-action-btn.approve-row-btn:hover {
+    background: var(--color-success-dark);
+}
+
+.row-action-btn.unverify-row-btn,
+.row-action-btn.unapprove-row-btn,
+.row-action-btn.retrieve-row-btn {
+    background: var(--color-warning);
+    color: var(--color-white);
+}
+
+.row-action-btn.download-row-btn {
+    background: var(--color-blue);
+    color: var(--color-white);
+}
+
+/* Image Cell Enhancement */
+.image-cell {
+    padding: 2px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.image-with-edit {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.table-image {
+    width: 45px;
+    height: 53px;
+    object-fit: cover;
+    border-radius: 2px;
+    border: 1px solid var(--color-gray-200);
+    transition: all 0.2s ease;
+}
+
+/* Signature/Barcode/QR: fixed width, auto height, minimize cropping */
+.table-image.signature-type,
+.table-image.barcode-type,
+.table-image.qr-type {
+    width: 45px;
+    height: auto;
+    max-height: 53px;
+    object-fit: contain;
+    object-position: center;
+    border: none;
+    border-radius: 0;
+}
+
+.image-with-edit:hover .table-image {
+    border-color: var(--color-blue);
+}
+
+/* Edit button below image - small text button */
+.edit-photo-btn {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: auto;
+    min-height: 20px;
+    background: transparent;
+    color: var(--color-blue);
+    border: none;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-xs, 11px);
+    font-weight: 500;
+    cursor: pointer;
+    display: block;
+    text-align: center;
+    padding: 2px 8px;
+    margin-top: 0px;
+    opacity: 1;
+    transform: none;
+    transition: color 0.15s ease;
+    line-height: 1.2;
+}
+
+.edit-photo-btn:hover {
+    color: var(--color-blue-dark);
+    text-decoration: underline;
+}
+
+/* Placeholder Images */
+.no-image {
+    width: 36px;
+    height: 44px;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--ui-font-size-base, 14px);
+}
+
+.colorful-placeholder {
+    background: var(--color-indigo-500);
+    color: rgba(255,255,255,0.8);
+}
+
+/* ==========================================
+   PAGINATION IMPROVEMENTS
+   ========================================== */
+
+/* Pagination → defined in common.css (single source of truth)
+   Only page-specific overrides below */
+
+.pagination-selected {
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-blue);
+    background: var(--color-blue-50);
+    padding: 2px 6px;
+    border-radius: 2px;
+}
+
+/* ==========================================
+   LAZY LOAD INDICATOR
+   ========================================== */
+
+.lazy-load-indicator {
+    padding: 10px 14px;
+    text-align: center;
+    color: var(--color-slate-500);
+    font-size: var(--ui-font-size-base, 14px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.lazy-load-indicator.is-visible {
+    display: block;
+}
+
+.lazy-skeleton-shell {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+}
+
+.lazy-skeleton-cell {
+    display: block;
+    height: 14px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--color-slate-100) 0%, #f6f8fb 50%, var(--color-slate-100) 100%);
+    background-size: 220% 100%;
+    animation: table-skeleton-shimmer 1.1s linear infinite;
+}
+
+.lazy-skeleton-cell:nth-child(2n) {
+    width: 88%;
+}
+
+.lazy-skeleton-cell:nth-child(3n) {
+    width: 72%;
+}
+
+/* Empty State → defined in common.css (single source of truth) */
+
+/* Removed: .status-badge — handled by tailwind-input.css */
+
+/* ==========================================
+   FILTER DROPDOWN Z-INDEX (Phase 5)
+   Must open above table header (z-20)
+   ========================================== */
+.filter-dropdown {
+    position: relative;
+}
+.filter-dropdown .dropdown-options {
+    position: absolute;
+    z-index: 50;
+}
+
+/* ==========================================
+   TIGHT WRAPPING — prefer text wrap over horizontal scroll
+   ========================================== */
+
+/* All dynamic cells: break long words only as last resort */
+.idcard-table td.dynamic-field {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+/* Numeric/date identifier cells must remain on one line. */
+.idcard-table td.dynamic-field.whitespace-nowrap {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+}
+
+/* Name fields: allow shrinking below min-w when viewport is tight */
+.idcard-table td.dynamic-field:not(.image-field) {
+    max-width: 220px;
+}
+
+/* ==========================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================== */
+
+/* 1200px+ UI lock: cap table page width so it doesn't over-stretch */
+@media (min-width: 1000px) {
+    .idcard-actions-page {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+}
+
+@media (min-width: 1000px) and (max-width: 1366px) {
+    .action-buttons-group .btn.action-btn,
+    .action-bar .btn.action-btn {
+        padding: 4px 8px;
+    }
+
+    .search-box {
+        min-width: 180px;
+    }
+
+    .idcard-table td.dynamic-field:not(.image-field) {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 999px) {
+    .action-buttons-group .btn.action-btn .btn-text,
+    .action-bar .btn.action-btn .btn-text {
+        display: none;
+    }
+    
+    .action-buttons-group .btn.action-btn,
+    .action-bar .btn.action-btn {
+        padding: 4px 6px;
+    }
+    
+    .search-box {
+        min-width: 150px;
+    }
+    
+}
+
+@media (max-width: 768px) {
+    .search-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .search-box {
+        flex: 1;
+        min-width: auto;
+    }
+    
+    .pagination-bar {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .pagination-left,
+    .pagination-right {
+        justify-content: center;
+    }
+}
+
+/* ==========================================
+   WORKFLOW CONFIRMATION MODAL
+   ========================================== */
+
+.wf-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    transition: background 0.25s ease, backdrop-filter 0.25s ease;
+    padding: 16px;
+}
+
+.wf-confirm-overlay.wf-active {
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+}
+
+.wf-confirm-overlay.wf-closing {
+    background: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+}
+
+.wf-confirm-card {
+    background: var(--color-white);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 650px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.wf-active .wf-confirm-card {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+.wf-closing .wf-confirm-card {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* Header */
+.wf-confirm-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-slate-100);
+    position: relative;
+}
+
+.wf-confirm-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-white);
+    font-size: var(--ui-font-size-lg, 15px);
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.wf-confirm-title {
+    font-size: var(--ui-font-size-lg, 15px);
+    font-weight: 600;
+    color: var(--color-slate-800);
+    flex: 1;
+}
+
+.wf-confirm-close {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-slate-400);
+    font-size: var(--ui-font-size-base, 14px);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.wf-confirm-close:hover {
+    background: var(--color-slate-100);
+    color: var(--color-slate-600);
+}
+
+/* Body */
+.wf-confirm-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.wf-confirm-msg {
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-slate-700);
+    line-height: 1.6;
+    margin: 0 0 16px 0;
+    font-weight: 500;
+}
+
+/* Status flow badges */
+.wf-status-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: var(--color-gray-50);
+    border-radius: 10px;
+    border: 1px solid var(--color-slate-200);
+}
+
+.wf-status-badge {
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 8px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.wf-flow-arrow {
+    font-size: var(--ui-font-size-base, 14px);
+    animation: wfArrowPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes wfArrowPulse {
+    0%, 100% { transform: translateX(0); opacity: 0.7; }
+    50% { transform: translateX(3px); opacity: 1; }
+}
+
+/* Count badge for bulk */
+.wf-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
+.wf-count-badge i {
+    font-size: var(--ui-font-size-md, 13px);
+}
+
+/* Info note */
+.wf-confirm-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--color-gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--color-slate-200);
+    font-size: var(--ui-font-size-sm, 12px);
+    color: var(--color-slate-500);
+    line-height: 1.5;
+}
+
+.wf-confirm-note i {
+    color: var(--color-slate-400);
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+.wf-confirm-code-wrap {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.wf-confirm-code {
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    font-size: var(--ui-font-size-xl, 16px);
+    padding: 8px 12px;
+    border: 1px dashed rgba(var(--yellow-rgb), 0.4);
+    border-radius: 10px;
+    background: var(--color-white);
+}
+
+.wf-confirm-input-wrap {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+.wf-confirm-input {
+    width: 100%;
+    max-width: 320px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: 10px;
+    text-align: center;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.wf-confirm-input:focus {
+    outline: none;
+    border-color: var(--color-warning);
+    box-shadow: 0 0 0 2px rgba(var(--yellow-rgb), 0.18);
+}
+
+.wf-confirm-error {
+    display: none;
+    margin-top: 8px;
+    color: var(--color-danger);
+    font-size: var(--ui-font-size-sm, 12px);
+    text-align: center;
+}
+
+/* Footer */
+.wf-confirm-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--color-slate-200);
+}
+
+.wf-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    font-size: var(--ui-font-size-md, 13px);
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.wf-btn-cancel {
+    background: var(--color-slate-200);
+    color: var(--color-slate-600);
+}
+
+.wf-btn-cancel:hover {
+    background: var(--color-slate-300);
+    color: var(--color-slate-700);
+}
+
+.wf-btn-confirm {
+    color: var(--color-white);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.wf-btn-confirm:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+}
+
+.wf-btn-confirm:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+}
+
+/* Strict button consistency overrides */
+.action-buttons-group .btn.action-btn,
+.action-bar .btn.action-btn {
+    height: 30px;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.row-action-btn {
+    height: 26px;
+    min-height: 26px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.wf-btn {
+    min-height: 34px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: var(--ui-font-size-sm, 12px);
+}

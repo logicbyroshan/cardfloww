@@ -1,0 +1,563 @@
+/* Cross-page control/table consistency layer.
+   Keeps icon sizes, control typography, and table typography aligned. */
+:root {
+  --sidebar-width: 190px !important;
+  --spacing-sidebar: 190px !important;
+  --ui-font-family-sans: var(--font-sans, var(--font-family, "Saira Semi Condensed", "Segoe UI", "Helvetica Neue", Arial, sans-serif));
+
+  /* Core UI type scale (small-to-large). */
+  --ui-font-size-5xs: 6px;
+  --ui-font-size-4xs: 7px;
+  --ui-font-size-3xs: 8px;
+  --ui-font-size-3xs-plus: 8.5px;
+  --ui-font-size-2xs: 10px;
+  --ui-font-size-2xs-plus: 9px;
+  --ui-font-size-xs-tight: 10.8px;
+  --ui-font-size-xs: 11px;
+  --ui-font-size-sm-tight: 11.8px;
+  --ui-font-size-sm: 12px;
+  --ui-font-size-md-tight: 12.8px;
+  --ui-font-size-md: 13px;
+  --ui-font-size-base: 14px;
+  --ui-font-size-lg: 15px;
+  --ui-font-size-xl: 16px;
+  --ui-font-size-xl-plus: 17px;
+  --ui-font-size-2xl: 18px;
+  --ui-font-size-2xl-plus: 19px;
+  --ui-font-size-3xl: 20px;
+  --ui-font-size-3xl-plus: 21px;
+  --ui-font-size-3xl-lg: 22px;
+  --ui-font-size-4xl: 24px;
+  --ui-font-size-4xl-plus: 26px;
+  --ui-font-size-5xl: 28px;
+  --ui-font-size-6xl: 30px;
+  --ui-font-size-7xl: 32px;
+  --ui-font-size-8xl: 36px;
+  --ui-font-size-9xl: 40px;
+  --ui-font-size-10xl: 48px;
+
+  --ui-line-height-tight: 1.2;
+  --ui-line-height-body: 1.4;
+  --ui-line-height-relaxed: 1.5;
+
+  /* Hierarchy aliases. */
+  --ui-heading-h1-size: var(--ui-font-size-5xl);
+  --ui-heading-h2-size: var(--ui-font-size-4xl);
+  --ui-heading-h3-size: var(--ui-font-size-3xl);
+  --ui-heading-h4-size: var(--ui-font-size-2xl);
+  --ui-heading-h5-size: var(--ui-font-size-xl);
+  --ui-heading-h6-size: var(--ui-font-size-lg);
+
+  --ui-consistent-control-font-size: var(--ui-font-size-md);
+  --ui-consistent-control-font-weight: 500;
+  --ui-consistent-input-font-weight: 400;
+  --ui-consistent-table-head-font-size: var(--ui-font-size-md);
+  --ui-consistent-table-head-font-weight: 600;
+  --ui-consistent-table-body-font-size: var(--ui-font-size-md);
+  --ui-consistent-table-body-font-weight: 500;
+  --ui-consistent-icon-size: var(--ui-font-size-sm);
+}
+
+html,
+body,
+input,
+button,
+select,
+textarea {
+  font-family: var(--ui-font-family-sans);
+}
+
+body {
+  font-size: var(--ui-font-size-lg);
+  line-height: var(--ui-line-height-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ui-font-family-sans);
+  line-height: var(--ui-line-height-tight);
+}
+
+h1 { font-size: var(--ui-heading-h1-size); }
+h2 { font-size: var(--ui-heading-h2-size); }
+h3 { font-size: var(--ui-heading-h3-size); }
+h4 { font-size: var(--ui-heading-h4-size); }
+h5 { font-size: var(--ui-heading-h5-size); }
+h6 { font-size: var(--ui-heading-h6-size); }
+
+/* Keep the app/sidebar brand title on one compact, uniform scale everywhere. */
+.sidebar .sidebar-header {
+  height: 50px !important;
+  padding: 0 8px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-right: none !important;
+}
+
+.sidebar .sidebar-logo {
+  min-width: 0;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.sidebar .sidebar-logo .profile {
+  width: 30px !important;
+  height: 30px !important;
+}
+
+.sidebar .sidebar-logo .profile img {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+.sidebar .sidebar-logo h3,
+.sidebar .sidebar-logo .sidebar-brand-title {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.15;
+  letter-spacing: -0.015em !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #1e1e2e !important;
+}
+
+small,
+.text-xs,
+.caption,
+.helper-text {
+  font-size: var(--ui-font-size-sm);
+  line-height: var(--ui-line-height-relaxed);
+}
+
+label,
+.form-label,
+.field-label {
+  font-size: var(--ui-font-size-md);
+  line-height: var(--ui-line-height-tight);
+}
+
+.main .btn,
+.main .btn.btn-sm,
+.main .btn.btn-md,
+.main .btn.btn-lg,
+.main .pagination-controls button,
+.main .page-num,
+.main .pagination-right label {
+  font-size: var(--ui-consistent-control-font-size) !important;
+  line-height: 1.2 !important;
+}
+
+.main .btn,
+.main .btn.btn-sm,
+.main .btn.btn-md,
+.main .btn.btn-lg,
+.main .pagination-controls button,
+.main .page-num {
+  font-weight: var(--ui-consistent-control-font-weight) !important;
+}
+
+.main select.form-select,
+.main select.form-select-sm,
+.main .dropdown-toggle,
+.main .dropdown-option,
+.main .search-box .search-input,
+.main .notif-search-box input {
+  font-size: var(--ui-consistent-control-font-size) !important;
+  line-height: 1.2 !important;
+  font-weight: var(--ui-consistent-input-font-weight) !important;
+}
+
+.main .btn i,
+.main .btn svg,
+.main .dropdown-toggle i,
+.main .dropdown-toggle svg,
+.main .search-box .search-icon,
+.main .search-box .search-clear-btn i,
+.main .search-box .search-clear-btn svg,
+.main .notif-search-box i {
+  width: var(--ui-consistent-icon-size);
+  height: var(--ui-consistent-icon-size);
+  font-size: var(--ui-consistent-icon-size) !important;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main .data-table th,
+.main .wa-table thead th,
+.main .notif-table th,
+.main .reprint-history-table th,
+.main .audit-users-table th {
+  font-size: var(--ui-consistent-table-head-font-size) !important;
+  font-weight: var(--ui-consistent-table-head-font-weight) !important;
+  line-height: 1.25 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.main .data-table td,
+.main .wa-table tbody td,
+.main .notif-table td,
+.main .reprint-history-table td,
+.main .audit-users-table td {
+  font-size: var(--ui-consistent-table-body-font-size) !important;
+  font-weight: var(--ui-consistent-table-body-font-weight) !important;
+  line-height: 1.3 !important;
+  text-transform: uppercase !important;
+}
+
+/* Keep action cells from drifting back to tiny icon rendering. */
+.main .wa-actions .btn i,
+.main .actions .btn i,
+.main .staff-actions .btn i {
+  font-size: var(--ui-consistent-icon-size) !important;
+}
+
+/* Keep search clear and dropdown caret visually aligned with text. */
+.main .search-box .search-clear-btn,
+.main .dropdown-toggle i,
+.main .dropdown-toggle svg {
+  vertical-align: middle;
+}
+
+/* Keep modal/drawer typography compact and consistent without changing page headers. */
+:root {
+  --ui-modal-header-title-size: var(--ui-font-size-md, 13px);
+  --ui-modal-section-title-size: var(--ui-font-size-sm, 12px);
+  --ui-modal-label-size: var(--ui-font-size-sm, 12px);
+  --ui-modal-control-size: var(--ui-font-size-sm, 12px);
+  --ui-modal-hint-size: var(--ui-font-size-xs, 11px);
+}
+
+.side-drawer .drawer-header h2,
+.side-drawer .drawer-header h3,
+.side-drawer .drawer-header .drawer-title,
+.drawer-content .drawer-header h2,
+.drawer-content .drawer-header h3,
+.drawer-content .drawer-header .drawer-title,
+.side-modal .modal-header h2,
+.side-modal .modal-header h3,
+.modal-center .modal-header h2,
+.modal-center .modal-header h3 {
+  font-size: var(--ui-modal-header-title-size) !important;
+  line-height: 1.25 !important;
+}
+
+.side-drawer .section-title,
+.side-drawer .permission-header,
+.drawer-content .section-title,
+.drawer-content .permission-header,
+.side-modal .section-title,
+.side-modal .permission-header,
+.modal-center .section-title,
+.modal-center .permission-header {
+  font-size: var(--ui-modal-section-title-size) !important;
+  line-height: 1.25 !important;
+}
+
+.side-drawer .section-title i,
+.side-drawer .permission-header i,
+.drawer-content .section-title i,
+.drawer-content .permission-header i,
+.side-modal .section-title i,
+.side-modal .permission-header i,
+.modal-center .section-title i,
+.modal-center .permission-header i {
+  font-size: var(--ui-modal-section-title-size) !important;
+}
+
+.side-drawer .form-label,
+.side-drawer .form-group > label,
+.drawer-content .form-label,
+.drawer-content .form-group > label,
+.side-modal .form-label,
+.side-modal .form-group > label,
+.modal-center .form-label,
+.modal-center .form-group > label {
+  font-size: var(--ui-modal-label-size) !important;
+  line-height: 1.2 !important;
+}
+
+.side-drawer .form-input,
+.side-drawer .form-select,
+.side-drawer .form-textarea,
+.side-drawer .dropdown-toggle,
+.side-drawer .dropdown-option,
+.side-drawer .client-multiselect-header,
+.side-drawer .client-multiselect-item,
+.side-drawer .client-multiselect-empty,
+.side-drawer .client-multiselect-search input,
+.drawer-content .form-input,
+.drawer-content .form-select,
+.drawer-content .form-textarea,
+.drawer-content .dropdown-toggle,
+.drawer-content .dropdown-option,
+.drawer-content .client-multiselect-header,
+.drawer-content .client-multiselect-item,
+.drawer-content .client-multiselect-empty,
+.drawer-content .client-multiselect-search input,
+.side-modal .form-input,
+.side-modal .form-select,
+.side-modal .form-textarea,
+.side-modal .dropdown-toggle,
+.side-modal .dropdown-option,
+.side-modal .client-multiselect-header,
+.side-modal .client-multiselect-item,
+.side-modal .client-multiselect-empty,
+.side-modal .client-multiselect-search input,
+.modal-center .form-input,
+.modal-center .form-select,
+.modal-center .form-textarea,
+.modal-center .dropdown-toggle,
+.modal-center .dropdown-option,
+.modal-center .client-multiselect-header,
+.modal-center .client-multiselect-item,
+.modal-center .client-multiselect-empty,
+.modal-center .client-multiselect-search input {
+  font-size: var(--ui-modal-control-size) !important;
+  line-height: 1.2 !important;
+}
+
+.side-drawer .field-hint,
+.side-drawer .form-label-hint,
+.drawer-content .field-hint,
+.drawer-content .form-label-hint,
+.side-modal .field-hint,
+.side-modal .form-label-hint,
+.modal-center .field-hint,
+.modal-center .form-label-hint {
+  font-size: var(--ui-modal-hint-size) !important;
+  line-height: 1.3 !important;
+}
+
+.modal-center .modal-body-title {
+  font-size: var(--ui-modal-header-title-size) !important;
+}
+
+.modal-center .modal-body-subtitle {
+  font-size: var(--ui-modal-control-size) !important;
+}
+
+/* Status Badges - uniform icon-only rounded square status badge overrides for Dashboard, and text badges elsewhere */
+.dashboard-client-status-badge,
+.assist-status-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px !important;
+    padding: 0 !important;
+    border-radius: 4px !important; /* Slightly rounded corners */
+    font-size: 0 !important;
+    color: transparent !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    margin: 0 4px !important;
+    vertical-align: middle !important;
+    overflow: visible !important;
+}
+
+.status-badge,
+.staff-status-badge,
+.client-status-badge,
+.reprint-status-badge,
+.email-status-badge,
+.wf-status-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 3px 10px !important;
+    border-radius: 6px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    text-transform: capitalize !important;
+    box-shadow: none !important;
+    margin: 0 4px !important;
+    vertical-align: middle !important;
+    border: 1px solid transparent !important;
+    /* Reset width/height constraints from icon-only badges */
+    width: auto !important;
+    min-width: unset !important;
+    max-width: unset !important;
+    height: auto !important;
+}
+
+/* Pseudo-elements for dashboard icon badges */
+.dashboard-client-status-badge::before,
+.assist-status-badge::before {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    font-size: 9px !important; /* Perfect size for centering check/cross inside 18x18px */
+    line-height: 1 !important;
+    width: 18px !important;
+    height: 18px !important;
+}
+
+/* Remove icon prefix from other status badges so they only show text */
+.status-badge::before,
+.status-badge::after,
+.staff-status-badge::before,
+.staff-status-badge::after,
+.client-status-badge::before,
+.client-status-badge::after,
+.reprint-status-badge::before,
+.reprint-status-badge::after,
+.email-status-badge::before,
+.email-status-badge::after,
+.wf-status-badge::before,
+.wf-status-badge::after {
+    content: none !important;
+}
+
+/* Active status styles */
+.status-badge.active,
+.status-badge.status-active,
+.status-badge.status-printed,
+.dashboard-client-status-badge.is-active,
+.assist-status-badge:not(.inactive),
+.staff-status-badge.active,
+.client-status-badge.active,
+.email-status-badge.sent {
+    background: #d1fae5 !important; /* Green-100 */
+    border-color: #6ee7b7 !important; /* Green-300 */
+    color: #065f46 !important; /* Green-800 */
+}
+.dashboard-client-status-badge.is-active::before,
+.assist-status-badge:not(.inactive)::before {
+    content: "\f00c" !important; /* checkmark */
+    color: #065f46 !important;
+}
+
+/* Inactive / Deleted / Failed status styles */
+.status-badge.inactive,
+.status-badge.status-inactive,
+.status-badge.status-deleted,
+.dashboard-client-status-badge.is-inactive,
+.assist-status-badge.inactive,
+.staff-status-badge.inactive,
+.client-status-badge.inactive,
+.email-status-badge.failed {
+    background: #fee2e2 !important; /* Red-100 */
+    border-color: #fca5a5 !important; /* Red-300 */
+    color: #991b1b !important; /* Red-800 */
+}
+.dashboard-client-status-badge.is-inactive::before,
+.assist-status-badge.inactive::before {
+    content: "\f00d" !important; /* times / xmark */
+    color: #991b1b !important;
+}
+
+/* Pending / Suspended / Warning status styles */
+.status-badge.pending,
+.status-badge.status-pending,
+.dashboard-client-status-badge.is-suspended,
+.email-status-badge.pending,
+.email-status-badge.on-hold {
+    background: #ffedd5 !important; /* Orange-100 */
+    border-color: #fdba74 !important; /* Orange-300 */
+    color: #ea580c !important; /* Orange-600 */
+}
+.dashboard-client-status-badge.is-suspended::before,
+.email-status-badge.pending::before,
+.email-status-badge.on-hold::before {
+    content: "\f12a" !important; /* exclamation point */
+    color: #ea580c !important;
+}
+
+
+/* ============================================================
+   CRITICAL LAYOUT FIX: Body margin reset (outside @layer)
+   Tailwind v4 puts its reset inside @layer base, but browser UA
+   stylesheet rules (body { margin: 8px }) are UNLAYERED and win
+   over @layer base rules. This rule is outside any @layer so it
+   correctly overrides the browser default, removing the grey strip
+   at the top of the page.
+   ============================================================ */
+html,
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Empty State Styling - Clean, simple text-only look to match default design, and remove table td text capitalization */
+.empty-row,
+.empty-row td,
+.empty-row td.empty-cell {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    padding: 32px 0 !important;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.empty-state i {
+    font-size: 40px;
+    color: #94a3b8;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.empty-state h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: none !important; /* override table cell capitalization */
+}
+
+.empty-state p {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 0;
+    text-transform: none !important; /* override table cell capitalization */
+}
+
+/* Pagination bar alignment and padding-bottom crop prevention */
+.pagination-bar {
+    padding: 8px 16px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+}
+
+/* Fix for dynamic badge container overflow lines */
+.dynamic-badge-container {
+    max-height: 20px !important;
+}
+.staff-assignment-chip {
+    line-height: 1.2 !important;
+}

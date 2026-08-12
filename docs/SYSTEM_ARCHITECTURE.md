@@ -46,13 +46,13 @@ CardFlow is architected as a hybrid enterprise platform combining a robust **Dja
 
 ## 2. Core Subsystem Responsibilities
 
-### 2.1 Backend Core (`core/`, `config/`)
-- **Django 5.2.12**: Core ORM, user management, REST APIs, and service controllers.
+### 2.1 Backend Core (`backend/`)
+- **Django 5.2.12**: Core ORM, user management, REST APIs, and service controllers encapsulated inside `backend/` (`backend/core/`, `backend/config/`, `backend/accounts/`, `backend/organisation/`, etc.).
 - **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`). Views remain thin, delegating all operations to services.
-- **Domain Split Routing**: `config.urls_panel`, `config.urls_website`, and `config.urls` support subdomain isolation between the public web landing page and administrative control panel (`https://panel.adarshbhopal.in`).
+- **Domain Split Routing**: Supports subdomain isolation between the public web landing page and administrative control panel.
 
 ### 2.2 Modern React Web SPA (`frontend/`)
-- **React 19 & Vite**: High-performance SPA frontend built for high-density tabular data editing, interactive status pipelines, and real-time dashboard analytics.
+- **React 19 & Vite**: High-performance SPA frontend located inside `frontend/` built for high-density tabular data editing, interactive status pipelines, and real-time dashboard analytics.
 - **Smooth Scrolling & Notifications**: Lenis smooth scrolling engine (`@studio-freight/lenis`) and Sonner toast notification pipeline (`sonner`).
 - **Iconography & Styling**: Uses Lucide icons (`lucide-react`) and Vanilla CSS design tokens with custom HSL palette rules.
 

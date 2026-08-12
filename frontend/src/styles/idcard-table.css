@@ -1,0 +1,813 @@
+/* ==========================================
+   ID CARD TABLE — Table layout, cells, images, rows
+   Split from idcard-actions.css
+   ========================================== */
+
+.idcard-table {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 0;
+    background: var(--color-white);
+    margin: 0;
+    padding-bottom: 0;
+}
+
+.idcard-table table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+/* ==========================================
+   BODY/HTML SCROLL LOCK — idcard-actions page only
+   Prevents the browser window scrollbar from spanning
+   the full viewport (including topbar/header).
+   The only scrollable element is .idcard-table itself.
+   ========================================== */
+html:has(.idcard-actions-page),
+body:has(.idcard-actions-page) {
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* ==========================================
+   ID CARD ACTIONS PAGE — FLEX COLUMN LAYOUT
+   Ensures table fills remaining viewport space
+   and thead sticks properly within scroll container.
+   ========================================== */
+.idcard-actions-page {
+    display: grid;
+    grid-template-rows: var(--spacing-topbar, 40px) 1fr;
+    height: 100vh;
+    overflow: hidden;
+    gap: 0;
+}
+
+.idcard-actions-page .main-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0 !important;  /* Phase 1: No gap under navbar */
+    margin: 0 !important;
+    gap: 0;
+}
+
+/* Action bar: on the idcard-actions page the layout is a full-height flex column
+   (height: 100vh, overflow: hidden) so sticky is not meaningful here —
+   position: relative keeps it in the normal flex flow, directly below the topbar.
+   padding: symmetric 4px top/bottom so buttons have consistent vertical room. */
+.idcard-actions-page .action-bar {
+    border: none;
+    border-bottom: 1px solid var(--color-gray-200);
+    position: relative;
+    top: 0;
+    z-index: 15;
+    background: var(--color-white);
+    flex-shrink: 0;
+    margin: 0;
+    padding: 4px 8px;
+    gap: 2px;
+}
+
+/* Consistent 2px gap between buttons inside idcard action bar */
+.idcard-actions-page .action-bar .flex {
+    gap: 2px;
+}
+
+/* Action dividers: only flex gap provides spacing */
+.idcard-actions-page .action-bar .action-divider {
+    margin: 0 2px;
+}
+
+.idcard-actions-page .search-filter-bar {
+    position: relative;
+    z-index: 30;
+    background: var(--color-white);
+    justify-content: space-between !important;
+    flex-shrink: 0;
+    margin: 0;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+/* Keep date filter + nav buttons on one row */
+.idcard-actions-page .search-filter-bar .action-right {
+    flex-wrap: nowrap;
+}
+
+/* Compact date-time filters */
+.idcard-actions-page .search-filter-bar #dateTimeFilterGroup,
+.idcard-actions-page .search-filter-bar #generateDateTimeFilterGroup {
+    gap: 4px;
+}
+
+.idcard-actions-page .search-filter-bar #dateTimeFilterGroup .datetime-label,
+.idcard-actions-page .search-filter-bar #generateDateTimeFilterGroup .datetime-label {
+    margin: 0;
+    line-height: 1;
+}
+
+.idcard-actions-page .search-filter-bar #dateTimeFilterGroup .datetime-input,
+.idcard-actions-page .search-filter-bar #generateDateTimeFilterGroup .datetime-input {
+    min-height: 0 !important;
+    height: 26px !important;
+    line-height: 26px;
+    padding: 0 6px !important;
+}
+
+.idcard-actions-page .search-filter-bar #dateTimeFilterGroup .btn.btn-sm,
+.idcard-actions-page .search-filter-bar #generateDateTimeFilterGroup .btn.btn-sm {
+    min-height: 0 !important;
+    height: 26px !important;
+    padding: 0 8px !important;
+}
+
+/* Card table container fills remaining space */
+.idcard-actions-page #card-table-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+}
+
+/* Pagination bar stays fixed at bottom */
+.idcard-actions-page #card-table-container > .pagination-bar {
+    position: static;
+    flex-shrink: 0;
+}
+
+.idcard-actions-page .table-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* Phase 3: .idcard-table is the scroll container */
+.idcard-actions-page .idcard-table {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border: none;
+    padding-bottom: 0; /* Spacing handled by #card-table-container padding-bottom */
+}
+
+/* Sticky header / gradient → canonical version in idcard-actions-enhanced.css */
+
+
+
+/* Action Bar Button Styles - Compact */
+.action-buttons-group .btn {
+    padding: 4px 8px;
+    font-size: var(--ui-font-size-md, 13px);
+    gap: 4px;
+    border-radius: 4px;
+    height: 28px;
+}
+
+.action-buttons-group .btn i {
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+/* Duplicate color block removed — colors consolidated above (L~1113). */
+
+/* Table width & layout set in idcard-actions-enhanced.css (single source). */
+
+/* Compact table cells — shared */
+.idcard-table th,
+.idcard-table td {
+    font-size: var(--ui-font-size-base, 14px);
+    font-weight: 400;
+    letter-spacing: 0;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    border-right: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+    text-transform: uppercase;
+}
+/* Headings get 6px vertical, 4px horizontal padding */
+.idcard-table th {
+    padding: 6px 4px;
+}
+.idcard-table td {
+    padding: 4px 1px;
+}
+.idcard-table th:first-child,
+.idcard-table td:first-child {
+    border-left: 1px solid var(--color-gray-200);
+}
+.idcard-table thead tr th {
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    border-right: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Dynamic field cells — allow wrapping, compact padding */
+.idcard-table td.dynamic-field {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    min-width: 30px;
+    width: auto;
+    line-height: 1.3;
+    vertical-align: middle;
+    padding: 4px 3px;
+    max-height: 60px;
+    overflow: hidden;
+}
+
+/* Respect semantic no-wrap classes from field specs (ID numbers, phones, dates, etc.). */
+.idcard-table td.dynamic-field.whitespace-nowrap {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+}
+
+/* Contact/mobile fields may contain multiple phone numbers; allow wrapping. */
+.idcard-table td.dynamic-field.phone-col {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.25;
+}
+
+/* Long text fields like address - wrap freely */
+.idcard-table td.dynamic-field.long-text {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    min-width: 180px;
+    line-height: 1.3;
+}
+
+/* Short text fields */
+.idcard-table td.dynamic-field.short-text {
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* Medium text fields */
+.idcard-table td.dynamic-field.medium-text {
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.3;
+}
+
+/* Address columns — give comparatively more room, especially on small screens */
+.idcard-table td.address-col {
+    min-width: 130px;
+    flex-shrink: 0;
+}
+@media (max-width: 768px) {
+    .idcard-table td.address-col {
+        min-width: 110px;
+    }
+}
+
+/* Transport/Route columns — enable word wrapping */
+.idcard-table td[data-field-name*="transport"],
+.idcard-table td[data-field-name*="route"],
+.idcard-table td[data-field-name*="TRANSPORT"],
+.idcard-table td[data-field-name*="ROUTE"] {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    hyphens: auto;
+    min-width: 60px;
+}
+
+/* Image field cells - percentage with min-width */
+.idcard-table td.dynamic-field.image-field {
+    text-align: center;
+    width: 4%;
+    min-width: 50px;
+}
+
+/* Editable cell indicator */
+.idcard-table td.editable-cell:not(.image-field) {
+    position: relative;
+    cursor: pointer;
+}
+
+.idcard-table td.editable-cell:not(.image-field)::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 4px;
+    height: 4px;
+    background: var(--color-blue);
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.idcard-table td.editable-cell:not(.image-field):hover::after {
+    opacity: 0.5;
+}
+
+/* .idcard-table th sizing/padding → canonical version in idcard-actions-enhanced.css */
+
+/* No-data row — center content in the visible viewport of the scroll container.
+   The td spans all columns via colspan. Content is wrapped in a div.no-data (flex)
+   so the td itself stays display:table-cell and colspan works correctly. */
+.idcard-table .no-data-row td.no-data-cell {
+    text-align: center !important;
+    padding: 80px 20px !important;
+    text-transform: none;
+    border: none !important;
+    border-bottom: none !important;
+    background: transparent;
+}
+.idcard-table .no-data-row td.no-data-cell .no-data {
+    justify-content: center;
+}
+.idcard-table .no-data-row td.no-data-cell i {
+    font-size: var(--ui-font-size-10xl, 48px);
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.45;
+    color: var(--color-slate-300);
+}
+.idcard-table .no-data-row td.no-data-cell span {
+    display: block;
+    font-size: var(--ui-font-size-lg, 15px);
+    font-weight: 500;
+    color: var(--color-slate-400);
+}
+
+/* Fixed columns - Checkbox */
+.idcard-table .checkbox-col,
+.idcard-table td:first-child:not(.no-data):not(.no-data-cell) {
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    text-align: center;
+    padding: 1px;
+}
+
+/* Fixed columns - Sr No */
+.idcard-table .sr-col,
+.idcard-table td:nth-child(2):not(.no-data):not(.no-data-cell) {
+    width: 36px;
+    min-width: 36px;
+    max-width: 40px;
+    text-align: center;
+    padding: 1px;
+}
+
+/* Dynamic columns */
+.idcard-table .dynamic-col {
+    min-width: 40px;
+    width: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    padding: 2px 4px;
+}
+
+/* Image column header */
+.idcard-table .image-col {
+    width: 50px;
+    min-width: 50px;
+    max-width: 55px;
+    text-align: center !important;
+    padding: 4px 2px !important;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.3;
+    overflow: visible;
+}
+
+/* Compact mode: allow word-wrap on image column headers */
+.idcard-table.compact-mode .image-col {
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: normal;
+}
+
+/* Image cell styling - compact */
+.idcard-table td.image-cell {
+    text-align: center;
+    vertical-align: middle;
+    padding: 2px;
+    width: 50px;
+    min-width: 50px;
+    max-width: 55px;
+    border: 1px solid var(--color-gray-200) !important;
+    border-bottom: 1px solid var(--color-gray-200) !important;
+    border-right: 1px solid var(--color-gray-200) !important;
+}
+
+/* Ensure image-field overrides left-aligned dynamic-field */
+.idcard-table td.image-field {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* All image type cells - uniform width */
+.idcard-table td.image-cell.signature-type,
+.idcard-table td.image-cell.qr-type,
+.idcard-table td.image-cell.barcode-type {
+    width: 50px;
+    min-width: 50px;
+    max-width: 55px;
+}
+
+/* Table images - compact */
+.table-image {
+    width: 45px;
+    height: 53px;
+    border-radius: 2px;
+    object-fit: cover;
+    border: 1px solid var(--color-gray-200);
+    display: block;
+    margin: 0 auto;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    background: var(--color-gray-100);
+    position: relative;
+}
+
+.table-image.signature-type {
+    width: 45px;
+    height: auto;
+    max-width: 45px;
+    max-height: 53px;
+    border-radius: 0;
+    object-fit: contain;
+    border: none;
+    background: transparent;
+}
+
+.table-image.qr-type {
+    width: 45px;
+    height: auto;
+    max-width: 45px;
+    max-height: 49px;
+    border-radius: 0;
+    object-fit: contain;
+    border: none;
+    background: transparent;
+}
+
+.table-image.barcode-type {
+    width: 45px;
+    height: auto;
+    max-width: 45px;
+    max-height: 33px;
+    border-radius: 0;
+    object-fit: contain;
+    border: none;
+    background: transparent;
+}
+
+/* Handle broken images - hide alt text */
+.table-image[src=""],
+.table-image:not([src]),
+.table-image[src*="NOT_FOUND"] {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Fallback for broken images via onerror */
+.table-image.img-error {
+    display: none !important;
+}
+
+.table-image:hover {
+    transform: scale(1.08);
+}
+
+/* Image with edit button wrapper */
+.image-with-edit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0px;
+    width: 100%;
+    height: 100%;
+}
+
+/* First .edit-photo-btn definition removed — overridden by second copy below + enhanced.css */
+
+/* Placeholder when no image in dynamic image field - Passport size */
+.no-image {
+    width: 45px;
+    height: 53px;
+    min-width: 45px;
+    min-height: 53px;
+    flex-shrink: 0;
+    border-radius: 2px;
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.no-image i {
+    font-size: var(--ui-font-size-lg, 15px);
+    color: var(--color-slate-400);
+}
+
+/* Passport style placeholder */
+.no-image.passport-placeholder {
+    background: linear-gradient(180deg, #f0f4f8 0%, var(--color-slate-200) 100%);
+    border: 1px solid #cbd5e0;
+}
+
+.no-image.passport-placeholder i {
+    font-size: var(--ui-font-size-lg, 15px);
+    color: var(--color-slate-400);
+}
+
+/* Not found placeholder - grayscale with X icon */
+.no-image.passport-placeholder.not-found {
+    background: linear-gradient(180deg, var(--color-gray-100) 0%, #e0e0e0 100%);
+    border: 1px dashed #bdbdbd;
+}
+
+.no-image.passport-placeholder.not-found i {
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-gray-400);
+}
+
+/* Gray placeholder - no image reference given */
+.no-image.colorful-placeholder {
+    background: linear-gradient(135deg, var(--color-gray-200) 0%, var(--color-gray-300) 50%, var(--color-gray-400) 100%);
+    border: 1px dashed var(--color-gray-400);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.no-image.colorful-placeholder i {
+    font-size: var(--ui-font-size-lg, 15px);
+    color: var(--color-gray-500);
+    text-shadow: none;
+}
+
+/* Pending image placeholder - image reference exists but waiting for upload */
+.no-image.colorful-placeholder.pending-image,
+.no-image.pending-image,
+.no-image.pending-placeholder {
+    background: linear-gradient(135deg, var(--color-warning) 0%, var(--color-warning-dark) 50%, var(--color-orange-600) 100%);
+    border: 1px solid var(--color-warning-dark);
+    box-shadow: 0 2px 8px rgba(var(--yellow-rgb), 0.4);
+    position: relative;
+}
+
+.no-image.colorful-placeholder.pending-image i,
+.no-image.pending-image i,
+.no-image.pending-placeholder i {
+    font-size: var(--ui-font-size-base, 14px);
+    color: var(--color-white);
+}
+
+/* Gray placeholder - no image given at all */
+.no-image.passport-placeholder.no-image-given {
+    background: linear-gradient(180deg, #f0f0f0 0%, #d5d5d5 100%);
+    border: 1px dashed #aaaaaa;
+}
+
+.no-image.passport-placeholder.no-image-given i {
+    font-size: var(--ui-font-size-base, 14px);
+    color: #888888;
+}
+
+.no-image i {
+    font-size: var(--ui-font-size-lg, 15px);
+    color: var(--color-slate-400);
+}
+
+/* Fixed columns - action col */
+.idcard-table .action-col {
+    width: 70px;
+    min-width: 70px;
+    text-align: center;
+}
+
+/* Dynamic columns - Last Updated, Updated By */
+.idcard-table .fixed-col {
+    min-width: 60px;
+    width: auto;
+    text-align: center;
+    white-space: nowrap;
+    padding: 2px 4px;
+}
+
+/* Zebra striping + Row hover */
+.idcard-table tbody tr:nth-child(odd) {
+    background-color: var(--color-gray-50);
+}
+.idcard-table tbody tr:nth-child(even) {
+    background-color: var(--color-white);
+}
+.idcard-table tbody tr:hover {
+    background-color: var(--color-gray-100);
+}
+
+/* Row action buttons — unified compact style */
+.verify-row-btn,
+.approve-row-btn,
+.unverify-row-btn,
+.unapprove-row-btn,
+.download-row-btn,
+.download-single-btn,
+.back-approved-row-btn,
+.retrieve-row-btn {
+    padding: 3px 8px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 600;
+    color: var(--color-white);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.verify-row-btn { background: var(--color-success); }
+.verify-row-btn:hover { background: var(--color-success-dark); }
+.approve-row-btn { background: var(--color-success); }
+.approve-row-btn:hover { background: var(--color-success-dark); }
+.unverify-row-btn { background: var(--color-danger); }
+.unverify-row-btn:hover { background: var(--color-danger-dark); }
+.unapprove-row-btn { background: var(--color-danger); }
+.unapprove-row-btn:hover { background: var(--color-danger-dark); }
+.download-row-btn { background: var(--color-blue); }
+.download-row-btn:hover { background: var(--color-blue-dark); }
+.download-single-btn { background: var(--color-emerald-500); }
+.download-single-btn:hover { background: var(--color-emerald-600); }
+.back-approved-row-btn { background: var(--color-warning); }
+.back-approved-row-btn:hover { background: var(--color-warning-dark); }
+.retrieve-row-btn { background: var(--color-blue); }
+.retrieve-row-btn:hover { background: var(--color-blue-dark); }
+
+/* Action cell - compact */
+.action-cell {
+    text-align: center !important;
+    vertical-align: middle;
+    min-width: 70px;
+    width: 80px;
+    padding: 1px !important;
+}
+
+.action-cell .action-buttons {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    white-space: nowrap;
+}
+
+/* Downloaded status badge in action cell */
+.action-cell .status-badge {
+    display: inline-flex !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+    min-width: max-content;
+}
+
+/* Approve row button - already defined above in unified block */
+
+/* Edit photo button - override for inline-table usage */
+.edit-photo-btn {
+    min-height: 20px;
+    padding: 2px 8px;
+    font-size: var(--ui-font-size-sm, 12px);
+    font-weight: 600;
+    background: transparent;
+    color: var(--color-blue);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    display: block;
+    margin: 0 auto;
+    width: auto;
+}
+
+.edit-photo-btn i {
+    font-size: var(--ui-font-size-md, 13px);
+    margin-right: 1px;
+}
+
+.edit-photo-btn:hover {
+    background: transparent;
+    color: var(--color-blue-dark);
+}
+
+/* Checkbox styling */
+.idcard-table input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+/* Header checkbox - visible on gradient */
+.idcard-table thead input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-white);
+}
+
+/* Row selection highlight — uses .selected class toggled by JS checkbox handler */
+.idcard-table tbody tr.selected {
+    background-color: var(--bg-selected);
+}
+
+.idcard-table tbody tr.selected:hover {
+    background-color: var(--bg-selected-hover);
+}
+
+/* Highlighted row from search */
+.idcard-table tbody tr.search-highlight {
+    background-color: #fff3cd !important;
+    animation: highlightPulse 2s ease-in-out 3;
+    box-shadow: inset 0 0 0 2px #ffc107;
+}
+
+.idcard-table tbody tr.search-highlight:hover {
+    background-color: #ffe69c !important;
+}
+
+@keyframes highlightPulse {
+    0%, 100% {
+        background-color: #fff3cd;
+    }
+    50% {
+        background-color: #ffe69c;
+    }
+}
+
+
+
+/* Legacy photo-preview / bare btn-upload / editable-cell base / tailwind modal
+   placeholders: REMOVED — overridden by enhanced.css or handled by tailwind-input.css */
+
+.inline-edit-input {
+    width: 100%;
+    min-width: 24px;
+    padding: 1px 2px;
+    border: 1px solid var(--color-primary);
+    border-radius: 2px;
+    font-size: var(--ui-font-size-base, 14px);
+    font-weight: 400;
+    letter-spacing: 0;
+    font-family: inherit;
+    background: var(--color-white);
+    outline: none;
+    box-shadow: 0 1px 4px rgba(var(--primary-rgb), 0.15);
+    overflow: hidden;
+    resize: none;
+    line-height: 1.3;
+}
+
+/* Empty State - No Cards Found
+   Base .empty-state styles are in common.css (single source of truth) */
+
+/* Strict button consistency overrides */
+.action-buttons-group .btn {
+    height: 30px;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
+
+.verify-row-btn,
+.approve-row-btn,
+.unverify-row-btn,
+.unapprove-row-btn,
+.download-row-btn,
+.download-single-btn,
+.back-approved-row-btn,
+.retrieve-row-btn {
+    height: 26px;
+    min-height: 26px;
+    padding: 3px 8px !important;
+    border-radius: 6px;
+    font-size: var(--ui-font-size-sm, 12px);
+}
