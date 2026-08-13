@@ -46,7 +46,7 @@ class SandboxService:
                 )
                 
                 # Clone Client
-                cloned_client = Client(
+                cloned_client = Organisation(
                     user=cloned_user,
                     name=original_client.name,
                     is_guest=True,

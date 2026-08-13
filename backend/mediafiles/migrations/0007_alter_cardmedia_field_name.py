@@ -15,9 +15,14 @@ class Migration(migrations.Migration):
             name='field_name',
             field=models.CharField(blank=True, help_text='Dynamic field name from Table (e.g., "Photo", "Father Photo")', max_length=100, null=True),
         ),
-        migrations.AddField(
-            model_name='cardmedia',
-            name='group',
-            field=models.ForeignKey(blank=True, help_text='Associated Table (for template images)', null=True, on_delete=models.deletion.CASCADE, related_name='template_media_files', to='tables.table'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='cardmedia',
+                    name='group',
+                    field=models.ForeignKey(blank=True, help_text='Associated Table (for template images)', null=True, on_delete=models.deletion.CASCADE, related_name='template_media_files', to='tables.table'),
+                ),
+            ],
+            database_operations=[],
         ),
     ]

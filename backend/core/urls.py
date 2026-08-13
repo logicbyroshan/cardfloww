@@ -81,12 +81,16 @@ urlpatterns = [
     path('api/client-staff/<int:staff_id>/toggle-status/', client_views_api.api_staff_toggle_status, name='api_client_staff_toggle_status'),
     path('api/client-staff/<int:staff_id>/set-temp-password/', client_views_api.api_staff_set_temp_password, name='api_client_staff_set_temp_password'),
 
-    # Client APIs
+    # Client / Organisation APIs
 
     path('api/client/create/', views.api_client_create, name='api_client_create'),
     path('api/clients/create/', views.api_client_create, name='api_clients_create'),
+    path('api/organisation/create/', views.api_client_create, name='api_organisation_create'),
+    path('api/organisations/create/', views.api_client_create, name='api_organisations_create'),
     path('api/client/<int:client_id>/', views.api_client_get, name='api_client_get'),
     path('api/clients/<int:client_id>/', views.api_client_get, name='api_clients_get'),
+    path('api/organisation/<int:client_id>/', views.api_client_get, name='api_organisation_get'),
+    path('api/organisations/<int:client_id>/', views.api_client_get, name='api_organisations_get'),
     path('api/client/<int:client_id>/update/', views.api_client_update, name='api_client_update'),
     path('api/clients/<int:client_id>/update/', views.api_client_update, name='api_clients_update'),
     path('api/client/<int:client_id>/delete/', views.api_client_delete, name='api_client_delete'),

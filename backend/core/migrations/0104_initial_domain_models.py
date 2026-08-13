@@ -34,11 +34,6 @@ class Migration(migrations.Migration):
             name='clientpresencesession',
             options={'verbose_name': 'Organisation Presence Session', 'verbose_name_plural': 'Organisation Presence Sessions'},
         ),
-        migrations.AddField(
-            model_name='organisation',
-            name='user',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='organisation_profile', to=settings.AUTH_USER_MODEL),
-        ),
         migrations.AlterField(
             model_name='clientmessage',
             name='client',
@@ -54,28 +49,43 @@ class Migration(migrations.Migration):
             name='client',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='photographer_assignments', to='core.organisation'),
         ),
-        migrations.DeleteModel(
-            name='IDCard',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.DeleteModel(
+                    name='IDCard',
+                ),
+                migrations.DeleteModel(
+                    name='IDCardGroup',
+                ),
+                migrations.DeleteModel(
+                    name='IDCardTable',
+                ),
+            ],
+            database_operations=[],
         ),
-        migrations.DeleteModel(
-            name='IDCardGroup',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddIndex(
+                    model_name='organisation',
+                    index=models.Index(fields=['status', '-created_at'], name='core_client_status_cb2b5e_idx'),
+                ),
+                migrations.AddIndex(
+                    model_name='organisation',
+                    index=models.Index(fields=['created_at'], name='core_client_created_f91eae_idx'),
+                ),
+                migrations.AddIndex(
+                    model_name='organisation',
+                    index=models.Index(fields=['status', 'created_at'], name='core_client_status_created_idx'),
+                ),
+            ],
+            database_operations=[],
         ),
-        migrations.DeleteModel(
-            name='IDCardTable',
-        ),
-        migrations.AddIndex(
-            model_name='organisation',
-            index=models.Index(fields=['status', '-created_at'], name='core_client_status_cb2b5e_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='organisation',
-            index=models.Index(fields=['created_at'], name='core_client_created_f91eae_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='organisation',
-            index=models.Index(fields=['status', 'created_at'], name='core_client_status_created_idx'),
-        ),
-        migrations.DeleteModel(
-            name='Client',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.DeleteModel(
+                    name='Client',
+                ),
+            ],
+            database_operations=[],
         ),
     ]

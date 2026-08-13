@@ -171,7 +171,6 @@ from .notification_api import (
 from .maintenance_api import (
     api_system_maintenance_check,
     api_maintenance_toggle,
-    system_maintenance_page,
 )
 
 
@@ -188,7 +187,6 @@ from .errors import (
 )
 
 from .photographer_api import (
-    manage_photographers,
     api_photographer_create,
     api_photographer_get,
     api_photographer_update,

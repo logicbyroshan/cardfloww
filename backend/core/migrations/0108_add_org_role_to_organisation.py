@@ -1,4 +1,4 @@
-﻿from django.db import migrations, models
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -8,9 +8,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='organisation',
-            name='org_role',
-            field=models.CharField(default='organisation', max_length=50, help_text='primary, organisation, or manager'),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='organisation',
+                    name='org_role',
+                    field=models.CharField(default='organisation', max_length=50, help_text='primary, organisation, or manager'),
+                ),
+            ],
+            database_operations=[],
         ),
     ]

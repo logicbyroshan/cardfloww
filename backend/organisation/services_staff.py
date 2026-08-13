@@ -65,7 +65,7 @@ class OrganisationStaffService(BaseService):
         import sys
         import assistants.services
         old_send = getattr(assistants.services, 'send_welcome_email', None)
-        current_module = sys.modules.get('client.services_staff')
+        current_module = sys.modules.get('organisation.services_staff')
         if current_module and hasattr(current_module, 'send_welcome_email'):
             assistants.services.send_welcome_email = current_module.send_welcome_email
         try:

@@ -1,19 +1,13 @@
 import json
 import logging
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.utils.timezone import localtime
 
-from core.models import User, Photographer, PhotographerAssignment
+from core.models import Photographer, PhotographerAssignment
 from organisation.models import Organisation
-from ..services.permission_service import require_super_admin, api_require_super_admin, PermissionService
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from ..services.permission_service import PermissionService
 from core.services.photographer_service import PhotographerService
-from core.views.base_helpers import get_user_role, get_page_range
 from accounts.rate_limit import rate_limit
 from functools import wraps
 from core.services.activity_service import ActivityService
@@ -29,12 +23,6 @@ def api_require_photographer_manager(view_func):
     return wrapper
 
 logger = logging.getLogger(__name__)
-
-
-def _apply_drawer_embed_frame_headers(request, response):
-    if request.GET.get('embed') == 'drawer':
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-    return response
 
 
 def _parse_json_object(request):
@@ -55,81 +43,6 @@ def _photographer_assignment_snapshot(photographer_obj):
     }
 
 
-@login_required
-def manage_photographers(request):
-    """View to manage photographers — supports HTMX partial responses."""
-    DEFAULT_PER_PAGE = 25
-    PER_PAGE_OPTIONS = [5, 10, 25, 50, 100]
-
-    try:
-        per_page = int(request.GET.get('per_page', DEFAULT_PER_PAGE))
-        if per_page not in PER_PAGE_OPTIONS:
-            per_page = DEFAULT_PER_PAGE
-    except (ValueError, TypeError):
-        per_page = DEFAULT_PER_PAGE
-
-    search_query = request.GET.get('search', '').strip()
-    status_filter = request.GET.get('status', '').strip()
-
-    user = request.user
-    can_manage = PermissionService.is_super_admin(user) or PermissionService.has(user, 'perm_manage_photographer_staff')
-    if not can_manage:
-        return HttpResponseForbidden("Access Denied")
-
-    staff_qs = Photographer.objects.select_related('user').prefetch_related('photographer_assignments__client').order_by('-id')
-
-    # active_clients used for assignment dropdown
-    active_clients = Organisation.objects.filter(status='active', is_guest=False)
-    
-    if not PermissionService.is_super_admin(user):
-        operator = getattr(user, 'operator_profile', None)
-        if operator:
-            active_clients = operator.assigned_organisations.filter(status='active', is_guest=False)
-        else:
-            active_clients = Organisation.objects.none()
-            
-    active_clients = active_clients.order_by('name').values('id', 'name')
-
-    if search_query:
-        staff_qs = staff_qs.filter(
-            Q(user__first_name__icontains=search_query) |
-            Q(user__last_name__icontains=search_query) |
-            Q(user__email__icontains=search_query) |
-            Q(user__phone__icontains=search_query) |
-            Q(user__username__icontains=search_query)
-        )
-
-    if status_filter == 'active':
-        staff_qs = staff_qs.filter(user__is_active=True)
-    elif status_filter == 'inactive':
-        staff_qs = staff_qs.filter(user__is_active=False)
-
-    paginator = Paginator(staff_qs, per_page)
-    page_obj = paginator.get_page(request.GET.get('page', 1))
-
-
-    # Detect if request is HTMX
-    is_htmx = request.headers.get('HX-Request') == 'true'
-
-    context = {
-        'active_page': 'manage_photographers',
-        'user_role': get_user_role(request.user),
-        'staff_list': page_obj.object_list,
-        'page_obj': page_obj,
-        'page_range': get_page_range(page_obj),
-        'per_page': per_page,
-        'per_page_options': PER_PAGE_OPTIONS,
-        'search_query': search_query,
-        'status_filter': status_filter,
-        'active_clients': list(active_clients),
-    }
-
-    if is_htmx:
-        response = render(request, 'index.html', context)
-        return _apply_drawer_embed_frame_headers(request, response)
-
-    response = render(request, 'index.html', context)
-    return _apply_drawer_embed_frame_headers(request, response)
 
 
 @require_http_methods(["POST"])

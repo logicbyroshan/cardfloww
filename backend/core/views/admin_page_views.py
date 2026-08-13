@@ -47,12 +47,6 @@ logger = logging.getLogger(__name__)
 
 
 
-def _apply_drawer_embed_frame_headers(request, response):
-    """Allow same-origin iframe embedding only for dashboard drawer embed mode."""
-    if request.GET.get('embed') == 'drawer':
-        response['X-Frame-Options'] = 'SAMEORIGIN'
-    return response
-
 
 def _normalize_device_surface(value):
     normalized = str(value or '').strip().lower()
