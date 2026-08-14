@@ -515,7 +515,7 @@ class PermissionValidationMiddleware:
         if not fresh_user.is_active:
             logger.warning("PVM_DEBUG: User %s (ID: %d) is now inactive", user.username, user.pk)
             return self._force_logout(request, 'Your account has been deactivated.')
-        if fresh_user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'guest_prime_manager'):
+        if fresh_user.role in ('client', 'organisation', 'prime_manager', 'manager', 'guest_prime_manager'):
             return self._validate_client_access(request, fresh_user)
         elif fresh_user.role in ('assistant'):
             return self._validate_assistant_access(request, fresh_user)
@@ -547,8 +547,8 @@ class PermissionValidationMiddleware:
         try:
             client_row = Organisation.objects.filter(user_id=user.pk).values('id', 'name', 'status').first()
             if not client_row:
-                raise Client.DoesNotExist()
-        except Client.DoesNotExist:
+                raise Organisation.DoesNotExist()
+        except Organisation.DoesNotExist:
             logger.warning("PermissionValidationMiddleware: Organisation profile not found for user %s", user.username)
             return self._force_logout(request, 'Your client profile is not configured.')
         except Exception as exc:
@@ -569,7 +569,7 @@ class PermissionValidationMiddleware:
         """Validate assistant user access"""
         from assistants.models import Assistant
         try:
-            assistant_row = Assistant.objects.filter(user_id=user.pk).values('id', 'client_id', 'client__name', 'client__status').first()
+            assistant_row = Assistant.objects.filter(user_id=user.pk).values('id', 'organisation_id', 'organisation__name', 'organisation__status').first()
             if not assistant_row:
                 raise Assistant.DoesNotExist()
         except Assistant.DoesNotExist:
@@ -578,16 +578,16 @@ class PermissionValidationMiddleware:
         except Exception as exc:
             logger.error("PermissionValidationMiddleware: DB error fetching assistant: %s", exc)
             return self._validation_unavailable_response(request)
-        if not assistant_row['client_id']:
-            logger.warning("PermissionValidationMiddleware: Assistant %s has no client assigned", user.username)
-            return self._force_logout(request, 'You are not assigned to any client.')
-        if assistant_row['client__status'] != 'active':
-            logger.warning("PermissionValidationMiddleware: Assistant client is now %s", assistant_row['client__status'])
+        if not assistant_row['organisation_id']:
+            logger.warning("PermissionValidationMiddleware: Assistant %s has no organisation assigned", user.username)
+            return self._force_logout(request, 'You are not assigned to any organisation.')
+        if assistant_row['organisation__status'] != 'active':
+            logger.warning("PermissionValidationMiddleware: Assistant organisation is now %s", assistant_row['organisation__status'])
             return self._redirect_to_maintenance(request, 'Your organization account has been suspended.')
         session_client_id = request.session.get('_staff_client_id')
         if session_client_id is None:
-            request.session['_staff_client_id'] = assistant_row['client_id']
-        elif session_client_id != assistant_row['client_id']:
+            request.session['_staff_client_id'] = assistant_row['organisation_id']
+        elif session_client_id != assistant_row['organisation_id']:
             logger.warning("PermissionValidationMiddleware: Assistant reassigned")
             return self._force_logout(request, 'You have been reassigned to a different organization. Please log in again.')
         return None
@@ -610,7 +610,7 @@ class PermissionValidationMiddleware:
                 request.user_scope['client_id'] = Organisation.objects.filter(user_id=user.id).values_list('id', flat=True).first()
             elif PermissionService.is_assistant(user):
                 from assistants.models import Assistant
-                request.user_scope['client_id'] = Assistant.objects.filter(user_id=user.id).values_list('client_id', flat=True).first()
+                request.user_scope['client_id'] = Assistant.objects.filter(user_id=user.id).values_list('organisation_id', flat=True).first()
         except Exception as exc:
             logger.warning("PermissionValidationMiddleware: _annotate_request_scope failed: %s", exc)
             if not hasattr(request, 'user_scope'):

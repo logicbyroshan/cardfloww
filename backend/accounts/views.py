@@ -249,7 +249,14 @@ class LoginAPIView(View):
                 return JsonResponse({
                     'success': True,
                     'redirect_url': result['redirect_url'],
-                    'message': result['message']
+                    'message': result['message'],
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': getattr(user, 'email', ''),
+                        'role': getattr(user, 'role', 'prime_manager') or 'prime_manager',
+                        'is_superuser': user.is_superuser,
+                    }
                 })
             else:
                 logger.warning(

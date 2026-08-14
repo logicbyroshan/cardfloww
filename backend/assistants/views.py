@@ -491,7 +491,7 @@ def api_client_groups_list(request):
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=404)
     
-    groups_qs = Table.objects.filter(client=client).order_by('name')
+    groups_qs = Table.objects.filter(organisation=client).order_by('name')
     group_count = groups_qs.count()
 
     if group_count <= 1:
@@ -500,7 +500,7 @@ def api_client_groups_list(request):
         # This applies both for the assignment drawer AND for the auto-create
         # modal — previously for_auto_create=true bypassed this, hiding tables.
         tables_qs = Table.objects.filter(
-            group__client=client,
+            organisation=client,
             deleted_by_client=False,
         ).order_by('name').values('id', 'name', 'group_id')
         groups_data = [
@@ -554,7 +554,7 @@ def api_class_section_options(request):
 
     resolved_id_source = id_source
     if resolved_id_source == 'auto':
-        group_count = Table.objects.filter(client=client).count()
+        group_count = Table.objects.filter(organisation=client).count()
         resolved_id_source = 'table' if group_count <= 1 else 'group'
 
     group_ids = []
@@ -565,14 +565,14 @@ def api_class_section_options(request):
             group_ids = []
 
     # Resolve effective tables.
-    tables_qs = Table.objects.filter(group__client=client, deleted_by_client=False)
+    tables_qs = Table.objects.filter(organisation=client, deleted_by_client=False)
 
     if group_ids:
         valid_group_ids = set(
-            Table.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(organisation=client, id__in=group_ids).values_list('id', flat=True)
         )
         valid_table_ids = set(
-            Table.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(organisation=client, id__in=group_ids).values_list('id', flat=True)
         )
 
         if resolved_id_source == 'table':
@@ -845,12 +845,12 @@ def api_staff_auto_create(request):
     target_table = None
 
     if id_source == 'table':
-        target_table = Table.objects.filter(id=selection_id, group__client=target_client, deleted_by_client=False).first()
+        target_table = Table.objects.filter(id=selection_id, organisation=target_client, deleted_by_client=False).first()
         if not target_table:
             return JsonResponse({'success': False, 'message': 'List/Table not found'}, status=404)
         target_group = target_table.group  # also carry the parent group for assignment
     else:
-        target_group = Table.objects.filter(id=selection_id, client=target_client).first()
+        target_group = Table.objects.filter(id=selection_id, organisation=target_client).first()
         if not target_group:
             return JsonResponse({'success': False, 'message': 'Group/List not found'}, status=404)
 

@@ -791,7 +791,7 @@ class IDCardCardService(BaseService):
         try:
             from django.db import transaction
             table = get_object_or_404(Table, id=table_id)
-            client = table.group.client
+            client = table.organisation
 
             # Uppercase text values only — preserve image paths
             field_data = cls.uppercase_field_data_selective(field_data, table.fields)

@@ -100,11 +100,11 @@ class AssistantService(BaseService):
             source = 'auto'
 
         if source == 'auto':
-            group_count = Table.objects.filter(client=client).count()
+            group_count = Table.objects.filter(organisation=client).count()
             source = 'table' if group_count <= 1 else 'group'
 
         valid_group_ids = set(
-            Table.objects.filter(client=client, id__in=normalized_ids)
+            Table.objects.filter(organisation=client, id__in=normalized_ids)
             .values_list('id', flat=True)
         )
 
@@ -113,7 +113,7 @@ class AssistantService(BaseService):
 
         valid_table_ids = set(
             Table.objects.filter(
-                group__client=client,
+                organisation=client,
                 deleted_by_client=False,
                 id__in=normalized_ids,
             ).values_list('id', flat=True)
@@ -207,14 +207,14 @@ class AssistantService(BaseService):
 
         valid_group_ids = set(
             Table.objects.filter(
-                client=client,
+                organisation=client,
                 id__in=list(requested_group_ids),
             ).values_list('id', flat=True)
         )
 
         valid_table_rows = list(
             Table.objects.filter(
-                group__client=client,
+                organisation=client,
                 deleted_by_client=False,
                 id__in=list(requested_table_ids),
             ).values_list('id', 'group_id')
@@ -326,7 +326,7 @@ class AssistantService(BaseService):
             assistant_only_fields = [
                 'id',
                 'user',
-                'client',
+                'organisation',
                 'created_at',
                 'department',
                 'designation',
@@ -344,17 +344,18 @@ class AssistantService(BaseService):
             
             assistant_filters = {}
             if client:
-                assistant_filters['client'] = client
+                assistant_filters['organisation'] = client
 
             assistant_list = Assistant.objects.filter(
                 **assistant_filters
-            ).select_related('user').only(*assistant_only_fields).prefetch_related(
-                Prefetch('assigned_groups', queryset=Table.objects.only('id'))
-            )
+            ).select_related('user', 'organisation').only(*assistant_only_fields)
             
             assistant_data = []
             for assistant in assistant_list:
-                assigned_group_ids = [group.id for group in assistant.assigned_groups.all()]
+                assigned_group_ids = [
+                    int(v) for v in (assistant.assigned_table_ids or [])
+                    if str(v).strip().isdigit() and int(v) > 0
+                ]
                 item = {
                     'id': assistant.id,
                     'user_id': assistant.user.id,
@@ -592,7 +593,7 @@ class AssistantService(BaseService):
                 
                 assistant_kwargs = {
                     'user': assistant_user,
-                    'client': Organisation,
+                    'client': client,
                     'department': data.get('department', ''),
                     'designation': data.get('designation', ''),
                     'allowed_classes': [
@@ -664,7 +665,7 @@ class AssistantService(BaseService):
                 if assigned_groups or normalized_assignment_scopes is not None:
                     valid_groups = Table.objects.filter(
                         id__in=resolved_group_ids,
-                        client=client,
+                        organisation=client,
                     )
                     assistant.assigned_groups.set(valid_groups)
                     assistant.assigned_table_ids = resolved_table_ids
@@ -907,7 +908,7 @@ class AssistantService(BaseService):
 
                     valid_groups = Table.objects.filter(
                         id__in=resolved_group_ids,
-                        client=client,
+                        organisation=client,
                     )
                     assistant.assigned_groups.set(valid_groups)
                     assistant.assigned_table_ids = resolved_table_ids
@@ -1156,7 +1157,7 @@ class AssistantService(BaseService):
           - neither → all tables for the client
         """
         from tables.models import Table, IDCard
-        tables = Table.objects.filter(group__client=client, deleted_by_client=False)
+        tables = Table.objects.filter(organisation=client, deleted_by_client=False)
         if table:
             tables = tables.filter(id=table.id)
         elif group:

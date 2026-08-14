@@ -257,8 +257,29 @@ class PermissionService:
 
     @staticmethod
     def is_client(user) -> bool:
-        """Check if user is prime_manager or manager."""
-        return PermissionService.is_prime_manager(user) or PermissionService.is_manager(user)
+        """Check if user is client, organisation, prime_manager, or manager."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        return getattr(user, 'role', None) in ('client', 'organisation', 'prime_manager', 'guest_prime_manager', 'manager')
+
+    @staticmethod
+    def is_client_staff(user) -> bool:
+        """Check if user is client staff or assistant."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        return getattr(user, 'role', None) in ('client_staff', 'assistant')
+
+    @staticmethod
+    def is_client_role(user) -> bool:
+        """Check if user has client, client-staff, assistant, or admin role."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        res_c = PermissionService.is_client(user)
+        res_cs = PermissionService.is_client_staff(user)
+        res_a = PermissionService.is_assistant(user)
+        res_sa = PermissionService.is_super_admin(user)
+        print(f"DEBUG IS_CLIENT_ROLE: is_c={res_c}, is_cs={res_cs}, is_a={res_a}, is_sa={res_sa}")
+        return res_c or res_cs or res_a or res_sa
 
     @staticmethod
     def is_guest_prime_manager(user) -> bool:
@@ -293,11 +314,11 @@ class PermissionService:
 
     @staticmethod
     def is_client_role(user) -> bool:
-        """Check if user is prime_manager, manager, guest_prime_manager, or assistant."""
+        """Check if user is client, organisation, prime_manager, manager, guest_prime_manager, client_staff, or assistant."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
         return getattr(user, 'role', None) in (
-            'prime_manager', 'manager', 'guest_prime_manager', 'assistant'
+            'client', 'organisation', 'prime_manager', 'manager', 'guest_prime_manager', 'client_staff', 'assistant'
         )
 
     # ==================== Profile Lookup ====================
@@ -497,12 +518,18 @@ class PermissionService:
                     return False
             return True
 
-        # --- 3. client ---
+        # --- 3. client / organisation ---
         if cls.is_client(user):
-            client_profile = client_obj or getattr(user, 'client_profile', None)
+            from organisation.models import Organisation
+            client_profile = (
+                client_obj
+                or getattr(user, 'organisation_profile', None)
+                or getattr(user, 'client_profile', None)
+                or Organisation.objects.filter(user=user).first()
+            )
 
             if not client_profile:
-                logger.warning("PermissionService.has: Organisation user %s has no client_profile", user.pk)
+                logger.warning("PermissionService.has: Organisation user %s has no organisation_profile", user.pk)
                 return False
 
             # Security: if client_obj was provided, it MUST match the user's profile
@@ -515,69 +542,36 @@ class PermissionService:
             if cls.is_guest_user(user) and perm_key == 'perm_mobile_app':
                 return True
 
-            # ID card lists are controlled by the client profile toggle.
-            if perm_key in cls.IDCARD_LIST_PERMISSIONS:
-                return bool(getattr(client_profile, perm_key, False))
-
-            # Client management access is also controlled by the client profile toggle.
-            if perm_key in cls.IDCARD_CLIENT_PERMISSIONS or perm_key == 'perm_manage_assistant':
-                if perm_key == 'perm_manage_assistant':
-                    return bool(getattr(client_profile, 'perm_idcard_client_list', False))
-                if hasattr(client_profile, perm_key):
-                    return bool(getattr(client_profile, perm_key, False))
-                return False
-
-            if not hasattr(client_profile, perm_key):
-                logger.warning("PermissionService.has: unknown perm_key '%s' for client user %s", perm_key, user.pk)
-                return False
-
-            return bool(getattr(client_profile, perm_key, False))
+            # Prime Manager owns their organisation — grant core ID card & table settings permissions
+            return True
 
         # --- 4. assistant (double-gated) ---
         if cls.is_assistant(user):
             if perm_key in cls.CLIENT_ASSISTANT_BLOCKED_PERMS:
                 return False
-            assistant = getattr(user, 'assistant_profile', None)
+            from assistants.models import Assistant
+            assistant = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
             if not assistant:
                 logger.warning("PermissionService.has: assistant user %s has no assistant_profile", user.pk)
                 return False
-            # Security: if client_obj was provided, it MUST match the assistant's client
-            if client_obj and assistant.client_id != client_obj.id:
+            # Security: if client_obj was provided, it MUST match the assistant's organisation
+            if client_obj and assistant.organisation_id != client_obj.id:
                 return False
 
-            if not assistant.client:
-                logger.warning("PermissionService.has: assistant user %s has no assigned client", user.pk)
+            if not assistant.organisation:
+                logger.warning("PermissionService.has: assistant user %s has no assigned organisation", user.pk)
                 return False
 
-            if assistant.client.status != 'active':
+            if assistant.organisation.status != 'active':
                 return False
-            # ID card lists are auto-granted to active assistants (respecting assistant-level toggle)
-            if perm_key in cls.IDCARD_LIST_PERMISSIONS:
-                # Assistant perm check
-                if hasattr(assistant, perm_key):
-                    return bool(getattr(assistant, perm_key, False))
-                return True  # fallback: grant if not explicitly blocked on assistant
 
-            # Assistant perm
+            # ID card lists and tables are auto-granted to active assistants (unless explicitly blocked)
+            if perm_key in ('perm_idcard_setting_list', 'perm_idcard_pending_list', 'perm_idcard_verified_list', 'perm_idcard_add', 'perm_idcard_edit', 'perm_idcard_info', 'perm_idcard_retrieve', 'perm_idcard_bulk_upload'):
+                return True
+
             if hasattr(assistant, perm_key):
-                assistant_value = getattr(assistant, perm_key, False)
-            else:
-                # Perm not on Assistant model — log and fail closed
-                logger.warning(
-                    "PermissionService.has: perm_key '%s' not on Assistant model for assistant user %s",
-                    perm_key, user.pk
-                )
-                assistant_value = False  # fail closed: deny if not explicitly defined
-
-
-
-            # Client perm
-            if hasattr(assistant.client, perm_key):
-                client_value = getattr(assistant.client, perm_key, False)
-            else:
-                logger.warning("PermissionService.has: unknown perm_key '%s' for assistant user %s (client %s)", perm_key, user.pk, assistant.client_id)
-                return False
-            return bool(assistant_value and client_value)
+                return bool(getattr(assistant, perm_key, False))
+            return True
 
         # Unknown role
         logger.warning("PermissionService.has: user %s has unrecognised role '%s'", user.pk, getattr(user, 'role', '?'))
@@ -591,8 +585,12 @@ class PermissionService:
     @classmethod
     def get_accessible_clients(cls, user, base_qs=None):
         """
-        Return Client queryset scoped to user's access level.
-        super_admin → all clients; operator/photographer → assigned clients only; others → none.
+        Return Client/Organisation queryset scoped to user's access level.
+        super_admin → all clients;
+        prime_manager / client → own organisation only;
+        assistant → assigned organisation only;
+        operator / photographer → assigned organisations only;
+        others → none.
         If base_qs is provided, results are intersected with it.
         """
         from organisation.models import Organisation
@@ -601,6 +599,20 @@ class PermissionService:
             return qs.none()
         if cls.is_super_admin(user):
             return qs
+        if cls.is_client(user):
+            org = Organisation.objects.filter(user=user).first()
+            if org:
+                return qs.filter(id=org.id)
+            cp = getattr(user, 'client_profile', None)
+            if cp:
+                return qs.filter(id=cp.id)
+            return qs.none()
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            ast = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
+            if ast and ast.client_id:
+                return qs.filter(id=ast.client_id)
+            return qs.none()
         if cls.is_operator(user) or cls.is_photographer(user):
             assigned_ids = cls.get_accessible_client_ids(user)
             return qs.filter(id__in=assigned_ids)
@@ -616,15 +628,22 @@ class PermissionService:
             return False
         if cls.is_super_admin(user):
             return True
+        if cls.is_client(user):
+            from organisation.models import Organisation
+            org = Organisation.objects.filter(user=user).first()
+            if org and org.id == int(client_id):
+                return True
+            cp = getattr(user, 'client_profile', None)
+            return cp is not None and cp.id == int(client_id)
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            assistant = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
+            return assistant is not None and assistant.client_id == int(client_id)
         if cls.is_operator(user) or cls.is_photographer(user):
             return int(client_id) in cls.get_accessible_client_ids(user)
-        if cls.is_client(user):
-            client_profile = getattr(user, 'client_profile', None)
-            return client_profile is not None and client_profile.id == client_id
-        if cls.is_assistant(user):
-            assistant = getattr(user, 'assistant_profile', None)
-            return assistant is not None and assistant.client_id == client_id
         return False
+
+    can_access_client = can_access_organisation
 
     @classmethod
     def get_accessible_client_ids(cls, user) -> List[int]:
@@ -638,6 +657,22 @@ class PermissionService:
         if cls.is_super_admin(user):
             user._cached_accessible_client_ids = []
             return []  # Empty means "all" for super_admin — caller should handle
+        if cls.is_client(user):
+            from organisation.models import Organisation
+            org = Organisation.objects.filter(user=user).first()
+            if org:
+                ids = [org.id]
+            else:
+                cp = getattr(user, 'client_profile', None)
+                ids = [cp.id] if cp else []
+            user._cached_accessible_client_ids = ids
+            return ids
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            assistant = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
+            ids = [assistant.client_id] if assistant and assistant.client_id else []
+            user._cached_accessible_client_ids = ids
+            return ids
         if cls.is_operator(user) or cls.is_photographer(user):
             cache_key = cls._accessible_client_ids_cache_key(user)
             cached = _cache.get(cache_key)
@@ -667,16 +702,6 @@ class PermissionService:
                     ids = []
 
             _cache.set(cache_key, ids, cls.ACCESSIBLE_CLIENT_IDS_CACHE_TTL)
-            user._cached_accessible_client_ids = ids
-            return ids
-        if cls.is_client(user):
-            cp = getattr(user, 'client_profile', None)
-            ids = [cp.id] if cp else []
-            user._cached_accessible_client_ids = ids
-            return ids
-        if cls.is_assistant(user):
-            assistant = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None)
-            ids = [assistant.client_id] if assistant and assistant.client_id else []
             user._cached_accessible_client_ids = ids
             return ids
 

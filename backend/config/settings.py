@@ -365,7 +365,7 @@ if SENTRY_DSN:
 # Example DATABASE_URL: postgres://user:password@host:5432/dbname
 
 import sys
-if os.getenv('RUNNING_TESTS') == '1' or 'pytest' in sys.modules or any('pytest' in arg or 'test' in arg for arg in sys.argv):
+if os.getenv('RUNNING_TESTS') == '1' or 'pytest' in sys.modules or (len(sys.argv) > 1 and sys.argv[1] in ('test', 'pytest')):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

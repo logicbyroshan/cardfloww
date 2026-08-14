@@ -583,15 +583,17 @@ def _check_client_scope_by_group(user, group_id):
     return group, None
 
 def _check_client_scope_by_table(user, table_id):
-    """Check user has access to the client owning this table. Returns (table, error_response).
+    """Check user has access to the organisation owning this table. Returns (table, error_response).
     
-    Delegates to PermissionService.can_access_client() (single authority).
+    Delegates to PermissionService.can_access_organisation() (single authority).
     """
-    table = get_object_or_404(Table.objects.select_related('group'), id=table_id)
-    if not PermissionService.can_access_client(user, table.group.client_id):
+    table = get_object_or_404(Table.objects.select_related('organisation'), id=table_id)
+    org_id = table.organisation_id or getattr(getattr(table, 'group', None), 'client_id', None)
+    if org_id and not PermissionService.can_access_organisation(user, org_id):
         return None, _access_denied_response()
     if PermissionService.is_client_staff(user):
-        staff = getattr(user, 'staff_profile', None)
+        from assistants.models import Assistant
+        staff = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
         if not staff:
             return None, _access_denied_response()
         if not _table_is_assigned_to_staff(staff, table):
@@ -599,15 +601,17 @@ def _check_client_scope_by_table(user, table_id):
     return table, None
 
 def _check_client_scope_by_card(user, card_id):
-    """Check user has access to the client owning this card. Returns (card, error_response).
+    """Check user has access to the organisation owning this card. Returns (card, error_response).
     
-    Delegates to PermissionService.can_access_client() (single authority).
+    Delegates to PermissionService.can_access_organisation() (single authority).
     """
-    card = get_object_or_404(IDCard.objects.select_related('table__group'), id=card_id)
-    if not PermissionService.can_access_client(user, card.table.group.client_id):
+    card = get_object_or_404(IDCard.objects.select_related('table__organisation'), id=card_id)
+    org_id = card.table.organisation_id if card.table else None
+    if org_id and not PermissionService.can_access_organisation(user, org_id):
         return None, _access_denied_response()
     if PermissionService.is_client_staff(user):
-        staff = getattr(user, 'staff_profile', None)
+        from assistants.models import Assistant
+        staff = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
         if not staff:
             return None, _access_denied_response()
         if not _table_is_assigned_to_staff(staff, card.table):

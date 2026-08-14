@@ -117,7 +117,7 @@ class ActivityService:
                 return 'Assistant'
             if hasattr(obj, 'photographer_profile'):
                 return 'Photographer'
-            if hasattr(obj, 'client_profile'):
+            if hasattr(obj, 'organisation_profile') or hasattr(obj, 'client_profile'):
                 return 'Client'
         return 'Staff'
 
@@ -1136,8 +1136,8 @@ class ActivityService:
         # Base queryset (no time filter when hours is None)
         qs = ActivityLog.objects.select_related(
             'user',
-            'user__client_profile',
-            'user__assistant_profile__client',
+            'user__organisation_profile',
+            'user__assistant_profile__organisation',
             'user__operator_profile',
             'user__photographer_profile',
         ).order_by('-created_at', '-id')
@@ -1934,7 +1934,7 @@ class ActivityService:
                 # instead of first fetching staff user IDs in a separate query.
                 return queryset.filter(
                     Q(user_id=user.pk) |
-                    Q(user__role__in=('assistant'), user__assistant_profile__client_id=client.id)
+                    Q(user__role__in=('assistant',), user__assistant_profile__organisation_id=client.id)
                 )
             return queryset.none()
         

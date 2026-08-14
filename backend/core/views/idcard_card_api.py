@@ -1277,7 +1277,7 @@ def api_idcard_create(request, table_id):
                 created_card_id = created_card.get('id')
                 if created_card_id:
                     from tables.models import IDCard as _IDCard
-                    _card_obj = _IDCard.objects.select_related('table__group__client').filter(pk=created_card_id).first()
+                    _card_obj = _IDCard.objects.select_related('table__organisation').filter(pk=created_card_id).first()
                     if _card_obj:
                         uploaded_img_fields = list(image_files.keys()) if image_files else []
                         if legacy_photo_file:

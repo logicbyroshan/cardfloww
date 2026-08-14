@@ -287,7 +287,7 @@ def api_client_delete(request, client_id):
     
     try:
         client_obj = Organisation.objects.annotate(
-            card_count=Count('id_card_groups__tables__id_cards', distinct=True)
+            card_count=Count('tables__id_cards', distinct=True)
         ).get(pk=client_id)
         
         client_name = client_obj.name

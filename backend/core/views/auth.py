@@ -83,15 +83,65 @@ def api_auth_me(request):
     if not user.is_authenticated:
         return JsonResponse({'authenticated': False}, status=200)
 
-    role = getattr(user, 'role', 'admin') or ('admin' if user.is_superuser else 'prime_manager')
+    role = getattr(user, 'role', None) or ('super_admin' if user.is_superuser else 'prime_manager')
+
+    ROLE_LABELS = {
+        'super_admin': 'Super Admin',
+        'pro_user': 'Pro Admin',
+        'admin': 'Super Admin',
+        'prime_manager': 'Organisation (Prime Manager)',
+        'client': 'Organisation (Prime Manager)',
+        'guest_prime_manager': 'Guest Manager',
+        'operator': 'Operator',
+        'admin_staff': 'Operator',
+        'manager': 'Manager',
+        'assistant': 'Assistant',
+        'client_staff': 'Assistant',
+        'photographer': 'Photographer',
+    }
+    role_label = ROLE_LABELS.get(role, role)
+
+    # Resolve org context for non-admin users
+    org_id = None
+    org_name = None
+    if role in ('prime_manager', 'client', 'guest_prime_manager'):
+        try:
+            from organisation.models import Organisation
+            org = Organisation.objects.filter(user=user).first()
+            if org:
+                org_id = org.id
+                org_name = org.name
+        except Exception:
+            pass
+    elif role in ('assistant', 'client_staff'):
+        try:
+            from assistants.models import Assistant
+            ast = Assistant.objects.filter(user=user).select_related('client').first()
+            if ast and ast.client:
+                org_id = ast.client.id
+                org_name = ast.client.name
+        except Exception:
+            pass
+
+    full_name = ' '.join(filter(None, [
+        getattr(user, 'first_name', ''),
+        getattr(user, 'last_name', ''),
+    ])).strip() or user.username
+
     return JsonResponse({
         'authenticated': True,
         'user': {
             'id': user.id,
             'username': user.username,
             'email': getattr(user, 'email', ''),
+            'first_name': getattr(user, 'first_name', ''),
+            'last_name': getattr(user, 'last_name', ''),
+            'full_name': full_name,
             'role': role,
+            'role_label': role_label,
             'is_superuser': user.is_superuser,
+            'org_id': org_id,
+            'org_name': org_name,
         }
     })
 

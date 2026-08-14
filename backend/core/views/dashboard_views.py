@@ -320,12 +320,12 @@ def _enrich_recent_activities_for_dashboard(user, activities):
         client_ids = list(client_id_by_name.values())
         first_table_rows = (
             Table.objects
-            .filter(group__client_id__in=client_ids)
-            .values('group__client_id')
+            .filter(organisation_id__in=client_ids)
+            .values('organisation_id')
             .annotate(first_table_id=Min('id'))
         )
         first_table_by_client = {
-            row['group__client_id']: row['first_table_id']
+            row['organisation_id']: row['first_table_id']
             for row in first_table_rows
         }
 
@@ -353,12 +353,8 @@ def _enrich_recent_activities_for_dashboard(user, activities):
 
 
 # ── Services ─────────────────────────────────────────────────────────────
-@login_required
-@require_any_admin
-
-
-
 @require_http_methods(["GET"])
+@api_require_any_authenticated
 def api_dashboard_card_stats(request):
     """API endpoint for live dashboard card stats refresh.
 
@@ -372,7 +368,7 @@ def api_dashboard_card_stats(request):
         if not user.is_authenticated:
             return JsonResponse({'success': False, 'authenticated': False, 'message': 'Authentication required.'}, status=401)
 
-        is_scoped = PermissionService.is_operator(user)
+        is_scoped = not PermissionService.is_super_admin(user)
         cache_suffix = f':{user.pk}' if is_scoped else ''
         cache_key = f'api_dashboard_card_stats{cache_suffix}'
 
@@ -384,7 +380,7 @@ def api_dashboard_card_stats(request):
 
         card_qs = IDCard.objects.all()
         if is_scoped:
-            card_qs = card_qs.filter(table__group__client_id__in=accessible_ids)
+            card_qs = card_qs.filter(table__organisation_id__in=accessible_ids)
 
         agg = card_qs.aggregate(
             total=Count('id', filter=Q(status__in=['pending', 'verified', 'approved', 'download'])),
@@ -395,18 +391,17 @@ def api_dashboard_card_stats(request):
             pool=Count('id', filter=Q(status='pool')),
         )
 
-        # User/org counts — only expose to super admins, scoped for operators
+        # User/org counts — scoped by access level
         try:
             from ..models import User as CoreUser
             if is_scoped:
-                # Operator sees only their assigned scope
-                total_orgs = Organisation.objects.filter(id__in=accessible_ids).count()
-                total_operators = CoreUser.objects.filter(role__in=('operator'), is_active=True).count()
-                total_assistants = CoreUser.objects.filter(role='assistant', is_active=True).count() if hasattr(CoreUser, 'role') else 0
-                total_photographers = CoreUser.objects.filter(role='photographer', is_active=True).count()
+                total_orgs = len(accessible_ids)
+                total_operators = 0
+                total_assistants = 0
+                total_photographers = 0
             else:
                 total_orgs = Organisation.objects.count()
-                total_operators = CoreUser.objects.filter(role__in=('operator'), is_active=True).count()
+                total_operators = CoreUser.objects.filter(role__in=('operator', 'manager'), is_active=True).count()
                 total_assistants = CoreUser.objects.filter(role='assistant', is_active=True).count() if hasattr(CoreUser, 'role') else 0
                 total_photographers = CoreUser.objects.filter(role='photographer', is_active=True).count()
         except Exception:
@@ -467,7 +462,7 @@ def api_dashboard_card_stats(request):
 
 
 @require_http_methods(["GET"])
-@api_require_any_admin
+@api_require_any_authenticated
 def api_recent_client_updates(request):
     """API endpoint to get recent clients with their ID card status counts.
 
@@ -481,7 +476,7 @@ def api_recent_client_updates(request):
         user = request.user
 
         # Cache the heavy client-results portion (raw SQL aggregation)
-        is_scoped = PermissionService.is_operator(user)
+        is_scoped = not PermissionService.is_super_admin(user)
         cache_suffix = f':{user.pk}' if is_scoped else ''
         cache_key = f'api_recent_client_updates{cache_suffix}:{"all" if limit is None else limit}'
 
@@ -503,8 +498,8 @@ def api_recent_client_updates(request):
             user, base_qs
         ).values('id', 'name', 'status', 'created_at').annotate(
             latest_approved=Max(
-                'id_card_groups__tables__id_cards__updated_at',
-                filter=Q(id_card_groups__tables__id_cards__status='approved')
+                'tables__id_cards__updated_at',
+                filter=Q(tables__id_cards__status__in=['approved', 'download', 'verified', 'pending'])
             )
         ).order_by(
             F('latest_approved').desc(nulls_last=True),
@@ -529,17 +524,16 @@ def api_recent_client_updates(request):
                 'SELECT '
                 '  t.id AS table_id, '
                 '  t.name AS table_name, '
-                '  g.client_id AS client_id, '
+                '  COALESCE(t.organisation_id, t.client_id) AS client_id, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS pending, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS verified, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS approved, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS downloaded, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS pool '
                 'FROM core_idcardtable t '
-                'JOIN core_idcardgroup g ON g.id = t.group_id '
                 'LEFT JOIN core_idcard c ON c.table_id = t.id '
-                f'WHERE g.client_id IN ({placeholders}) '
-                'GROUP BY t.id, t.name, g.client_id '
+                f'WHERE COALESCE(t.organisation_id, t.client_id) IN ({placeholders}) '
+                'GROUP BY t.id, t.name, COALESCE(t.organisation_id, t.client_id) '
                 'ORDER BY t.id ASC'
             )
             sql_params = ['pending', 'verified', 'approved', 'download', 'pool', *client_ids]
@@ -589,7 +583,7 @@ def api_recent_client_updates(request):
                 'id': client_id,
                 'client_id': client_id,
                 'name': client_name,
-                'status': Organisation.get('status'),
+                'status': client.get('status') or 'active',
                 'initial': client_name[0].upper() if client_name else 'C',
                 'first_table_id': first_table_map.get(client_id),
                 'tables': tables_map.get(client_id, []),
@@ -679,8 +673,8 @@ def api_reprint_overview(request):
         # Order reprint clients by latest request-list activity, then newest client.
         reprint_clients_qs = accessible_clients.annotate(
             latest_request_time=Max(
-                'id_card_groups__tables__reprint_requests__created_at',
-                filter=Q(id_card_groups__tables__reprint_requests__status='requested')
+                'tables__reprint_requests__created_at',
+                filter=Q(tables__reprint_requests__status='requested')
             )
         ).order_by(
             F('latest_request_time').desc(nulls_last=True),
@@ -693,33 +687,33 @@ def api_reprint_overview(request):
 
         # ── Reprint source counts per client (Download cards only) ─
         reprint_source_qs = IDCard.objects.filter(
-            table__group__client_id__in=client_ids,
+            table__organisation_id__in=client_ids,
             status='download',
-        ).values('table__group__client_id').annotate(
+        ).values('table__organisation_id').annotate(
             download_list=Count('id')
         )
-        reprint_source_map = {r['table__group__client_id']: r for r in reprint_source_qs}
+        reprint_source_map = {r['table__organisation_id']: r for r in reprint_source_qs}
 
         # ── Reprint request/confirmed counts per client ──────────────
         reprint_counts_qs = ReprintRequest.objects.filter(
-            table__group__client_id__in=client_ids,
+            table__organisation_id__in=client_ids,
             card__status='download',
-        ).values('table__group__client_id').annotate(
+        ).values('table__organisation_id').annotate(
             requested=Count('id', filter=Q(status='requested')),
             confirmed=Count('id', filter=Q(status='confirmed')),
         )
-        reprint_map = {r['table__group__client_id']: r for r in reprint_counts_qs}
+        reprint_map = {r['table__organisation_id']: r for r in reprint_counts_qs}
 
         # ── Reprint source counts per table ──────────────────────────
         reprint_source_table_qs = IDCard.objects.filter(
-            table__group__client_id__in=client_ids,
+            table__organisation_id__in=client_ids,
             status='download',
-        ).values('table__id', 'table__name', 'table__group__client_id', 'table__created_at').annotate(
+        ).values('table__id', 'table__name', 'table__organisation_id', 'table__created_at').annotate(
             download_list=Count('id')
         ).order_by('table__id')
         reprint_source_table_map = {}
         for t in reprint_source_table_qs:
-            cid = t['table__group__client_id']
+            cid = t['table__organisation_id']
             if cid not in reprint_source_table_map:
                 reprint_source_table_map[cid] = {}
             reprint_source_table_map[cid][t['table__id']] = {
@@ -734,16 +728,16 @@ def api_reprint_overview(request):
 
         # ── Reprint request/confirmed counts per table ───────────────
         reprint_table_qs = ReprintRequest.objects.filter(
-            table__group__client_id__in=client_ids,
+            table__organisation_id__in=client_ids,
             card__status='download',
-        ).values('table__id', 'table__name', 'table__group__client_id', 'table__created_at').annotate(
+        ).values('table__id', 'table__name', 'table__organisation_id', 'table__created_at').annotate(
             requested=Count('id', filter=Q(status='requested')),
             confirmed=Count('id', filter=Q(status='confirmed')),
             latest_update=Max('updated_at', filter=Q(status='requested')),
         ).order_by('table__id')
 
         for t in reprint_table_qs:
-            cid = t['table__group__client_id']
+            cid = t['table__organisation_id']
             if cid not in reprint_source_table_map:
                 reprint_source_table_map[cid] = {}
             if t['table__id'] not in reprint_source_table_map[cid]:
@@ -778,7 +772,7 @@ def api_reprint_overview(request):
 
         # Total requested should represent all accessible clients, not just the limited list.
         reprint_total_requested = ReprintRequest.objects.filter(
-            table__group__client__in=accessible_clients,
+            table__organisation__in=accessible_clients,
             card__status='download',
             status='requested',
         ).count()

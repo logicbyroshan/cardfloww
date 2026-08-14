@@ -278,23 +278,49 @@ def api_idcard_table_list(request, group_id):
 @require_http_methods(["GET"])
 @api_require_permission('perm_idcard_setting_list')
 def api_schema_list(request):
-    """List all table schemas for the current user/client or default group."""
+    """List all table schemas scoped to the authenticated user's organisation access."""
     from organisation.models import Organisation
+    from tables.models import Table, IDCard
+    from django.db.models import Count, Q
     try:
-        if PermissionService.is_client_role(request.user):
-            client = getattr(request.user, 'client_profile', None)
-            if not client:
-                return JsonResponse({'success': True, 'tables': []})
-            group = IDCardService.ensure_default_group(client)
-            result = IDCardService.list_tables(group.id)
-            return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
+        user = request.user
+        if not user.is_authenticated:
+            return JsonResponse({'success': False, 'message': 'Authentication required.'}, status=401)
+
+        if PermissionService.is_super_admin(user):
+            tables_qs = Table.objects.all().select_related('organisation').order_by('id')
         else:
-            client = Organisation.objects.filter(status='active').first()
-            if not client:
-                return JsonResponse({'success': True, 'tables': []})
-            group = IDCardService.ensure_default_group(client)
-            result = IDCardService.list_tables(group.id)
-            return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
+            accessible_ids = PermissionService.get_accessible_client_ids(user)
+            tables_qs = Table.objects.filter(organisation_id__in=accessible_ids).select_related('organisation').order_by('id')
+
+        tables_data = []
+        for t in tables_qs:
+            # Card status counts for this table
+            agg = IDCard.objects.filter(table=t).aggregate(
+                pending=Count('id', filter=Q(status='pending')),
+                verified=Count('id', filter=Q(status='verified')),
+                approved=Count('id', filter=Q(status='approved')),
+                download=Count('id', filter=Q(status='download')),
+                pool=Count('id', filter=Q(status='pool')),
+            )
+            tables_data.append({
+                'id': t.id,
+                'name': t.name,
+                'description': t.description,
+                'organisation_id': t.organisation_id,
+                'organisation_name': t.organisation.name if t.organisation else '',
+                'is_active': t.is_active,
+                'status': 'active' if t.is_active else 'inactive',
+                'fields': t.fields if hasattr(t, 'fields') else [],
+                'pending_count': agg['pending'] or 0,
+                'verified_count': agg['verified'] or 0,
+                'approved_count': agg['approved'] or 0,
+                'download_count': agg['download'] or 0,
+                'pool_count': agg['pool'] or 0,
+                'total_cards': sum(agg.values()) or 0,
+            })
+
+        return JsonResponse({'success': True, 'tables': tables_data, 'results': tables_data})
     except Exception as e:
         logger.exception("Schema list error: %s", e)
         return JsonResponse({'success': False, 'message': _safe_error(e)}, status=500)
