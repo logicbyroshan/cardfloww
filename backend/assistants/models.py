@@ -21,6 +21,19 @@ class Assistant(models.Model):
         db_column='client_id',
         related_name='assistants',
     )
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='managed_assistants',
+        help_text='The Manager or Prime Manager this assistant belongs to. Deleting the manager cascades deletion of their assistants.',
+    )
+
+    def __init__(self, *args, **kwargs):
+        if 'client' in kwargs:
+            kwargs['organisation'] = kwargs.pop('client')
+        super().__init__(*args, **kwargs)
 
     @property
     def client_id(self):
@@ -29,6 +42,10 @@ class Assistant(models.Model):
     @property
     def client(self):
         return self.organisation
+
+    @client.setter
+    def client(self, value):
+        self.organisation = value
 
     # Tables this assistant can access (empty = all tables in the organisation)
     assigned_groups = models.ManyToManyField(

@@ -296,6 +296,8 @@ class AssistantService(BaseService):
             return False
         if user.is_superuser:
             return True
+        if getattr(user, 'role', '') in ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'organisation'):
+            return True
         if PermissionService.has(user, 'perm_idcard_client_list'):
             return True
         if PermissionService.is_client(user) and PermissionService.has(user, 'perm_manage_assistant'):
@@ -345,10 +347,12 @@ class AssistantService(BaseService):
             assistant_filters = {}
             if client:
                 assistant_filters['organisation'] = client
+            if getattr(user, 'role', '') == 'manager':
+                assistant_filters['manager'] = user
 
             assistant_list = Assistant.objects.filter(
                 **assistant_filters
-            ).select_related('user', 'organisation').only(*assistant_only_fields)
+            ).select_related('user', 'organisation', 'manager').only(*assistant_only_fields, 'manager__first_name', 'manager__last_name', 'manager__username')
             
             assistant_data = []
             for assistant in assistant_list:
@@ -356,6 +360,7 @@ class AssistantService(BaseService):
                     int(v) for v in (assistant.assigned_table_ids or [])
                     if str(v).strip().isdigit() and int(v) > 0
                 ]
+                mgr_name = (assistant.manager.get_full_name() or assistant.manager.username) if assistant.manager else 'Prime Manager'
                 item = {
                     'id': assistant.id,
                     'user_id': assistant.user.id,
@@ -363,8 +368,10 @@ class AssistantService(BaseService):
                     'organisation_id': assistant.client_id,
                     'client_name': assistant.client.name if assistant.client else '-',
                     'organisation_name': assistant.client.name if assistant.client else '-',
+                    'manager_id': assistant.manager_id,
+                    'manager_name': mgr_name,
                     'name': assistant.user.get_full_name() or assistant.user.username,
-                    'role_title': 'Manager',
+                    'role_title': 'Assistant',
                     'email': cls._public_email(assistant.user.email),
                     'phone': assistant.user.phone or '',
                     'department': assistant.department or '',
@@ -421,6 +428,8 @@ class AssistantService(BaseService):
                 client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
+                if getattr(user, 'role', '') == 'manager' and assistant.manager_id != user.id:
+                    return ServiceResult(success=False, message='Access denied: Assistant belongs to another manager')
                 if not cls._has_staff_management_access(user):
                     return ServiceResult(success=False, message='Permission denied')
             
@@ -591,9 +600,20 @@ class AssistantService(BaseService):
                     is_active=is_active,
                 )
                 
+                manager_user = None
+                if user and user.is_authenticated:
+                    if getattr(user, 'role', '') in ('prime_manager', 'manager', 'guest_prime_manager'):
+                        manager_user = user
+                    elif user.is_superuser:
+                        if data.get('manager_id'):
+                            manager_user = User.objects.filter(id=data['manager_id']).first()
+                        if not manager_user and client:
+                            manager_user = client.user
+
                 assistant_kwargs = {
                     'user': assistant_user,
-                    'client': client,
+                    'organisation': client,
+                    'manager': manager_user,
                     'department': data.get('department', ''),
                     'designation': data.get('designation', ''),
                     'allowed_classes': [
@@ -789,6 +809,8 @@ class AssistantService(BaseService):
                 client = target_client or OrganisationAccessService.get_organisation_for_user(user)
                 if not client:
                     return ServiceResult(success=False, message='Client profile not found')
+                if getattr(user, 'role', '') == 'manager' and assistant.manager_id != user.id:
+                    return ServiceResult(success=False, message='Access denied: Assistant belongs to another manager')
                 if not cls._has_staff_management_access(user):
                     return ServiceResult(success=False, message='Permission denied')
 
@@ -957,6 +979,8 @@ class AssistantService(BaseService):
                 client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
+                if getattr(user, 'role', '') == 'manager' and assistant.manager_id != user.id:
+                    return ServiceResult(success=False, message='Access denied: Assistant belongs to another manager')
                 if not cls._has_staff_management_access(user):
                     return ServiceResult(success=False, message='Permission denied')
 
@@ -994,6 +1018,8 @@ class AssistantService(BaseService):
                 client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
+                if getattr(user, 'role', '') == 'manager' and assistant.manager_id != user.id:
+                    return ServiceResult(success=False, message='Access denied: Assistant belongs to another manager')
                 if not cls._has_staff_management_access(user):
                     return ServiceResult(success=False, message='Permission denied')
             

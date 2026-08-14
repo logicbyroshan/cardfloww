@@ -66,7 +66,7 @@ class AutoCreateAssistantsTests(TestCase):
     def test_auto_create_fallback_mode_when_no_columns(self):
         # Create a new table with NO Class or Section fields
         simple_table = Table.objects.create(
-            group=self.group,
+            organisation=self.client_obj,
             name='Simple Staff Table',
             fields=[{'name': 'Full Name', 'type': 'text'}, {'name': 'Phone', 'type': 'text'}]
         )
@@ -75,7 +75,7 @@ class AutoCreateAssistantsTests(TestCase):
         # Run auto create for this specific table (single list)
         result = AssistantService.auto_create_assistants(
             self.user, self.client_obj, 'STGS', 'class', auto_assign=True,
-            group=self.group, table=simple_table
+            table=simple_table
         )
         self.assertTrue(result.success)
         # Should create exactly 1 assistant for the entire table
@@ -84,8 +84,6 @@ class AutoCreateAssistantsTests(TestCase):
         # Retrieve the assistant and verify properties
         assistant = Assistant.objects.filter(client=self.client_obj, user__email__icontains='simplestafftable').first()
         self.assertIsNotNone(assistant)
-        # Should be assigned to the group
-        self.assertIn(self.group, assistant.assigned_groups.all())
         # Should be assigned to the table with full access (empty allowed_classes)
         self.assertEqual(assistant.allowed_classes, [])
         self.assertEqual(assistant.allowed_sections, [])
@@ -109,9 +107,8 @@ class AssistantAPIViewPermissionTests(TestCase):
         )
         self.client_obj = Organisation.objects.create(name='Test Client Permissions', user=self.client_user)
 
-        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
         self.table = Table.objects.create(
-            group=self.group, 
+            organisation=self.client_obj, 
             name='Test Table',
             fields=[{'name': 'Class', 'type': 'text'}, {'name': 'Section', 'type': 'text'}]
         )
@@ -125,8 +122,8 @@ class AssistantAPIViewPermissionTests(TestCase):
             'acronym': 'TST',
             'mode': 'class',
             'assign': 'true',
-            'id_source': 'group',
-            'group_id': self.group.id
+            'id_source': 'table',
+            'table_id': self.table.id
         })
         # Should succeed and return the Excel spreadsheet
         self.assertEqual(response.status_code, 200)
@@ -138,8 +135,8 @@ class AssistantAPIViewPermissionTests(TestCase):
             'acronym': 'TST',
             'mode': 'class',
             'assign': 'true',
-            'id_source': 'group',
-            'group_id': self.group.id
+            'id_source': 'table',
+            'table_id': self.table.id
         })
         self.assertEqual(response.status_code, 403)
 

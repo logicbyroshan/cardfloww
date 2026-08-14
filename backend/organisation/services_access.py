@@ -158,7 +158,7 @@ class OrganisationAccessService:
                 return explicit_table_ids
 
         assigned_table_ids = OrganisationAccessService._normalize_positive_int_ids(
-            staff.assigned_table_ids or []
+            getattr(staff, 'assigned_table_ids', None) or []
         )
         setattr(staff, '_cached_assigned_table_ids_for_access', assigned_table_ids)
         return assigned_table_ids
@@ -193,7 +193,20 @@ class OrganisationAccessService:
             if client_profile is None:
                 from organisation.models import Organisation
                 client_profile = Organisation.objects.filter(user_id=user.pk).first()
-            return client_profile
+            if client_profile:
+                return client_profile
+            
+            # Check if sub-manager has managed assistants with an organisation
+            from assistants.models import Assistant
+            first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+            if first_asst and first_asst.organisation:
+                return first_asst.organisation
+
+            # Check if user has an operator profile with assigned organisations
+            if hasattr(user, 'operator_profile') and user.operator_profile:
+                return user.operator_profile.assigned_organisations.first()
+
+            return None
 
         if PermissionService.is_client_staff(user):
             staff = OrganisationAccessService._get_staff_profile(user)
@@ -276,8 +289,10 @@ class OrganisationAccessService:
     def can_access_table(user, table: Table) -> bool:
         """Check if user can access a specific table.
         super_admin has unrestricted access.
-        admin_staff/photographer is restricted to assigned clients.
-        client_staff: limited to assigned groups (empty assigned_groups = all groups).
+        operator/photographer is restricted to assigned clients.
+        manager: restricted to assigned tables (if configured).
+        assistant: restricted to assigned tables AND parent manager's table scope.
+        prime_manager: owns all tables in the organisation.
         """
         if PermissionService.is_super_admin(user):
             return True
@@ -290,15 +305,34 @@ class OrganisationAccessService:
         if table.organisation_id != client.id:
             return False
 
-        # For assistant / client_staff with assigned tables: restrict to assigned tables only
-        if PermissionService.is_assistant(user) or PermissionService.is_client_staff(user):
+        # Prime manager has full access to all tables of their organisation
+        if getattr(user, 'role', '') in ('prime_manager', 'guest_prime_manager', 'organisation', 'client'):
+            return True
+
+        # For sub-manager with assigned tables
+        if getattr(user, 'role', '') == 'manager':
             staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
                 assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
                 if assigned_table_ids:
                     return table.id in assigned_table_ids
-                
+            return True
+
+        # For assistant: verify parent manager access first, then assistant's assigned tables
+        if PermissionService.is_assistant(user) or PermissionService.is_client_staff(user):
+            from assistants.models import Assistant
+            staff = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
+            if staff:
+                if staff.manager:
+                    if not OrganisationAccessService.can_access_table(staff.manager, table):
+                        return False
+                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                if assigned_table_ids:
+                    return table.id in assigned_table_ids
+                # If no specific table restrictions, assistant inherits manager's access
+                return True
             return False
+
         return True
 
     @classmethod
@@ -307,10 +341,6 @@ class OrganisationAccessService:
         
         This is the SINGLE AUTHORITY for table-level scoping.
         All views and services MUST use this method instead of inline Q filters.
-        
-        Returns:
-            QuerySet of Table, filtered to only tables the user can access.
-            For assistant / client_staff with no assignments, returns tables.none().
         """
         if base_qs is None:
             from tables.models import Table
@@ -320,19 +350,39 @@ class OrganisationAccessService:
                 deleted_by_manager=False,
             )
         
-        if not (PermissionService.is_assistant(user) or PermissionService.is_client_staff(user)):
-            return base_qs
-        
-        staff = OrganisationAccessService._get_staff_profile(user)
-        if not staff:
+        if not user or not user.is_authenticated:
             return base_qs.none()
+
+        if PermissionService.is_super_admin(user) or getattr(user, 'role', '') in ('prime_manager', 'guest_prime_manager', 'organisation', 'client'):
+            return base_qs
+
+        # For sub-manager
+        if getattr(user, 'role', '') == 'manager':
+            staff = OrganisationAccessService._get_staff_profile(user)
+            if staff:
+                assigned_table_ids = cls._assigned_table_ids_for_access(staff)
+                if assigned_table_ids:
+                    return base_qs.filter(id__in=assigned_table_ids)
+            return base_qs
+
+        # For assistant
+        if PermissionService.is_assistant(user) or PermissionService.is_client_staff(user):
+            from assistants.models import Assistant
+            staff = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
+            if not staff:
+                return base_qs.none()
+            
+            # Scope to parent manager's tables first
+            qs = base_qs
+            if staff.manager:
+                qs = cls.get_scoped_tables_qs(staff.manager, client, base_qs=qs)
+            
+            assigned_table_ids = cls._assigned_table_ids_for_access(staff)
+            if assigned_table_ids:
+                return qs.filter(id__in=assigned_table_ids)
+            return qs
         
-        assigned_table_ids = cls._assigned_table_ids_for_access(staff)
-        
-        if assigned_table_ids:
-            return base_qs.filter(id__in=assigned_table_ids)
-        
-        return base_qs.none()
+        return base_qs
 
     @staticmethod
     def can_access_card(user, card: IDCard) -> bool:

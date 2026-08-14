@@ -106,6 +106,7 @@ class PermissionService:
     # access only; pro features are reserved for pro_user and super_admin.
     OPERATOR_AUTO_PERMS: set = {
         'perm_reupload_idcard_image',
+        'perm_manage_photographer_staff',
     }
 
     # All known perm keys (computed once at class-load time)
@@ -165,7 +166,7 @@ class PermissionService:
 
     # Sensitive permissions that assistant can never hold
     CLIENT_ASSISTANT_BLOCKED_PERMS: set = {
-        'perm_manage_assistant',       # Assistants cannot manage other staff
+        'perm_manage_assistant',          # Assistants cannot manage other staff
         'perm_manage_photographer_staff', # Assistants cannot manage photographers
         'perm_idcard_setting_add',        # Assistants cannot create new tables
         'perm_idcard_setting_delete',     # Assistants cannot delete tables
@@ -174,7 +175,11 @@ class PermissionService:
         'perm_manage_panel_email',        # Admin-only
         'perm_idcard_approved_list',      # Assistants cannot see approved list
         'perm_idcard_download_list',      # Assistants cannot see download list
+        'perm_idcard_reprint_list',       # Assistants cannot see reprint list
+        'perm_reprint_request_list',      # Assistants cannot see reprint requests
+        'perm_confirmed_list',            # Assistants cannot see confirmed reprints
         'perm_idcard_approve',            # Assistants cannot approve cards
+        'perm_idcard_bulk_download',      # Assistants cannot bulk download cards
     }
 
     # Status → list-permission mapping (shared across views)
@@ -565,6 +570,15 @@ class PermissionService:
             if assistant.organisation.status != 'active':
                 return False
 
+            # Double-gate against manager: assistant only gets permissions that their parent manager holds
+            if assistant.manager_id:
+                from core.models import User
+                mgr = User.objects.filter(id=assistant.manager_id).first()
+                if not mgr or not mgr.is_active:
+                    return False
+                if not cls.has(mgr, perm_key, client=client_obj or assistant.organisation):
+                    return False
+
             # ID card lists and tables are auto-granted to active assistants (unless explicitly blocked)
             if perm_key in ('perm_idcard_setting_list', 'perm_idcard_pending_list', 'perm_idcard_verified_list', 'perm_idcard_add', 'perm_idcard_edit', 'perm_idcard_info', 'perm_idcard_retrieve', 'perm_idcard_bulk_upload'):
                 return True
@@ -597,15 +611,17 @@ class PermissionService:
         qs = base_qs if base_qs is not None else Organisation.objects.all()
         if not user.is_authenticated:
             return qs.none()
-        if cls.is_super_admin(user):
-            return qs
-        if cls.is_client(user):
+        if cls.is_client(user) or Organisation.objects.filter(user=user).exists() or getattr(user, 'client_profile', None):
             org = Organisation.objects.filter(user=user).first()
             if org:
                 return qs.filter(id=org.id)
             cp = getattr(user, 'client_profile', None)
             if cp:
                 return qs.filter(id=cp.id)
+            from assistants.models import Assistant
+            first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+            if first_asst and first_asst.organisation_id:
+                return qs.filter(id=first_asst.organisation_id)
             return qs.none()
         if cls.is_assistant(user):
             from assistants.models import Assistant
@@ -613,6 +629,8 @@ class PermissionService:
             if ast and ast.client_id:
                 return qs.filter(id=ast.client_id)
             return qs.none()
+        if cls.is_super_admin(user) and not cls.is_operator(user):
+            return qs
         if cls.is_operator(user) or cls.is_photographer(user):
             assigned_ids = cls.get_accessible_client_ids(user)
             return qs.filter(id__in=assigned_ids)
@@ -626,19 +644,25 @@ class PermissionService:
         """
         if not user.is_authenticated:
             return False
-        if cls.is_super_admin(user):
-            return True
-        if cls.is_client(user):
+        if cls.is_client(user) or hasattr(user, 'client_profile'):
             from organisation.models import Organisation
             org = Organisation.objects.filter(user=user).first()
             if org and org.id == int(client_id):
                 return True
             cp = getattr(user, 'client_profile', None)
-            return cp is not None and cp.id == int(client_id)
+            if cp and cp.id == int(client_id):
+                return True
+            from assistants.models import Assistant
+            first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+            if first_asst and first_asst.organisation_id == int(client_id):
+                return True
+            return False
         if cls.is_assistant(user):
             from assistants.models import Assistant
-            assistant = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
-            return assistant is not None and assistant.client_id == int(client_id)
+            ast = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
+            return bool(ast and ast.client_id == int(client_id))
+        if cls.is_super_admin(user) and not cls.is_operator(user):
+            return True
         if cls.is_operator(user) or cls.is_photographer(user):
             return int(client_id) in cls.get_accessible_client_ids(user)
         return False
@@ -647,24 +671,31 @@ class PermissionService:
 
     @classmethod
     def get_accessible_client_ids(cls, user) -> List[int]:
-        """Return list of client IDs the user may access."""
-        cached_ids = getattr(user, '_cached_accessible_client_ids', None)
-        if cached_ids is not None:
-            return cached_ids
+        """
+        Return list of client IDs accessible by user.
+        Cached on user object for request lifecycle.
+        For super_admin, returns empty list (meaning: all).
+        """
+        cached = getattr(user, '_cached_accessible_client_ids', None)
+        if cached is not None:
+            return cached
 
         if not user.is_authenticated:
-            return []
-        if cls.is_super_admin(user):
             user._cached_accessible_client_ids = []
-            return []  # Empty means "all" for super_admin — caller should handle
-        if cls.is_client(user):
+            return []
+        if cls.is_client(user) or hasattr(user, 'client_profile'):
             from organisation.models import Organisation
             org = Organisation.objects.filter(user=user).first()
             if org:
                 ids = [org.id]
             else:
                 cp = getattr(user, 'client_profile', None)
-                ids = [cp.id] if cp else []
+                if cp:
+                    ids = [cp.id]
+                else:
+                    from assistants.models import Assistant
+                    first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+                    ids = [first_asst.organisation_id] if first_asst and first_asst.organisation_id else []
             user._cached_accessible_client_ids = ids
             return ids
         if cls.is_assistant(user):
@@ -673,6 +704,9 @@ class PermissionService:
             ids = [assistant.client_id] if assistant and assistant.client_id else []
             user._cached_accessible_client_ids = ids
             return ids
+        if cls.is_super_admin(user) and not cls.is_operator(user):
+            user._cached_accessible_client_ids = []
+            return []  # Empty means "all" for super_admin — caller should handle
         if cls.is_operator(user) or cls.is_photographer(user):
             cache_key = cls._accessible_client_ids_cache_key(user)
             cached = _cache.get(cache_key)

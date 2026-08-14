@@ -845,14 +845,15 @@ def api_staff_auto_create(request):
     target_table = None
 
     if id_source == 'table':
-        target_table = Table.objects.filter(id=selection_id, organisation=target_client, deleted_by_client=False).first()
+        target_table = Table.objects.filter(id=selection_id, organisation=target_client, deleted_by_manager=False).first()
         if not target_table:
-            return JsonResponse({'success': False, 'message': 'List/Table not found'}, status=404)
-        target_group = target_table.group  # also carry the parent group for assignment
+            return JsonResponse({'success': False, 'message': 'Table not found'}, status=404)
+        target_group = target_table
     else:
-        target_group = Table.objects.filter(id=selection_id, organisation=target_client).first()
-        if not target_group:
-            return JsonResponse({'success': False, 'message': 'Group/List not found'}, status=404)
+        target_table = Table.objects.filter(id=selection_id, organisation=target_client, deleted_by_manager=False).first()
+        if not target_table:
+            return JsonResponse({'success': False, 'message': 'Table not found'}, status=404)
+        target_group = target_table
 
     result = AssistantService.auto_create_assistants(
         request.user, target_client, acronym, mode, auto_assign,
