@@ -198,8 +198,8 @@ class ExcelExporter:
             
             # Get client name for filename
             client_name = ''
-            if table.group and table.group.client:
-                client_name = table.group.client.name
+            if getattr(table, 'organisation', None):
+                client_name = table.organisation.name
 
             # Generate filename
             filename = generate_export_filename(table.name, 'xlsx', client_name=client_name, status=status)

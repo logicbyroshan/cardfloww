@@ -187,14 +187,14 @@ class DesktopAppService:
     @classmethod
     def _scope_objects(cls, *, client_id: Optional[int] = None, table_id: Optional[int] = None, search_query: Optional[str] = None, include_data: bool = True):
         if table_id:
-            table = Table.objects.select_related('group', 'group__client').filter(id=table_id).first()
+            table = Table.objects.select_related('organisation').filter(id=table_id).first()
             if not table:
                 return None
-            client_id = table.group.client_id
+            client_id = table.organisation_id
             clients = Organisation.objects.filter(id=client_id).order_by('id')
-            groups = Table.objects.select_related('client').filter(client_id=client_id).order_by('id')
-            tables = Table.objects.select_related('group', 'group__client').filter(group__client_id=client_id).order_by('id')
-            cards = IDCard.objects.select_related('table', 'table__group', 'table__group__client').filter(table_id=table.id, status__in=['approved', 'download']).order_by('-id') if include_data else IDCard.objects.none()
+            groups = Table.objects.filter(organisation_id=client_id).order_by('id')
+            tables = Table.objects.filter(organisation_id=client_id).order_by('id')
+            cards = IDCard.objects.select_related('table', 'table__organisation').filter(table_id=table.id, status__in=['approved', 'download']).order_by('-id') if include_data else IDCard.objects.none()
             return clients, groups, tables, cards
 
         clients = Organisation.objects.all().order_by('id')
@@ -209,34 +209,34 @@ class DesktopAppService:
             return clients, Table.objects.none(), Table.objects.none(), IDCard.objects.none()
 
         client_ids = list(clients.values_list('id', flat=True))
-        groups = Table.objects.select_related('client').filter(client_id__in=client_ids).order_by('id')
-        tables = Table.objects.select_related('group', 'group__client').filter(group__client_id__in=client_ids).order_by('id')
+        groups = Table.objects.filter(organisation_id__in=client_ids).order_by('id')
+        tables = Table.objects.filter(organisation_id__in=client_ids).order_by('id')
         table_ids = list(tables.values_list('id', flat=True))
-        cards = IDCard.objects.select_related('table', 'table__group', 'table__group__client').filter(table_id__in=table_ids, status__in=['approved', 'download']).order_by('-id')
+        cards = IDCard.objects.select_related('table', 'table__organisation').filter(table_id__in=table_ids, status__in=['approved', 'download']).order_by('-id')
         return clients, groups, tables, cards
 
     @staticmethod
-    def _serialize_client(organisation: Organisation) -> Dict[str, Any]:
+    def _serialize_client(client: Organisation) -> Dict[str, Any]:
         return {
-            'id': Organisation.id,
-            'name': Organisation.name,
-            'status': Organisation.status,
-            'is_guest': Organisation.is_guest,
-            'image_folder_code': Organisation.image_folder_code,
+            'id': client.id,
+            'name': client.name,
+            'status': client.status,
+            'is_guest': client.is_guest,
+            'image_folder_code': client.image_folder_code,
             'image_folder_uuid': str(client.image_folder_uuid),
-            'city': Organisation.city,
-            'state': Organisation.state,
-            'pincode': Organisation.pincode,
+            'city': client.city,
+            'state': client.state,
+            'pincode': client.pincode,
             'address': '',
-            'created_at': Organisation.created_at.isoformat() if client.created_at else None,
-            'updated_at': Organisation.updated_at.isoformat() if client.updated_at else None,
+            'created_at': client.created_at.isoformat() if client.created_at else None,
+            'updated_at': client.updated_at.isoformat() if client.updated_at else None,
         }
 
     @staticmethod
     def _serialize_group(group: Table) -> Dict[str, Any]:
         return {
             'id': group.id,
-            'client_id': group.client_id,
+            'client_id': group.organisation_id,
             'name': group.name,
             'description': group.description,
             'is_active': group.is_active,
@@ -249,13 +249,13 @@ class DesktopAppService:
         image_fields = [field for field in (table.fields or []) if field.get('type') in IMAGE_FIELD_TYPES]
         return {
             'id': table.id,
-            'group_id': table.group_id,
-            'client_id': table.group.client_id if table.group_id else None,
+            'group_id': table.id,
+            'client_id': table.organisation_id,
             'name': table.name,
             'fields': table.fields,
             'image_fields': image_fields,
             'is_active': table.is_active,
-            'deleted_by_client': table.deleted_by_client,
+            'deleted_by_client': table.deleted_by_manager,
             'created_at': table.created_at.isoformat() if table.created_at else None,
             'updated_at': table.updated_at.isoformat() if table.updated_at else None,
         }
@@ -280,8 +280,8 @@ class DesktopAppService:
         return {
             'id': card.id,
             'table_id': card.table_id,
-            'group_id': card.table.group_id if card.table_id else None,
-            'client_id': card.table.group.client_id if card.table_id else None,
+            'group_id': card.table_id,
+            'client_id': card.table.organisation_id if card.table_id else None,
             'status': card.status,
             'field_data': card.field_data,
             'image_paths': image_paths,

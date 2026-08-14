@@ -68,11 +68,12 @@ class Organisation(models.Model):
         ('other', 'Other'),
     ]
 
-    # Prime Manager — the owner account created together with this Organisation
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='organisation_profile',
+        null=True,
+        blank=True,
     )
 
     # Unique folder ID for storing images (never changes)

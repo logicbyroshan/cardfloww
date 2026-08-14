@@ -76,26 +76,26 @@ class OrganisationService(BaseService):
     @classmethod
     def serialize(cls, client: Organisation, include_permissions: bool = True) -> Dict[str, Any]:
         """Serialize Client/Organisation instance to dict"""
-        prime_manager_name = client.user.get_full_name() or client.user.username
+        prime_manager_name = (client.user.get_full_name() or client.user.username) if client.user else ''
         data = {
-            'id': Organisation.id,
-            'organisation_id': Organisation.id,
-            'name': Organisation.name,
-            'organisation_name': Organisation.name,
+            'id': client.id,
+            'organisation_id': client.id,
+            'name': client.name,
+            'organisation_name': client.name,
             'prime_manager': prime_manager_name,
-            'prime_manager_id': Organisation.user.id,
+            'prime_manager_id': client.user_id if client.user_id else None,
             'role_title': 'Guest Prime Manager' if client.is_guest else 'Prime Manager',
             'is_guest': bool(getattr(client, 'is_guest', False)),
-            'email': cls._public_email(client.user.email),
-            'phone': Organisation.user.phone or '',
-            'city': Organisation.city or '',
-            'state': Organisation.state or '',
-            'pincode': Organisation.pincode or '',
-            'status': Organisation.status,
+            'email': cls._public_email(client.user.email) if client.user else '',
+            'phone': (client.user.phone or '') if client.user else '',
+            'city': client.city or '',
+            'state': client.state or '',
+            'pincode': client.pincode or '',
+            'status': client.status,
             # Keep photo_url/logo_url keys as empty strings for backward compatibility.
             'photo_url': '',
             'logo_url': '',
-            'icon': Organisation.icon,
+            'icon': client.icon or '',
             'created_at': localtime(client.created_at).strftime('%d-%m-%Y %H:%M'),
             'updated_at': localtime(client.updated_at).strftime('%d-%m-%Y %H:%M'),
         }

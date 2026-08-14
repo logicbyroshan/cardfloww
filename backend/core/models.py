@@ -84,9 +84,16 @@ class User(AbstractUser):
     @property
     def client_profile(self):
         try:
-            return getattr(self, 'organisation_profile', None)
+            profile = getattr(self, '_organisation_profile_cache', None)
+            if profile is not None:
+                return profile
+            return self.organisation_profile
         except Exception:
-            return None
+            try:
+                from organisation.models import Organisation
+                return Organisation.objects.filter(user=self).first()
+            except Exception:
+                return None
     
     def save(self, *args, **kwargs):
         """

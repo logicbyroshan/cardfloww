@@ -447,8 +447,8 @@ class PdfExporter:
 
             # Get institution name
             institution_name = "Institution"
-            if table.group and table.group.client:
-                institution_name = table.group.client.name
+            if getattr(table, 'organisation', None):
+                institution_name = table.organisation.name
 
             # Fetch template footer text if template_id provided
             from core.models import ExportTemplate

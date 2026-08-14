@@ -4,6 +4,40 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def sync_tables_schema(apps, schema_editor):
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        tables = connection.introspection.table_names(cursor)
+        if 'core_idcardtable' not in tables:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS core_idcardtable (
+                    id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    name varchar(255) NOT NULL,
+                    description text NULL,
+                    table_type varchar(20) NOT NULL,
+                    fields json NOT NULL,
+                    is_active bool NOT NULL,
+                    deleted_by_client bool NOT NULL DEFAULT 0,
+                    created_at datetime NOT NULL,
+                    updated_at datetime NOT NULL,
+                    organisation_id bigint NULL REFERENCES core_client(id),
+                    client_id bigint NULL REFERENCES core_client(id)
+                )
+            """)
+        else:
+            columns = [col.name.lower() for col in connection.introspection.get_table_description(cursor, 'core_idcardtable')]
+            if 'client_id' not in columns:
+                try:
+                    cursor.execute("ALTER TABLE core_idcardtable ADD COLUMN client_id integer NULL")
+                except Exception:
+                    pass
+            if 'organisation_id' not in columns:
+                try:
+                    cursor.execute("ALTER TABLE core_idcardtable ADD COLUMN organisation_id integer NULL")
+                except Exception:
+                    pass
+
+
 class Migration(migrations.Migration):
 
     initial = True
@@ -14,6 +48,9 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunPython(sync_tables_schema, reverse_code=migrations.RunPython.noop, atomic=False),
+            ],
             state_operations=[
                 migrations.CreateModel(
                     name='Table',
@@ -27,7 +64,7 @@ class Migration(migrations.Migration):
                         ('deleted_by_manager', models.BooleanField(default=False, help_text='True when the prime manager soft-deletes this table.')),
                         ('created_at', models.DateTimeField(auto_now_add=True)),
                         ('updated_at', models.DateTimeField(auto_now=True)),
-                        ('organisation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tables', to='core.organisation')),
+                        ('organisation', models.ForeignKey(db_column='client_id', on_delete=django.db.models.deletion.CASCADE, related_name='tables', to='core.organisation')),
                     ],
                     options={
                         'db_table': 'core_idcardtable',
@@ -116,6 +153,5 @@ class Migration(migrations.Migration):
                     index=models.Index(fields=['status_changed_at'], name='tbl_status_changed_at_idx'),
                 ),
             ],
-            database_operations=[],
         ),
     ]

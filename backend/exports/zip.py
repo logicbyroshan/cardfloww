@@ -183,8 +183,8 @@ class ZipExporter:
             
             # Get client name for filename
             client_name = ''
-            if table.group and table.group.client:
-                client_name = table.group.client.name
+            if getattr(table, 'organisation', None):
+                client_name = table.organisation.name
             clean_client_name = clean_filename(client_name) if client_name else ''
             clean_table_name = clean_filename(table.name)
             

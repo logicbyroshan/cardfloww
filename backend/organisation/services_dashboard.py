@@ -80,7 +80,7 @@ class OrganisationDashboardService(BaseService):
 
     @classmethod
     def _get_accessible_tables_qs(cls, user, client):
-        tables = Table.objects.filter(group__client=client, is_active=True)
+        tables = Table.objects.filter(organisation=client, is_active=True)
         return OrganisationAccessService.get_scoped_tables_qs(user, client, tables)
 
     @staticmethod
@@ -369,7 +369,7 @@ class OrganisationDashboardService(BaseService):
 
             tables = list(
                 cls._get_accessible_tables_qs(user, client)
-                .only('id', 'group_id', 'fields')
+                .only('id', 'organisation_id', 'fields')
             )
             table_ids = [table.id for table in tables]
             counts = cls._status_template()
@@ -404,7 +404,7 @@ class OrganisationDashboardService(BaseService):
 
             # Get staff count (client_staff under this client)
             staff_count = Assistant.objects.filter(
-                client=client
+                organisation=client
             ).count()
 
             # Get recent assistants (for dashboard Recent Assistants panel, Client Admin only)
@@ -412,12 +412,12 @@ class OrganisationDashboardService(BaseService):
             if not PermissionService.is_client_staff(user):
                 try:
                     recent_staff_qs = (
-                        Assistant.objects.filter(client=client)
+                        Assistant.objects.filter(organisation=client)
                         .select_related('user')
                         .prefetch_related('assigned_groups')
                         .order_by('-id')[:5]
                     )
-                    active_tables = list(Table.objects.filter(group__client=client, is_active=True)[:10])
+                    active_tables = list(Table.objects.filter(organisation=client, is_active=True)[:10])
                     
                     for s in recent_staff_qs:
                         s.user.assistant_profile = s
@@ -500,70 +500,70 @@ class OrganisationDashboardService(BaseService):
             except Exception as activity_exc:
                 logger.warning(
                     'OrganisationDashboardService.get_dashboard_data: recent activity load failed for user_id=%s role=%s: %s',
-                    user.pk,
-                    getattr(user, 'role', 'unknown'),
-                    activity_exc,
+                    user.pk, getattr(user, 'role', 'unknown'), activity_exc
                 )
                 recent_activity = []
-            
+
             return ServiceResult(
                 success=True,
                 data={
-                    'client': {
-                        'id': Organisation.id,
-                        'name': Organisation.name,
-                        'status': Organisation.status,
+                    'organisation': {
+                        'id': client.id,
+                        'name': client.name,
+                        'city': client.city,
+                        'state': client.state,
                     },
-                    'card_counts': counts,
-                    'counts': counts,  # Keep for backward compatibility
-                    'total_cards': total_cards,
-                    'group_count': group_count,
-                    'table_count': table_count,
-                    'staff_count': staff_count,
+                    'counts': {
+                        'tables': table_count,
+                        'groups': group_count,
+                        'staff': staff_count,
+                        'cards_total': total_cards,
+                        'cards_pending': counts['pending'],
+                        'cards_verified': counts['verified'],
+                        'cards_approved': counts['approved'],
+                        'cards_download': counts['download'],
+                    },
                     'recent_staff': recent_staff,
                     'recent_activity': recent_activity,
                 }
             )
             
         except Exception as e:
-            logger.exception(
-                'OrganisationDashboardService.get_dashboard_data failed for user_id=%s role=%s: %s',
-                user.pk, getattr(user, 'role', 'unknown'), str(e)
-            )
-            return cls._unexpected_error_result('get_dashboard_data', e)
+            logger.exception("OrganisationDashboardService.get_dashboard_data error: %s", e)
+            return ServiceResult(success=False, message=str(e))
     
     @classmethod
     def get_groups_with_counts(cls, user) -> ServiceResult:
-        """
-        Get all groups with card status counts for the client.
-        """
+        """Get tables with status counts."""
         try:
             client = OrganisationAccessService.get_organisation_for_user(user)
-            if not client:
-                return ServiceResult(success=False, message='Client profile not found')
+            if client is None:
+                return ServiceResult(success=False, message='Organisation not found')
 
-            marker = cls._scope_marker(user)
-            counts_version = cls._client_card_counts_version(client.id)
-            cache_key = cls._groups_counts_cache_key(user, client.id, marker, counts_version)
-            cached_groups = cache.get(cache_key)
-            if cached_groups is not None:
-                return ServiceResult(success=True, data={'groups': cached_groups})
+            marker = cls._staff_assignment_marker(user)
+            counts_version = CacheVersionService.get_version(
+                'client_dash_counts',
+                f'client:{client.id}',
+            )
+            cache_key = cls._group_counts_cache_key(user, client.id, marker, counts_version)
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return ServiceResult(success=True, data={'groups': cached_data})
 
+            from organisation.services import OrganisationAccessService
+            tables_qs = Table.objects.filter(organisation=client, is_active=True)
+            tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, base_qs=tables_qs)
             accessible_tables = list(
-                cls._get_accessible_tables_qs(user, client)
-                .select_related('group')
-                .only('id', 'name', 'is_active', 'fields', 'group_id', 'group__id', 'group__name')
+                tables_qs.only('id', 'name', 'is_active', 'fields')
             )
             if not accessible_tables:
                 cache.set(cache_key, [], cls.GROUP_COUNTS_CACHE_TTL)
                 return ServiceResult(success=True, data={'groups': []})
 
             table_ids = [table.id for table in accessible_tables]
-            group_ids = sorted({table.group_id for table in accessible_tables})
-
-            groups = Table.objects.filter(
-                client=client,
-                id__in=group_ids,
+            tables = Table.objects.filter(
+                organisation=client,
+                id__in=table_ids,
             ).only('id', 'name', 'is_active', 'created_at')
 
             table_card_counts = {}
@@ -596,7 +596,7 @@ class OrganisationDashboardService(BaseService):
                         )
 
                     table_card_counts[table.id] = sum(int(v or 0) for v in table_status_map.values())
-                    group_bucket = group_counts_map[table.group_id]
+                    group_bucket = group_counts_map[table.id]
                     for status, count in table_status_map.items():
                         group_bucket[status] = group_bucket.get(status, 0) + int(count or 0)
             else:
@@ -610,16 +610,16 @@ class OrganisationDashboardService(BaseService):
 
                 base_group_counts = IDCard.objects.filter(
                     table_id__in=table_ids
-                ).values('table__group_id', 'status').annotate(count=Count('id'))
+                ).values('table_id', 'status').annotate(count=Count('id'))
                 for row in base_group_counts:
-                    gid = row['table__group_id']
+                    gid = row['table_id']
                     status = row.get('status')
                     if status:
                         group_counts_map[gid][status] = int(row.get('count', 0) or 0)
 
             tables_by_group = defaultdict(list)
             for table in accessible_tables:
-                tables_by_group[table.group_id].append(table)
+                tables_by_group[table.id].append(table)
 
             groups_data = []
             for group in groups:

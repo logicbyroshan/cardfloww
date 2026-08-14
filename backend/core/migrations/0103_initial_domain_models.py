@@ -6,6 +6,60 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def sync_core_client_columns(apps, schema_editor):
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        existing = {col.name for col in connection.introspection.get_table_description(cursor, 'core_client')}
+        
+        column_defs = {
+            'user_id': "ALTER TABLE core_client ADD COLUMN user_id integer NULL REFERENCES core_user(id)",
+            'client_type': "ALTER TABLE core_client ADD COLUMN client_type varchar(50) DEFAULT 'school'",
+            'org_role': "ALTER TABLE core_client ADD COLUMN org_role varchar(50) DEFAULT 'organisation'",
+            'is_guest': "ALTER TABLE core_client ADD COLUMN is_guest bool DEFAULT 0",
+            'is_default': "ALTER TABLE core_client ADD COLUMN is_default bool DEFAULT 0",
+            'icon': "ALTER TABLE core_client ADD COLUMN icon varchar(100) DEFAULT 'fa-solid fa-building'",
+            'perm_organisation_list': "ALTER TABLE core_client ADD COLUMN perm_organisation_list bool DEFAULT 0",
+            'perm_idcard_client_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_client_list bool DEFAULT 0",
+            'perm_idcard_setting_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_setting_list bool DEFAULT 0",
+            'perm_idcard_setting_add': "ALTER TABLE core_client ADD COLUMN perm_idcard_setting_add bool DEFAULT 0",
+            'perm_idcard_setting_edit': "ALTER TABLE core_client ADD COLUMN perm_idcard_setting_edit bool DEFAULT 0",
+            'perm_idcard_setting_delete': "ALTER TABLE core_client ADD COLUMN perm_idcard_setting_delete bool DEFAULT 0",
+            'perm_idcard_setting_status': "ALTER TABLE core_client ADD COLUMN perm_idcard_setting_status bool DEFAULT 0",
+            'perm_idcard_pending_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_pending_list bool DEFAULT 0",
+            'perm_idcard_verified_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_verified_list bool DEFAULT 0",
+            'perm_idcard_pool_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_pool_list bool DEFAULT 0",
+            'perm_idcard_approved_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_approved_list bool DEFAULT 0",
+            'perm_idcard_download_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_download_list bool DEFAULT 0",
+            'perm_idcard_reprint_list': "ALTER TABLE core_client ADD COLUMN perm_idcard_reprint_list bool DEFAULT 0",
+            'perm_reprint_request_list': "ALTER TABLE core_client ADD COLUMN perm_reprint_request_list bool DEFAULT 0",
+            'perm_confirmed_list': "ALTER TABLE core_client ADD COLUMN perm_confirmed_list bool DEFAULT 0",
+            'perm_idcard_add': "ALTER TABLE core_client ADD COLUMN perm_idcard_add bool DEFAULT 0",
+            'perm_idcard_edit': "ALTER TABLE core_client ADD COLUMN perm_idcard_edit bool DEFAULT 0",
+            'perm_idcard_delete': "ALTER TABLE core_client ADD COLUMN perm_idcard_delete bool DEFAULT 0",
+            'perm_idcard_info': "ALTER TABLE core_client ADD COLUMN perm_idcard_info bool DEFAULT 0",
+            'perm_idcard_approve': "ALTER TABLE core_client ADD COLUMN perm_idcard_approve bool DEFAULT 0",
+            'perm_idcard_verify': "ALTER TABLE core_client ADD COLUMN perm_idcard_verify bool DEFAULT 0",
+            'perm_idcard_updated_at': "ALTER TABLE core_client ADD COLUMN perm_idcard_updated_at bool DEFAULT 0",
+            'perm_idcard_delete_from_pool': "ALTER TABLE core_client ADD COLUMN perm_idcard_delete_from_pool bool DEFAULT 0",
+            'perm_reupload_idcard_image': "ALTER TABLE core_client ADD COLUMN perm_reupload_idcard_image bool DEFAULT 0",
+        }
+
+        for col_name, sql in column_defs.items():
+            if col_name not in existing:
+                try:
+                    cursor.execute(sql)
+                except Exception:
+                    pass
+
+        tables = connection.introspection.table_names(cursor)
+        if 'core_idcardtable' in tables:
+            tbl_cols = {col.name.lower() for col in connection.introspection.get_table_description(cursor, 'core_idcardtable')}
+            if 'client_id' not in tbl_cols:
+                cursor.execute("ALTER TABLE core_idcardtable ADD COLUMN client_id integer NULL")
+            if 'organisation_id' not in tbl_cols:
+                cursor.execute("ALTER TABLE core_idcardtable ADD COLUMN organisation_id integer NULL")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -13,6 +67,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(sync_core_client_columns, reverse_code=migrations.RunPython.noop, atomic=False),
         # Use SeparateDatabaseAndState because the core_client table already exists
         # (it was created by the old Client model). We only need Django's migration
         # state to know about the new Organisation model name — no DDL needed.
@@ -22,20 +77,19 @@ class Migration(migrations.Migration):
                     name='Organisation',
                     fields=[
                         ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                        ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='organisation_profile', to=settings.AUTH_USER_MODEL)),
+                        ('user', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='organisation_profile', to=settings.AUTH_USER_MODEL)),
                         ('image_folder_uuid', models.UUIDField(default=uuid.uuid4, editable=False)),
                         ('image_folder_code', models.CharField(blank=True, max_length=10, null=True, unique=True)),
                         ('image_folder_suffix', models.CharField(blank=True, max_length=5, null=True)),
                         ('name', models.CharField(db_index=True, max_length=200)),
-                        ('org_type', models.CharField(choices=[('school', 'School'), ('college', 'College'), ('company', 'Company / Corporate'), ('other', 'Other')], db_index=True, default='school', help_text='Type of organisation: school, college, company, or other', max_length=20)),
+                        ('org_type', models.CharField(choices=[('school', 'School'), ('college', 'College'), ('company', 'Company / Corporate'), ('other', 'Other')], db_column='client_type', db_index=True, default='school', help_text='Type of organisation: school, college, company, or other', max_length=20)),
                         ('is_guest', models.BooleanField(db_index=True, default=False)),
                         ('is_default', models.BooleanField(default=False, help_text='System default organisation')),
-                        ('org_role', models.CharField(default='organisation', help_text='primary, organisation, or manager', max_length=50)),
                         ('icon', models.CharField(default='fa-solid fa-building', max_length=100)),
                         ('city', models.CharField(blank=True, max_length=100, null=True)),
                         ('state', models.CharField(blank=True, max_length=100, null=True)),
                         ('pincode', models.CharField(blank=True, max_length=10, null=True)),
-                        ('perm_organisation_list', models.BooleanField(default=False)),
+                        ('perm_organisation_list', models.BooleanField(db_column='perm_idcard_client_list', default=False)),
                         ('perm_idcard_setting_list', models.BooleanField(default=False)),
                         ('perm_idcard_setting_add', models.BooleanField(default=False)),
                         ('perm_idcard_setting_edit', models.BooleanField(default=False)),
@@ -82,16 +136,21 @@ class Migration(migrations.Migration):
                 # Table already exists as core_client — no DDL needed
             ],
         ),
-        migrations.RemoveField(
-            model_name='client',
-            name='user',
-        ),
-        migrations.RemoveField(
-            model_name='idcardgroup',
-            name='client',
-        ),
-        migrations.RemoveField(
-            model_name='idcard',
-            name='table',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RemoveField(
+                    model_name='client',
+                    name='user',
+                ),
+                migrations.RemoveField(
+                    model_name='idcardgroup',
+                    name='client',
+                ),
+                migrations.RemoveField(
+                    model_name='idcard',
+                    name='table',
+                ),
+            ],
+            database_operations=[],
         ),
     ]

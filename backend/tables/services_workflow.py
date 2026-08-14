@@ -580,7 +580,7 @@ class WorkflowService:
             from core.services.activity_service import ActivityService
             client_name = ''
             try:
-                client_name = card.table.group.client.name
+                client_name = card.table.organisation.name
             except Exception as exc:
                 logger.debug('WorkflowService transition client-name resolution failed: %s', exc)
             status_labels = dict(IDCard.STATUS_CHOICES)
@@ -607,7 +607,7 @@ class WorkflowService:
             from collections import defaultdict
             client_name = ''
             try:
-                client_name = table.group.client.name
+                client_name = table.organisation.name
             except Exception as exc:
                 logger.debug('WorkflowService bulk transition client-name resolution failed: %s', exc)
             if not card_status_pairs:

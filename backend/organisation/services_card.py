@@ -1042,7 +1042,7 @@ class OrganisationCardService(BaseService):
                     'status': card.status,
                     'status_display': card.get_status_display(),
                     'table_name': card.table.name,
-                    'group_name': card.table.group.name,
+                    'group_name': card.table.name,
                     'created_at': localtime(card.created_at).strftime('%d %b %Y, %H:%M'),
                     'updated_at': localtime(card.updated_at).strftime('%d %b %Y, %H:%M'),
                 }

@@ -24,8 +24,8 @@ def api_public_clients_list(request):
 
     # Subquery to aggregate card counts across all tables for each client
     card_count_subquery = IDCard.objects.filter(
-        table__group__client=OuterRef('pk')
-    ).values('table__group__client').annotate(
+        table__organisation=OuterRef('pk')
+    ).values('table__organisation').annotate(
         count=Count('id')
     ).values('count')
 

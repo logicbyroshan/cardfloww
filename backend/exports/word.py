@@ -147,8 +147,8 @@ class WordExporter(WordStylesMixin, WordTablesMixin, WordImagesMixin):
 
             # Determine institution name
             institution_name = "Institution"
-            if table.group and table.group.client:
-                institution_name = table.group.client.name
+            if getattr(table, 'organisation', None):
+                institution_name = table.organisation.name
 
             import tempfile
             import os
@@ -270,8 +270,8 @@ class WordExporter(WordStylesMixin, WordTablesMixin, WordImagesMixin):
 
             # Get institution name
             institution_name = "Institution"
-            if table.group and table.group.client:
-                institution_name = table.group.client.name
+            if getattr(table, 'organisation', None):
+                institution_name = table.organisation.name
             
             # Create document
             doc = Document()

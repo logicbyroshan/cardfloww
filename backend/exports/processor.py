@@ -153,7 +153,7 @@ def process_export_zip(task):
     task.update_progress(0, total_cards * len(image_fields))
     
     # Get client name for filename
-    client_name = table.group.client.name if table.group and table.group.client else ''
+    client_name = table.organisation.name if getattr(table, 'organisation', None) else ''
     clean_client = clean_filename(client_name) if client_name else ''
     clean_table = clean_filename(table.name)
     
@@ -383,7 +383,7 @@ def process_export_pdf(task):
         
         # Stream exporter response directly to disk.
         exports_dir = ensure_exports_directory()
-        client_name = table.group.client.name if table.group and table.group.client else ''
+        client_name = table.organisation.name if getattr(table, 'organisation', None) else ''
         filename = generate_export_filename(table.name, 'pdf', client_name=client_name, status=status_filter)
 
         pdf_path = os.path.join(exports_dir, filename)
@@ -530,7 +530,7 @@ def process_export_docx(task):
         
         # Stream exporter response directly to disk.
         exports_dir = ensure_exports_directory()
-        client_name = table.group.client.name if table.group and table.group.client else ''
+        client_name = table.organisation.name if getattr(table, 'organisation', None) else ''
         is_zip = result.filename.endswith('.zip') if result.filename else False
         extension = 'zip' if is_zip else ('doc' if doc_format == 'doc' else 'docx')
         filename = generate_export_filename(table.name, extension, client_name=client_name, status=status_filter)
@@ -666,7 +666,7 @@ def process_export_excel(task):
         
         # Stream exporter response directly to disk.
         exports_dir = ensure_exports_directory()
-        client_name = table.group.client.name if table.group and table.group.client else ''
+        client_name = table.organisation.name if getattr(table, 'organisation', None) else ''
         filename = generate_export_filename(table.name, 'xlsx', client_name=client_name, status=status_filter)
 
         excel_path = os.path.join(exports_dir, filename)

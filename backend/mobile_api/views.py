@@ -3999,8 +3999,8 @@ def api_dashboard_data(request):
                 
                 ordered_clients = list(clients_qs.annotate(
                     latest_approved=Max(
-                        'id_card_groups__tables__id_cards__updated_at',
-                        filter=Q(id_card_groups__tables__id_cards__status='approved')
+                        'tables__id_cards__updated_at',
+                        filter=Q(tables__id_cards__status='approved')
                     )
                 ).order_by(
                     F('latest_approved').desc(nulls_last=True),
@@ -4011,7 +4011,7 @@ def api_dashboard_data(request):
                 from collections import defaultdict
                 tables_by_client = defaultdict(list)
                 for t in tables_qs:
-                    client_id = getattr(t.group, 'client_id', None)
+                    client_id = getattr(t, 'organisation_id', None)
                     if client_id is not None:
                         tables_by_client[client_id].append(t)
                 
@@ -4026,13 +4026,13 @@ def api_dashboard_data(request):
                         tables_data.append({
                             'id': t.id,
                             'name': t.name,
-                            'group': t.group.name if t.group else '',
+                            'group': getattr(t, 'name', ''),
                             'captured': t_counts['captured'],
                             'uncaptured': t_counts['uncaptured'],
                         })
                     
                     clients_data.append({
-                        'id': Organisation.id,
+                        'id': client.id,
                         'name': getattr(client, 'business_name', client.name),
                         'captured': c_counts['captured'],
                         'uncaptured': c_counts['uncaptured'],
@@ -4054,7 +4054,7 @@ def api_dashboard_data(request):
             # --- Efficient Global Counts ---
             card_qs = IDCard.objects.all()
             if not PermissionService.is_super_admin(user):
-                card_qs = card_qs.filter(table__group__client_id__in=accessible_ids)
+                card_qs = card_qs.filter(table__organisation_id__in=accessible_ids)
             
             global_counts_agg = card_qs.aggregate(
                 total=Count('id', filter=Q(status__in=['pending', 'verified', 'approved', 'download'])),
@@ -4081,8 +4081,8 @@ def api_dashboard_data(request):
             # Order clients identically to the dashboard: latest approved cards first, then latest created.
             ordered_clients = list(clients_qs.annotate(
                 latest_approved=Max(
-                    'id_card_groups__tables__id_cards__updated_at',
-                    filter=Q(id_card_groups__tables__id_cards__status='approved')
+                    'tables__id_cards__updated_at',
+                    filter=Q(tables__id_cards__status='approved')
                 )
             ).order_by(
                 F('latest_approved').desc(nulls_last=True),

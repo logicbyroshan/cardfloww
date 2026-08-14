@@ -211,7 +211,7 @@ def _get_card_ids_from_request(request, table_id: int = None) -> Optional[List[i
             if not user or not getattr(user, 'is_authenticated', False):
                 logger.warning("Export fallback blocked for unauthenticated request on table %s", table_id)
                 return None
-            if not PermissionService.can_access_client(user, table.group.client_id):
+            if not PermissionService.can_access_client(user, table.organisation_id):
                 logger.warning("Export fallback blocked for unauthorized user %s on table %s", getattr(user, 'id', None), table_id)
                 return None
 
@@ -1561,8 +1561,8 @@ def api_download_all_cards(request, table_id: int) -> JsonResponse:
         
         # Get client name for filenames
         client_name = ''
-        if table.group and table.group.client:
-            client_name = table.group.client.name
+        if getattr(table, 'organisation', None):
+            client_name = table.organisation.name
         
         from .utils import clean_filename
         clean_client = clean_filename(client_name) if client_name else ''

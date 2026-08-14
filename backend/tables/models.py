@@ -65,6 +65,7 @@ class Table(models.Model):
         Organisation,
         on_delete=models.CASCADE,
         related_name='tables',
+        db_column='client_id',
     )
     name = models.CharField(max_length=255, db_index=True)
     description = models.TextField(blank=True, null=True)
@@ -87,6 +88,19 @@ class Table(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __init__(self, *args, **kwargs):
+        if 'client' in kwargs:
+            kwargs['organisation'] = kwargs.pop('client')
+        super().__init__(*args, **kwargs)
+
+    @property
+    def client(self):
+        return self.organisation
+
+    @client.setter
+    def client(self, value):
+        self.organisation = value
 
     # ── Field introspection helpers ──────────────────────────
 

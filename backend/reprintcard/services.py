@@ -109,7 +109,7 @@ class ReprintWorkflowService:
             client_name = ''
             table_name = ''
             try:
-                client_name = reprint_req.table.group.client.name
+                client_name = reprint_req.table.organisation.name
                 table_name = reprint_req.table.name
             except Exception:
                 pass
