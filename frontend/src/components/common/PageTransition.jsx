@@ -18,11 +18,15 @@ export default function PageTransition({ pageKey, children, fullHeight = false }
           opacity: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
           y: { duration: 0.32, ease: [0.16, 1, 0.3, 1] },
         }}
-        style={
-          fullHeight
-            ? { height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
-            : { flex: 1, minHeight: 0, width: '100%' }
-        }
+        style={{
+          flex: 1,
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
       >
         {children}
       </motion.div>

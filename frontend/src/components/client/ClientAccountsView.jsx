@@ -15,6 +15,7 @@ import {
   AlertCircle,
   ShieldCheck,
   Building,
+  X,
 } from 'lucide-react';
 import { clientApi } from '../../services/api';
 import { SkeletonTableRows } from '../common/Skeleton';

@@ -2844,17 +2844,31 @@ export default function IDCardActionsView({ tableId, initialStatus = 'pending', 
       /* ignore */
     }
 
-    // Fallback count from local storage
+    // Deduplicate local storage fallback without double counting
     const local = getLocalStorageCards();
-    local.forEach((card) => {
-      let s = card.status || 'pending';
-      if (s === 'download' || s === 'downloaded') s = 'printed';
-      if (s === 'pool') s = 'deleted';
-      if (s === 'reprint_pending' || s === 'reprinting') s = 'reprint';
-      if (s === 'reprint_request' || s === 'requested') s = 'request';
-      if (s === 'reprint_confirmed' || s === 'confirmed') s = 'confirm';
-      if (counts[s] !== undefined) counts[s]++;
-    });
+    if (local.length > 0) {
+      const cardMap = new Map();
+      local.forEach((card) => {
+        if (card && (card.id || card.roll_number || card.name)) {
+          const key = card.id || `${card.roll_number}_${card.name}`;
+          cardMap.set(key, card);
+        }
+      });
+      const uniqueLocal = Array.from(cardMap.values());
+      const localCounts = { pending: 0, verified: 0, approved: 0, printed: 0, deleted: 0, reprint: 0, request: 0, confirm: 0 };
+      uniqueLocal.forEach((card) => {
+        let s = card.status || 'pending';
+        if (s === 'download' || s === 'downloaded') s = 'printed';
+        if (s === 'pool') s = 'deleted';
+        if (s === 'reprint_pending' || s === 'reprinting') s = 'reprint';
+        if (s === 'reprint_request' || s === 'requested') s = 'request';
+        if (s === 'reprint_confirmed' || s === 'confirmed') s = 'confirm';
+        if (localCounts[s] !== undefined) localCounts[s]++;
+      });
+      Object.keys(counts).forEach((k) => {
+        counts[k] = Math.max(counts[k], localCounts[k]);
+      });
+    }
     setStatusCounts(counts);
   }, [tableId, getLocalStorageCards]);
 

@@ -184,7 +184,29 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState('super_admin');
   const [impersonatedUser, setImpersonatedUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const pathToTab = {
+        '/': 'dashboard',
+        '/dashboard': 'dashboard',
+        '/cards': 'cards',
+        '/reprints': 'reprints',
+        '/organisations': 'organisations',
+        '/clients': 'clients',
+        '/staff': 'staff',
+        '/assistants': 'assistants',
+        '/photographers': 'photographers',
+        '/panel': 'panel',
+        '/tutorial': 'tutorial',
+        '/settings': 'settings',
+        '/pro': 'pro',
+        '/profile': 'profile',
+      };
+      return pathToTab[path] || 'dashboard';
+    }
+    return 'dashboard';
+  });
   const [activeTableId, setActiveTableId] = useState(null); // set when navigating from cardflow → cards
   const [idcardActionsState, setIdcardActionsState] = useState(null); // { tableId, status }
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,55 +233,77 @@ export default function App() {
     }
   }, []);
 
-  // Sync clean, semantic role URLs in browser address bar (e.g. /org/prime-manager/dash, /org/assistant/dash)
+  // Sync clean, semantic role URLs in browser address bar and sync routes
   useEffect(() => {
-    if (bootState !== BOOT.AUTH) return;
-    const path = window.location.pathname;
-    if (path.includes('prime-manager')) {
-      setActiveTab('prime-manager-dashboard');
-    } else if (path.includes('assistant')) {
-      setActiveTab('assistant-dashboard');
-    } else if (path.includes('photographer')) {
-      setActiveTab('photographer-dashboard');
-    }
-  }, [bootState]);
-
-  // Initialize Lenis smooth scroll safely on .page-content container
-  useEffect(() => {
-    if (bootState !== BOOT.AUTH) return;
-    let lenis = null;
-    let rafId = null;
-
-    const timer = setTimeout(() => {
-      const container = document.querySelector('.page-content');
-      if (!container) return;
-      try {
-        lenis = new Lenis({
-          wrapper: container,
-          content: container,
-          duration: 1.1,
-          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-          orientation: 'vertical',
-          smoothWheel: true,
-          wheelMultiplier: 1,
-          touchMultiplier: 2,
-        });
-        function raf(time) {
-          lenis?.raf(time);
-          rafId = requestAnimationFrame(raf);
-        }
-        rafId = requestAnimationFrame(raf);
-      } catch (err) {
-        console.warn('Lenis init warning:', err);
+    if (bootState === BOOT.UNAUTH) {
+      if (window.location.pathname !== '/auth/login' && window.location.pathname !== '/login') {
+        window.history.replaceState({}, document.title, '/auth/login');
       }
-    }, 150);
+      return;
+    }
 
-    return () => {
-      clearTimeout(timer);
-      if (rafId) cancelAnimationFrame(rafId);
-      if (lenis) lenis.destroy();
+    if (bootState === BOOT.AUTH) {
+      const path = window.location.pathname;
+      if (path === '/auth/login' || path === '/login') {
+        window.history.replaceState({}, document.title, '/');
+      } else {
+        const routeMap = {
+          dashboard: '/',
+          cards: '/cards',
+          reprints: '/reprints',
+          organisations: '/organisations',
+          clients: '/clients',
+          staff: '/staff',
+          assistants: '/assistants',
+          photographers: '/photographers',
+          panel: '/panel',
+          tutorial: '/tutorial',
+          settings: '/settings',
+          pro: '/pro',
+          profile: '/profile',
+        };
+        const targetRoute = routeMap[activeTab] || '/';
+        if (path !== targetRoute && path !== '/dashboard' && !path.includes('table/')) {
+          window.history.pushState({}, document.title, targetRoute);
+        }
+      }
+    }
+  }, [bootState, activeTab]);
+
+  // Handle browser back/forward buttons (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const pathToTab = {
+        '/': 'dashboard',
+        '/dashboard': 'dashboard',
+        '/cards': 'cards',
+        '/reprints': 'reprints',
+        '/organisations': 'organisations',
+        '/clients': 'clients',
+        '/staff': 'staff',
+        '/assistants': 'assistants',
+        '/photographers': 'photographers',
+        '/panel': 'panel',
+        '/tutorial': 'tutorial',
+        '/settings': 'settings',
+        '/pro': 'pro',
+        '/profile': 'profile',
+      };
+      const matchedTab = pathToTab[path];
+      if (matchedTab) {
+        setActiveTab(matchedTab);
+      }
     };
-  }, [bootState]);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Native scroll handling for nested scroll containers
+  useEffect(() => {
+    // Native browser scrolling for nested tables and views
+    return () => {};
+  }, []);
 
   // Register global impersonation callback
   useEffect(() => {
@@ -315,14 +359,17 @@ export default function App() {
         } else {
           setImpersonatedUser(null);
         }
+        setBootState(BOOT.AUTH);
       } else {
         setCurrentUser(null);
         setImpersonatedUser(null);
+        setBootState(BOOT.UNAUTH);
       }
-      setBootState(BOOT.AUTH);
     } catch (err) {
       console.warn('Auth refresh error:', err);
-      setBootState(BOOT.AUTH);
+      setCurrentUser(null);
+      setImpersonatedUser(null);
+      setBootState(BOOT.UNAUTH);
     }
   }, []);
 
@@ -340,14 +387,12 @@ export default function App() {
 
     // Immediate fallback so app NEVER gets stuck loading
     const timer = setTimeout(() => {
-      setBootState((prev) => (prev === BOOT.LOADING ? BOOT.AUTH : prev));
-    }, 400);
+      setBootState((prev) => (prev === BOOT.LOADING ? BOOT.UNAUTH : prev));
+    }, 1200);
 
     // Prefetch CSRF cookie before auth check, then check auth state.
-    // GET /api/auth/csrf/ has @ensure_csrf_cookie so Django sets csrftoken
-    // cookie immediately. Without this, POST requests (login) fail with 403.
     fetch('/api/auth/csrf/', { credentials: 'include' })
-      .catch(() => {}) // Non-fatal: CSRF may already be set from a prior session
+      .catch(() => {})
       .finally(() => {
         refreshUser().finally(() => clearTimeout(timer));
       });
@@ -412,11 +457,12 @@ export default function App() {
   if (bootState === BOOT.UNAUTH) {
     return (
       <AuthFlowContainer
-        onLoginSuccess={(user) => {
+        onLoginSuccess={async (user) => {
           if (user) {
             setCurrentUser(user);
-            setUserRole(user.role || 'super_admin');
+            if (user.role) setUserRole(user.role);
           }
+          await refreshUser();
           setBootState(BOOT.AUTH);
           addToast('Welcome back!', 'success');
         }}
@@ -429,7 +475,10 @@ export default function App() {
     return <MobileAppFallback onForceDesktop={() => setForceDesktop(true)} />;
   }
 
-  // ── App Shell ───────────────────────────────────────────────────────────────
+  const normRole = String(userRole || '').toLowerCase();
+  const isAdminRole = normRole === 'super_admin' || normRole === 'pro_user' || normRole === 'admin';
+  const isOrgRole = normRole === 'prime_manager' || normRole === 'client' || normRole === 'guest_prime_manager';
+
   return (
     <div className="app-container">
       {/* Premium Ambient Preloader */}
@@ -580,7 +629,7 @@ export default function App() {
               {activeTab === 'reprints' && <ReprintCardsManagerView addToast={addToast} />}
 
               {/* ── Manage Organisation ── */}
-              {activeTab === 'organisations' && (
+              {activeTab === 'organisations' && (isAdminRole ? (
                 <ClientDirectoryView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -589,10 +638,12 @@ export default function App() {
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
                 />
-              )}
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Manage Client ── */}
-              {activeTab === 'clients' && (
+              {activeTab === 'clients' && (isAdminRole ? (
                 <ClientAccountsView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -601,10 +652,12 @@ export default function App() {
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
                 />
-              )}
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Manage Staff/Operator ── */}
-              {activeTab === 'staff' && (
+              {activeTab === 'staff' && (isAdminRole ? (
                 <StaffManagementView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -613,10 +666,12 @@ export default function App() {
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
                 />
-              )}
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Manage Assistants ── */}
-              {activeTab === 'assistants' && (
+              {activeTab === 'assistants' && ((isAdminRole || isOrgRole) ? (
                 <StaffManagementView
                   addToast={addToast}
                   staffType="assistant"
@@ -626,10 +681,12 @@ export default function App() {
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
                 />
-              )}
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Manage Photographers ── */}
-              {activeTab === 'photographers' && (
+              {activeTab === 'photographers' && (isAdminRole ? (
                 <StaffManagementView
                   addToast={addToast}
                   staffType="photographer"
@@ -639,13 +696,19 @@ export default function App() {
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
                 />
-              )}
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Table Settings (Merged into CardTableView) ── */}
               {activeTab === 'schema' && <CardTableView addToast={addToast} onNavigate={setActiveTab} />}
 
               {/* ── System/Control Panel ── */}
-              {activeTab === 'panel' && <ManagePanelView addToast={addToast} />}
+              {activeTab === 'panel' && (isAdminRole ? (
+                <ManagePanelView addToast={addToast} />
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
 
               {/* ── Tutorial ── */}
               {activeTab === 'tutorial' && <TutorialGuideView />}
@@ -656,7 +719,11 @@ export default function App() {
               )}
 
               {/* ── Manage Features / Pro Features ── */}
-              {activeTab === 'pro' && <ManageFeaturesView addToast={addToast} />}
+              {activeTab === 'pro' && (isAdminRole ? (
+                <ManageFeaturesView addToast={addToast} />
+              ) : (
+                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
+              ))}
             </PageTransition>
           </ErrorBoundary>
         </div>

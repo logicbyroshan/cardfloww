@@ -25,6 +25,7 @@ import {
   Minus,
 } from 'lucide-react';
 import WatermarkLogo from '../common/WatermarkLogo';
+import StatusChangeBadge from '../common/StatusChangeBadge';
 
 import { dashboardApi, schemaApi } from '../../services/api';
 
@@ -46,9 +47,13 @@ function WelcomeBanner({ currentUser }) {
     year: 'numeric',
   });
   const formattedTime = time.toLocaleTimeString('en-US', { hour12: false });
-  const userName = currentUser?.first_name
-    ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim()
-    : currentUser?.username || 'System Admin';
+  const userName =
+    currentUser?.org_name ||
+    currentUser?.name ||
+    currentUser?.full_name ||
+    (currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim() : null) ||
+    currentUser?.username ||
+    'User';
 
   return (
     <div
@@ -100,7 +105,7 @@ const STAT_CARDS_DEF = [
   { key: 'total_id_cards', growthKey: 'total', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
 ];
 
-function StatCardsRow({ stats, loading, onNavigate, userRole = 'super_admin' }) {
+function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'super_admin' }) {
   const isAdminOrOperator = [
     'super_admin',
     'pro_user',
@@ -121,15 +126,29 @@ function StatCardsRow({ stats, loading, onNavigate, userRole = 'super_admin' }) 
       }}
     >
       {STAT_CARDS_DEF.map(({ key, growthKey, label, defaultVal, bg, Icon }, idx) => {
-        const rawVal =
+        let clientSum = null;
+        if (Array.isArray(clients) && clients.length > 0) {
+          if (key === 'pending_cards') clientSum = clients.reduce((acc, c) => acc + (c.pending || 0), 0);
+          else if (key === 'verified_cards') clientSum = clients.reduce((acc, c) => acc + (c.verified || 0), 0);
+          else if (key === 'approved_cards') clientSum = clients.reduce((acc, c) => acc + (c.approved || 0), 0);
+          else if (key === 'printed_cards') clientSum = clients.reduce((acc, c) => acc + (c.downloaded || c.download || 0), 0);
+          else if (key === 'requested_cards') clientSum = clients.reduce((acc, c) => acc + (c.request || c.requested || 0), 0);
+          else if (key === 'deleted_cards') clientSum = clients.reduce((acc, c) => acc + (c.pool || c.deleted || 0), 0);
+          else if (key === 'total_id_cards') clientSum = clients.reduce((acc, c) => acc + (c.pending || 0) + (c.verified || 0) + (c.approved || 0) + (c.downloaded || c.download || 0) + (c.request || c.requested || 0) + (c.pool || c.deleted || 0), 0);
+        }
+
+        const apiVal =
           stats?.[key] ??
           stats?.[key.replace('_cards', '')] ??
           (key === 'printed_cards'
-            ? (stats?.download_cards ?? stats?.download)
+            ? (stats?.download_cards ?? stats?.downloaded ?? stats?.download)
             : key === 'deleted_cards'
               ? (stats?.pool_cards ?? stats?.pool)
-              : undefined);
-        const val = rawVal !== undefined ? rawVal : defaultVal;
+              : key === 'requested_cards'
+                ? (stats?.requested_cards ?? stats?.requested ?? stats?.reprint_count)
+                : undefined);
+
+        const val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientSum !== null ? clientSum : (apiVal ?? defaultVal));
         const statusKey = key.replace('_cards', '');
         const isLast = idx === STAT_CARDS_DEF.length - 1;
 
@@ -293,13 +312,24 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
   };
 
   const sortedRows = [...rows].sort((a, b) => {
-    if (!sortKey) return 0;
-    const valA = a[sortKey] ?? (sortKey === 'download' ? a.downloaded : 0) ?? 0;
-    const valB = b[sortKey] ?? (sortKey === 'download' ? b.downloaded : 0) ?? 0;
-    if (typeof valA === 'string') {
-      return sortDir === 'desc' ? valB.localeCompare(valA) : valA.localeCompare(valB);
+    if (sortKey) {
+      const valA = a[sortKey] ?? (sortKey === 'download' ? a.downloaded : 0) ?? 0;
+      const valB = b[sortKey] ?? (sortKey === 'download' ? b.downloaded : 0) ?? 0;
+      if (typeof valA === 'string') {
+        return sortDir === 'desc' ? valB.localeCompare(valA) : valA.localeCompare(valB);
+      }
+      return sortDir === 'desc' ? valB - valA : valA - valB;
     }
-    return sortDir === 'desc' ? valB - valA : valB - valB;
+    // Default sorting for "Recent Approved": Orgs with Approved/Printed cards first, then by total cards, then name
+    const appA = (a.approved || 0) + (a.downloaded || a.printed || 0);
+    const appB = (b.approved || 0) + (b.downloaded || b.printed || 0);
+    if (appB !== appA) return appB - appA;
+
+    const totA = (a.pending || 0) + (a.verified || 0) + appA;
+    const totB = (b.pending || 0) + (b.verified || 0) + appB;
+    if (totB !== totA) return totB - totA;
+
+    return (a.name || '').localeCompare(b.name || '');
   });
 
   const renderSortIcon = (key) => {
@@ -308,7 +338,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
   };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
       <WatermarkLogo />
 
       <table
@@ -328,7 +358,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 12px',
                 textAlign: 'left',
                 fontWeight: 700,
-                width: '46%',
+                width: '40%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -380,7 +410,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -398,7 +428,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -416,7 +446,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -434,7 +464,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -452,7 +482,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -470,7 +500,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '9%',
+                width: '10%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 cursor: 'pointer',
@@ -515,11 +545,14 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                     const cName = String(c.name || c.school_name || '').toLowerCase();
                     const tClientName = String(t.client_name || t.group?.client?.name || '').toLowerCase();
 
+                    const tName = String(t.name || '').toLowerCase();
+                    const cIdStr = String(cId).toLowerCase();
+
                     return (
-                      (cId && tClientId === cId) ||
+                      (cId && tClientId === cIdStr) ||
                       (cName && tClientName === cName) ||
                       (cName && tClientId === cName) ||
-                      allTables.length > 0
+                      (cIdStr && cIdStr.length >= 4 && tName.includes(cIdStr))
                     );
                   });
 
@@ -575,7 +608,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       color: '#0f172a',
                       fontSize: '12px',
                       borderRight: '1px solid #e2e8f0',
-                      width: '46%',
+                      width: '40%',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -623,230 +656,80 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                   </td>
                   {/* REDESIGNED STATUS COUNT BUTTON BADGES */}
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '9%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
                   >
-                    <button
+                    <StatusChangeBadge
+                      count={cPending}
+                      statusKey="pending"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'pending');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #fdba74',
-                        background: '#fff7ed',
-                        color: '#c2410c',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(234,88,12,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#ffedd5';
-                        e.currentTarget.style.borderColor = '#ea580c';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fff7ed';
-                        e.currentTarget.style.borderColor = '#fdba74';
-                      }}
-                    >
-                      {cPending}
-                    </button>
+                    />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '9%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
                   >
-                    <button
+                    <StatusChangeBadge
+                      count={cVerified}
+                      statusKey="verified"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'verified');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #6ee7b7',
-                        background: '#ecfdf5',
-                        color: '#047857',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(5,150,105,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#d1fae5';
-                        e.currentTarget.style.borderColor = '#059669';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#ecfdf5';
-                        e.currentTarget.style.borderColor = '#6ee7b7';
-                      }}
-                    >
-                      {cVerified}
-                    </button>
+                    />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '9%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
                   >
-                    <button
+                    <StatusChangeBadge
+                      count={cApproved}
+                      statusKey="approved"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'approved');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #93c5fd',
-                        background: '#eff6ff',
-                        color: '#1d4ed8',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(37,99,235,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#dbeafe';
-                        e.currentTarget.style.borderColor = '#2563eb';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#eff6ff';
-                        e.currentTarget.style.borderColor = '#93c5fd';
-                      }}
-                    >
-                      {cApproved}
-                    </button>
+                    />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '9%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
                   >
-                    <button
+                    <StatusChangeBadge
+                      count={cDownloaded}
+                      statusKey="printed"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'downloaded');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #cbd5e1',
-                        background: '#f8fafc',
-                        color: '#334155',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(71,85,105,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#f1f5f9';
-                        e.currentTarget.style.borderColor = '#475569';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#f8fafc';
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                      }}
-                    >
-                      {cDownloaded}
-                    </button>
+                    />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '9%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
                   >
-                    <button
+                    <StatusChangeBadge
+                      count={cRequest}
+                      statusKey="request"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'request');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #c4b5fd',
-                        background: '#f5f3ff',
-                        color: '#6d28d9',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(109,40,217,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#ede9fe';
-                        e.currentTarget.style.borderColor = '#7c3aed';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#f5f3ff';
-                        e.currentTarget.style.borderColor = '#c4b5fd';
-                      }}
-                    >
-                      {cRequest}
-                    </button>
+                    />
                   </td>
-                  <td style={{ padding: '6px 6px', textAlign: 'center', width: '9%' }}>
-                    <button
+                  <td style={{ padding: '6px 6px', textAlign: 'center', width: '10%' }}>
+                    <StatusChangeBadge
+                      count={cPool}
+                      statusKey="pool"
+                      entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBadgeClick(subTables[0] || c, 'pool');
                       }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '46px',
-                        height: '24px',
-                        padding: '0 8px',
-                        borderRadius: '4px',
-                        border: '1px solid #fca5a5',
-                        background: '#fef2f2',
-                        color: '#b91c1c',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                        boxShadow: '0 1px 2px rgba(220,38,38,0.08)',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#fee2e2';
-                        e.currentTarget.style.borderColor = '#dc2626';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fef2f2';
-                        e.currentTarget.style.borderColor = '#fca5a5';
-                      }}
-                    >
-                      {cPool}
-                    </button>
+                    />
                   </td>
                 </tr>
 
@@ -866,7 +749,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             fontSize: '12px',
                             fontWeight: 600,
                             borderRight: '1px solid #e2e8f0',
-                            width: '46%',
+                            width: '40%',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -898,197 +781,107 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '9%',
+                            width: '10%',
                           }}
                         >
-                          <button
+                          <StatusChangeBadge
+                            count={sc.pending}
+                            statusKey="pending"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'pending');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #fdba74',
-                              background: '#fff7ed',
-                              color: '#c2410c',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(234,88,12,0.08)',
-                            }}
-                          >
-                            {sc.pending}
-                          </button>
+                          />
                         </td>
                         <td
                           style={{
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '9%',
+                            width: '10%',
                           }}
                         >
-                          <button
+                          <StatusChangeBadge
+                            count={sc.verified}
+                            statusKey="verified"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'verified');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #6ee7b7',
-                              background: '#ecfdf5',
-                              color: '#047857',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(5,150,105,0.08)',
-                            }}
-                          >
-                            {sc.verified}
-                          </button>
+                          />
                         </td>
                         <td
                           style={{
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '9%',
+                            width: '10%',
                           }}
                         >
-                          <button
+                          <StatusChangeBadge
+                            count={sc.approved}
+                            statusKey="approved"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'approved');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #93c5fd',
-                              background: '#eff6ff',
-                              color: '#1d4ed8',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(37,99,235,0.08)',
-                            }}
-                          >
-                            {sc.approved}
-                          </button>
+                          />
                         </td>
                         <td
                           style={{
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '9%',
+                            width: '10%',
                           }}
                         >
-                          <button
+                          <StatusChangeBadge
+                            count={sc.download}
+                            statusKey="printed"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'downloaded');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #cbd5e1',
-                              background: '#f8fafc',
-                              color: '#334155',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(71,85,105,0.08)',
-                            }}
-                          >
-                            {sc.download}
-                          </button>
+                          />
                         </td>
                         <td
                           style={{
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '9%',
+                            width: '10%',
                           }}
                         >
-                          <button
+                          <StatusChangeBadge
+                            count={sc.request}
+                            statusKey="request"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'request');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #c4b5fd',
-                              background: '#f5f3ff',
-                              color: '#6d28d9',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(109,40,217,0.08)',
-                            }}
-                          >
-                            {sc.request}
-                          </button>
+                          />
                         </td>
-                        <td style={{ padding: '6px 6px', textAlign: 'center', width: '9%' }}>
-                          <button
+                        <td style={{ padding: '6px 6px', textAlign: 'center', width: '10%' }}>
+                          <StatusChangeBadge
+                            count={sc.pool}
+                            statusKey="pool"
+                            entityId={`table_${sub.id}`}
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleBadgeClick(sub, 'pool');
                             }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '46px',
-                              height: '24px',
-                              padding: '0 8px',
-                              borderRadius: '4px',
-                              border: '1px solid #fca5a5',
-                              background: '#fef2f2',
-                              color: '#dc2626',
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              cursor: 'pointer',
-                              fontFamily: 'var(--font-family)',
-                              boxShadow: '0 1px 2px rgba(220,38,38,0.08)',
-                            }}
-                          >
-                            {sc.pool}
-                          </button>
+                          />
                         </td>
                       </tr>
                     );
@@ -1148,7 +941,7 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
   };
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
         <thead style={{ position: 'sticky', top: 0, background: '#2d3748', color: '#fff', zIndex: 2 }}>
           <tr>
@@ -1157,7 +950,7 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                 padding: '7px 10px',
                 textAlign: 'left',
                 fontWeight: 700,
-                width: '60%',
+                width: '46%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #4a5568',
@@ -1166,11 +959,28 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
               CLIENT
             </th>
             <th
+              onClick={() => handleSort('reprint')}
+              style={{
+                padding: '7px 8px',
+                textAlign: 'center',
+                fontWeight: 700,
+                width: '18%',
+                fontSize: '11px',
+                letterSpacing: '0.04em',
+                borderRight: '1px solid #4a5568',
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              REPRINTING LIST{renderSortIcon('reprint')}
+            </th>
+            <th
               onClick={() => handleSort('reprint_pending')}
               style={{
                 padding: '7px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
+                width: '18%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #4a5568',
@@ -1186,6 +996,7 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                 padding: '7px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
+                width: '18%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 cursor: 'pointer',
@@ -1202,17 +1013,20 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
             const clientId = c.id || idx;
             const isExpanded = !!expandedRows[clientId];
 
-            const requestCount = c.reprint_pending ?? Math.floor((c.pending || 4) * 0.5);
-            const confirmedCount = c.reprint_confirmed ?? Math.floor((c.verified || 2) * 0.4);
+            const reprintingCount = c.reprint ?? c.reprinting ?? Math.floor((c.pending || 2) * 0.3);
+            const requestCount = c.reprint_pending ?? c.request ?? Math.floor((c.pending || 4) * 0.5);
+            const confirmedCount = c.reprint_confirmed ?? c.confirmed ?? Math.floor((c.verified || 2) * 0.4);
 
             const subTables = c.tables || [
               {
                 name: 'Class 1st to 5th',
+                reprinting: Math.floor(reprintingCount * 0.6),
                 requestList: Math.floor(requestCount * 0.6),
                 confirmed: Math.floor(confirmedCount * 0.6),
               },
               {
                 name: 'Class 6th to 10th',
+                reprinting: Math.ceil(reprintingCount * 0.4),
                 requestList: Math.ceil(requestCount * 0.4),
                 confirmed: Math.ceil(confirmedCount * 0.4),
               },
@@ -1236,6 +1050,7 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                       color: '#334155',
                       fontSize: '11px',
                       borderRight: '1px solid #e2e8f0',
+                      width: '46%',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1281,51 +1096,38 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                       </button>
                     </div>
                   </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                    <button
+                  <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '18%' }}>
+                    <StatusChangeBadge
+                      count={reprintingCount}
+                      statusKey="reprint"
+                      entityId={`reprint_client_${clientId}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onNavigate('reprints', { client: c.id, tab: 'reprinting' });
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: '6px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '18%' }}>
+                    <StatusChangeBadge
+                      count={requestCount}
+                      statusKey="request"
+                      entityId={`reprint_client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onNavigate('reprints', { client: c.id, tab: 'pending' });
                       }}
-                      style={{
-                        display: 'inline-block',
-                        minWidth: '42px',
-                        padding: '2px 6px',
-                        borderRadius: '2px',
-                        border: 'none',
-                        background: '#ffedd5',
-                        color: '#c2410c',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                      }}
-                    >
-                      {requestCount}
-                    </button>
+                    />
                   </td>
-                  <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                    <button
+                  <td style={{ padding: '6px 8px', textAlign: 'center', width: '18%' }}>
+                    <StatusChangeBadge
+                      count={confirmedCount}
+                      statusKey="confirmed"
+                      entityId={`reprint_client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onNavigate('reprints', { client: c.id, tab: 'confirmed' });
                       }}
-                      style={{
-                        display: 'inline-block',
-                        minWidth: '42px',
-                        padding: '2px 6px',
-                        borderRadius: '2px',
-                        border: 'none',
-                        background: '#d1fae5',
-                        color: '#047857',
-                        fontWeight: 700,
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-family)',
-                      }}
-                    >
-                      {confirmedCount}
-                    </button>
+                    />
                   </td>
                 </tr>
 
@@ -1343,6 +1145,7 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                           fontSize: '11px',
                           fontWeight: 500,
                           borderRight: '1px solid #e2e8f0',
+                          width: '46%',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1350,37 +1153,29 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
                           <span>{sub.name}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '3px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            minWidth: '36px',
-                            padding: '1px 5px',
-                            borderRadius: '2px',
-                            background: '#fff7ed',
-                            color: '#ea580c',
-                            fontWeight: 600,
-                            fontSize: '10px',
-                          }}
-                        >
-                          {sub.requestList}
-                        </span>
+                      <td style={{ padding: '3px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '18%' }}>
+                        <StatusChangeBadge
+                          count={sub.reprinting ?? Math.floor(reprintingCount * 0.5)}
+                          statusKey="reprint"
+                          entityId={`reprint_sub_${clientId}_${sIdx}`}
+                          size="small"
+                        />
                       </td>
-                      <td style={{ padding: '3px 8px', textAlign: 'center' }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            minWidth: '36px',
-                            padding: '1px 5px',
-                            borderRadius: '2px',
-                            background: '#ecfdf5',
-                            color: '#059669',
-                            fontWeight: 600,
-                            fontSize: '10px',
-                          }}
-                        >
-                          {sub.confirmed}
-                        </span>
+                      <td style={{ padding: '3px 8px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '18%' }}>
+                        <StatusChangeBadge
+                          count={sub.requestList ?? Math.floor(requestCount * 0.5)}
+                          statusKey="request"
+                          entityId={`reprint_sub_${clientId}_${sIdx}`}
+                          size="small"
+                        />
+                      </td>
+                      <td style={{ padding: '3px 8px', textAlign: 'center', width: '18%' }}>
+                        <StatusChangeBadge
+                          count={sub.confirmed ?? Math.floor(confirmedCount * 0.5)}
+                          statusKey="confirmed"
+                          entityId={`reprint_sub_${clientId}_${sIdx}`}
+                          size="small"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -1424,7 +1219,7 @@ function RecentActivityUpdatesTable({ activities = [], search, loading }) {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', background: '#fff' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px', background: '#fff' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.map((a, idx) => {
           const user = a.user || a.username || a.performed_by || 'System';
@@ -1506,7 +1301,165 @@ function RecentActivityUpdatesTable({ activities = [], search, loading }) {
 /* ─────────────────────────────────────────────────────────────────────────
    Right Side Stacked Panels — 3 EQUAL HEIGHT SECTION BOXES (33.33% EACH)
 ───────────────────────────────────────────────────────────────────────── */
-function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection, setActiveSection }) {
+function RightSidePanels({
+  stats,
+  clients = [],
+  reprintClients = [],
+  activities = [],
+  allTables = [],
+  onNavigate,
+  onOpenActionDrawer,
+  activeSection,
+  setActiveSection,
+  currentUser,
+  userRole = 'super_admin',
+}) {
+  const role = String(currentUser?.role || userRole || '').toLowerCase();
+  const isAdmin = role === 'super_admin' || role === 'pro_user' || role === 'admin';
+  const isOrg = role === 'prime_manager' || role === 'client' || role === 'guest_prime_manager';
+  const isAssistant = role === 'assistant' || role === 'client_staff';
+
+  const approvedCount = (clients || []).reduce((acc, c) => acc + (c.approved || 0), 0) || (stats?.approved ?? stats?.approved_cards ?? 0);
+  const requestedCount = (reprintClients.length ? reprintClients : clients || []).reduce((acc, c) => acc + (c.requested || c.request || c.reprint_pending || 0), 0) || (stats?.requested ?? stats?.reprint_count ?? 0);
+  const updatesCount = activities.length || (stats?.activity_count ?? 0);
+
+  // Dynamic quick actions per role
+  let quickActions = [];
+  if (isAdmin) {
+    quickActions = [
+      { label: 'Add New Organisation', action: () => onOpenActionDrawer('add-client'), Icon: Plus },
+      { label: 'Add New Operator', action: () => onNavigate('staff'), Icon: Shield },
+      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Users },
+      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
+    ];
+  } else if (isOrg) {
+    quickActions = [
+      { label: 'Manage Tables & Cards', action: () => onNavigate('cards'), Icon: CreditCard },
+      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Plus },
+      { label: 'Reprint Queue', action: () => onNavigate('reprints'), Icon: RefreshCw },
+      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
+    ];
+  } else {
+    quickActions = [
+      { label: 'Manage Cards', action: () => onNavigate('cards'), Icon: CreditCard },
+      { label: 'Reprint Requests', action: () => onNavigate('reprints'), Icon: RefreshCw },
+      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
+    ];
+  }
+
+  // Dynamic overview boxes per role
+  let overviewTitle = 'Users Overview';
+  let overviewBoxes = [];
+  if (isAdmin) {
+    overviewTitle = 'Users Overview';
+    overviewBoxes = [
+      {
+        label: 'Organisations',
+        count: stats?.total_organizations ?? stats?.total_clients ?? (clients?.length || 0),
+        action: () => onNavigate('organisations'),
+        Icon: Building,
+        color: '#0050d2',
+        bg: '#eff6ff',
+      },
+      {
+        label: 'Operators',
+        count: stats?.total_operators ?? stats?.guest_users ?? 0,
+        action: () => onNavigate('staff'),
+        Icon: Shield,
+        color: '#7c3aed',
+        bg: '#f5f3ff',
+      },
+      {
+        label: 'Assistants',
+        count: stats?.total_assistants ?? stats?.client_staff_count ?? 0,
+        action: () => onNavigate('assistants'),
+        Icon: Users,
+        color: '#d97706',
+        bg: '#fff7ed',
+      },
+      {
+        label: 'Photographers',
+        count: stats?.total_photographers ?? 0,
+        action: () => onNavigate('photographers'),
+        Icon: User,
+        color: '#059669',
+        bg: '#ecfdf5',
+      },
+    ];
+  } else if (isOrg) {
+    overviewTitle = 'Organisation Overview';
+    overviewBoxes = [
+      {
+        label: 'Tables',
+        count: allTables.length || (clients[0]?.tables?.length || 0),
+        action: () => onNavigate('cards'),
+        Icon: Layers,
+        color: '#0050d2',
+        bg: '#eff6ff',
+      },
+      {
+        label: 'Assistants',
+        count: stats?.total_assistants ?? stats?.client_staff_count ?? 1,
+        action: () => onNavigate('assistants'),
+        Icon: Users,
+        color: '#d97706',
+        bg: '#fff7ed',
+      },
+      {
+        label: 'Total Cards',
+        count: stats?.total_id_cards ?? stats?.total ?? 0,
+        action: () => onNavigate('cards'),
+        Icon: CreditCard,
+        color: '#059669',
+        bg: '#ecfdf5',
+      },
+      {
+        label: 'Pending',
+        count: stats?.pending_cards ?? stats?.pending ?? 0,
+        action: () => onNavigate('cards'),
+        Icon: Clock,
+        color: '#f59e0b',
+        bg: '#fffbeb',
+      },
+    ];
+  } else {
+    overviewTitle = 'My Overview';
+    overviewBoxes = [
+      {
+        label: 'Tables',
+        count: allTables.length || (clients[0]?.tables?.length || 0),
+        action: () => onNavigate('cards'),
+        Icon: Layers,
+        color: '#0050d2',
+        bg: '#eff6ff',
+      },
+      {
+        label: 'Total Cards',
+        count: stats?.total_id_cards ?? stats?.total ?? 0,
+        action: () => onNavigate('cards'),
+        Icon: CreditCard,
+        color: '#059669',
+        bg: '#ecfdf5',
+      },
+      {
+        label: 'Pending',
+        count: stats?.pending_cards ?? stats?.pending ?? 0,
+        action: () => onNavigate('cards'),
+        Icon: Clock,
+        color: '#f59e0b',
+        bg: '#fffbeb',
+      },
+      {
+        label: 'Verified',
+        count: stats?.verified_cards ?? stats?.verified ?? 0,
+        action: () => onNavigate('cards'),
+        Icon: CheckCircle2,
+        color: '#10b981',
+        bg: '#ecfdf5',
+      },
+    ];
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', background: '#fff', height: '100%', overflow: 'hidden' }}>
       {/* 1. Dashboard Sections — 1/3 Equal Height Section Box */}
@@ -1537,16 +1490,16 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
             {
               id: 'clients',
               label: 'Recent Approved',
-              count: stats?.approved_cards ?? stats?.total_organizations ?? 0,
+              count: approvedCount,
               Icon: ThumbsUp,
             },
             {
               id: 'reprints',
               label: 'Recent Requested',
-              count: stats?.requested_cards ?? stats?.reprint_count ?? 0,
+              count: requestedCount,
               Icon: Send,
             },
-            { id: 'updates', label: 'Recent Updates', count: stats?.activity_count ?? 0, Icon: Clock },
+            { id: 'updates', label: 'Recent Updates', count: updatesCount, Icon: Clock },
           ].map(({ id, label, count, Icon }) => {
             const isActive = activeSection === id;
             return (
@@ -1637,11 +1590,7 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
           <Plus size={13} /> Quick Actions
         </div>
         <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {[
-            { label: 'Add New Organisation', action: () => onOpenActionDrawer('add-client'), Icon: Plus },
-            { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Plus },
-            { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
-          ].map(({ label, action, Icon }) => (
+          {quickActions.map(({ label, action, Icon }) => (
             <button
               key={label}
               onClick={action}
@@ -1670,7 +1619,7 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
         </div>
       </div>
 
-      {/* 3. Users Overview — 1/3 Equal Height Section Box */}
+      {/* 3. Overview — 1/3 Equal Height Section Box */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div
           style={{
@@ -1689,7 +1638,7 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
             flexShrink: 0,
           }}
         >
-          <Shield size={13} /> Users Overview
+          <Shield size={13} /> {overviewTitle}
         </div>
 
         <div
@@ -1702,40 +1651,7 @@ function RightSidePanels({ stats, onNavigate, onOpenActionDrawer, activeSection,
             alignContent: 'start',
           }}
         >
-          {[
-            {
-              label: 'Organisations',
-              count: stats?.total_organizations ?? stats?.total_clients ?? 0,
-              action: () => onNavigate('organisations'),
-              Icon: Building,
-              color: '#0050d2',
-              bg: '#eff6ff',
-            },
-            {
-              label: 'Operators',
-              count: stats?.total_operators ?? stats?.guest_users ?? 0,
-              action: () => onNavigate('staff'),
-              Icon: Shield,
-              color: '#7c3aed',
-              bg: '#f5f3ff',
-            },
-            {
-              label: 'Assistants',
-              count: stats?.total_assistants ?? stats?.client_staff_count ?? 0,
-              action: () => onNavigate('assistants'),
-              Icon: Users,
-              color: '#d97706',
-              bg: '#fff7ed',
-            },
-            {
-              label: 'Photographers',
-              count: stats?.total_photographers ?? 0,
-              action: () => onNavigate('photographers'),
-              Icon: User,
-              color: '#059669',
-              bg: '#ecfdf5',
-            },
-          ].map(({ label, count, action, Icon, color, bg }) => (
+          {overviewBoxes.map(({ label, count, action, Icon, color, bg }) => (
             <button
               key={label}
               onClick={action}
@@ -1989,7 +1905,7 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
       style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}
     >
       {/* 1. 7 Stat Cards Row with Daily Growth Indicators */}
-      <StatCardsRow stats={stats} loading={loading} onNavigate={onNavigate} userRole={currentUser?.role || userRole} />
+      <StatCardsRow stats={stats} clients={clients} loading={loading} onNavigate={onNavigate} userRole={currentUser?.role || userRole} />
 
       {/* 3. Main Dashboard Body: Dynamic Left Section + Right Stacked Panels */}
       <div
@@ -2040,10 +1956,16 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
         {/* Right Side Panels */}
         <RightSidePanels
           stats={stats}
+          clients={clients}
+          reprintClients={reprintClients}
+          activities={activities}
+          allTables={allTables}
           onNavigate={onNavigate}
           onOpenActionDrawer={onOpenActionDrawer}
           activeSection={activeSection}
           setActiveSection={setActiveSection}
+          currentUser={currentUser}
+          userRole={currentUser?.role || userRole}
         />
       </div>
     </div>

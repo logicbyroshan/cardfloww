@@ -21,6 +21,34 @@ import { profileApi } from '../../services/api';
 
 const APP_VERSION = 'v4.19.01';
 
+const ROLE_LABELS = {
+  super_admin: 'Super Admin',
+  pro_user: 'Pro Admin',
+  admin: 'Super Admin',
+  prime_manager: 'Organisation (Prime Manager)',
+  client: 'Organisation (Prime Manager)',
+  guest_prime_manager: 'Guest Manager',
+  operator: 'Operator',
+  admin_staff: 'Operator',
+  manager: 'Manager',
+  assistant: 'Assistant',
+  client_staff: 'Assistant',
+  photographer: 'Photographer',
+};
+
+const ROLE_COLORS = {
+  super_admin: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+  pro_user: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+  prime_manager: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+  client: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+  guest_prime_manager: 'linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%)',
+  operator: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+  manager: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+  assistant: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+  client_staff: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
+  photographer: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+};
+
 export default function ProfileSettingsView({ addToast, currentUser }) {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -133,9 +161,14 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
     }
   };
 
+  const role = String(currentUser?.role || '').toLowerCase();
+  const isAdminUser = role === 'super_admin' || role === 'pro_user' || role === 'admin';
+  const roleLabel = ROLE_LABELS[role] || (currentUser?.role ? currentUser.role : 'User');
+  const roleBg = ROLE_COLORS[role] || 'linear-gradient(135deg, rgb(0, 80, 210) 0%, rgb(0, 180, 255) 100%)';
+
   const displayName = profileData.first_name
     ? `${profileData.first_name} ${profileData.last_name || ''}`.trim()
-    : profileData.username || 'System Admin';
+    : profileData.username || currentUser?.username || currentUser?.email || 'User';
 
   const initials = displayName.slice(0, 2).toUpperCase();
 
@@ -701,7 +734,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
             <span
               style={{
                 display: 'inline-block',
-                background: 'linear-gradient(135deg, rgb(0, 80, 210) 0%, #7c3aed 100%)',
+                background: roleBg,
                 color: '#ffffff',
                 padding: '3px 12px',
                 borderRadius: '6px',
@@ -712,7 +745,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
                 marginBottom: '12px',
               }}
             >
-              Administrator
+                {roleLabel}
             </span>
             <div
               style={{
@@ -769,7 +802,8 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
             </div>
           </div>
 
-          {/* Super Mode Action */}
+          {/* Super Mode Action — Admin only */}
+          {isAdminUser && (
           <div style={{ padding: '16px', marginTop: 'auto' }}>
             <button
               type="button"
@@ -802,6 +836,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
               )}
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>

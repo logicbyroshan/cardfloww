@@ -15,7 +15,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
     try {
       const res = await authApi.login(username, password);
       if (res.success || res.authenticated) {
-        onLoginSuccess?.(res.user || res);
+        onLoginSuccess?.(res.user || { username, role: res.role });
       } else {
         setError(res.message || 'Invalid credentials. Please check and try again.');
       }
@@ -24,11 +24,14 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         setError('Invalid credentials. Please try again.');
       } else {
         // Fallback for dev / offline mode: auto-detect role from username
-        const role = username.includes('manager')
-          ? 'client'
-          : username.includes('assistant')
-            ? 'assistant'
-            : 'super_admin';
+        const lowerU = (username || '').toLowerCase();
+        const role = lowerU.includes('org') || lowerU.includes('prime')
+          ? 'prime_manager'
+          : lowerU.includes('manager') || lowerU.includes('operator')
+            ? 'operator'
+            : lowerU.includes('assistant')
+              ? 'assistant'
+              : 'super_admin';
         onLoginSuccess?.({ username: username || 'admin', role });
       }
     } finally {

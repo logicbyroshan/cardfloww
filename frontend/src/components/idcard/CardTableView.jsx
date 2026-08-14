@@ -25,6 +25,7 @@ import {
   Pencil,
   Save,
 } from 'lucide-react';
+import StatusChangeBadge, { StatusChangeDeltaPill } from '../common/StatusChangeBadge';
 import WatermarkLogo from '../common/WatermarkLogo';
 import CreateXlsxModal from '../common/CreateXlsxModal';
 import CustomSelect from '../common/CustomSelect';
@@ -126,14 +127,28 @@ function getTableCounts(t) {
       (c) => String(c.table_id || c.table) === String(t.id) || String(c.table_name) === String(t.name)
     );
 
-    const allCards = [...listByTableId, ...listByTableName, ...filteredGlobalCards];
+    const cardMap = new Map();
+    [...listByTableId, ...listByTableName, ...filteredGlobalCards].forEach((card) => {
+      if (card && (card.id || card.roll_number || card.name)) {
+        const key = card.id || `${card.roll_number}_${card.name}`;
+        cardMap.set(key, card);
+      }
+    });
 
-    if (allCards.length > 0) {
-      pending += allCards.filter((c) => !c.status || c.status === 'pending').length;
-      verified += allCards.filter((c) => c.status === 'verified').length;
-      approved += allCards.filter((c) => c.status === 'approved').length;
-      download += allCards.filter((c) => c.status === 'download' || c.status === 'printed').length;
-      pool += allCards.filter((c) => c.status === 'pool' || c.status === 'deleted').length;
+    const uniqueLocalCards = Array.from(cardMap.values());
+
+    if (uniqueLocalCards.length > 0) {
+      const localP = uniqueLocalCards.filter((c) => !c.status || c.status === 'pending').length;
+      const localV = uniqueLocalCards.filter((c) => c.status === 'verified').length;
+      const localA = uniqueLocalCards.filter((c) => c.status === 'approved').length;
+      const localD = uniqueLocalCards.filter((c) => c.status === 'download' || c.status === 'printed').length;
+      const localPool = uniqueLocalCards.filter((c) => c.status === 'pool' || c.status === 'deleted').length;
+
+      pending = Math.max(pending, localP);
+      verified = Math.max(verified, localV);
+      approved = Math.max(approved, localA);
+      download = Math.max(download, localD);
+      pool = Math.max(pool, localPool);
     }
   } catch {
     /* ignore */
@@ -801,55 +816,164 @@ export default function CardTableView({ addToast, onNavigate }) {
                               e.stopPropagation();
                               openIDCardActions(t, 'pending');
                             }}
-                            style={statusBtnStyle('pending').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#c2410c',
+                              border: '1.5px solid #f97316',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(249,115,22,0.06)',
+                            }}
                             title="View Pending List"
                           >
-                            <span>Pending List</span>
-                            <span style={statusBtnStyle('pending').badge}>{counts.pending}</span>
+                            <span>Pending</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#c2410c' }}>{counts.pending}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.pending}
+                              statusKey="pending"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'verified');
                             }}
-                            style={statusBtnStyle('verified').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#047857',
+                              border: '1.5px solid #10b981',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(16,185,129,0.06)',
+                            }}
                             title="View Verified List"
                           >
-                            <span>Verified List</span>
-                            <span style={statusBtnStyle('verified').badge}>{counts.verified}</span>
+                            <span>Verified</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#047857' }}>{counts.verified}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.verified}
+                              statusKey="verified"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'approved');
                             }}
-                            style={statusBtnStyle('approved').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#1d4ed8',
+                              border: '1.5px solid #2563eb',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(37,99,235,0.06)',
+                            }}
                             title="View Approved List"
                           >
-                            <span>Approved List</span>
-                            <span style={statusBtnStyle('approved').badge}>{counts.approved}</span>
+                            <span>Approved</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#1d4ed8' }}>{counts.approved}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.approved}
+                              statusKey="approved"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'printed');
                             }}
-                            style={statusBtnStyle('printed').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#334155',
+                              border: '1.5px solid #64748b',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(100,116,139,0.06)',
+                            }}
                             title="View Printed List"
                           >
-                            <span>Printed List</span>
-                            <span style={statusBtnStyle('printed').badge}>{counts.download}</span>
+                            <span>Printed</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>{counts.download}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.download}
+                              statusKey="printed"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'deleted');
                             }}
-                            style={statusBtnStyle('deleted').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#b91c1c',
+                              border: '1.5px solid #ef4444',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(239,68,68,0.06)',
+                            }}
                             title="View Deleted List"
                           >
-                            <span>Deleted List</span>
-                            <span style={statusBtnStyle('deleted').badge}>{counts.pool}</span>
+                            <span>Deleted</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#b91c1c' }}>{counts.pool}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.pool}
+                              statusKey="pool"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
                         </div>
                       </td>
@@ -862,33 +986,98 @@ export default function CardTableView({ addToast, onNavigate }) {
                               e.stopPropagation();
                               openIDCardActions(t, 'reprint');
                             }}
-                            style={reprintBtnStyle('reprint').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#b45309',
+                              border: '1.5px solid #d97706',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(217,119,6,0.06)',
+                            }}
                             title="View Reprinting List"
                           >
-                            <span>Reprinting List</span>
-                            <span style={reprintBtnStyle('reprint').badge}>{counts.rpCnt}</span>
+                            <span>Reprinting</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#b45309' }}>{counts.rpCnt}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.rpCnt}
+                              statusKey="reprint"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'request');
                             }}
-                            style={reprintBtnStyle('request').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#6d28d9',
+                              border: '1.5px solid #8b5cf6',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(139,92,246,0.06)',
+                            }}
                             title="View Requested List"
                           >
-                            <span>Requested List</span>
-                            <span style={reprintBtnStyle('request').badge}>{counts.reqCnt}</span>
+                            <span>Requested</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#6d28d9' }}>{counts.reqCnt}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.reqCnt}
+                              statusKey="request"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               openIDCardActions(t, 'confirm');
                             }}
-                            style={reprintBtnStyle('confirm').btn}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#ffffff',
+                              color: '#047857',
+                              border: '1.5px solid #059669',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              boxShadow: '0 1px 2px rgba(5,150,105,0.06)',
+                            }}
                             title="View Confirmed List"
                           >
-                            <span>Confirmed List</span>
-                            <span style={reprintBtnStyle('confirm').badge}>{counts.confCnt}</span>
+                            <span>Confirmed</span>
+                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#047857' }}>{counts.confCnt}</span>
+                            <StatusChangeDeltaPill
+                              count={counts.confCnt}
+                              statusKey="confirmed"
+                              entityId={`table_${t.id}`}
+                              size="small"
+                            />
                           </button>
                         </div>
                       </td>

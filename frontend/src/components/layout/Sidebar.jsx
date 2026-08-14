@@ -37,51 +37,75 @@ const NAV_CONFIG = {
     {
       section: 'CardFlow Management',
       items: [
+        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
+        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
         { id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal },
         { id: 'pro', label: 'Manage Pro Features', Icon: Gem },
       ],
     },
   ],
-  operator: [
-    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+
+  prime_manager: [
+    { id: 'dashboard', label: 'Organisation Dashboard', Icon: Home },
     {
-      section: 'Client Management',
-      items: [{ id: 'organisations', label: 'Manage Organisation', Icon: Building }],
-    },
-    {
-      section: 'CardFlow Management',
-      items: [{ id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal }],
-    },
-  ],
-  client: [
-    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
-    {
-      section: 'Management',
-      items: [{ id: 'staff', label: 'Manage Assistant', Icon: UserCog }],
-    },
-    {
-      section: 'ID Card Management',
+      section: 'Organisation Management',
       items: [
-        { id: 'cards', label: 'Tables', Icon: ShieldCheck },
-        { id: 'settings', label: 'Settings', Icon: UserCog },
+        { id: 'assistants', label: 'Manage Assistant', Icon: UsersRound },
+        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
+        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+        { id: 'settings', label: 'Table Settings', Icon: SlidersHorizontal },
       ],
     },
   ],
-  assistant: [
-    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+
+  manager: [
+    { id: 'dashboard', label: 'Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [{ id: 'cards', label: 'Tables', Icon: ShieldCheck }],
+      items: [
+        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
+        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+      ],
     },
   ],
-  photographer: [
-    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+
+  operator: [
+    { id: 'dashboard', label: 'Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [{ id: 'cards', label: 'Tables', Icon: Camera }],
+      items: [
+        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
+        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+      ],
+    },
+  ],
+
+  assistant: [
+    { id: 'dashboard', label: 'Assistant Dashboard', Icon: Home },
+    {
+      section: 'ID Card Management',
+      items: [
+        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
+        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+      ],
+    },
+  ],
+
+  photographer: [
+    { id: 'dashboard', label: 'Photographer Dashboard', Icon: Home },
+    {
+      section: 'ID Card Management',
+      items: [{ id: 'cards', label: 'Manage Cards & Tables', Icon: Camera }],
     },
   ],
 };
+
+// Map role aliases cleanly
+NAV_CONFIG.client = NAV_CONFIG.prime_manager;
+NAV_CONFIG.guest_prime_manager = NAV_CONFIG.prime_manager;
+NAV_CONFIG.admin_staff = NAV_CONFIG.operator;
+NAV_CONFIG.client_staff = NAV_CONFIG.assistant;
+NAV_CONFIG.pro_user = NAV_CONFIG.super_admin;
 
 const ROLE_COLORS = {
   super_admin: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
@@ -103,13 +127,13 @@ const ROLE_LABELS = {
   pro_user: 'Pro Admin',
   operator: 'Operator',
   admin_staff: 'Operator',
-  prime_manager: 'Prime Manager',
+  prime_manager: 'Organisation (Prime Manager)',
   manager: 'Manager',
-  guest_prime_manager: 'Guest Prime Manager',
+  guest_prime_manager: 'Guest Manager',
   assistant: 'Assistant',
   photographer: 'Photographer',
   // Compat aliases
-  client: 'Prime Manager',
+  client: 'Organisation (Prime Manager)',
   client_staff: 'Assistant',
 };
 
@@ -117,21 +141,20 @@ const APP_VERSION = 'v5.0.0';
 
 export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_admin', currentUser, onLogout }) {
   const normalizedRole = String(userRole || '').toLowerCase();
-  const roleKey =
-    normalizedRole === 'admin' || normalizedRole === 'pro_user'
-      ? 'super_admin'
-      : normalizedRole === 'admin_staff'
-        ? 'operator'
-        : normalizedRole === 'client_staff'
-          ? 'assistant'
-          : normalizedRole === 'client'
-            ? 'prime_manager'
-            : normalizedRole === 'guest_user'
-              ? 'guest_prime_manager'
-              : NAV_CONFIG[normalizedRole]
-                ? normalizedRole
-                : 'super_admin';
-  const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.super_admin;
+  let roleKey = 'prime_manager';
+  if (normalizedRole === 'admin' || normalizedRole === 'super_admin' || normalizedRole === 'pro_user') {
+    roleKey = 'super_admin';
+  } else if (normalizedRole === 'prime_manager' || normalizedRole === 'client' || normalizedRole === 'guest_prime_manager') {
+    roleKey = 'prime_manager';
+  } else if (normalizedRole === 'operator' || normalizedRole === 'admin_staff' || normalizedRole === 'manager') {
+    roleKey = 'operator';
+  } else if (normalizedRole === 'assistant' || normalizedRole === 'client_staff') {
+    roleKey = 'assistant';
+  } else if (normalizedRole === 'photographer') {
+    roleKey = 'photographer';
+  }
+
+  const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.prime_manager;
 
   const displayName = currentUser?.first_name
     ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim()
@@ -158,21 +181,22 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
           boxSizing: 'border-box',
         }}
       >
-        <div className="logo-flare-container">
+        <div className="logo-flare-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <img
-            src="/static/cardflow_logo_brand.png"
+            src="/cardflow_logo_brand.png"
             onError={(e) => {
-              if (!e.target.src.endsWith('/cardflow_logo_brand.png')) {
-                e.target.src = '/cardflow_logo_brand.png';
+              if (!e.target.src.includes('/static/cardflow_logo_brand.png')) {
+                e.target.src = '/static/cardflow_logo_brand.png';
               }
             }}
             alt="CardFlow"
             style={{
-              maxHeight: '34px',
+              maxHeight: '36px',
               maxWidth: '160px',
-              width: '100%',
+              width: 'auto',
               objectFit: 'contain',
               background: 'transparent',
+              filter: 'drop-shadow(0 2px 10px rgba(0, 180, 255, 0.45)) brightness(1.15) contrast(1.05)',
             }}
           />
         </div>
