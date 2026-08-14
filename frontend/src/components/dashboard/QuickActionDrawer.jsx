@@ -204,30 +204,80 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     }
   }, [initialData]);
 
-  const [groupPerms, setGroupPerms] = useState({
-    add: true,
-    edit: true,
-    list: true,
-    delete: true,
-    status: true,
+  const [listPerms, setListPerms] = useState({
+    perm_idcard_pending_list: true,
+    perm_idcard_verified_list: true,
+    perm_idcard_approved_list: true,
+    perm_idcard_download_list: true,
+    perm_idcard_pool_list: true,
+    perm_reprint_request_list: true,
+    perm_confirmed_list: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true,
-    verified: true,
-    pool: true,
-    approved: true,
-    download: true,
+    perm_idcard_add: true,
+    perm_idcard_edit: true,
+    perm_idcard_delete: true,
+    perm_idcard_verify: true,
+    perm_idcard_approve: true,
+    perm_idcard_info: true,
+    perm_idcard_retrieve: true,
+    perm_idcard_delete_from_pool: true,
   });
 
-  const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true,
-    reprint_confirmed: true,
-    card_add: true,
-    card_edit: true,
-    card_verify: true,
-    card_approve: true,
+  const [bulkPerms, setBulkPerms] = useState({
+    perm_idcard_bulk_upload: true,
+    perm_idcard_bulk_download: true,
+    perm_idcard_download_image_rename_mode: true,
+    perm_idcard_download_image_generate_mode: true,
+    perm_reupload_idcard_image: true,
+    perm_idcard_bulk_reupload: true,
+    perm_idcard_upgrade_all: true,
   });
+
+  const [systemPerms, setSystemPerms] = useState({
+    perm_mobile_app: true,
+    perm_manage_assistant: true,
+    perm_set_temp_password: true,
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setListPerms({
+        perm_idcard_pending_list: initialData.perm_idcard_pending_list !== false,
+        perm_idcard_verified_list: initialData.perm_idcard_verified_list !== false,
+        perm_idcard_approved_list: initialData.perm_idcard_approved_list !== false,
+        perm_idcard_download_list: initialData.perm_idcard_download_list !== false,
+        perm_idcard_pool_list: initialData.perm_idcard_pool_list !== false,
+        perm_reprint_request_list: initialData.perm_reprint_request_list !== false,
+        perm_confirmed_list: initialData.perm_confirmed_list !== false,
+      });
+      setActionPerms({
+        perm_idcard_add: initialData.perm_idcard_add !== false,
+        perm_idcard_edit: initialData.perm_idcard_edit !== false,
+        perm_idcard_delete: initialData.perm_idcard_delete !== false,
+        perm_idcard_verify: initialData.perm_idcard_verify !== false,
+        perm_idcard_approve: initialData.perm_idcard_approve !== false,
+        perm_idcard_info: initialData.perm_idcard_info !== false,
+        perm_idcard_retrieve: initialData.perm_idcard_retrieve !== false,
+        perm_idcard_delete_from_pool: initialData.perm_idcard_delete_from_pool !== false,
+      });
+      setBulkPerms({
+        perm_idcard_bulk_upload: initialData.perm_idcard_bulk_upload !== false,
+        perm_idcard_bulk_download: initialData.perm_idcard_bulk_download !== false,
+        perm_idcard_download_image_rename_mode: initialData.perm_idcard_download_image_rename_mode !== false,
+        perm_idcard_download_image_generate_mode: initialData.perm_idcard_download_image_generate_mode !== false,
+        perm_reupload_idcard_image: initialData.perm_reupload_idcard_image !== false,
+        perm_idcard_bulk_reupload: initialData.perm_idcard_bulk_reupload !== false,
+        perm_idcard_upgrade_all: initialData.perm_idcard_upgrade_all !== false,
+      });
+      setSystemPerms({
+        perm_mobile_app: initialData.perm_mobile_app !== false,
+        perm_manage_assistant: initialData.perm_manage_assistant !== false && initialData.perm_manage_assistants !== false,
+        perm_set_temp_password: initialData.perm_set_temp_password !== false,
+      });
+    }
+  }, [initialData]);
 
   const [saving, setSaving] = useState(false);
 
@@ -238,6 +288,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
       return;
     }
     setSaving(true);
+    const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms, ...systemPerms };
     const payload = {
       name: formData.name,
       email: formData.email,
@@ -245,7 +296,8 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
       status: formData.status === 'true' ? 'active' : 'inactive',
       password_option: formData.passwordOption,
       password: formData.passwordOption === 'custom' ? formData.password : undefined,
-      permissions: { ...groupPerms, ...actionPerms, ...reprintPerms },
+      ...allPermissions,
+      permissions: allPermissions,
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
@@ -588,7 +640,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             <Shield size={15} /> User Permission
           </div>
 
-          {/* Category 1: GROUP SETTINGS */}
+          {/* Category 1: ID CARD LISTS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -603,12 +655,12 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Cog size={13} /> TABLE SETTINGS
+                <List size={13} /> ID CARD LIST PERMISSIONS
               </div>
               <ToggleSwitch
-                checked={Object.values(groupPerms).every(Boolean)}
+                checked={Object.values(listPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms((prev) => {
+                  setListPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -620,11 +672,13 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'add', label: 'Create Template' },
-                { key: 'edit', label: 'Edit Template' },
-                { key: 'list', label: 'View Template' },
-                { key: 'delete', label: 'Delete Template' },
-                { key: 'status', label: 'Status Template' },
+                { key: 'perm_idcard_pending_list', label: 'Pending List' },
+                { key: 'perm_idcard_verified_list', label: 'Verified List' },
+                { key: 'perm_idcard_approved_list', label: 'Approved List' },
+                { key: 'perm_idcard_download_list', label: 'Download List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
+                { key: 'perm_reprint_request_list', label: 'Reprint Request List' },
+                { key: 'perm_confirmed_list', label: 'Confirmed List' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -639,8 +693,8 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!listPerms[key]}
+                    onChange={(v) => setListPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -648,7 +702,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 2: ID CARD ACTION LIST */}
+          {/* Category 2: CARD ACTIONS & DATA ENTRY */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -663,7 +717,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <List size={13} /> ID CARD ACTION LIST
+                <CreditCard size={13} /> CARD ACTIONS & DATA ENTRY
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
@@ -680,11 +734,14 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'pending', label: 'Pending List' },
-                { key: 'verified', label: 'Verified List' },
-                { key: 'pool', label: 'Pool List' },
-                { key: 'approved', label: 'Approved List' },
-                { key: 'download', label: 'Download List' },
+                { key: 'perm_idcard_add', label: 'Add Single Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_delete', label: 'Delete Card' },
+                { key: 'perm_idcard_verify', label: 'Verify Card' },
+                { key: 'perm_idcard_approve', label: 'Approve Card' },
+                { key: 'perm_idcard_info', label: 'View Card Info' },
+                { key: 'perm_idcard_retrieve', label: 'Retrieve from Pool' },
+                { key: 'perm_idcard_delete_from_pool', label: 'Delete from Pool' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -708,8 +765,8 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 3: REPRINT & CARD ACTIONS */}
-          <div>
+          {/* Category 3: BULK TOOLS & PHOTO DOWNLOADS */}
+          <div style={{ marginBottom: '14px' }}>
             <div
               style={{
                 display: 'flex',
@@ -723,12 +780,12 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <RefreshCw size={13} /> REPRINT & CARD ACTIONS
+                <Download size={13} /> BULK ACTIONS & PHOTO DOWNLOADS
               </div>
               <ToggleSwitch
-                checked={Object.values(reprintPerms).every(Boolean)}
+                checked={Object.values(bulkPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms((prev) => {
+                  setBulkPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -740,12 +797,13 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'reprint_pending', label: 'Reprint Request' },
-                { key: 'reprint_confirmed', label: 'Confirmed List' },
-                { key: 'card_add', label: 'Add Card' },
-                { key: 'card_edit', label: 'Edit Card' },
-                { key: 'card_verify', label: 'Verify Card' },
-                { key: 'card_approve', label: 'Approve Card' },
+                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_idcard_bulk_download', label: 'Bulk Photo Download' },
+                { key: 'perm_idcard_download_image_rename_mode', label: 'Image Rename Download' },
+                { key: 'perm_idcard_download_image_generate_mode', label: 'Image Generate Download' },
+                { key: 'perm_reupload_idcard_image', label: 'Re-upload Card Image' },
+                { key: 'perm_idcard_bulk_reupload', label: 'Bulk Reupload' },
+                { key: 'perm_idcard_upgrade_all', label: 'Upgrade All Cards' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -760,8 +818,66 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!bulkPerms[key]}
+                    onChange={(v) => setBulkPerms((prev) => ({ ...prev, [key]: v }))}
+                  />
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Category 4: SYSTEM & APP ACCESS */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Smartphone size={13} /> SYSTEM & APP ACCESS
+              </div>
+              <ToggleSwitch
+                checked={Object.values(systemPerms).every(Boolean)}
+                onChange={(val) => {
+                  setSystemPerms((prev) => {
+                    const copy = { ...prev };
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
+                    return copy;
+                  });
+                }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              {[
+                { key: 'perm_mobile_app', label: 'Mobile App Access' },
+                { key: 'perm_manage_assistant', label: 'Manage Assistants' },
+                { key: 'perm_set_temp_password', label: 'Set Temporary Password' },
+              ].map(({ key, label }) => (
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <ToggleSwitch
+                    checked={!!systemPerms[key]}
+                    onChange={(v) => setSystemPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -860,30 +976,84 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     }
   }, [initialData]);
 
-  const [groupPerms, setGroupPerms] = useState({
-    add: true,
-    edit: true,
-    list: true,
-    delete: true,
-    status: true,
+  const [listPerms, setListPerms] = useState({
+    perm_idcard_pending_list: true,
+    perm_idcard_verified_list: true,
+    perm_idcard_approved_list: true,
+    perm_idcard_download_list: true,
+    perm_idcard_pool_list: true,
+    perm_reprint_request_list: true,
+    perm_confirmed_list: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true,
-    verified: true,
-    pool: true,
-    approved: true,
-    download: true,
+    perm_idcard_add: true,
+    perm_idcard_edit: true,
+    perm_idcard_delete: true,
+    perm_idcard_verify: true,
+    perm_idcard_approve: true,
+    perm_idcard_info: true,
+    perm_idcard_retrieve: true,
+    perm_idcard_delete_from_pool: true,
   });
 
-  const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true,
-    reprint_confirmed: true,
-    card_add: true,
-    card_edit: true,
-    card_verify: true,
-    card_approve: true,
+  const [bulkPerms, setBulkPerms] = useState({
+    perm_idcard_bulk_upload: true,
+    perm_idcard_bulk_download: true,
+    perm_idcard_download_image_rename_mode: true,
+    perm_idcard_download_image_generate_mode: true,
+    perm_reupload_idcard_image: true,
+    perm_idcard_bulk_reupload: true,
+    perm_idcard_upgrade_all: true,
   });
+
+  const [systemPerms, setSystemPerms] = useState({
+    perm_mobile_app: true,
+    perm_manage_assistant: true,
+    perm_manage_photographer_staff: true,
+    perm_manage_panel_backup: true,
+    perm_manage_panel_email: true,
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setListPerms({
+        perm_idcard_pending_list: initialData.perm_idcard_pending_list !== false,
+        perm_idcard_verified_list: initialData.perm_idcard_verified_list !== false,
+        perm_idcard_approved_list: initialData.perm_idcard_approved_list !== false,
+        perm_idcard_download_list: initialData.perm_idcard_download_list !== false,
+        perm_idcard_pool_list: initialData.perm_idcard_pool_list !== false,
+        perm_reprint_request_list: initialData.perm_reprint_request_list !== false,
+        perm_confirmed_list: initialData.perm_confirmed_list !== false,
+      });
+      setActionPerms({
+        perm_idcard_add: initialData.perm_idcard_add !== false,
+        perm_idcard_edit: initialData.perm_idcard_edit !== false,
+        perm_idcard_delete: initialData.perm_idcard_delete !== false,
+        perm_idcard_verify: initialData.perm_idcard_verify !== false,
+        perm_idcard_approve: initialData.perm_idcard_approve !== false,
+        perm_idcard_info: initialData.perm_idcard_info !== false,
+        perm_idcard_retrieve: initialData.perm_idcard_retrieve !== false,
+        perm_idcard_delete_from_pool: initialData.perm_idcard_delete_from_pool !== false,
+      });
+      setBulkPerms({
+        perm_idcard_bulk_upload: initialData.perm_idcard_bulk_upload !== false,
+        perm_idcard_bulk_download: initialData.perm_idcard_bulk_download !== false,
+        perm_idcard_download_image_rename_mode: initialData.perm_idcard_download_image_rename_mode !== false,
+        perm_idcard_download_image_generate_mode: initialData.perm_idcard_download_image_generate_mode !== false,
+        perm_reupload_idcard_image: initialData.perm_reupload_idcard_image !== false,
+        perm_idcard_bulk_reupload: initialData.perm_idcard_bulk_reupload !== false,
+        perm_idcard_upgrade_all: initialData.perm_idcard_upgrade_all !== false,
+      });
+      setSystemPerms({
+        perm_mobile_app: initialData.perm_mobile_app !== false,
+        perm_manage_assistant: initialData.perm_manage_assistant !== false && initialData.perm_manage_assistants !== false,
+        perm_manage_photographer_staff: initialData.perm_manage_photographer_staff !== false,
+        perm_manage_panel_backup: initialData.perm_manage_panel_backup !== false,
+        perm_manage_panel_email: initialData.perm_manage_panel_email !== false,
+      });
+    }
+  }, [initialData]);
 
   const [saving, setSaving] = useState(false);
 
@@ -894,6 +1064,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       return;
     }
     setSaving(true);
+    const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms, ...systemPerms };
     const payload = {
       name: operatorName,
       email,
@@ -901,6 +1072,8 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       status: status === 'true',
       password_option: passwordOption,
       password: passwordOption === 'custom' ? password : phone || '12345678',
+      ...allPermissions,
+      permissions: allPermissions,
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
@@ -1210,7 +1383,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             <Shield size={15} /> Operator Permissions
           </div>
 
-          {/* Category 1: GROUP SETTINGS */}
+          {/* Category 1: ID CARD LISTS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -1225,12 +1398,12 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Cog size={13} /> TABLE SETTINGS
+                <List size={13} /> ID CARD LIST PERMISSIONS
               </div>
               <ToggleSwitch
-                checked={Object.values(groupPerms).every(Boolean)}
+                checked={Object.values(listPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms((prev) => {
+                  setListPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -1242,11 +1415,13 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'add', label: 'Create Template' },
-                { key: 'edit', label: 'Edit Template' },
-                { key: 'list', label: 'View Template' },
-                { key: 'delete', label: 'Delete Template' },
-                { key: 'status', label: 'Status Template' },
+                { key: 'perm_idcard_pending_list', label: 'Pending List' },
+                { key: 'perm_idcard_verified_list', label: 'Verified List' },
+                { key: 'perm_idcard_approved_list', label: 'Approved List' },
+                { key: 'perm_idcard_download_list', label: 'Download List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
+                { key: 'perm_reprint_request_list', label: 'Reprint Request List' },
+                { key: 'perm_confirmed_list', label: 'Confirmed List' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -1261,8 +1436,8 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!listPerms[key]}
+                    onChange={(v) => setListPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -1270,7 +1445,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 2: ID CARD ACTION LIST */}
+          {/* Category 2: CARD ACTIONS & DATA ENTRY */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -1285,7 +1460,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <List size={13} /> ID CARD ACTION LIST
+                <CreditCard size={13} /> CARD ACTIONS & DATA ENTRY
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
@@ -1302,11 +1477,14 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'pending', label: 'Pending List' },
-                { key: 'verified', label: 'Verified List' },
-                { key: 'pool', label: 'Pool List' },
-                { key: 'approved', label: 'Approved List' },
-                { key: 'download', label: 'Download List' },
+                { key: 'perm_idcard_add', label: 'Add Single Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_delete', label: 'Delete Card' },
+                { key: 'perm_idcard_verify', label: 'Verify Card' },
+                { key: 'perm_idcard_approve', label: 'Approve Card' },
+                { key: 'perm_idcard_info', label: 'View Card Info' },
+                { key: 'perm_idcard_retrieve', label: 'Retrieve from Pool' },
+                { key: 'perm_idcard_delete_from_pool', label: 'Delete from Pool' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -1330,8 +1508,8 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 3: REPRINT & CARD ACTIONS */}
-          <div>
+          {/* Category 3: BULK TOOLS & PHOTO DOWNLOADS */}
+          <div style={{ marginBottom: '14px' }}>
             <div
               style={{
                 display: 'flex',
@@ -1345,12 +1523,12 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <RefreshCw size={13} /> REPRINT & CARD ACTIONS
+                <Download size={13} /> BULK ACTIONS & PHOTO DOWNLOADS
               </div>
               <ToggleSwitch
-                checked={Object.values(reprintPerms).every(Boolean)}
+                checked={Object.values(bulkPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms((prev) => {
+                  setBulkPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -1362,12 +1540,13 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'reprint_pending', label: 'Reprint Request' },
-                { key: 'reprint_confirmed', label: 'Confirmed List' },
-                { key: 'card_add', label: 'Add Card' },
-                { key: 'card_edit', label: 'Edit Card' },
-                { key: 'card_verify', label: 'Verify Card' },
-                { key: 'card_approve', label: 'Approve Card' },
+                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_idcard_bulk_download', label: 'Bulk Photo Download' },
+                { key: 'perm_idcard_download_image_rename_mode', label: 'Image Rename Download' },
+                { key: 'perm_idcard_download_image_generate_mode', label: 'Image Generate Download' },
+                { key: 'perm_reupload_idcard_image', label: 'Re-upload Card Image' },
+                { key: 'perm_idcard_bulk_reupload', label: 'Bulk Reupload' },
+                { key: 'perm_idcard_upgrade_all', label: 'Upgrade All Cards' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -1382,8 +1561,68 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!bulkPerms[key]}
+                    onChange={(v) => setBulkPerms((prev) => ({ ...prev, [key]: v }))}
+                  />
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Category 4: ADMIN & PANEL MANAGEMENT */}
+          <div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '11px',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                letterSpacing: '0.04em',
+                marginBottom: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Shield size={13} /> ADMIN & PANEL MANAGEMENT
+              </div>
+              <ToggleSwitch
+                checked={Object.values(systemPerms).every(Boolean)}
+                onChange={(val) => {
+                  setSystemPerms((prev) => {
+                    const copy = { ...prev };
+                    Object.keys(copy).forEach((k) => {
+                      copy[k] = val;
+                    });
+                    return copy;
+                  });
+                }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              {[
+                { key: 'perm_mobile_app', label: 'Mobile App Access' },
+                { key: 'perm_manage_assistant', label: 'Manage Assistants' },
+                { key: 'perm_manage_photographer_staff', label: 'Manage Photographer' },
+                { key: 'perm_manage_panel_backup', label: 'Database Backup' },
+                { key: 'perm_manage_panel_email', label: 'Email Settings' },
+              ].map(({ key, label }) => (
+                <div
+                  key={key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 12px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                  }}
+                >
+                  <ToggleSwitch
+                    checked={!!systemPerms[key]}
+                    onChange={(v) => setSystemPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -2194,30 +2433,43 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
     }
   }, [initialData]);
 
-  const [groupPerms, setGroupPerms] = useState({
-    add: true,
-    edit: true,
-    list: true,
-    delete: true,
-    status: true,
+  const [listPerms, setListPerms] = useState({
+    perm_idcard_pending_list: true,
+    perm_idcard_verified_list: true,
+    perm_idcard_pool_list: true,
   });
 
   const [actionPerms, setActionPerms] = useState({
-    pending: true,
-    verified: true,
-    pool: true,
-    approved: true,
-    download: true,
+    perm_idcard_add: true,
+    perm_idcard_edit: true,
+    perm_idcard_verify: true,
+    perm_idcard_info: true,
   });
 
-  const [reprintPerms, setReprintPerms] = useState({
-    reprint_pending: true,
-    reprint_confirmed: true,
-    card_add: true,
-    card_edit: true,
-    card_verify: true,
-    card_approve: true,
+  const [bulkPerms, setBulkPerms] = useState({
+    perm_idcard_bulk_upload: true,
+    perm_mobile_app: true,
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setListPerms({
+        perm_idcard_pending_list: initialData.perm_idcard_pending_list !== false,
+        perm_idcard_verified_list: initialData.perm_idcard_verified_list !== false,
+        perm_idcard_pool_list: initialData.perm_idcard_pool_list !== false,
+      });
+      setActionPerms({
+        perm_idcard_add: initialData.perm_idcard_add !== false,
+        perm_idcard_edit: initialData.perm_idcard_edit !== false,
+        perm_idcard_verify: initialData.perm_idcard_verify !== false,
+        perm_idcard_info: initialData.perm_idcard_info !== false,
+      });
+      setBulkPerms({
+        perm_idcard_bulk_upload: initialData.perm_idcard_bulk_upload !== false,
+        perm_mobile_app: initialData.perm_mobile_app !== false,
+      });
+    }
+  }, [initialData]);
 
   const [allClients, setAllClients] = useState([]);
 
@@ -2259,6 +2511,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
       return;
     }
     setSaving(true);
+    const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms };
     const payload = {
       name: assistantName,
       email,
@@ -2267,6 +2520,8 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
       client: selectedClient || undefined,
       password_option: passwordOption,
       password: passwordOption === 'custom' ? password : phone || '12345678',
+      ...allPermissions,
+      permissions: allPermissions,
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
@@ -2622,6 +2877,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
           </div>
 
           {/* Category 1: GROUP SETTINGS */}
+          {/* Category 1: ID CARD LISTS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -2636,12 +2892,12 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Cog size={13} /> TABLE SETTINGS
+                <List size={13} /> ID CARD LIST ACCESS
               </div>
               <ToggleSwitch
-                checked={Object.values(groupPerms).every(Boolean)}
+                checked={Object.values(listPerms).every(Boolean)}
                 onChange={(val) => {
-                  setGroupPerms((prev) => {
+                  setListPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -2653,11 +2909,9 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'add', label: 'Create Template' },
-                { key: 'edit', label: 'Edit Template' },
-                { key: 'list', label: 'View Template' },
-                { key: 'delete', label: 'Delete Template' },
-                { key: 'status', label: 'Status Template' },
+                { key: 'perm_idcard_pending_list', label: 'Pending List' },
+                { key: 'perm_idcard_verified_list', label: 'Verified List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -2672,8 +2926,8 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!groupPerms[key]}
-                    onChange={(v) => setGroupPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!listPerms[key]}
+                    onChange={(v) => setListPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
@@ -2681,7 +2935,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 2: ID CARD ACTION LIST */}
+          {/* Category 2: CARD ACTIONS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -2696,7 +2950,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <List size={13} /> ID CARD ACTION LIST
+                <CreditCard size={13} /> CARD ACTIONS & DATA ENTRY
               </div>
               <ToggleSwitch
                 checked={Object.values(actionPerms).every(Boolean)}
@@ -2713,11 +2967,10 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'pending', label: 'Pending List' },
-                { key: 'verified', label: 'Verified List' },
-                { key: 'pool', label: 'Pool List' },
-                { key: 'approved', label: 'Approved List' },
-                { key: 'download', label: 'Download List' },
+                { key: 'perm_idcard_add', label: 'Add Single Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_verify', label: 'Verify Card' },
+                { key: 'perm_idcard_info', label: 'View Card Info' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -2741,7 +2994,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 3: REPRINT & CARD ACTIONS */}
+          {/* Category 3: BULK TOOLS & MOBILE ACCESS */}
           <div>
             <div
               style={{
@@ -2756,12 +3009,12 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <RefreshCw size={13} /> REPRINT & CARD ACTIONS
+                <Smartphone size={13} /> BULK TOOLS & MOBILE ACCESS
               </div>
               <ToggleSwitch
-                checked={Object.values(reprintPerms).every(Boolean)}
+                checked={Object.values(bulkPerms).every(Boolean)}
                 onChange={(val) => {
-                  setReprintPerms((prev) => {
+                  setBulkPerms((prev) => {
                     const copy = { ...prev };
                     Object.keys(copy).forEach((k) => {
                       copy[k] = val;
@@ -2773,12 +3026,8 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'reprint_pending', label: 'Reprint Request' },
-                { key: 'reprint_confirmed', label: 'Confirmed List' },
-                { key: 'card_add', label: 'Add Card' },
-                { key: 'card_edit', label: 'Edit Card' },
-                { key: 'card_verify', label: 'Verify Card' },
-                { key: 'card_approve', label: 'Approve Card' },
+                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_mobile_app', label: 'Mobile App Access' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -2793,8 +3042,8 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                   }}
                 >
                   <ToggleSwitch
-                    checked={!!reprintPerms[key]}
-                    onChange={(v) => setReprintPerms((prev) => ({ ...prev, [key]: v }))}
+                    checked={!!bulkPerms[key]}
+                    onChange={(v) => setBulkPerms((prev) => ({ ...prev, [key]: v }))}
                   />
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>{label}</span>
                 </div>
