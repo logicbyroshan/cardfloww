@@ -896,6 +896,191 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Recent Tables Updates Table (For Organisation Prime Manager & Assistant)
+───────────────────────────────────────────────────────────────────────── */
+function RecentTablesUpdatesTable({ tables = [], loading, onNavigate, search, setSearch, userRole, currentUser }) {
+  const isAssistant = String(userRole || currentUser?.role || '').toLowerCase() === 'assistant';
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState('desc');
+
+  const rows = (tables || []).filter(
+    (t) => !search || (t.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleSort = (key) => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir('desc');
+    } else if (sortDir === 'desc') {
+      setSortDir('asc');
+    } else {
+      setSortKey(null);
+      setSortDir('desc');
+    }
+  };
+
+  const sortedRows = [...rows].sort((a, b) => {
+    const countsA = getTableCounts(a);
+    const countsB = getTableCounts(b);
+    if (sortKey) {
+      const valA = countsA[sortKey] ?? 0;
+      const valB = countsB[sortKey] ?? 0;
+      return sortDir === 'desc' ? valB - valA : valA - valB;
+    }
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  const renderSortIcon = (key) => {
+    if (sortKey !== key) return ' ⇕';
+    return sortDir === 'desc' ? ' ⬇' : ' ⬆';
+  };
+
+  const handleBadgeClick = (table, statusKey) => {
+    const targetStatus = statusKey === 'deleted' || statusKey === 'pool' ? 'deleted' : statusKey === 'download' ? 'printed' : statusKey;
+    onNavigate('cards', { tableId: table.id, status: targetStatus });
+  };
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+      <WatermarkLogo />
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '12px',
+          position: 'relative',
+          zIndex: 1,
+          background: 'transparent',
+        }}
+      >
+        <thead style={{ position: 'sticky', top: 0, background: '#1e293b', color: '#ffffff', zIndex: 2 }}>
+          <tr style={{ height: '38px' }}>
+            <th
+              style={{
+                padding: '0 12px',
+                textAlign: 'left',
+                fontWeight: 700,
+                width: isAssistant ? '40%' : '30%',
+                fontSize: '11px',
+                letterSpacing: '0.04em',
+                borderRight: '1px solid #334155',
+                height: '38px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                <span style={{ color: '#ffffff', fontWeight: 700 }}>TABLE NAME</span>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '180px' }}>
+                  <Search size={11} style={{ position: 'absolute', left: '7px', color: '#94a3b8', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search table..."
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: '100%',
+                      height: '24px',
+                      paddingLeft: '24px',
+                      paddingRight: '8px',
+                      fontSize: '10px',
+                      fontWeight: 500,
+                      borderRadius: '4px',
+                      border: '1px solid #475569',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+            </th>
+            <th onClick={() => handleSort('pending')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+              PENDING{renderSortIcon('pending')}
+            </th>
+            <th onClick={() => handleSort('verified')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+              VERIFIED{renderSortIcon('verified')}
+            </th>
+            {!isAssistant && (
+              <>
+                <th onClick={() => handleSort('approved')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                  APPROVED{renderSortIcon('approved')}
+                </th>
+                <th onClick={() => handleSort('download')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                  PRINTED{renderSortIcon('download')}
+                </th>
+                <th onClick={() => handleSort('request')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                  REQUESTED{renderSortIcon('request')}
+                </th>
+              </>
+            )}
+            <th onClick={() => handleSort('pool')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+              DELETED{renderSortIcon('pool')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedRows.length === 0 ? (
+            <tr>
+              <td colSpan={isAssistant ? 4 : 7} style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                No tables found in this organisation.
+              </td>
+            </tr>
+          ) : (
+            sortedRows.map((t, idx) => {
+              const counts = getTableCounts(t);
+              return (
+                <tr
+                  key={t.id || idx}
+                  onClick={() => onNavigate('cards', { tableId: t.id, status: 'pending' })}
+                  style={{
+                    borderBottom: '1px solid #e2e8f0',
+                    background: idx % 2 === 0 ? '#fff' : '#fafafa',
+                    cursor: 'pointer',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafafa')}
+                >
+                  <td style={{ padding: '8px 12px', borderRight: '1px solid #e2e8f0', fontWeight: 600, color: '#1e293b' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Layers size={14} style={{ color: '#2563eb' }} />
+                      <span style={{ fontSize: '12px', fontWeight: 700 }}>{t.name}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                    <StatusChangeBadge count={counts.pending} statusKey="pending" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'pending'); }} />
+                  </td>
+                  <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                    <StatusChangeBadge count={counts.verified} statusKey="verified" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'verified'); }} />
+                  </td>
+                  {!isAssistant && (
+                    <>
+                      <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                        <StatusChangeBadge count={counts.approved} statusKey="approved" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'approved'); }} />
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                        <StatusChangeBadge count={counts.download} statusKey="downloaded" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'download'); }} />
+                      </td>
+                      <td style={{ padding: '6px', textAlign: 'center', borderRight: '1px solid #e2e8f0' }}>
+                        <StatusChangeBadge count={counts.request} statusKey="request" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'request'); }} />
+                      </td>
+                    </>
+                  )}
+                  <td style={{ padding: '6px', textAlign: 'center' }}>
+                    <StatusChangeBadge count={counts.pool} statusKey="pool" entityId={`tbl_${t.id}`} onClick={(e) => { e.stopPropagation(); handleBadgeClick(t, 'deleted'); }} />
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Recent Reprints Table Sub-Component (Matches original recent-reprints.html)
 ───────────────────────────────────────────────────────────────────────── */
 function RecentReprintsTable({ clients, onNavigate, search }) {
@@ -1334,15 +1519,13 @@ function RightSidePanels({
     ];
   } else if (isOrg) {
     quickActions = [
-      { label: 'Manage Tables & Cards', action: () => onNavigate('cards'), Icon: CreditCard },
+      { label: 'Manage Tables', action: () => onNavigate('cards'), Icon: CreditCard },
       { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Plus },
-      { label: 'Reprint Queue', action: () => onNavigate('reprints'), Icon: RefreshCw },
       { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   } else {
     quickActions = [
-      { label: 'Manage Cards', action: () => onNavigate('cards'), Icon: CreditCard },
-      { label: 'Reprint Requests', action: () => onNavigate('reprints'), Icon: RefreshCw },
+      { label: 'Manage Tables', action: () => onNavigate('cards'), Icon: CreditCard },
       { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   }
@@ -1871,6 +2054,10 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
     };
   }, [load]);
 
+  const currentRole = String(currentUser?.role || userRole || '').toLowerCase();
+  const isOrg = currentRole === 'prime_manager' || currentRole === 'client' || currentRole === 'guest_prime_manager' || currentRole === 'manager';
+  const isAssistant = currentRole === 'assistant' || currentRole === 'client_staff';
+
   const getSectionTitle = () => {
     if (activeSection === 'reprints')
       return {
@@ -1888,6 +2075,15 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
         badgeBg: '#dbeafe',
         badgeColor: '#1d4ed8',
       };
+    if (isOrg || isAssistant) {
+      return {
+        title: 'Organisation Tables',
+        Icon: Layers,
+        badgeText: `Total Tables: ${allTables?.length || 0}`,
+        badgeBg: '#dbeafe',
+        badgeColor: '#1d4ed8',
+      };
+    }
     return {
       title: 'Recent Organisations',
       Icon: Building,
@@ -1931,14 +2127,26 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
         >
           {/* Dynamic Table Body */}
           {activeSection === 'clients' && (
-            <RecentClientUpdatesTable
-              clients={clients}
-              allTables={allTables}
-              loading={loading}
-              onNavigate={onNavigate}
-              search={search}
-              setSearch={setSearch}
-            />
+            (isOrg || isAssistant) ? (
+              <RecentTablesUpdatesTable
+                tables={allTables}
+                loading={loading}
+                onNavigate={onNavigate}
+                search={search}
+                setSearch={setSearch}
+                userRole={currentUser?.role || userRole}
+                currentUser={currentUser}
+              />
+            ) : (
+              <RecentClientUpdatesTable
+                clients={clients}
+                allTables={allTables}
+                loading={loading}
+                onNavigate={onNavigate}
+                search={search}
+                setSearch={setSearch}
+              />
+            )
           )}
           {activeSection === 'reprints' && (
             <RecentReprintsTable

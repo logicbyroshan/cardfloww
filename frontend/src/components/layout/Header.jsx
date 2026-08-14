@@ -102,24 +102,8 @@ export default function Header({
         boxSizing: 'border-box',
       }}
     >
-      {/* Left: Brand Logo + Live Time & Date Badge + Animated Blue Heart + Welcome + Name */}
+      {/* Left: Live Time & Date Badge + Animated Blue Heart + Welcome + Name */}
       <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img
-          src="/cardflow_logo_brand.png"
-          onError={(e) => {
-            if (!e.target.src.includes('/static/cardflow_logo_brand.png')) {
-              e.target.src = '/static/cardflow_logo_brand.png';
-            }
-          }}
-          alt="CardFlow"
-          style={{
-            height: '26px',
-            maxWidth: '120px',
-            objectFit: 'contain',
-            filter: 'drop-shadow(0 2px 8px rgba(59, 130, 246, 0.45)) brightness(1.15)',
-          }}
-        />
-
         {/* 1. Live Date & Time Button Badge */}
         <div
           style={{

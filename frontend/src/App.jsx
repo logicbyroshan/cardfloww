@@ -477,7 +477,8 @@ export default function App() {
 
   const normRole = String(userRole || '').toLowerCase();
   const isAdminRole = normRole === 'super_admin' || normRole === 'pro_user' || normRole === 'admin';
-  const isOrgRole = normRole === 'prime_manager' || normRole === 'client' || normRole === 'guest_prime_manager';
+  const isOrgRole = normRole === 'prime_manager' || normRole === 'client' || normRole === 'guest_prime_manager' || normRole === 'manager';
+  const isOperatorRole = normRole === 'operator' || normRole === 'staff';
 
   return (
     <div className="app-container">
@@ -590,6 +591,8 @@ export default function App() {
               {activeTab === 'cards' && (
                 <CardTableView
                   addToast={addToast}
+                  currentUser={currentUser}
+                  userRole={userRole}
                   onNavigate={(tabOrObj, params) => {
                     if (typeof tabOrObj === 'string' && tabOrObj === 'idcard-actions' && params) {
                       setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
@@ -607,6 +610,8 @@ export default function App() {
                   tableId={idcardActionsState.tableId}
                   initialStatus={idcardActionsState.status || 'pending'}
                   addToast={addToast}
+                  currentUser={currentUser}
+                  userRole={userRole}
                   onBack={() => {
                     setActiveTab('cards');
                     setIdcardActionsState(null);
@@ -629,7 +634,7 @@ export default function App() {
               {activeTab === 'reprints' && <ReprintCardsManagerView addToast={addToast} />}
 
               {/* ── Manage Organisation ── */}
-              {activeTab === 'organisations' && (isAdminRole ? (
+              {activeTab === 'organisations' && ((isAdminRole || isOperatorRole) ? (
                 <ClientDirectoryView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -643,7 +648,7 @@ export default function App() {
               ))}
 
               {/* ── Manage Client ── */}
-              {activeTab === 'clients' && (isAdminRole ? (
+              {activeTab === 'clients' && ((isAdminRole || isOperatorRole) ? (
                 <ClientAccountsView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -686,7 +691,7 @@ export default function App() {
               ))}
 
               {/* ── Manage Photographers ── */}
-              {activeTab === 'photographers' && (isAdminRole ? (
+              {activeTab === 'photographers' && ((isAdminRole || isOperatorRole) ? (
                 <StaffManagementView
                   addToast={addToast}
                   staffType="photographer"
@@ -704,7 +709,7 @@ export default function App() {
               {activeTab === 'schema' && <CardTableView addToast={addToast} onNavigate={setActiveTab} />}
 
               {/* ── System/Control Panel ── */}
-              {activeTab === 'panel' && (isAdminRole ? (
+              {activeTab === 'panel' && ((isAdminRole || isOperatorRole) ? (
                 <ManagePanelView addToast={addToast} />
               ) : (
                 <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />

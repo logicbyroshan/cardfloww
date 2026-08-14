@@ -2697,14 +2697,43 @@ function CardLogDrawer({ card, table, onClose }) {
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 
-export default function IDCardActionsView({ tableId, initialStatus = 'pending', onBack, onNavigate, addToast }) {
+export default function IDCardActionsView({
+  tableId,
+  initialStatus = 'pending',
+  onBack,
+  onNavigate,
+  addToast,
+  currentUser,
+  userRole = 'super_admin',
+}) {
+  const role = String(currentUser?.role || userRole || '').toLowerCase();
+  const isAssistant = role === 'assistant' || role === 'client_staff';
+
   /* ── Table metadata ── */
   const [table, setTable] = useState(null);
   const [tableLoading, setTableLoading] = useState(true);
 
   /* ── Status & status counts ── */
-  const [status, setStatus] = useState(initialStatus);
+  const [status, setStatus] = useState(() => {
+    if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(initialStatus)) {
+      return 'pending';
+    }
+    return initialStatus;
+  });
   const [statusCounts, setStatusCounts] = useState({ pending: 0, verified: 0, approved: 0, download: 0, pool: 0 });
+
+  useEffect(() => {
+    if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(status)) {
+      setStatus('pending');
+    }
+  }, [isAssistant, status]);
+
+  const visibleStatusList = useMemo(() => {
+    if (isAssistant) {
+      return ID_CARD_STATUS_LIST.filter((s) => ['pending', 'verified', 'deleted'].includes(s.key));
+    }
+    return ['reprint', 'request', 'confirm'].includes(status) ? REPRINT_STATUS_LIST : ID_CARD_STATUS_LIST;
+  }, [isAssistant, status]);
 
   /* ── Cards list state ── */
   const [cards, setCards] = useState([]);
@@ -3413,7 +3442,7 @@ export default function IDCardActionsView({ tableId, initialStatus = 'pending', 
           }}
         >
           {/* Render Flow-Specific Status Tabs */}
-          {(['reprint', 'request', 'confirm'].includes(status) ? REPRINT_STATUS_LIST : ID_CARD_STATUS_LIST).map((s) => {
+          {visibleStatusList.map((s) => {
             const count = statusCounts[s.key] ?? 0;
             const isActive = status === s.key;
             return (

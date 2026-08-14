@@ -168,7 +168,10 @@ function getDisplayOrgName(clientName, activeOrg) {
   return '';
 }
 
-export default function CardTableView({ addToast, onNavigate }) {
+export default function CardTableView({ addToast, onNavigate, currentUser, userRole = 'super_admin' }) {
+  const role = String(currentUser?.role || userRole || '').toLowerCase();
+  const isAssistant = role === 'assistant' || role === 'client_staff';
+
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState('All');
@@ -413,120 +416,125 @@ export default function CardTableView({ addToast, onNavigate }) {
                 {t}
               </button>
             ))}
-          </div>
+          {/* | Divider & Section 2: Table Buttons (Hidden for Assistant) */}
+          {!isAssistant && (
+            <>
+              <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
+              <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {/* 1. Add Button */}
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setEditingTable(null);
+                    setShowAddEditDrawer(true);
+                  }}
+                  title="Add New Table Setting"
+                  style={{
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    border: '1px solid #2563eb',
+                    height: '28px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Plus size={13} /> <span>Add</span>
+                </button>
 
-          {/* | Divider */}
-          <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
+                {/* 2. Edit Button */}
+                <button
+                  className="btn"
+                  disabled={!selectedTable}
+                  onClick={() => {
+                    setEditingTable(selectedTable);
+                    setShowAddEditDrawer(true);
+                  }}
+                  title={!selectedTable ? 'Select a table row to edit' : `Edit ${selectedTable.name}`}
+                  style={{
+                    background: selectedTable ? '#2563eb' : 'rgba(255, 255, 255, 0.08)',
+                    color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    border: selectedTable ? '1px solid #2563eb' : '1px solid rgba(255, 255, 255, 0.15)',
+                    height: '28px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    cursor: selectedTable ? 'pointer' : 'not-allowed',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Pencil size={13} /> <span>Edit</span>
+                </button>
 
-          {/* Section 2: 4 Table Buttons (Add always enabled; Edit, Delete, Active require row selection!) */}
-          <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {/* 1. Add Button (Always Enabled) */}
-            <button
-              className="btn"
-              onClick={() => {
-                setEditingTable(null);
-                setShowAddEditDrawer(true);
-              }}
-              title="Add New Table Setting"
-              style={{
-                background: '#2563eb',
-                color: '#ffffff',
-                border: '1px solid #2563eb',
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <Plus size={13} /> <span>Add</span>
-            </button>
+                {/* 3. Delete Button */}
+                <button
+                  className="btn"
+                  disabled={!selectedTable}
+                  onClick={() => handleDeleteTable(selectedTable)}
+                  title={!selectedTable ? 'Select a table row to delete' : `Delete ${selectedTable.name}`}
+                  style={{
+                    background: selectedTable ? '#ef4444' : 'rgba(255, 255, 255, 0.08)',
+                    color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    border: selectedTable ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
+                    height: '28px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    cursor: selectedTable ? 'pointer' : 'not-allowed',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Trash2 size={13} /> <span>Delete</span>
+                </button>
 
-            {/* 2. Edit Button (Requires Table Selection) */}
-            <button
-              className="btn"
-              disabled={!selectedTable}
-              onClick={() => {
-                setEditingTable(selectedTable);
-                setShowAddEditDrawer(true);
-              }}
-              title={!selectedTable ? 'Select a table row to edit' : `Edit ${selectedTable.name}`}
-              style={{
-                background: selectedTable ? '#2563eb' : 'rgba(255, 255, 255, 0.08)',
-                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                border: selectedTable ? '1px solid #2563eb' : '1px solid rgba(255, 255, 255, 0.15)',
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                cursor: selectedTable ? 'pointer' : 'not-allowed',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxSizing: 'border-box',
-                opacity: selectedTable ? 1 : 0.6,
-              }}
-            >
-              <Pencil size={13} /> <span>Edit</span>
-            </button>
-
-            {/* 3. Delete Button (Requires Table Selection) */}
-            <button
-              className="btn"
-              disabled={!selectedTable}
-              onClick={() => handleDeleteTable(selectedTable)}
-              title={!selectedTable ? 'Select a table row to delete' : `Delete ${selectedTable.name}`}
-              style={{
-                background: selectedTable ? '#ef4444' : 'rgba(255, 255, 255, 0.08)',
-                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                border: selectedTable ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                cursor: selectedTable ? 'pointer' : 'not-allowed',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxSizing: 'border-box',
-                opacity: selectedTable ? 1 : 0.6,
-              }}
-            >
-              <Trash2 size={13} /> <span>Delete</span>
-            </button>
-
-            {/* 4. Active Button (Requires Table Selection) */}
-            <button
-              className="btn"
-              disabled={!selectedTable}
-              onClick={() => handleToggleStatus(selectedTable)}
-              title={!selectedTable ? 'Select a table row to toggle status' : `Toggle status for ${selectedTable.name}`}
-              style={{
-                background: selectedTable ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
-                color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                border: selectedTable ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.15)',
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                cursor: selectedTable ? 'pointer' : 'not-allowed',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxSizing: 'border-box',
-                opacity: selectedTable ? 1 : 0.6,
-              }}
-            >
-              <ToggleRight size={13} /> <span>Active</span>
-            </button>
+                {/* 4. Active/Inactive Toggle Button */}
+                <button
+                  className="btn"
+                  disabled={!selectedTable}
+                  onClick={() => handleToggleStatus(selectedTable)}
+                  title={
+                    !selectedTable
+                      ? 'Select a table row to toggle status'
+                      : selectedTable.is_active !== false
+                        ? 'Deactivate Table'
+                        : 'Activate Table'
+                  }
+                  style={{
+                    background: selectedTable ? '#059669' : 'rgba(255, 255, 255, 0.08)',
+                    color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    border: selectedTable ? '1px solid #059669' : '1px solid rgba(255, 255, 255, 0.15)',
+                    height: '28px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    cursor: selectedTable ? 'pointer' : 'not-allowed',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <ToggleRight size={13} />{' '}
+                  <span>{selectedTable && selectedTable.is_active === false ? 'Activate' : 'Active'}</span>
+                </button>
+              </div>
+            </>
+          )}
           </div>
 
           {/* | Divider */}
@@ -712,7 +720,7 @@ export default function CardTableView({ addToast, onNavigate }) {
                     NAME
                   </th>
                   <th
-                    colSpan="5"
+                    colSpan={isAssistant ? "3" : "5"}
                     style={{
                       textAlign: 'center',
                       padding: '10px 12px',
@@ -726,37 +734,23 @@ export default function CardTableView({ addToast, onNavigate }) {
                   >
                     ID CARD LISTS
                   </th>
-                  <th
-                    colSpan="3"
-                    style={{
-                      textAlign: 'center',
-                      padding: '10px 12px',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '11px',
-                      letterSpacing: '0.05em',
-                      background: '#2d3748',
-                      borderRight: '1px solid #4a5568',
-                    }}
-                  >
-                    REPRINT CARD LISTS
-                  </th>
-                  <th
-                    rowSpan="2"
-                    style={{
-                      width: '90px',
-                      textAlign: 'center',
-                      padding: '10px 8px',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '11px',
-                      letterSpacing: '0.05em',
-                      background: '#2d3748',
-                      borderRight: '1px solid #4a5568',
-                    }}
-                  >
-                    STATUS
-                  </th>
+                  {!isAssistant && (
+                    <th
+                      colSpan="3"
+                      style={{
+                        textAlign: 'center',
+                        padding: '10px 12px',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        letterSpacing: '0.05em',
+                        background: '#2d3748',
+                        borderRight: '1px solid #4a5568',
+                      }}
+                    >
+                      REPRINT CARD LISTS
+                    </th>
+                  )}
                   <th
                     rowSpan="2"
                     style={{
@@ -771,7 +765,7 @@ export default function CardTableView({ addToast, onNavigate }) {
                       borderRight: 'none',
                     }}
                   >
-                    ACTION
+                    STATUS
                   </th>
                 </tr>
               </thead>
@@ -800,7 +794,7 @@ export default function CardTableView({ addToast, onNavigate }) {
                         {idx + 1}
                       </td>
 
-                      {/* NAME Column (Clean formatting without underline or dash lines!) */}
+                      {/* NAME Column */}
                       <td style={{ padding: '8px 12px', textAlign: 'left' }}>
                         <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '13px' }}>{t.name}</span>
                         {Boolean(displayOrg) && (
@@ -808,8 +802,8 @@ export default function CardTableView({ addToast, onNavigate }) {
                         )}
                       </td>
 
-                      {/* ID CARD LISTS (5 Badges) */}
-                      <td colSpan="5" style={{ padding: '8px' }}>
+                      {/* ID CARD LISTS Badges */}
+                      <td colSpan={isAssistant ? "3" : "5"} style={{ padding: '8px' }}>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'nowrap' }}>
                           <button
                             onClick={(e) => {
@@ -877,71 +871,75 @@ export default function CardTableView({ addToast, onNavigate }) {
                             />
                           </button>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openIDCardActions(t, 'approved');
-                            }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              color: '#1d4ed8',
-                              border: '1.5px solid #2563eb',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 1px 2px rgba(37,99,235,0.06)',
-                            }}
-                            title="View Approved List"
-                          >
-                            <span>Approved</span>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#1d4ed8' }}>{counts.approved}</span>
-                            <StatusChangeDeltaPill
-                              count={counts.approved}
-                              statusKey="approved"
-                              entityId={`table_${t.id}`}
-                              size="small"
-                            />
-                          </button>
+                          {!isAssistant && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openIDCardActions(t, 'approved');
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  background: '#ffffff',
+                                  color: '#1d4ed8',
+                                  border: '1.5px solid #2563eb',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: '0 1px 2px rgba(37,99,235,0.06)',
+                                }}
+                                title="View Approved List"
+                              >
+                                <span>Approved</span>
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: '#1d4ed8' }}>{counts.approved}</span>
+                                <StatusChangeDeltaPill
+                                  count={counts.approved}
+                                  statusKey="approved"
+                                  entityId={`table_${t.id}`}
+                                  size="small"
+                                />
+                              </button>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openIDCardActions(t, 'printed');
-                            }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              color: '#334155',
-                              border: '1.5px solid #64748b',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 1px 2px rgba(100,116,139,0.06)',
-                            }}
-                            title="View Printed List"
-                          >
-                            <span>Printed</span>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>{counts.download}</span>
-                            <StatusChangeDeltaPill
-                              count={counts.download}
-                              statusKey="printed"
-                              entityId={`table_${t.id}`}
-                              size="small"
-                            />
-                          </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openIDCardActions(t, 'printed');
+                                }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  background: '#ffffff',
+                                  color: '#334155',
+                                  border: '1.5px solid #64748b',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: '0 1px 2px rgba(100,116,139,0.06)',
+                                }}
+                                title="View Printed List"
+                              >
+                                <span>Printed</span>
+                                <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>{counts.download}</span>
+                                <StatusChangeDeltaPill
+                                  count={counts.download}
+                                  statusKey="printed"
+                                  entityId={`table_${t.id}`}
+                                  size="small"
+                                />
+                              </button>
+                            </>
+                          )}
 
                           <button
                             onClick={(e) => {
@@ -978,68 +976,69 @@ export default function CardTableView({ addToast, onNavigate }) {
                         </div>
                       </td>
 
-                      {/* REPRINT CARD LISTS (3 Badges) */}
-                      <td colSpan="3" style={{ padding: '8px' }}>
-                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openIDCardActions(t, 'reprint');
-                            }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              color: '#b45309',
-                              border: '1.5px solid #d97706',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 1px 2px rgba(217,119,6,0.06)',
-                            }}
-                            title="View Reprinting List"
-                          >
-                            <span>Reprinting</span>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#b45309' }}>{counts.rpCnt}</span>
-                            <StatusChangeDeltaPill
-                              count={counts.rpCnt}
-                              statusKey="reprint"
-                              entityId={`table_${t.id}`}
-                              size="small"
-                            />
-                          </button>
+                      {/* REPRINT CARD LISTS (Hidden for Assistant) */}
+                      {!isAssistant && (
+                        <td colSpan="3" style={{ padding: '8px' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openIDCardActions(t, 'reprint');
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: '#ffffff',
+                                color: '#b45309',
+                                border: '1.5px solid #d97706',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 1px 2px rgba(217,119,6,0.06)',
+                              }}
+                              title="View Reprinting List"
+                            >
+                              <span>Reprinting</span>
+                              <span style={{ fontSize: '12px', fontWeight: 800, color: '#b45309' }}>{counts.rpCnt}</span>
+                              <StatusChangeDeltaPill
+                                count={counts.rpCnt}
+                                statusKey="reprint"
+                                entityId={`table_${t.id}`}
+                                size="small"
+                              />
+                            </button>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openIDCardActions(t, 'request');
-                            }}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: '#ffffff',
-                              color: '#6d28d9',
-                              border: '1.5px solid #8b5cf6',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              boxShadow: '0 1px 2px rgba(139,92,246,0.06)',
-                            }}
-                            title="View Requested List"
-                          >
-                            <span>Requested</span>
-                            <span style={{ fontSize: '12px', fontWeight: 800, color: '#6d28d9' }}>{counts.reqCnt}</span>
-                            <StatusChangeDeltaPill
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openIDCardActions(t, 'request');
+                              }}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: '#ffffff',
+                                color: '#6d28d9',
+                                border: '1.5px solid #8b5cf6',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                boxShadow: '0 1px 2px rgba(139,92,246,0.06)',
+                              }}
+                              title="View Requested List"
+                            >
+                              <span>Requested</span>
+                              <span style={{ fontSize: '12px', fontWeight: 800, color: '#6d28d9' }}>{counts.reqCnt}</span>
+                              <StatusChangeDeltaPill
                               count={counts.reqCnt}
                               statusKey="request"
                               entityId={`table_${t.id}`}
@@ -1081,6 +1080,7 @@ export default function CardTableView({ addToast, onNavigate }) {
                           </button>
                         </div>
                       </td>
+                    )}
 
                       {/* STATUS Column */}
                       <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -1105,32 +1105,6 @@ export default function CardTableView({ addToast, onNavigate }) {
                           title="Click to toggle Active/Inactive status"
                         >
                           <ToggleRight size={12} /> {isActive ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-
-                      {/* ACTION Column (Setting Button opens dedicated Table Setting Schema Modal!) */}
-                      <td style={{ padding: '8px', textAlign: 'center' }}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSettingModalTable(t);
-                          }}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 600,
-                            background: '#f1f5f9',
-                            color: '#1e293b',
-                            border: '1px solid #cbd5e1',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                          title={`View table schema for ${t.name}`}
-                        >
-                          <Settings size={12} style={{ color: '#2563eb' }} /> Setting
                         </button>
                       </td>
                     </tr>

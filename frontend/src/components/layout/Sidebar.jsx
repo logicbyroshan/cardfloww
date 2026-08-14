@@ -19,7 +19,7 @@ import {
   Menu items and sections match the Django template 1-to-1.
 */
 
-// Role-gated nav structure — mirrors original role boundaries
+// Role-gated nav structure — exact per role requirements
 const NAV_CONFIG = {
   super_admin: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
@@ -37,65 +37,65 @@ const NAV_CONFIG = {
     {
       section: 'CardFlow Management',
       items: [
-        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
-        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
         { id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal },
         { id: 'pro', label: 'Manage Pro Features', Icon: Gem },
       ],
     },
   ],
 
+  operator: [
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+    {
+      section: 'Admin Management',
+      items: [{ id: 'photographers', label: 'Manage Photographer', Icon: Camera }],
+    },
+    {
+      section: 'Client Management',
+      items: [{ id: 'organisations', label: 'Manage Organisation', Icon: Building }],
+    },
+    {
+      section: 'CardFlow Management',
+      items: [{ id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal }],
+    },
+  ],
+
   prime_manager: [
-    { id: 'dashboard', label: 'Organisation Dashboard', Icon: Home },
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'Organisation Management',
       items: [
         { id: 'assistants', label: 'Manage Assistant', Icon: UsersRound },
-        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
-        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
-        { id: 'settings', label: 'Table Settings', Icon: SlidersHorizontal },
+        { id: 'cards', label: 'Manage Tables', Icon: ShieldCheck },
       ],
     },
   ],
 
   manager: [
-    { id: 'dashboard', label: 'Dashboard', Icon: Home },
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
-      section: 'ID Card Management',
+      section: 'Organisation Management',
       items: [
-        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
-        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
-      ],
-    },
-  ],
-
-  operator: [
-    { id: 'dashboard', label: 'Dashboard', Icon: Home },
-    {
-      section: 'ID Card Management',
-      items: [
-        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
-        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+        { id: 'assistants', label: 'Manage Assistant', Icon: UsersRound },
+        { id: 'cards', label: 'Manage Tables', Icon: ShieldCheck },
       ],
     },
   ],
 
   assistant: [
-    { id: 'dashboard', label: 'Assistant Dashboard', Icon: Home },
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
       items: [
-        { id: 'cards', label: 'Manage Cards & Tables', Icon: ShieldCheck },
-        { id: 'reprints', label: 'Reprint Queue', Icon: GitBranch },
+        { id: 'cards', label: 'Manage Tables', Icon: ShieldCheck },
       ],
     },
   ],
 
   photographer: [
-    { id: 'dashboard', label: 'Photographer Dashboard', Icon: Home },
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'ID Card Management',
-      items: [{ id: 'cards', label: 'Manage Cards & Tables', Icon: Camera }],
+      items: [{ id: 'cards', label: 'Manage Tables', Icon: Camera }],
     },
   ],
 };
