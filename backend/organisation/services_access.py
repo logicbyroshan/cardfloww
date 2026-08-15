@@ -181,39 +181,42 @@ class OrganisationAccessService:
     @staticmethod
     def get_organisation_for_user(user) -> Optional[Organisation]:
         """
-        Get the Client instance for a user.
-        Works for both 'client' and 'client_staff' roles.
-        Delegates role checks to PermissionService (single authority).
+        Get the Organisation instance for a user.
+        Works for Prime Manager, Super Manager, Guest Manager, Assistant, and Operator.
         """
-        if not user.is_authenticated:
+        if not user or not user.is_authenticated:
             return None
 
-        if PermissionService.is_client(user):
-            client_profile = getattr(user, 'client_profile', None)
-            if client_profile is None:
-                from organisation.models import Organisation
-                client_profile = Organisation.objects.filter(user_id=user.pk).first()
-            if client_profile:
-                return client_profile
-            
-            # Check if sub-manager has managed assistants with an organisation
-            from assistants.models import Assistant
-            first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
-            if first_asst and first_asst.organisation:
-                return first_asst.organisation
+        # 1. Check Organisation Manager profile (Prime Manager, Super Manager, Guest Manager)
+        if hasattr(user, 'org_manager_profile') and user.org_manager_profile:
+            return user.org_manager_profile.organisation
 
-            # Check if user has an operator profile with assigned organisations
-            if hasattr(user, 'operator_profile') and user.operator_profile:
-                return user.operator_profile.assigned_organisations.first()
+        # 2. Check Assistant profile
+        if hasattr(user, 'assistant_profile') and user.assistant_profile:
+            return user.assistant_profile.organisation
 
-            return None
+        # 3. Check direct Organisation profile (Prime Manager owner)
+        if hasattr(user, 'organisation_profile') and user.organisation_profile:
+            return user.organisation_profile
 
-        if PermissionService.is_client_staff(user):
-            staff = OrganisationAccessService._get_staff_profile(user)
-            if staff:
-                return getattr(staff, 'organisation', None) or getattr(staff, 'client', None)
+        # 4. Check client_profile property
+        client_profile = getattr(user, 'client_profile', None)
+        if client_profile:
+            return client_profile
 
-        return None
+        # 5. Check if sub-manager has managed assistants with an organisation
+        from assistants.models import Assistant
+        first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+        if first_asst and first_asst.organisation:
+            return first_asst.organisation
+
+        # 6. Check Operator assigned organisations
+        if hasattr(user, 'operator_profile') and user.operator_profile:
+            return user.operator_profile.assigned_organisations.first()
+
+        # 7. Fallback DB lookup
+        from organisation.models import Organisation
+        return Organisation.objects.filter(user_id=user.pk).first()
 
     @staticmethod
     def can_access_organisation(user, client_id: int) -> bool:
@@ -307,14 +310,10 @@ class OrganisationAccessService:
         if getattr(user, 'role', '') in ('prime_manager', 'guest_prime_manager', 'organisation', 'client'):
             return True
 
-        # For sub-manager with assigned tables
-        if getattr(user, 'role', '') == 'manager':
-            staff = OrganisationAccessService._get_staff_profile(user)
-            if staff:
-                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
-                if assigned_table_ids:
-                    return table.id in assigned_table_ids
-            return True
+        # For super_manager / manager / guest_manager: check TableAccess delegation
+        if getattr(user, 'role', '') in ('super_manager', 'manager', 'guest_manager'):
+            from tables.models import TableAccess
+            return TableAccess.objects.filter(table=table, manager=user, can_view=True).exists()
 
         # For assistant: verify parent manager access first, then assistant's assigned tables
         if PermissionService.is_assistant(user) or PermissionService.is_client_staff(user):
@@ -324,14 +323,12 @@ class OrganisationAccessService:
                 if staff.manager:
                     if not OrganisationAccessService.can_access_table(staff.manager, table):
                         return False
+                # If assistant has specific assigned tables, check membership
+                if staff.assigned_groups.exists():
+                    return staff.assigned_groups.filter(id=table.id).exists()
                 assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
-                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
-                if assigned_table_ids and assigned_group_ids:
-                    return (table.id in assigned_table_ids) or (table.id in assigned_group_ids)
                 if assigned_table_ids:
                     return table.id in assigned_table_ids
-                if assigned_group_ids:
-                    return table.id in assigned_group_ids
                 # If no specific table restrictions, assistant inherits manager's access
                 return True
             return False
@@ -359,14 +356,15 @@ class OrganisationAccessService:
         if PermissionService.is_super_admin(user) or getattr(user, 'role', '') in ('prime_manager', 'guest_prime_manager', 'organisation', 'client'):
             return base_qs
 
-        # For sub-manager
-        if getattr(user, 'role', '') == 'manager':
-            staff = OrganisationAccessService._get_staff_profile(user)
-            if staff:
-                assigned_table_ids = cls._assigned_table_ids_for_access(staff)
-                if assigned_table_ids:
-                    return base_qs.filter(id__in=assigned_table_ids)
-            return base_qs
+        # For super_manager / manager / guest_manager: filter by TableAccess delegation
+        if getattr(user, 'role', '') in ('super_manager', 'manager', 'guest_manager'):
+            from tables.models import TableAccess
+            allowed_table_ids = TableAccess.objects.filter(
+                manager=user,
+                can_view=True,
+                table__organisation=client
+            ).values_list('table_id', flat=True)
+            return base_qs.filter(id__in=allowed_table_ids)
 
         # For assistant
         if PermissionService.is_assistant(user) or PermissionService.is_client_staff(user):
@@ -380,14 +378,11 @@ class OrganisationAccessService:
             if staff.manager:
                 qs = cls.get_scoped_tables_qs(staff.manager, client, base_qs=qs)
             
+            if staff.assigned_groups.exists():
+                return qs.filter(id__in=staff.assigned_groups.values_list('id', flat=True))
             assigned_table_ids = cls._assigned_table_ids_for_access(staff)
-            assigned_group_ids = cls._assigned_group_ids_for_access(staff)
-            if assigned_table_ids and assigned_group_ids:
-                return qs.filter(Q(id__in=assigned_table_ids) | Q(id__in=assigned_group_ids))
             if assigned_table_ids:
                 return qs.filter(id__in=assigned_table_ids)
-            if assigned_group_ids:
-                return qs.filter(id__in=assigned_group_ids)
             return qs
         
         return base_qs

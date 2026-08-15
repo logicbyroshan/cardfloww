@@ -16,6 +16,7 @@ from assistants.models import Assistant
 from core.utils import send_welcome_email
 from core.services.base import BaseService, ServiceResult
 from core.services.cache_version_service import CacheVersionService
+from core.services.auto_password_service import AutoPasswordService
 from accounts.services import normalize_password_input
 
 import logging
@@ -69,8 +70,6 @@ class OrganisationService(BaseService):
         'perm_idcard_upgrade_all',
         # Mobile App
         'perm_mobile_app',
-        # Account Security
-        'perm_set_temp_password',
     ]
     
     @classmethod
@@ -176,41 +175,23 @@ class OrganisationService(BaseService):
 
             email = raw_email
 
-            if role == 'guest_prime_manager' and username_input:
-                username = username_input.lower().replace('.', '_')
-            else:
-                username = email.split('@')[0].lower().replace('.', '_')
-
-            if not username:
-                username = f'client_{secrets.token_hex(4)}'
-
-            base_username = username
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
+            username = AutoPasswordService.generate_unique_username(
+                email=email,
+                preferred_username=username_input,
+                name=name,
+            )
 
             name_parts = name.split() if name else []
             
             # Password policy:
-            # - if custom password is provided, use it
-            # - otherwise phone number is required and used as password
+            # - If phone is given, uses phone number
+            # - If phone is not given, auto-generates 8-10 char PIN from org acronym + special char + 4-digit number
             phone = str(data.get('phone') or '').strip()
-            password = str(data.get('password') or '').strip()
-            if not password:
-                if phone:
-                    # Universal password normalization (phone formats -> digits)
-                    password = normalize_password_input(phone)
-                    if not password:
-                        return ServiceResult(success=False, message='Phone number must contain digits to be used as a password')
-                else:
-                    return ServiceResult(
-                        success=False,
-                        message='Phone number is required when custom password is not provided'
-                    )
+            custom_pwd = str(data.get('password') or '').strip()
+            if custom_pwd:
+                password = normalize_password_input(custom_pwd)
             else:
-                # Normalize custom password input
-                password = normalize_password_input(password)
+                password = AutoPasswordService.generate_auto_password(name_or_org=name, phone=phone)
             
             if not email:
                 return ServiceResult(success=False, message='Email is required')
@@ -231,6 +212,7 @@ class OrganisationService(BaseService):
                     role=role,
                     is_active=create_as_active,
                 )
+                AutoPasswordService.assign_temp_password(user, password, must_change=True)
 
                 # Build client kwargs
                 client_kwargs = {
@@ -250,7 +232,7 @@ class OrganisationService(BaseService):
                     'perm_idcard_download_list', 'perm_idcard_pool_list', 'perm_idcard_add', 'perm_idcard_edit',
                     'perm_idcard_info', 'perm_idcard_delete', 'perm_idcard_approve', 'perm_idcard_verify',
                     'perm_idcard_updated_at', 'perm_idcard_retrieve', 'perm_idcard_bulk_download',
-                    'perm_idcard_client_list', 'perm_set_temp_password'
+                    'perm_idcard_client_list'
                 }
 
                 # Add permissions

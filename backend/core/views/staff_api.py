@@ -6,7 +6,7 @@ import json
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
-from ..services.permission_service import api_require_super_admin
+from ..services.permission_service import api_require_super_admin, api_require_any_admin
 from operators.services import OperatorCreationService
 from ..services.activity_service import ActivityService
 from organisation.models import Organisation
@@ -474,25 +474,143 @@ def api_staff_toggle_status(request, staff_id):
 
 
 @require_http_methods(["GET"])
-@api_require_super_admin
+@api_require_any_admin
 def api_active_clients_list(request):
-    """API endpoint to get list of active clients for staff assignment dropdown"""
-    clients = Organisation.objects.filter(status='active', is_guest=False).order_by('name').values('id', 'name')
-    return JsonResponse({
-        'success': True,
-        'clients': list(clients)
-    })
+    """API endpoint to get list of active clients with rich details, counts, and search/status filters"""
+    try:
+        from django.db.models import Count, Q
+        from django.utils.timezone import localtime
+
+        qs = Organisation.objects.filter(is_guest=False).select_related('user').annotate(
+            tables_cnt=Count('tables', filter=Q(tables__deleted_by_manager=False), distinct=True),
+            assistants_cnt=Count('assistants', distinct=True),
+        )
+
+        search = request.GET.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(name__icontains=search) |
+                Q(user__username__icontains=search) |
+                Q(user__email__icontains=search) |
+                Q(user__phone__icontains=search) |
+                Q(city__icontains=search) |
+                Q(state__icontains=search)
+            )
+
+        status = request.GET.get('status', '').strip().lower()
+        if status and status not in ('all', ''):
+            qs = qs.filter(status=status)
+
+        qs = qs.order_by('-id')
+        total_count = qs.count()
+
+        page = request.GET.get('page')
+        page_size = request.GET.get('page_size')
+        if page or (page_size and int(page_size) < 1000):
+            try:
+                page_num = max(1, int(page or 1))
+                p_size = max(1, min(1000, int(page_size or 25)))
+                start = (page_num - 1) * p_size
+                end = start + p_size
+                page_qs = qs[start:end]
+            except (ValueError, TypeError):
+                page_qs = qs
+        else:
+            page_qs = qs
+
+        clients_data = []
+        for org in page_qs:
+            u = org.user
+            raw_email = (u.email or '').strip() if u else ''
+            email = '' if raw_email.endswith('@noemail.local') else raw_email
+            username = (u.username or '').strip() if u else ''
+            phone = (u.phone or '').strip() if u else ''
+
+            clients_data.append({
+                'id': org.id,
+                'organisation_id': org.id,
+                'name': org.name,
+                'school_name': org.name,
+                'email': email,
+                'username': username,
+                'phone': phone,
+                'mobile': phone,
+                'city': org.city or '',
+                'state': org.state or '',
+                'pincode': org.pincode or '',
+                'icon': org.icon or 'fa-solid fa-building',
+                'status': org.status,
+                'is_active': org.status == 'active' and (u.is_active if u else True),
+                'tables_count': org.tables_cnt,
+                'table_count': org.tables_cnt,
+                'assistants_count': org.assistants_cnt,
+                'assistant_count': org.assistants_cnt,
+                'managers_count': 1 if org.user_id else 0,
+                'manager_count': 1 if org.user_id else 0,
+                'created_at': localtime(org.created_at).isoformat() if org.created_at else None,
+                'updated_at': localtime(org.updated_at).isoformat() if org.updated_at else None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'clients': clients_data,
+            'total': total_count,
+            'count': total_count,
+        })
+    except Exception as e:
+        logger.exception("api_active_clients_list error: %s", e)
+        return JsonResponse({'success': False, 'message': 'An error occurred fetching organisations'}, status=500)
 
 
 @require_http_methods(["GET"])
-@api_require_super_admin
+@api_require_any_admin
 def api_all_clients_for_assignment(request):
-    """API endpoint to get ALL clients (active + inactive) for staff assignment dropdown."""
-    clients = Organisation.objects.filter(is_guest=False).order_by('status', 'name').values('id', 'name', 'status')
-    return JsonResponse({
-        'success': True,
-        'clients': list(clients)
-    })
+    """API endpoint to get ALL clients (active + inactive) for staff assignment dropdown with rich info."""
+    try:
+        from django.db.models import Count, Q
+        from django.utils.timezone import localtime
+
+        qs = Organisation.objects.filter(is_guest=False).select_related('user').annotate(
+            tables_cnt=Count('tables', filter=Q(tables__deleted_by_manager=False), distinct=True),
+            assistants_cnt=Count('assistants', distinct=True),
+        ).order_by('name')
+
+        clients_data = []
+        for org in qs:
+            u = org.user
+            raw_email = (u.email or '').strip() if u else ''
+            email = '' if raw_email.endswith('@noemail.local') else raw_email
+            username = (u.username or '').strip() if u else ''
+            phone = (u.phone or '').strip() if u else ''
+
+            clients_data.append({
+                'id': org.id,
+                'name': org.name,
+                'school_name': org.name,
+                'email': email,
+                'username': username,
+                'phone': phone,
+                'mobile': phone,
+                'status': org.status,
+                'is_active': org.status == 'active' and (u.is_active if u else True),
+                'tables_count': org.tables_cnt,
+                'table_count': org.tables_cnt,
+                'assistants_count': org.assistants_cnt,
+                'assistant_count': org.assistants_cnt,
+                'managers_count': 1 if org.user_id else 0,
+                'manager_count': 1 if org.user_id else 0,
+                'created_at': localtime(org.created_at).isoformat() if org.created_at else None,
+                'updated_at': localtime(org.updated_at).isoformat() if org.updated_at else None,
+            })
+
+        return JsonResponse({
+            'success': True,
+            'clients': clients_data,
+            'total': len(clients_data),
+        })
+    except Exception as e:
+        logger.exception("api_all_clients_for_assignment error: %s", e)
+        return JsonResponse({'success': False, 'message': 'An error occurred fetching organisations'}, status=500)
 
 
 @require_http_methods(["POST"])

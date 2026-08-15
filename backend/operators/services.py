@@ -28,6 +28,7 @@ from django.db.models import QuerySet, Count, Q
 
 from core.models import User
 from organisation.models import Organisation
+from core.services.auto_password_service import AutoPasswordService
 from operators.models import Operator
 from core.services.permission_service import PermissionService
 from core.utils.email_utils import generate_secure_password, send_welcome_email
@@ -284,6 +285,7 @@ class OperatorCreationService:
         password: str = '',
         perm_keys: Optional[List[str]] = None,
         is_active: bool = False,
+        username: str = '',
     ) -> Dict[str, Any]:
         """
         Create a new operator member.
@@ -310,19 +312,27 @@ class OperatorCreationService:
                     'success': False,
                     'error': 'A user with this email already exists'
                 }
+
+            full_name = f"{first_name} {last_name}".strip()
+            operator_username = AutoPasswordService.generate_unique_username(
+                email=normalized_email,
+                preferred_username=username,
+                name=full_name,
+            )
             
             with transaction.atomic():
-                # Universal password normalization
+                # Universal password / PIN generation
                 if password and password.strip():
                     final_password = normalize_password_input(password)
-                elif phone:
-                    final_password = normalize_password_input(phone)
                 else:
-                    final_password = generate_secure_password()
+                    final_password = AutoPasswordService.generate_auto_password(
+                        name_or_org=full_name or 'Operator',
+                        phone=phone,
+                    )
                 
                 # Create User
                 user = User.objects.create_user(
-                    username=normalized_email,
+                    username=operator_username,
                     email=normalized_email,
                     password=final_password,
                     first_name=first_name,
@@ -331,6 +341,7 @@ class OperatorCreationService:
                     phone=phone,
                     is_active=is_active,
                 )
+                AutoPasswordService.assign_temp_password(user, final_password, must_change=True)
                 
                 # Build profile kwargs
                 profile_kwargs = {

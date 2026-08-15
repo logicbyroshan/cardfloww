@@ -123,7 +123,9 @@ class UserProfileService:
             return False, str(e)
 
         user.set_password(normalized_new)
-        user.save()
+        user.temp_password = ''
+        user.must_change_password = False
+        user.save(update_fields=['password', 'temp_password', 'must_change_password'])
 
         # Security hardening: revoke other active sessions after password change.
         try:

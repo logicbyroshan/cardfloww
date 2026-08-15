@@ -129,6 +129,14 @@ def api_idcard_table_create(request, group_id):
     """API endpoint to create a new ID Card Table"""
     group, err = _check_client_scope_by_group(request.user, group_id)
     if err: return err
+
+    org = getattr(group, 'organisation', getattr(group, 'client', None))
+    if not PermissionService.can_create_table(request.user, org):
+        return JsonResponse({
+            'success': False,
+            'message': 'Permission denied: Only Prime Managers can create new Tables. Super Managers can only manage tables delegated to them.'
+        }, status=403)
+
     try:
         data = json.loads(request.body)
         result = IDCardService.create_table(group_id, data)
@@ -278,7 +286,7 @@ def api_idcard_table_list(request, group_id):
 @require_http_methods(["GET"])
 @api_require_permission('perm_idcard_setting_list')
 def api_schema_list(request):
-    """List all table schemas scoped to the authenticated user's organisation access."""
+    """List all table schemas scoped to the authenticated user's organisation access and optional client_id filter."""
     from organisation.models import Organisation
     from tables.models import Table, IDCard
     from django.db.models import Count, Q
@@ -287,11 +295,45 @@ def api_schema_list(request):
         if not user.is_authenticated:
             return JsonResponse({'success': False, 'message': 'Authentication required.'}, status=401)
 
-        if PermissionService.is_super_admin(user):
-            tables_qs = Table.objects.all().select_related('organisation').order_by('id')
-        else:
+        tables_qs = Table.objects.filter(deleted_by_manager=False).select_related('organisation')
+
+        if not PermissionService.is_super_admin(user):
             accessible_ids = PermissionService.get_accessible_client_ids(user)
-            tables_qs = Table.objects.filter(organisation_id__in=accessible_ids).select_related('organisation').order_by('id')
+            tables_qs = tables_qs.filter(organisation_id__in=accessible_ids)
+
+        # For super_manager / guest_manager: restrict to delegated tables via TableAccess
+        if getattr(user, 'role', '') in ('super_manager', 'manager', 'guest_manager'):
+            from tables.models import TableAccess
+            allowed_ids = TableAccess.objects.filter(
+                manager=user,
+                can_view=True
+            ).values_list('table_id', flat=True)
+            tables_qs = tables_qs.filter(id__in=allowed_ids)
+
+        # For assistant: restrict to assigned_groups & parent manager's delegated tables
+        if getattr(user, 'role', '') in ('assistant', 'client_staff'):
+            from assistants.models import Assistant
+            ast = getattr(user, 'assistant_profile', None) or Assistant.objects.filter(user=user).first()
+            if ast:
+                if ast.assigned_groups.exists():
+                    tables_qs = tables_qs.filter(id__in=ast.assigned_groups.values_list('id', flat=True))
+                if ast.manager:
+                    from tables.models import TableAccess
+                    mgr_allowed_ids = TableAccess.objects.filter(
+                        manager=ast.manager,
+                        can_view=True
+                    ).values_list('table_id', flat=True)
+                    tables_qs = tables_qs.filter(id__in=mgr_allowed_ids)
+
+        client_filter = request.GET.get('client_id') or request.GET.get('organisation_id')
+        if client_filter and str(client_filter).lower() != 'all':
+            try:
+                cid = int(str(client_filter).strip())
+                tables_qs = tables_qs.filter(organisation_id=cid)
+            except (ValueError, TypeError):
+                pass
+
+        tables_qs = tables_qs.order_by('id')
 
         tables_data = []
         for t in tables_qs:
@@ -302,22 +344,65 @@ def api_schema_list(request):
                 approved=Count('id', filter=Q(status='approved')),
                 download=Count('id', filter=Q(status='download')),
                 pool=Count('id', filter=Q(status='pool')),
+                reprint=Count('id', filter=Q(status='reprint')),
             )
+
+            rp_req_cnt = 0
+            rp_conf_cnt = 0
+            try:
+                from reprintcard.models import ReprintRequest
+                req_counts = ReprintRequest.objects.filter(table=t).aggregate(
+                    req_c=Count('id', filter=Q(status='requested')),
+                    conf_c=Count('id', filter=Q(status='confirmed')),
+                )
+                rp_req_cnt = req_counts['req_c'] or 0
+                rp_conf_cnt = req_counts['conf_c'] or 0
+            except Exception:
+                pass
+
+            p_cnt = agg['pending'] or 0
+            v_cnt = agg['verified'] or 0
+            a_cnt = agg['approved'] or 0
+            d_cnt = agg['download'] or 0
+            l_cnt = agg['pool'] or 0
+            r_cnt = agg['reprint'] or 0
+
+            org_name = t.organisation.name if t.organisation else ''
+
             tables_data.append({
                 'id': t.id,
                 'name': t.name,
                 'description': t.description,
                 'organisation_id': t.organisation_id,
-                'organisation_name': t.organisation.name if t.organisation else '',
+                'organisation_name': org_name,
+                'client_id': t.organisation_id,
+                'client_name': org_name,
+                'school_name': org_name,
+                'table_type': getattr(t, 'table_type', 'custom') or 'custom',
                 'is_active': t.is_active,
                 'status': 'active' if t.is_active else 'inactive',
                 'fields': t.fields if hasattr(t, 'fields') else [],
-                'pending_count': agg['pending'] or 0,
-                'verified_count': agg['verified'] or 0,
-                'approved_count': agg['approved'] or 0,
-                'download_count': agg['download'] or 0,
-                'pool_count': agg['pool'] or 0,
-                'total_cards': sum(agg.values()) or 0,
+                'pending_count': p_cnt,
+                'verified_count': v_cnt,
+                'approved_count': a_cnt,
+                'download_count': d_cnt,
+                'pool_count': l_cnt,
+                'reprint_count': r_cnt,
+                'reprint_request_count': rp_req_cnt,
+                'reprint_confirmed_count': rp_conf_cnt,
+                'pending': p_cnt,
+                'verified': v_cnt,
+                'approved': a_cnt,
+                'download': d_cnt,
+                'downloaded': d_cnt,
+                'printed': d_cnt,
+                'pool': l_cnt,
+                'deleted': l_cnt,
+                'reprint': r_cnt,
+                'request': rp_req_cnt,
+                'requested': rp_req_cnt,
+                'confirmed': rp_conf_cnt,
+                'total_cards': p_cnt + v_cnt + a_cnt + d_cnt + l_cnt + r_cnt,
             })
 
         return JsonResponse({'success': True, 'tables': tables_data, 'results': tables_data})
@@ -346,6 +431,13 @@ def api_schema_create(request):
 
         if not client:
             return JsonResponse({'success': False, 'message': 'No active organisation found.'}, status=400)
+
+        # Server-side validation: Only Prime Manager can create tables
+        if not PermissionService.can_create_table(request.user, client):
+            return JsonResponse({
+                'success': False,
+                'message': 'Permission denied: Only Prime Managers can create new Tables. Super Managers can only manage tables delegated to them.'
+            }, status=403)
 
         group = IDCardService.ensure_default_group(client)
         result = IDCardService.create_table(group.id, data)
@@ -775,3 +867,115 @@ def api_create_table_from_xlsx(request, group_id):
             'success': False,
             'message': 'Table was created but data import failed. Please try again.'
         }, status=500)
+
+
+# ==================== TABLE SHARING / DELEGATION APIS ====================
+
+@require_http_methods(["GET"])
+def api_table_shared_managers_get(request, table_id):
+    """
+    Get all Super Managers in the Table's Organisation and indicate which ones
+    have delegated access to this Table.
+    """
+    table, err = _check_client_scope_by_table(request.user, table_id)
+    if err:
+        return err
+
+    from organisation.models import OrganisationManager
+    from tables.models import TableAccess
+
+    # Fetch all Super Managers belonging to the same organisation
+    super_managers = OrganisationManager.objects.filter(
+        organisation=table.organisation,
+        manager_type='super_manager',
+        is_active=True,
+    ).select_related('user')
+
+    existing_access = {
+        ta.manager_id: ta for ta in TableAccess.objects.filter(table=table)
+    }
+
+    result = []
+    for sm in super_managers:
+        acc = existing_access.get(sm.user_id)
+        result.append({
+            'manager_id': sm.user_id,
+            'username': sm.user.username,
+            'name': sm.user.get_full_name() or sm.user.username,
+            'email': sm.user.email,
+            'is_shared': acc is not None and acc.can_view,
+            'can_edit_cards': acc.can_edit_cards if acc else True,
+            'can_approve_print': acc.can_approve_print if acc else False,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'table_id': table.id,
+        'table_name': table.name,
+        'organisation_id': table.organisation_id,
+        'super_managers': result,
+    })
+
+
+@require_http_methods(["POST"])
+def api_table_share_managers(request, table_id):
+    """
+    Update Table delegation for Super Managers.
+    Allowed for Prime Admin, Super Admin, or Prime Manager of the table's organisation.
+    """
+    table, err = _check_client_scope_by_table(request.user, table_id)
+    if err:
+        return err
+
+    # Ensure user has authority to delegate tables
+    if not (PermissionService.is_super_admin(request.user) or getattr(request.user, 'role', '') in ('prime_manager', 'client')):
+        return JsonResponse({
+            'success': False,
+            'message': 'Only Prime Managers can share or delegate Tables to Super Managers.'
+        }, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+        manager_ids = data.get('manager_ids', [])
+        can_edit_cards = bool(data.get('can_edit_cards', True))
+        can_approve_print = bool(data.get('can_approve_print', False))
+
+        from organisation.models import OrganisationManager
+        from tables.models import TableAccess
+        from django.db import transaction
+
+        # Validate that all manager_ids belong to the table's organisation
+        valid_manager_user_ids = set(
+            OrganisationManager.objects.filter(
+                organisation=table.organisation,
+                manager_type='super_manager',
+                user_id__in=manager_ids
+            ).values_list('user_id', flat=True)
+        )
+
+        with transaction.atomic():
+            # Delete accesses no longer granted
+            TableAccess.objects.filter(table=table).exclude(manager_id__in=valid_manager_user_ids).delete()
+
+            # Create or update access for granted managers
+            for mid in valid_manager_user_ids:
+                TableAccess.objects.update_or_create(
+                    table=table,
+                    manager_id=mid,
+                    defaults={
+                        'can_view': True,
+                        'can_edit_cards': can_edit_cards,
+                        'can_approve_print': can_approve_print,
+                    }
+                )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Table "{table.name}" access updated for {len(valid_manager_user_ids)} manager(s).',
+            'shared_manager_count': len(valid_manager_user_ids),
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
+    except Exception as e:
+        logger.exception("Table share error: %s", e)
+        return JsonResponse({'success': False, 'message': _safe_error(e)}, status=500)

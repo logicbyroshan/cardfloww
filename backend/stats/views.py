@@ -350,10 +350,10 @@ ALERT_COOLDOWN_MINUTES = 30
 
 
 def _get_admin_emails():
-    """Return emails of all active super_admin / pro_user accounts."""
+    """Return emails of all active super_admin / prime_admin accounts."""
     admins = User.objects.filter(
         is_active=True,
-        role__in=('super_admin', 'pro_user'),
+        role__in=('super_admin', 'prime_admin', 'pro_user'),
     ).values_list('email', flat=True)
     return [e for e in admins if e and '@' in e]
 

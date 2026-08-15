@@ -192,29 +192,33 @@ class PermissionService:
     # ==================== Role Checks ====================
 
     @staticmethod
-    def is_pro_user(user) -> bool:
-        """Check if user is the pro user."""
+    def is_prime_admin(user) -> bool:
+        """Check if user is Prime Admin."""
         if not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) == 'pro_user'
+        return getattr(user, 'role', None) in ('prime_admin', 'pro_user')
+
+    @staticmethod
+    def is_pro_user(user) -> bool:
+        """Check if user is the prime admin / pro user."""
+        return PermissionService.is_prime_admin(user)
 
     @staticmethod
     def can_manage_pro_features(user) -> bool:
         """Return True if the user may manage or operate pro feature management.
 
-        This is broader than `is_pro_user` and allows the Pro User and
-        Super Admin roles to perform management tasks (assignments, toggles).
+        Allows Prime Admin and Super Admin roles to perform management tasks.
         """
         if not getattr(user, 'is_authenticated', False):
             return False
-        return user.role in {'pro_user', 'super_admin'} or getattr(user, 'is_superuser', False)
+        return user.role in {'prime_admin', 'pro_user', 'super_admin'} or getattr(user, 'is_superuser', False)
 
     @staticmethod
     def is_super_admin(user) -> bool:
-        """Check if user is super admin (or pro_user which has all super_admin powers)."""
+        """Check if user is super admin or prime admin."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('super_admin', 'pro_user')
+        return getattr(user, 'is_superuser', False) or getattr(user, 'role', None) in ('prime_admin', 'super_admin', 'pro_user')
 
     @staticmethod
     def is_operator(user) -> bool:
@@ -243,18 +247,23 @@ class PermissionService:
         return getattr(user, 'role', None) in ('prime_manager', 'guest_prime_manager')
 
     @staticmethod
-    def is_manager(user) -> bool:
-        """Check if user is regular manager."""
+    def is_super_manager(user) -> bool:
+        """Check if user is super manager."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) == 'manager'
+        return getattr(user, 'role', None) in ('super_manager', 'manager')
+
+    @staticmethod
+    def is_manager(user) -> bool:
+        """Check if user is super manager (compat)."""
+        return PermissionService.is_super_manager(user)
 
     @staticmethod
     def is_client(user) -> bool:
-        """Check if user is client, organisation, prime_manager, or manager."""
+        """Check if user is client, organisation, prime_manager, or super_manager."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) in ('client', 'organisation', 'prime_manager', 'guest_prime_manager', 'manager')
+        return getattr(user, 'role', None) in ('client', 'organisation', 'prime_manager', 'guest_prime_manager', 'super_manager', 'manager')
 
     @staticmethod
     def is_client_staff(user) -> bool:
@@ -282,16 +291,84 @@ class PermissionService:
         return res_c or res_cs or res_a or res_sa
 
     @staticmethod
-    def is_guest_prime_manager(user) -> bool:
-        """Check if user is a guest prime manager account."""
+    def is_guest_manager(user) -> bool:
+        """Check if user is guest manager."""
         if not user or not getattr(user, 'is_authenticated', False):
             return False
-        return getattr(user, 'role', None) == 'guest_prime_manager'
+        return getattr(user, 'role', None) in ('guest_manager', 'guest_prime_manager')
+
+    @staticmethod
+    def is_guest_prime_manager(user) -> bool:
+        """Alias for is_guest_manager."""
+        return PermissionService.is_guest_manager(user)
 
     @staticmethod
     def is_guest_user(user) -> bool:
-        """Alias for is_guest_prime_manager."""
-        return PermissionService.is_guest_prime_manager(user)
+        """Alias for is_guest_manager."""
+        return PermissionService.is_guest_manager(user)
+
+    @staticmethod
+    def can_create_table(user, organisation=None) -> bool:
+        """
+        Server-side authorization rule: Can user create new Tables?
+        RULES:
+        - Super Admin / Prime Admin -> True
+        - Prime Manager of the organisation -> True
+        - Super Manager -> Strictly FALSE
+        - Guest Manager -> Strictly FALSE
+        - Assistant -> Strictly FALSE
+        - Operator / Photographer -> Strictly FALSE
+        """
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if PermissionService.is_super_admin(user):
+            return True
+        if getattr(user, 'role', '') in ('prime_manager', 'client'):
+            if organisation:
+                return getattr(organisation, 'user_id', None) == user.id or getattr(user, 'organisation_profile', None) == organisation
+            return True
+        return False
+
+    @staticmethod
+    def can_manage_super_managers(user, organisation=None) -> bool:
+        """Only Super Admin or Prime Manager can create/manage Super Managers."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if PermissionService.is_super_admin(user):
+            return True
+        if getattr(user, 'role', '') in ('prime_manager', 'client'):
+            if organisation:
+                return getattr(organisation, 'user_id', None) == user.id or getattr(user, 'organisation_profile', None) == organisation
+            return True
+        return False
+
+    @staticmethod
+    def can_manage_assistant(user, assistant) -> bool:
+        """
+        Check if user can view/edit/delete a specific Assistant.
+        - Super Admin -> True
+        - Prime Manager -> Can manage any Assistant in their Organisation
+        - Super Manager -> Can ONLY manage Assistants where assistant.manager == user
+        """
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        if PermissionService.is_super_admin(user):
+            return True
+        if not assistant:
+            return False
+        
+        from organisation.services_access import OrganisationAccessService
+        user_org = OrganisationAccessService.get_organisation_for_user(user)
+        if not user_org or assistant.organisation_id != user_org.id:
+            return False
+        
+        if getattr(user, 'role', '') in ('prime_manager', 'guest_prime_manager', 'client'):
+            return True
+        
+        if getattr(user, 'role', '') in ('super_manager', 'manager'):
+            return assistant.manager_id == user.id
+        
+        return False
 
     @staticmethod
     def is_any_admin(user) -> bool:
@@ -453,6 +530,10 @@ class PermissionService:
         if cls.is_photographer(user) and perm_key in cls.OPERATOR_AUTO_PERMS:
             return True
 
+        # --- Intrinsic permissions (no longer toggleable in UI) ---
+        if perm_key == 'perm_idcard_info':
+            return True
+
         # --- 1. Super admin always passes ---
         if cls.is_super_admin(user):
             return True
@@ -534,6 +615,14 @@ class PermissionService:
             if cls.is_guest_user(user) and perm_key == 'perm_mobile_app':
                 return True
 
+            # Table creation: Strictly restricted to Prime Manager (and Platform Admins)
+            if perm_key == 'perm_idcard_setting_add':
+                return cls.can_create_table(user, client_profile)
+
+            # Table listing: Available to active managers (scoped in schema views)
+            if perm_key in ('perm_idcard_setting_list', 'perm_idcard_group_list'):
+                return True
+
             # Map legacy permission names to Organisation model fields if needed
             field_name = perm_key
             if perm_key in ('perm_idcard_client_list', 'perm_client_list'):
@@ -544,10 +633,23 @@ class PermissionService:
                 field_name = 'perm_idcard_setting_list'
 
             if hasattr(client_profile, field_name):
-                return bool(getattr(client_profile, field_name, False))
+                val = getattr(client_profile, field_name, False)
+                if val:
+                    return True
 
             if hasattr(client_profile, perm_key):
-                return bool(getattr(client_profile, perm_key, False))
+                val = getattr(client_profile, perm_key, False)
+                if val:
+                    return True
+
+            # Standard operational permissions default to True for active managers
+            if perm_key in (
+                'perm_idcard_pending_list', 'perm_idcard_verified_list', 'perm_idcard_approved_list',
+                'perm_idcard_download_list', 'perm_idcard_pool_list', 'perm_idcard_add',
+                'perm_idcard_edit', 'perm_idcard_verify', 'perm_idcard_approve', 'perm_idcard_retrieve',
+                'perm_idcard_info'
+            ):
+                return True
 
             return False
 

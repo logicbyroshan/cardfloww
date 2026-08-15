@@ -16,6 +16,7 @@ from tables.models import Table
 from core.services.base import BaseService, ServiceResult
 from core.services.cache_version_service import CacheVersionService
 from core.services.permission_service import PermissionService
+from core.services.auto_password_service import AutoPasswordService
 from core.utils import send_welcome_email
 from organisation.services_access import OrganisationAccessService
 from accounts.services import normalize_password_input
@@ -535,35 +536,24 @@ class AssistantService(BaseService):
                     message='A user with this email already exists'
                 )
             email = raw_email
+            preferred_username = str(data.get('username') or '').strip()
 
-            username = email.split('@')[0].lower().replace('.', '_')
-            if not username:
-                username = f'assistant_{secrets.token_hex(4)}'
-            base_username = username
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base_username}{counter}"
-                counter += 1
+            username = AutoPasswordService.generate_unique_username(
+                email=email,
+                preferred_username=preferred_username,
+                name=display_name,
+            )
             
             phone = str(data.get('phone') or '').strip()
-            password = str(data.get('password') or '').strip()
-            used_phone_as_password = False
-            if not password:
-                if phone:
-                    password = phone
-                    used_phone_as_password = True
-                else:
-                    return ServiceResult(
-                        success=False,
-                        message='Phone number is required when custom password is not provided'
-                    )
-            
-            if not used_phone_as_password:
-                from django.contrib.auth.password_validation import validate_password
-                try:
-                    validate_password(password)
-                except Exception as pw_err:
-                    return ServiceResult(success=False, message=str(pw_err))
+            custom_pwd = str(data.get('password') or '').strip()
+            if custom_pwd:
+                password = normalize_password_input(custom_pwd)
+            else:
+                org_seed_name = client.name if client else display_name
+                password = AutoPasswordService.generate_auto_password(
+                    name_or_org=org_seed_name,
+                    phone=phone,
+                )
             
             with transaction.atomic():
                 is_active = cls.parse_bool(data.get('is_active', True))
@@ -577,6 +567,7 @@ class AssistantService(BaseService):
                     role='assistant',
                     is_active=is_active,
                 )
+                AutoPasswordService.assign_temp_password(assistant_user, password, must_change=True)
                 
                 manager_user = None
                 if user and user.is_authenticated:
@@ -1033,8 +1024,6 @@ class AssistantService(BaseService):
                 client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
-                if not PermissionService.has(user, 'perm_set_temp_password'):
-                    return ServiceResult(success=False, message='Permission denied')
 
             from operators.services import OperatorCreationService
             res_dict = OperatorCreationService.set_temp_password(assistant.id, new_password, is_assistant=True, request=request)

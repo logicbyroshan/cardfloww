@@ -154,7 +154,7 @@ def _consume_log_clear_code_if_valid(request, provided_code: str):
 
 def _is_log_clear_actor(user) -> bool:
     role = str(getattr(user, 'role', '') or '').strip().lower()
-    return role in {'super_admin', 'pro_user'}
+    return role in {'prime_admin', 'super_admin', 'pro_user'}
 
 
 def _is_manual_log_clear_enabled() -> bool:
@@ -1185,8 +1185,8 @@ def api_clear_activity_logs(request):
             'state': next_state,
         })
 
-    if role != 'pro_user':
-        return JsonResponse({'success': False, 'message': 'Only Pro User can finalize log deletion.'}, status=403)
+    if role not in {'prime_admin', 'pro_user'}:
+        return JsonResponse({'success': False, 'message': 'Only Prime Admin can finalize log deletion.'}, status=403)
 
     if guard_state.get('status') != 'pending_pro_user_confirmation':
         return JsonResponse(
@@ -1235,7 +1235,7 @@ def api_activity_log_clear_state(request):
     from core.services.permission_service import PermissionService
 
     if not _is_log_clear_actor(request.user):
-        return JsonResponse({'success': False, 'message': 'Only Super Admin or Pro User can view this state.'}, status=403)
+        return JsonResponse({'success': False, 'message': 'Only Super Admin or Prime Admin can view this state.'}, status=403)
 
     if not _is_manual_log_clear_enabled():
         return JsonResponse(
@@ -1249,15 +1249,16 @@ def api_activity_log_clear_state(request):
 
     role = str(getattr(request.user, 'role', '') or '').strip().lower()
     state = _load_log_clear_guard_state()
-    can_confirm = role == 'pro_user' and state.get('status') == 'pending_pro_user_confirmation'
-    can_request = role in {'super_admin', 'pro_user'}
+    can_confirm = role in {'prime_admin', 'pro_user'} and state.get('status') == 'pending_pro_user_confirmation'
+    can_request = role in {'super_admin', 'prime_admin', 'pro_user'}
     return JsonResponse({
         'success': True,
         'state': state,
         'can_request': can_request,
         'can_confirm': can_confirm,
-        'is_pro_user': role == 'pro_user',
-        'is_super_admin': PermissionService.is_super_admin(request.user) and role != 'pro_user',
+        'is_pro_user': role in {'prime_admin', 'pro_user'},
+        'is_prime_admin': role in {'prime_admin', 'pro_user'},
+        'is_super_admin': PermissionService.is_super_admin(request.user) and role not in {'prime_admin', 'pro_user'},
     })
 
 

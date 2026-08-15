@@ -81,6 +81,8 @@ from .idcard_table_api import (
     api_idcard_table_toggle_status,
     api_idcard_table_list,
     api_create_table_from_xlsx,
+    api_table_shared_managers_get,
+    api_table_share_managers,
 )
 
 from .idcard_api import (
@@ -180,6 +182,12 @@ from .pro_user_guest_users_api import (
     api_pro_user_guest_user_create,
     api_pro_user_guest_user_convert,
     api_pro_user_guest_user_restore,
+)
+
+from .temp_passwords_api import (
+    api_manage_temp_passwords_list,
+    api_manage_temp_password_reset,
+    api_manage_temp_password_resend_email,
 )
 
 from .errors import (

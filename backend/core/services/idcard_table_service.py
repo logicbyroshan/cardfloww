@@ -176,7 +176,7 @@ class IDCardTableService(BaseService):
         try:
             group = get_object_or_404(Table, id=group_id)
 
-            name = data.get('name', '').strip().upper()
+            name = str(data.get('name') or data.get('table_name') or '').strip().upper()
             if not name:
                 return ServiceResult(success=False, message='Table name is required!')
 
@@ -212,9 +212,10 @@ class IDCardTableService(BaseService):
                     'show_path': field_show_path
                 })
 
-            # Determine table type: use explicit value if valid, else auto-detect
-            org_name = getattr(group.client, 'name', '') if group.client_id else ''
-            org_type = getattr(group.client, 'org_type', '') if group.client_id else ''
+            # Determine organisation & table type: use explicit value if valid, else auto-detect
+            org = getattr(group, 'organisation', None) or (group if hasattr(group, 'org_type') else None)
+            org_name = getattr(org, 'name', '') if org else ''
+            org_type = getattr(org, 'org_type', '') if org else ''
             raw_type = str(data.get('table_type') or '').strip().lower()
             if raw_type in cls.VALID_TABLE_TYPES:
                 table_type = raw_type
@@ -222,7 +223,7 @@ class IDCardTableService(BaseService):
                 table_type = cls._infer_table_type(name, org_name, org_type)
 
             table = Table.objects.create(
-                group=group,
+                organisation=org,
                 name=name,
                 table_type=table_type,
                 fields=validated_fields,
@@ -368,11 +369,11 @@ class IDCardTableService(BaseService):
 
     @classmethod
     def ensure_default_group(cls, client) -> 'Table':
-        """Return the first Table for a client, creating one if none exists."""
-        group = Table.objects.filter(client=client).first()
+        """Return the first Table for an organisation, creating one if none exists."""
+        group = Table.objects.filter(organisation=client).first()
         if not group:
             group = Table.objects.create(
-                client=client,
+                organisation=client,
                 name=f"{client.name} - Default Table",
                 is_active=True,
             )

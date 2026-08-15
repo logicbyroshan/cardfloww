@@ -85,6 +85,12 @@ urlpatterns = [
     path('api/client-staff/<int:staff_id>/toggle-status/', client_views_api.api_staff_toggle_status, name='api_client_staff_toggle_status'),
     path('api/client-staff/<int:staff_id>/set-temp-password/', client_views_api.api_staff_set_temp_password, name='api_client_staff_set_temp_password'),
 
+    # Organisation Managers APIs (Prime Manager, Super Managers, Guest Managers)
+    path('api/organisation-managers/', client_views_api.api_organisation_managers_list_create, name='api_organisation_managers_list_create'),
+    path('api/organisation-managers/<int:manager_id>/', client_views_api.api_organisation_manager_detail, name='api_organisation_manager_detail'),
+    path('api/managers/', client_views_api.api_organisation_managers_list_create, name='api_managers_list_create'),
+    path('api/managers/<int:manager_id>/', client_views_api.api_organisation_manager_detail, name='api_managers_detail'),
+
     # Client / Organisation APIs
 
     path('api/client/create/', views.api_client_create, name='api_client_create'),
@@ -149,7 +155,8 @@ urlpatterns = [
     path('api/table/<int:table_id>/update/', views.api_idcard_table_update, name='api_idcard_table_update'),
     path('api/table/<int:table_id>/delete/', views.api_idcard_table_delete, name='api_idcard_table_delete'),
     path('api/table/<int:table_id>/generate-delete-code/', views.api_generate_table_delete_code, name='api_generate_table_delete_code'),
-    path('api/table/<int:table_id>/toggle-status/', views.api_idcard_table_toggle_status, name='api_idcard_table_toggle_status'),
+    path('api/table/<int:table_id>/shared-managers/', views.api_table_shared_managers_get, name='api_table_shared_managers_get'),
+    path('api/table/<int:table_id>/share-managers/', views.api_table_share_managers, name='api_table_share_managers'),
     path('api/group/<int:group_id>/table/create-from-xlsx/', views.api_create_table_from_xlsx, name='api_create_table_from_xlsx'),
     
     # ID Card APIs
@@ -221,6 +228,11 @@ urlpatterns = [
     path('api/pro-user/guest-users/create/', views.api_pro_user_guest_user_create, name='api_pro_user_guest_user_create'),
     path('api/pro-user/guest-users/convert/', views.api_pro_user_guest_user_convert, name='api_pro_user_guest_user_convert'),
     path('api/pro-user/guest-users/restore/', views.api_pro_user_guest_user_restore, name='api_pro_user_guest_user_restore'),
+
+    # Manage Passwords / Temp PIN APIs
+    path('api/panel/temp-passwords/', views.api_manage_temp_passwords_list, name='api_manage_temp_passwords_list'),
+    path('api/panel/temp-passwords/reset/', views.api_manage_temp_password_reset, name='api_manage_temp_password_reset'),
+    path('api/panel/temp-passwords/resend-email/', views.api_manage_temp_password_resend_email, name='api_manage_temp_password_resend_email'),
 
     # Settings/Profile APIs (for all user types)
     path('api/profile/', views.api_get_profile, name='api_get_profile'),

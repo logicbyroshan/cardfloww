@@ -18,7 +18,10 @@ from assistants.services import AssistantService
 from .services_staff import OrganisationStaffService
 
 from core.models import ClientMessage, NotificationRead
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from core.services.permission_service import PermissionService
+from core.services.auto_password_service import AutoPasswordService
 from core.services.activity_service import ActivityService
 from core.services.cache_version_service import CacheVersionService
 from core.services.session_revalidation import get_user_revalidation_marker
@@ -1208,10 +1211,301 @@ def client_api_create_table_from_xlsx(request):
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found.'}, status=403)
 
-    if not PermissionService.has_permission(user, 'perm_idcard_setting_add'):
-        return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
+    if not PermissionService.can_create_table(user, client):
+        return JsonResponse({'success': False, 'message': 'Permission denied: Only Prime Managers can create new Tables.'}, status=403)
 
     from core.services.idcard_service import IDCardService
     group = IDCardService.ensure_default_group(client)
     from core.views.idcard_api import api_create_table_from_xlsx
     return api_create_table_from_xlsx(request, group.id)
+
+
+# =============================================================================
+# API VIEWS - Organisation Managers Management (Prime, Super, Guest Managers)
+# =============================================================================
+
+@require_http_methods(["GET", "POST"])
+def api_organisation_managers_list_create(request):
+    """
+    API: List all managers of an organisation (GET) or Create a new Super/Guest Manager (POST).
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required.'}, status=401)
+
+    from organisation.models import Organisation, OrganisationManager
+    from tables.models import TableAccess, Table
+
+    # Resolve target organisation
+    org_id_param = request.GET.get('organisation_id') or request.GET.get('client_id')
+    org = None
+    if org_id_param:
+        try:
+            org = Organisation.objects.filter(id=int(org_id_param)).first()
+        except (ValueError, TypeError):
+            pass
+
+    if not org:
+        org = OrganisationAccessService.get_organisation_for_user(user)
+
+    if not org:
+        if PermissionService.is_super_admin(user):
+            org = Organisation.objects.filter(status='active').first()
+
+    if not org:
+        return JsonResponse({'success': False, 'message': 'Organisation not found.'}, status=404)
+
+    # Check access to this organisation
+    if not OrganisationAccessService.can_access_organisation(user, org.id):
+        return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
+
+    if request.method == 'GET':
+        managers = OrganisationManager.objects.filter(organisation=org).select_related('user').order_by('-created_at')
+        
+        super_count = managers.filter(manager_type='super_manager', is_active=True).count()
+        
+        managers_data = []
+        for m in managers:
+            # Count shared tables
+            table_count = 0
+            if m.manager_type in ('super_manager', 'guest_manager'):
+                table_count = TableAccess.objects.filter(manager=m.user, can_view=True).count()
+            elif m.manager_type == 'prime_manager':
+                table_count = Table.objects.filter(organisation=org, deleted_by_manager=False).count()
+
+            # Count managed assistants
+            assistant_count = m.user.managed_assistants.count()
+
+            managers_data.append({
+                'id': m.id,
+                'user_id': m.user_id,
+                'username': m.user.username,
+                'name': m.user.get_full_name() or m.user.username,
+                'email': m.user.email if not m.user.email.endswith('@noemail.local') else '',
+                'phone': m.user.phone or '',
+                'manager_type': m.manager_type,
+                'role_title': m.get_manager_type_display(),
+                'department': m.department or '',
+                'designation': m.designation or '',
+                'is_active': m.is_active and m.user.is_active,
+                'status': 'active' if (m.is_active and m.user.is_active) else 'inactive',
+                'shared_tables_count': table_count,
+                'assistants_count': assistant_count,
+                'created_at': m.created_at.strftime('%Y-%m-%d %H:%M'),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'organisation_id': org.id,
+            'organisation_name': org.name,
+            'max_super_managers': org.max_super_managers,
+            'super_manager_count': super_count,
+            'available_super_manager_slots': max(0, org.max_super_managers - super_count),
+            'managers': managers_data,
+        })
+
+    # POST - Create new Super Manager or Guest Manager
+    if not PermissionService.can_manage_super_managers(user, org):
+        return JsonResponse({
+            'success': False,
+            'message': 'Only Prime Managers and Platform Admins can create Super Managers.'
+        }, status=403)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
+
+    manager_type = data.get('manager_type', 'super_manager')
+    if manager_type not in ('super_manager', 'guest_manager'):
+        manager_type = 'super_manager'
+
+    # Enforce max super managers limit
+    if manager_type == 'super_manager':
+        active_super_count = OrganisationManager.objects.filter(
+            organisation=org,
+            manager_type='super_manager',
+            is_active=True
+        ).count()
+        if active_super_count >= org.max_super_managers:
+            return JsonResponse({
+                'success': False,
+                'message': f'Cannot create Super Manager: Organisation limit of {org.max_super_managers} Super Managers reached.'
+            }, status=400)
+
+    name = str(data.get('name') or '').strip()
+    if not name:
+        return JsonResponse({'success': False, 'message': 'Manager name is required.'}, status=400)
+
+    email = str(data.get('email') or '').strip().lower()
+    if not email:
+        return JsonResponse({'success': False, 'message': 'Email address is required.'}, status=400)
+
+    if User.objects.filter(email__iexact=email).exists():
+        return JsonResponse({'success': False, 'message': 'A user with this email already exists.'}, status=400)
+
+    preferred_username = str(data.get('username') or '').strip()
+    username = AutoPasswordService.generate_unique_username(
+        email=email,
+        preferred_username=preferred_username,
+        name=name,
+    )
+
+    phone = str(data.get('phone') or '').strip()
+    password = str(data.get('password') or '').strip()
+    if not password:
+        password = AutoPasswordService.generate_auto_password(name_or_org=org.name, phone=phone)
+
+    first_name = name.split()[0] if name else ''
+    last_name = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
+
+    from django.db import transaction
+    with transaction.atomic():
+        new_user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            role=manager_type,
+            is_active=bool(data.get('is_active', True)),
+        )
+        AutoPasswordService.assign_temp_password(new_user, password, must_change=True)
+
+        org_manager = OrganisationManager.objects.create(
+            user=new_user,
+            organisation=org,
+            manager_type=manager_type,
+            department=str(data.get('department') or '').strip(),
+            designation=str(data.get('designation') or '').strip(),
+            is_active=bool(data.get('is_active', True)),
+        )
+
+        # Assign initial tables if provided
+        assigned_tables = data.get('assigned_table_ids') or data.get('assigned_groups') or []
+        if assigned_tables:
+            valid_tables = Table.objects.filter(organisation=org, id__in=assigned_tables, deleted_by_manager=False)
+            for tbl in valid_tables:
+                TableAccess.objects.create(
+                    table=tbl,
+                    manager=new_user,
+                    can_view=True,
+                    can_edit_cards=True,
+                    can_approve_print=False,
+                )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'{org_manager.get_manager_type_display()} "{name}" created successfully.',
+        'manager': {
+            'id': org_manager.id,
+            'user_id': new_user.id,
+            'username': new_user.username,
+            'name': name,
+            'email': email,
+            'manager_type': manager_type,
+            'role_title': org_manager.get_manager_type_display(),
+        }
+    })
+
+
+@require_http_methods(["GET", "PUT", "DELETE"])
+def api_organisation_manager_detail(request, manager_id):
+    """
+    API: Get, Update, or Delete a specific Organisation Manager.
+    """
+    user = request.user
+    if not user.is_authenticated:
+        return JsonResponse({'success': False, 'message': 'Authentication required.'}, status=401)
+
+    from organisation.models import OrganisationManager
+    from tables.models import TableAccess
+
+    org_mgr = OrganisationManager.objects.filter(id=manager_id).select_related('user', 'organisation').first()
+    if not org_mgr:
+        # Try finding by user_id
+        org_mgr = OrganisationManager.objects.filter(user_id=manager_id).select_related('user', 'organisation').first()
+
+    if not org_mgr:
+        return JsonResponse({'success': False, 'message': 'Manager not found.'}, status=404)
+
+    # Check permission
+    if not PermissionService.can_manage_super_managers(user, org_mgr.organisation):
+        return JsonResponse({'success': False, 'message': 'Permission denied.'}, status=403)
+
+    if request.method == 'GET':
+        shared_table_ids = list(TableAccess.objects.filter(manager=org_mgr.user, can_view=True).values_list('table_id', flat=True))
+        return JsonResponse({
+            'success': True,
+            'manager': {
+                'id': org_mgr.id,
+                'user_id': org_mgr.user_id,
+                'username': org_mgr.user.username,
+                'name': org_mgr.user.get_full_name() or org_mgr.user.username,
+                'email': org_mgr.user.email if not org_mgr.user.email.endswith('@noemail.local') else '',
+                'phone': org_mgr.user.phone or '',
+                'manager_type': org_mgr.manager_type,
+                'role_title': org_mgr.get_manager_type_display(),
+                'department': org_mgr.department or '',
+                'designation': org_mgr.designation or '',
+                'is_active': org_mgr.is_active and org_mgr.user.is_active,
+                'assigned_table_ids': shared_table_ids,
+                'created_at': org_mgr.created_at.strftime('%Y-%m-%d %H:%M'),
+            }
+        })
+
+    if request.method == 'PUT':
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
+
+        name = data.get('name')
+        if name:
+            name_parts = str(name).strip().split()
+            org_mgr.user.first_name = name_parts[0] if name_parts else ''
+            org_mgr.user.last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+
+        if 'phone' in data:
+            org_mgr.user.phone = str(data.get('phone') or '').strip()
+
+        if 'is_active' in data:
+            is_act = bool(data['is_active'])
+            org_mgr.is_active = is_act
+            org_mgr.user.is_active = is_act
+
+        if 'department' in data:
+            org_mgr.department = str(data.get('department') or '').strip()
+
+        if 'designation' in data:
+            org_mgr.designation = str(data.get('designation') or '').strip()
+
+        org_mgr.user.save()
+        org_mgr.save()
+
+        # Update assigned tables if provided
+        if 'assigned_table_ids' in data:
+            assigned_tables = data.get('assigned_table_ids', [])
+            from tables.models import Table
+            TableAccess.objects.filter(manager=org_mgr.user).delete()
+            valid_tables = Table.objects.filter(organisation=org_mgr.organisation, id__in=assigned_tables, deleted_by_manager=False)
+            for tbl in valid_tables:
+                TableAccess.objects.create(
+                    table=tbl,
+                    manager=org_mgr.user,
+                    can_view=True,
+                    can_edit_cards=True,
+                    can_approve_print=False,
+                )
+
+        return JsonResponse({'success': True, 'message': 'Manager updated successfully.'})
+
+    if request.method == 'DELETE':
+        if org_mgr.manager_type == 'prime_manager':
+            return JsonResponse({'success': False, 'message': 'Prime Manager (Organisation Owner) cannot be deleted.'}, status=400)
+
+        user_obj = org_mgr.user
+        org_mgr.delete()
+        user_obj.delete()
+        return JsonResponse({'success': True, 'message': 'Manager account deleted successfully.'})
