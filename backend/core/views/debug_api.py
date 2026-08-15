@@ -133,12 +133,12 @@ def api_card_allowed_transitions(request, card_id):
     from tables.services_workflow import WorkflowService
 
     try:
-        card = get_object_or_404(IDCard.objects.select_related('table__group'), id=card_id)
+        card = get_object_or_404(IDCard.objects.select_related('table__organisation'), id=card_id)
     except Exception:
         return JsonResponse({'success': False, 'message': 'Card not found'}, status=404)
 
     # IDOR protection: scope card to requesting user's client
-    client_id = card.table.group.client_id
+    client_id = card.table.organisation_id
     if not PermissionService.can_access_client(request.user, client_id):
         return JsonResponse({'success': False, 'message': 'Card not found'}, status=404)
 

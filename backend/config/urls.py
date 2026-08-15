@@ -177,13 +177,20 @@ urlpatterns += [
     path('panel/client/', include(('organisation.urls', 'organisation'), namespace='panel_client_root')),
     path('client/', include(('organisation.urls', 'organisation'), namespace='client_root')),
     path('assistants/', include(('assistants.urls', 'assistants'), namespace='assistants_root')),
+    path('panel/assistants/', include(('assistants.urls', 'assistants'), namespace='panel_assistants_root')),
     path('exports/', include(('exports.urls', 'exports'), namespace='exports_root')),
+    path('panel/exports/', include(('exports.urls', 'exports'), namespace='panel_exports_root')),
     path('images/', include(('mediafiles.urls', 'mediafiles'), namespace='mediafiles_root')),
     path('operators/', include(('operators.urls', 'operators'), namespace='operators_root')),
+    path('panel/operators/', include(('operators.urls', 'operators'), namespace='panel_operators_root')),
     path('staff/', include(('staff.urls', 'staff'), namespace='staff_root')),
+    path('panel/staff/', include(('staff.urls', 'staff'), namespace='panel_staff_root')),
     path('tables/', include(('tables.urls', 'tables'), namespace='tables_root')),
+    path('panel/tables/', include(('tables.urls', 'tables'), namespace='panel_tables_root')),
     path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
+    path('panel/reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='panel_reprintcard_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
+    path('panel/stats/', include(('stats.urls', 'stats'), namespace='panel_stats_root')),
 
     # ==================== MOBILE APP DOWNLOAD LANDING (/app/*) ====================
     # Kept as HTML — web fallback for mobile users who scan QR codes and

@@ -292,8 +292,9 @@ class ReprintWorkflowService:
 
             if should_move and card_ids:
                 now = timezone.now()
+                target_card_status = 'pool' if move_card_to_pool else 'deleted'
                 IDCard.objects.filter(id__in=card_ids).update(
-                    status='deleted',
+                    status=target_card_status,
                     deleted_at=now,
                     status_changed_at=now,
                     updated_at=now,

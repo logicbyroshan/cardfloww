@@ -21,4 +21,5 @@ urlpatterns = [
     path('api/table/<int:table_id>/mark-downloaded/', views.api_reprint_mark_downloaded, name='api_reprint_mark_downloaded'),
     path('api/table/<int:table_id>/download-list/', views.api_download_list, name='api_download_list'),
     path('api/table/<int:table_id>/send-to-print/', views.api_reprint_send_to_print, name='api_reprint_send_to_print'),
+    path('api/table/<int:table_id>/cards/', views.api_reprint_list, name='reprint_cards'),
 ]

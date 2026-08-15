@@ -183,7 +183,7 @@ def api_idcard_bulk_upload(request, table_id):
             except Exception:
                 pass  # Non-critical — proceed if check fails
         
-        table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
+        table = get_object_or_404(Table.objects.select_related('organisation'), id=table_id)
         
         if 'file' not in request.FILES:
             return JsonResponse({'success': False, 'message': 'No file uploaded!'}, status=400)
@@ -696,8 +696,8 @@ def api_idcard_reupload_images(request, table_id):
         from django.db import transaction
         from ..services.bulk_upload_service import DiskBackedImageStore
         
-        table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
-        client = table.group.client
+        table = get_object_or_404(Table.objects.select_related('organisation'), id=table_id)
+        client = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
         
         reupload_zip_source = None
 

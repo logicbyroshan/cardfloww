@@ -936,11 +936,11 @@ def api_global_search(request):
         table_ids = sorted({card.table_id for card in cards if card.table_id})
         table_map = {
             table.id: table
-            for table in Table.objects.filter(id__in=table_ids).select_related('group__client').only(
+            for table in Table.objects.filter(id__in=table_ids).select_related('organisation').only(
                 'id',
                 'name',
                 'fields',
-                'group__client__name',
+                'organisation__name',
             )
         }
 
@@ -1048,7 +1048,7 @@ def api_global_search(request):
                     ''
                 ).strip()
 
-            client_name = table.group.client.name if table.group_id and table.group and table.group.client else 'Unknown'
+            client_name = table.organisation.name if getattr(table, 'organisation', None) else 'Unknown'
             table_name = table.name or 'Unknown'
             
             # Find first valid photo from image fields

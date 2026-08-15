@@ -115,7 +115,7 @@ def process_export_zip(task):
         return
     
     try:
-        table = Table.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('organisation').get(id=table_id)
     except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
@@ -307,7 +307,7 @@ def process_export_pdf(task):
         return
     
     try:
-        table = Table.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('organisation').get(id=table_id)
     except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
@@ -442,7 +442,7 @@ def process_export_docx(task):
         return
     
     try:
-        table = Table.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('organisation').get(id=table_id)
     except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return
@@ -602,7 +602,7 @@ def process_export_excel(task):
         return
     
     try:
-        table = Table.objects.select_related('group__client').get(id=table_id)
+        table = Table.objects.select_related('organisation').get(id=table_id)
     except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return

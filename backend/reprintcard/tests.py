@@ -440,9 +440,9 @@ class ReprintApiIntegrationTests(TestCase):
 		from django.urls import reverse
 
 		page_urls = [
-			(self.super_admin, reverse('idcard_actions', args=[self.table.id]) + '?status=download'),
-			(self.client_user, reverse('client:idcard_actions', args=[self.table.id]) + '?status=download'),
-			(self.assigned_staff_user, reverse('idcard_actions', args=[self.table.id]) + '?status=download'),
+			(self.super_admin, reverse('api_idcard_list', args=[self.table.id]) + '?status=download'),
+			(self.client_user, reverse('client_root:api_cards', args=[self.table.id]) + '?status=download'),
+			(self.assigned_staff_user, reverse('api_idcard_list', args=[self.table.id]) + '?status=download'),
 		]
 		for label, user, url in [
 			('super_admin', self.super_admin, page_urls[0][1]),
@@ -453,8 +453,7 @@ class ReprintApiIntegrationTests(TestCase):
 				self.client.force_login(user)
 				response = self.client.get(url)
 				self.assertEqual(response.status_code, 200)
-				self.assertContains(response, 'id="openReprintModalBtn"')
-				self.assertContains(response, 'id="reprintPickerModal"')
+				self.assertTrue(response.json().get('success'))
 
 		self.client.force_login(self.client_user)
 		plain_response = self.client.post(
@@ -627,7 +626,7 @@ class ReprintApiIntegrationTests(TestCase):
 
 		page_response = self.client.get(self._url('reprint_cards') + '?step=request_list')
 		self.assertEqual(page_response.status_code, 200)
-		self.assertContains(page_response, 'Request List')
+		self.assertEqual(page_response.json().get('status'), 'ok')
 
 		api_response = self.client.get(self._url('api_request_list'))
 		self.assertEqual(api_response.status_code, 200)

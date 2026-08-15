@@ -50,33 +50,20 @@ class StatisticsTests(TestCase):
             self.pro_user.user_permissions.add(perm)
         self.pro_user.save()
 
-    def test_statistics_page_redirects_for_anonymous_user(self):
-        response = self.client.get(reverse('pro_user_statistics'))
-        self.assertRedirects(response, f'/panel/auth/login/?next={reverse("pro_user_statistics")}')
-
-    def test_statistics_page_redirects_for_non_pro_user(self):
-        self.assertTrue(self.client.login(username='stats-client@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_statistics'))
-        self.assertRedirects(response, reverse('dashboard'), fetch_redirect_response=False)
-        self.client.logout()
-
-    def test_statistics_page_accessible_for_super_admin(self):
-        self.assertTrue(self.client.login(username='stats-admin@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_statistics'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'stats/statistics.html')
-        self.client.logout()
-
-    def test_statistics_page_accessible_for_pro_user(self):
-        self.assertTrue(self.client.login(username='stats-pro@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_statistics'))
-        self.assertEqual(response.status_code, 200)
-        self.client.logout()
+    def test_api_endpoint_denied_for_anonymous_user(self):
+        response = self.client.get(reverse('api_statistics_data'))
+        self.assertEqual(response.status_code, 401)
 
     def test_api_endpoint_denied_for_non_pro_user(self):
         self.assertTrue(self.client.login(username='stats-client@test.com', password='testpass123'))
         response = self.client.get(reverse('api_statistics_data'))
         self.assertEqual(response.status_code, 403)
+        self.client.logout()
+
+    def test_api_endpoint_accessible_for_pro_user(self):
+        self.assertTrue(self.client.login(username='stats-pro@test.com', password='testpass123'))
+        response = self.client.get(reverse('api_statistics_data'))
+        self.assertEqual(response.status_code, 200)
         self.client.logout()
 
     def test_api_endpoint_returns_json_data_for_super_admin(self):
@@ -89,34 +76,23 @@ class StatisticsTests(TestCase):
             data = response.json()
             self.assertTrue(data['success'])
             self.assertIn('labels', data)
-            self.assertIn('client_activity', data)
-            self.assertIn('assistant_activity', data)
-            self.assertIn('batch_jobs_count', data)
+            self.assertIn('desktop_activity', data)
+            self.assertIn('mobile_activity', data)
+            self.assertIn('cards_created', data)
             self.assertIn('summary', data)
             self.assertIn('current_active_users', data['summary'])
             self.assertIn('peak_active_users', data['summary'])
             
         self.client.logout()
 
-    def test_batch_jobs_page_redirects_for_anonymous_user(self):
-        response = self.client.get(reverse('pro_user_batch_jobs'))
-        self.assertRedirects(response, f'/login/?next={reverse("pro_user_batch_jobs")}')
-
-    def test_batch_jobs_page_redirects_for_non_pro_user(self):
-        self.assertTrue(self.client.login(username='stats-client@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_batch_jobs'))
-        self.assertRedirects(response, reverse('dashboard'), fetch_redirect_response=False)
-        self.client.logout()
-
-    def test_batch_jobs_page_accessible_for_super_admin(self):
+    def test_check_server_load_accessible_for_super_admin(self):
         self.assertTrue(self.client.login(username='stats-admin@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_batch_jobs'))
+        response = self.client.get(reverse('api_check_server_load'))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'pro_user/batch-jobs.html')
         self.client.logout()
 
-    def test_batch_jobs_page_accessible_for_pro_user(self):
-        self.assertTrue(self.client.login(username='stats-pro@test.com', password='testpass123'))
-        response = self.client.get(reverse('pro_user_batch_jobs'))
-        self.assertEqual(response.status_code, 200)
+    def test_check_server_load_denied_for_non_pro_user(self):
+        self.assertTrue(self.client.login(username='stats-client@test.com', password='testpass123'))
+        response = self.client.get(reverse('api_check_server_load'))
+        self.assertEqual(response.status_code, 403)
         self.client.logout()

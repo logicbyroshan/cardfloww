@@ -31,6 +31,7 @@ def _setup_export_data():
     from tables.models import Table, IDCard
     group = Table.objects.create(client=client, name='Export Group')
     table = Table.objects.create(
+        organisation=client,
         group=group, name='Export Table',
         fields=[
             {'name': 'NAME', 'type': 'text', 'order': 1},
@@ -62,7 +63,7 @@ class ExportPermissionTests(TestCase):
             data=json.dumps({'card_ids': []}),
             content_type='application/json',
         )
-        self.assertIn(response.status_code, [302, 403])
+        self.assertIn(response.status_code, [302, 401, 403])
 
     def test_admin_can_export_xlsx(self):
         self.client.login(username='exadmin@test.com', password='adminpass1')
@@ -546,8 +547,8 @@ class ExportServiceAdvancedTests(TestCase):
 
         group1 = Table.objects.create(client=self.client1, name='Group 1')
         group2 = Table.objects.create(client=self.client2, name='Group 2')
-        self.table1 = Table.objects.create(group=group1, name='Table 1', fields=[{'name': 'NAME', 'type': 'text'}])
-        self.table2 = Table.objects.create(group=group2, name='Table 2', fields=[{'name': 'NAME', 'type': 'text'}])
+        self.table1 = Table.objects.create(organisation=self.client1, group=group1, name='Table 1', fields=[{'name': 'NAME', 'type': 'text'}])
+        self.table2 = Table.objects.create(organisation=self.client2, group=group2, name='Table 2', fields=[{'name': 'NAME', 'type': 'text'}])
 
         IDCard.objects.create(table=self.table1, field_data={'NAME': 'A'}, status='pending')
         IDCard.objects.create(table=self.table1, field_data={'NAME': 'B'}, status='verified')
@@ -1024,6 +1025,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
 
         group = Table.objects.create(client=self.client_obj, name='Deep Group')
         self.table = Table.objects.create(
+            organisation=self.client_obj,
             group=group,
             name='Deep Table',
             fields=[
@@ -1060,6 +1062,7 @@ class ExportDeepLimitAndRoleTests(TestCase):
 
         other_group = Table.objects.create(client=self.client_obj, name='Other Group')
         other_table = Table.objects.create(
+            organisation=self.client_obj,
             group=other_group,
             name='Other Table',
             fields=[{'name': 'NAME', 'type': 'text', 'order': 1}],

@@ -268,11 +268,11 @@ def api_photographer_client_tables(request, client_id):
         from tables.models import Table, IDCard
         from mediafiles.utils import get_card_photo_url
 
-        groups = Table.objects.filter(client_id=client_id, is_active=True).order_by('name')
+        tables = Table.objects.filter(organisation_id=client_id, is_active=True, deleted_by_manager=False).order_by('name')
         
         # Calculate captured/uncaptured counts per table for this client
         assigned_cards_qs = IDCard.objects.filter(
-            table__group__client_id=client_id,
+            table__organisation_id=client_id,
             status__in=['pending', 'verified']
         ).only('id', 'table_id', 'photo', 'field_data')
 
@@ -288,26 +288,18 @@ def api_photographer_client_tables(request, client_id):
                 uncaptured_counts[t_id] = uncaptured_counts.get(t_id, 0) + 1
 
         result = []
-        for group in groups:
-            tables = Table.objects.filter(
-                group=group, deleted_by_client=False
-            ).order_by('name').values('id', 'name', 'is_active')
-            
-            tables_data = []
-            for t in tables:
-                t_id = t['id']
-                tables_data.append({
+        for table in tables:
+            t_id = table.id
+            result.append({
+                'group_id': table.id,
+                'group_name': table.name,
+                'tables': [{
                     'id': t_id,
-                    'name': t['name'],
-                    'is_active': t['is_active'],
+                    'name': table.name,
+                    'is_active': table.is_active,
                     'captured_count': captured_counts.get(t_id, 0),
                     'uncaptured_count': uncaptured_counts.get(t_id, 0)
-                })
-
-            result.append({
-                'group_id': group.id,
-                'group_name': group.name,
-                'tables': tables_data,
+                }],
             })
         return JsonResponse({'success': True, 'groups': result})
     except Exception as e:

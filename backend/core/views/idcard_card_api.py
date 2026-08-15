@@ -1812,7 +1812,7 @@ def api_idcard_bulk_status(request, table_id):
 
                 if apply_class_change and class_updates:
                     candidate_cards = list(
-                        IDCard.objects.select_related('table__group').filter(
+                        IDCard.objects.select_related('table__organisation').filter(
                             table=_tbl,
                             id__in=forbidden_ids,
                             status='pool',
@@ -1848,7 +1848,7 @@ def api_idcard_bulk_status(request, table_id):
                     ).exists()
                     if has_pool_mismatch:
                         pool_cards = list(
-                            IDCard.objects.select_related('table__group').filter(
+                            IDCard.objects.select_related('table__organisation').filter(
                                 table=_tbl,
                                 id__in=forbidden_ids,
                                 status='pool',

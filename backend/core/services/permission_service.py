@@ -616,7 +616,19 @@ class PermissionService:
         qs = base_qs if base_qs is not None else Organisation.objects.all()
         if not user.is_authenticated:
             return qs.none()
-        if cls.is_client(user) or Organisation.objects.filter(user=user).exists() or getattr(user, 'client_profile', None):
+        if cls.is_super_admin(user) and not cls.is_operator(user):
+            return qs
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            ast = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
+            if ast and (ast.organisation_id or getattr(ast, 'client_id', None)):
+                target_id = ast.organisation_id or getattr(ast, 'client_id', None)
+                return qs.filter(id=target_id)
+            return qs.none()
+        if cls.is_operator(user) or cls.is_photographer(user):
+            assigned_ids = cls.get_accessible_client_ids(user)
+            return qs.filter(id__in=assigned_ids)
+        if cls.is_client(user):
             org = Organisation.objects.filter(user=user).first()
             if org:
                 return qs.filter(id=org.id)
@@ -628,17 +640,6 @@ class PermissionService:
             if first_asst and first_asst.organisation_id:
                 return qs.filter(id=first_asst.organisation_id)
             return qs.none()
-        if cls.is_assistant(user):
-            from assistants.models import Assistant
-            ast = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
-            if ast and ast.client_id:
-                return qs.filter(id=ast.client_id)
-            return qs.none()
-        if cls.is_super_admin(user) and not cls.is_operator(user):
-            return qs
-        if cls.is_operator(user) or cls.is_photographer(user):
-            assigned_ids = cls.get_accessible_client_ids(user)
-            return qs.filter(id__in=assigned_ids)
         return qs.none()
 
     @classmethod
@@ -688,30 +689,15 @@ class PermissionService:
         if not user.is_authenticated:
             user._cached_accessible_client_ids = []
             return []
-        if cls.is_client(user) or hasattr(user, 'client_profile'):
-            from organisation.models import Organisation
-            org = Organisation.objects.filter(user=user).first()
-            if org:
-                ids = [org.id]
-            else:
-                cp = getattr(user, 'client_profile', None)
-                if cp:
-                    ids = [cp.id]
-                else:
-                    from assistants.models import Assistant
-                    first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
-                    ids = [first_asst.organisation_id] if first_asst and first_asst.organisation_id else []
-            user._cached_accessible_client_ids = ids
-            return ids
-        if cls.is_assistant(user):
-            from assistants.models import Assistant
-            assistant = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
-            ids = [assistant.client_id] if assistant and assistant.client_id else []
-            user._cached_accessible_client_ids = ids
-            return ids
         if cls.is_super_admin(user) and not cls.is_operator(user):
             user._cached_accessible_client_ids = []
             return []  # Empty means "all" for super_admin — caller should handle
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            assistant = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
+            ids = [assistant.organisation_id or getattr(assistant, 'client_id', None)] if assistant and (assistant.organisation_id or getattr(assistant, 'client_id', None)) else []
+            user._cached_accessible_client_ids = ids
+            return ids
         if cls.is_operator(user) or cls.is_photographer(user):
             cache_key = cls._accessible_client_ids_cache_key(user)
             cached = _cache.get(cache_key)
@@ -734,16 +720,27 @@ class PermissionService:
                 else:
                     ids = []
             else:
-                op = getattr(user, 'operator_profile', None)
-                if op:
-                    ids = list(op.assigned_organisations.values_list('id', flat=True))
-                else:
-                    ids = []
+                profile = cls.get_profile(user)
+                ids = list(profile.assigned_organisations.values_list('id', flat=True)) if profile else []
 
-            _cache.set(cache_key, ids, cls.ACCESSIBLE_CLIENT_IDS_CACHE_TTL)
+            _cache.set(cache_key, ids, 300)
             user._cached_accessible_client_ids = ids
             return ids
-
+        if cls.is_client(user):
+            from organisation.models import Organisation
+            org = Organisation.objects.filter(user=user).first()
+            if org:
+                ids = [org.id]
+            else:
+                cp = getattr(user, 'client_profile', None)
+                if cp:
+                    ids = [cp.id]
+                else:
+                    from assistants.models import Assistant
+                    first_asst = Assistant.objects.filter(manager=user).select_related('organisation').first()
+                    ids = [first_asst.organisation_id] if first_asst and first_asst.organisation_id else []
+            user._cached_accessible_client_ids = ids
+            return ids
         user._cached_accessible_client_ids = []
         return []
 

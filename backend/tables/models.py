@@ -114,6 +114,14 @@ class Table(models.Model):
     def group_id(self):
         return self.id
 
+    @property
+    def deleted_by_client(self):
+        return self.deleted_by_manager
+
+    @deleted_by_client.setter
+    def deleted_by_client(self, value):
+        self.deleted_by_manager = value
+
     # ── Field introspection helpers ──────────────────────────
 
     def has_class_field(self):

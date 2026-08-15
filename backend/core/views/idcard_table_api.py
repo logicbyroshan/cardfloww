@@ -190,8 +190,8 @@ def api_idcard_table_delete(request, table_id):
             }, status=400)
         # Client users: soft-delete only
         if PermissionService.is_client_role(request.user):
-            table.deleted_by_client = True
-            table.save(update_fields=['deleted_by_client'])
+            table.deleted_by_manager = True
+            table.save(update_fields=['deleted_by_manager'])
             return JsonResponse({'success': True, 'message': 'Table removed from your view successfully.'})
 
         # Admin-staff hard-delete requires one-time 10-digit confirmation code.

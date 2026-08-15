@@ -1062,10 +1062,9 @@ class IDCardCardService(BaseService):
             from django.utils.dateparse import parse_datetime
 
             with db_transaction.atomic():
-                # Lock the row to prevent concurrent writes
-                card = IDCard.objects.select_for_update().select_related('table__group__client').get(id=card_id)
+                card = IDCard.objects.select_for_update().get(id=card_id)
                 table = card.table
-                client = table.group.client
+                client = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
 
                 # ── Smart 3-way field-level merge on concurrent edit ──
                 # When two users edit the same card simultaneously:
@@ -1429,7 +1428,8 @@ class IDCardCardService(BaseService):
                         real_media_path = None
                         try:
                             from mediafiles.models import CardMedia
-                            media_qs = CardMedia.objects.filter(client=table.group.client)
+                            client_for_media = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
+                            media_qs = CardMedia.objects.filter(client=client_for_media) if client_for_media else CardMedia.objects.none()
                             for media in media_qs:
                                 m_file = str(media.file or '')
                                 m_orig = str(media.original_filename or '')
@@ -1446,7 +1446,7 @@ class IDCardCardService(BaseService):
                             from django.conf import settings
                             media_root = getattr(settings, 'MEDIA_ROOT', '')
                             if media_root:
-                                client_id_str = str(table.group.client_id) if (table and getattr(table.group, 'client_id', None)) else ''
+                                client_id_str = str(table.organisation_id) if getattr(table, 'organisation_id', None) else (str(table.group.client_id) if (table and getattr(table, 'group', None) and getattr(table.group, 'client_id', None)) else '')
                                 # Check client specific paths first
                                 possible_rel_paths = []
                                 if client_id_str:
@@ -1523,11 +1523,12 @@ class IDCardCardService(BaseService):
                             }
                         )
                     try:
+                        client_for_img = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
                         result = ImageService.process_image_field(
                             field_name=canonical_field,
                             new_value=new_img_value,
                             existing_value=existing_value,
-                            client=table.group.client,
+                            client=client_for_img,
                             card=card,
                             uploaded_file=None,
                             batch_counter=1,
@@ -1581,7 +1582,7 @@ class IDCardCardService(BaseService):
     def delete_card(cls, card_id: int) -> ServiceResult:
         """Delete an ID Card"""
         try:
-            card = get_object_or_404(IDCard.objects.select_related('table__group'), id=card_id)
+            card = get_object_or_404(IDCard.objects.select_related('table__organisation'), id=card_id)
             table = card.table
             card.delete()
             cls._bump_table_cache_versions(table)
@@ -1628,7 +1629,7 @@ class IDCardCardService(BaseService):
             with transaction.atomic():
                 card = IDCard.objects.select_for_update().get(id=card.id)
                 table = card.table
-                client = table.group.client
+                client = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
                 
                 # Identify image fields
                 image_field_names = cls.get_image_field_names(table.fields or [])

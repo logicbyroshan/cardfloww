@@ -575,8 +575,7 @@ def _check_client_scope_by_group(user, group_id):
         if assigned_table_ids:
             has_group_table = Table.objects.filter(
                 id__in=assigned_table_ids,
-                group_id=group.id,
-                deleted_by_client=False,
+                deleted_by_manager=False,
             ).exists()
 
         if (assigned_group_ids or assigned_table_ids) and not (has_group_assignment or has_group_table):
@@ -636,7 +635,7 @@ def _client_readonly_response():
 
 def _is_client_readonly(user, card_status):
     """Return True when client/client_staff tries to modify a card in a locked status."""
-    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant') and card_status in _CLIENT_READONLY_STATUSES
+    return PermissionService.is_client_role(user) and card_status in _CLIENT_READONLY_STATUSES
 
 
 def _client_edit_locked_response():
@@ -649,7 +648,7 @@ def _client_edit_locked_response():
 
 def _is_client_edit_locked(user, card_status):
     """Return True when client/client_staff tries to edit a card in an edit-locked status."""
-    return user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant') and card_status in _CLIENT_EDIT_LOCK_STATUSES
+    return PermissionService.is_client_role(user) and card_status in _CLIENT_EDIT_LOCK_STATUSES
 
 
 # ==================== FIELD HELPERS (canonical: core.utils.field_utils) ====================

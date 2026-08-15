@@ -138,7 +138,7 @@ class CropService:
 
         # Validate table
         try:
-            table = Table.objects.select_related("group__client").get(id=table_id)
+            table = Table.objects.select_related("organisation").get(id=table_id)
         except Table.DoesNotExist:
             return {"success": False, "message": f"Table {table_id} not found"}
 
@@ -334,11 +334,11 @@ class CropService:
 
         # Validate table
         try:
-            table = Table.objects.select_related("group__client").get(id=table_id)
+            table = Table.objects.select_related("organisation").get(id=table_id)
         except Table.DoesNotExist:
             return {"success": False, "message": f"Table {table_id} not found"}
 
-        client = table.group.client
+        client = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
 
         # Determine source folder: prefer edited > cropped > original
         cropped_dir = cls._cropped_dir(batch_dir)

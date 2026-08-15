@@ -218,8 +218,8 @@ def process_reupload_images(task):
         return
     
     try:
-        table = Table.objects.select_related('group__client').get(id=table_id)
-        client = table.group.client
+        table = Table.objects.select_related('organisation').get(id=table_id)
+        client = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
     except Table.DoesNotExist:
         task.mark_failed(f"Table {table_id} not found")
         return

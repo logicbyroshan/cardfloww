@@ -130,33 +130,15 @@ class ExportService:
         # Super admin sees all
         if PermissionService.is_super_admin(self.user):
             return cards.order_by('-id')
-        
-        # Apply client scoping for admin staff
-        if PermissionService.is_admin_staff(self.user):
-            accessible_ids = PermissionService.get_accessible_client_ids(self.user)
-            cards = cards.filter(table__group__client_id__in=accessible_ids)
-        
-        # For client users, scope to their own client
-        elif PermissionService.is_client(self.user):
-            client = getattr(self.user, 'client_profile', None)
-            if client:
-                cards = cards.filter(table__group__client=client)
-            else:
-                cards = cards.none()
-        
-        # For client staff, scope to their client
-        elif PermissionService.is_client_staff(self.user):
-            staff = getattr(self.user, 'staff_profile', None)
-            if staff and staff.client:
-                cards = cards.filter(table__group__client=staff.client)
-                from core.views.idcard_helpers import _apply_client_staff_row_scope
-                cards = _apply_client_staff_row_scope(cards, self.user, table)
-            else:
-                cards = cards.none()
-        
-        else:
-            cards = cards.none()
-        
+
+        table_org_id = getattr(table, 'organisation_id', None) or getattr(getattr(table, 'group', None), 'client_id', None) or getattr(table, 'client_id', None)
+        if table_org_id and not PermissionService.can_access_organisation(self.user, table_org_id):
+            return IDCard.objects.none()
+
+        if PermissionService.is_assistant(self.user) or PermissionService.is_client_staff(self.user):
+            from core.views.idcard_helpers import _apply_client_staff_row_scope
+            cards = _apply_client_staff_row_scope(cards, self.user, table)
+
         return cards.order_by('-id')
     
     def _prepare_context(
@@ -187,7 +169,7 @@ class ExportService:
             )
         
         try:
-            table = get_object_or_404(Table.objects.select_related('group__client'), id=table_id)
+            table = get_object_or_404(Table.objects.select_related('organisation'), id=table_id)
         except Exception:
             return ExportContext(
                 user=self.user,

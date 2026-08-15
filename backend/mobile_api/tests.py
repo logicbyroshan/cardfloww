@@ -63,8 +63,7 @@ class MobileStaffAssignmentTests(TestCase):
             user=self.assistant_user, client=self.client_obj
         )
         
-        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
-        self.table = Table.objects.create(group=self.group, name='Test Table')
+        self.table = Table.objects.create(organisation=self.client_obj, name='Test Table')
         
     def test_mobile_staff_assignment_endpoint(self):
         # Set session flag
@@ -126,3 +125,145 @@ class MobileStaffAssignmentTests(TestCase):
         )
         load_data = load_response.json()
         self.assertEqual(load_data['data']['assignment_id_source'], 'table')
+
+
+class MobilePermissionAndEditLockTests(TestCase):
+    def setUp(self):
+        import json
+        from django.contrib.auth import get_user_model
+        from organisation.models import Organisation
+        from assistants.models import Assistant
+        from tables.models import Table, IDCard
+
+        User = get_user_model()
+        self.client_user = User.objects.create_user(
+            username='perm_client@test.com', email='perm_client@test.com', password='clientpass1', role='prime_manager'
+        )
+        self.client_obj = Organisation.objects.create(
+            user=self.client_user, name='Perm Client', perm_mobile_app=False, perm_idcard_edit=True, perm_idcard_delete=True
+        )
+
+        self.assistant_user = User.objects.create_user(
+            username='perm_assistant@test.com', email='perm_assistant@test.com', password='assistantpass1', role='assistant'
+        )
+        self.assistant = Assistant.objects.create(
+            user=self.assistant_user,
+            client=self.client_obj,
+            perm_mobile_app=False,
+            perm_idcard_edit=True,
+            perm_idcard_delete=True,
+            perm_idcard_pending_list=True,
+            perm_idcard_approved_list=True,
+            perm_idcard_download_list=True,
+        )
+
+        self.table = Table.objects.create(
+            organisation=self.client_obj,
+            name='Perm Table',
+            fields=[{'name': 'NAME', 'type': 'text', 'order': 1}],
+        )
+
+        self.pending_card = IDCard.objects.create(
+            table=self.table, field_data={'NAME': 'Pending Student'}, status='pending'
+        )
+        self.approved_card = IDCard.objects.create(
+            table=self.table, field_data={'NAME': 'Approved Student'}, status='approved'
+        )
+        self.download_card = IDCard.objects.create(
+            table=self.table, field_data={'NAME': 'Download Student'}, status='download'
+        )
+
+    def test_mobile_login_blocked_when_perm_mobile_app_is_false(self):
+        import json
+        # Client user login
+        response = self.client.post(
+            reverse('mobile_api:api_mobile_login'),
+            data=json.dumps({'email': 'perm_client@test.com', 'password': 'clientpass1'}),
+            content_type='application/json',
+            HTTP_USER_AGENT='Mobile Safari'
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('disabled for your account', response.json().get('message', ''))
+
+        # Assistant user login
+        response = self.client.post(
+            reverse('mobile_api:api_mobile_login'),
+            data=json.dumps({'email': 'perm_assistant@test.com', 'password': 'assistantpass1'}),
+            content_type='application/json',
+            HTTP_USER_AGENT='Mobile Safari'
+        )
+        self.assertEqual(response.status_code, 403)
+        self.assertIn('disabled for your account', response.json().get('message', ''))
+
+    def test_mobile_login_allowed_when_perm_mobile_app_is_true(self):
+        import json
+        self.client_obj.perm_mobile_app = True
+        self.client_obj.save(update_fields=['perm_mobile_app'])
+
+        response = self.client.post(
+            reverse('mobile_api:api_mobile_login'),
+            data=json.dumps({'email': 'perm_client@test.com', 'password': 'clientpass1'}),
+            content_type='application/json',
+            HTTP_USER_AGENT='Mobile Safari'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('success'))
+
+        self.assistant.perm_mobile_app = True
+        self.assistant.save(update_fields=['perm_mobile_app'])
+
+        response = self.client.post(
+            reverse('mobile_api:api_mobile_login'),
+            data=json.dumps({'email': 'perm_assistant@test.com', 'password': 'assistantpass1'}),
+            content_type='application/json',
+            HTTP_USER_AGENT='Mobile Safari'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('success'))
+
+    def test_client_and_assistant_cannot_edit_approved_or_download_cards(self):
+        import json
+        self.client.login(username='perm_client@test.com', password='clientpass1')
+
+        # Try editing approved card field
+        response = self.client.post(
+            f'/api/card/{self.approved_card.id}/update-field/',
+            data=json.dumps({'field': 'NAME', 'value': 'Hacked Name'}),
+            content_type='application/json'
+        )
+        self.assertIn(response.status_code, [403, 400])
+
+        # Try editing download card field
+        response = self.client.post(
+            f'/api/card/{self.download_card.id}/update-field/',
+            data=json.dumps({'field': 'NAME', 'value': 'Hacked Name'}),
+            content_type='application/json'
+        )
+        self.assertIn(response.status_code, [403, 400])
+
+        # Editing pending card succeeds
+        response = self.client.post(
+            f'/api/card/{self.pending_card.id}/update-field/',
+            data=json.dumps({'field': 'NAME', 'value': 'Valid Name'}),
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('success'))
+
+    def test_client_and_assistant_cannot_delete_approved_or_download_cards(self):
+        self.client.login(username='perm_client@test.com', password='clientpass1')
+
+        # Try deleting approved card
+        response = self.client.post(f'/api/card/{self.approved_card.id}/delete/')
+        self.assertIn(response.status_code, [403, 400])
+
+        # Try deleting download card
+        response = self.client.post(f'/api/card/{self.download_card.id}/delete/')
+        self.assertIn(response.status_code, [403, 400])
+
+        # Deleting pending card succeeds
+        response = self.client.post(f'/api/card/{self.pending_card.id}/delete/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('success'))
+
+
