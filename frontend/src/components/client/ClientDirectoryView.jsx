@@ -30,6 +30,7 @@ import {
 
 import WatermarkLogo from '../common/WatermarkLogo';
 import { SkeletonTableRows } from '../common/Skeleton';
+import CustomSelect from '../common/CustomSelect';
 import { clientApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
@@ -44,12 +45,26 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
 
-  /* Dispatch footer data count */
+  /* Dispatch footer data count & selection */
   useEffect(() => {
+    let selectedText = '';
+    if (selected) {
+      const match = clients.find((c) => String(c.id) === String(selected));
+      if (match) {
+        const orgName = match.name || match.school_name || match.username || `Org #${match.id}`;
+        selectedText = `Selected: ${orgName}`;
+      }
+    }
     window.dispatchEvent(
-      new CustomEvent('cardflow:data-count', { detail: { text: `Total Organisations: ${clients.length}` } })
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Organisations: ${clients.length}`,
+          selectedText,
+          count: clients.length,
+        },
+      })
     );
-  }, [clients.length]);
+  }, [clients, selected]);
 
   const getStoredClients = useCallback(() => {
     try {
@@ -77,8 +92,9 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
           : Array.isArray(data)
             ? data
             : [];
-      const combined = [...localItems];
-      list.forEach((item) => {
+      // The DB list is primary and contains authoritative table counts, assistant counts, and details
+      const combined = [...list];
+      localItems.forEach((item) => {
         if (
           !combined.some(
             (c) =>
@@ -90,8 +106,9 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
         }
       });
       setClients(combined);
-      setTotal(combined.length);
-    } catch {
+      setTotal(data?.total || combined.length);
+    } catch (err) {
+      console.warn('Load client directory warning, using stored clients:', err);
       setClients(localItems);
       setTotal(localItems.length);
     } finally {
@@ -186,40 +203,12 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
 
   const getManagerCount = useCallback((org) => {
     if (!org) return 1;
-    try {
-      const customMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const extra = customMgrs
-        .filter(
-          (m) =>
-            String(m.organisation_id) === String(org.id) ||
-            m.school_name === org.name ||
-            String(m.organisation?.id) === String(org.id)
-        )
-        .filter((m) => !m.is_default && m.client_type !== 'primary');
-      return 1 + extra.length;
-    } catch {
-      return 1;
-    }
+    return org.managers_count ?? org.manager_count ?? (org.user_id ? 1 : 1);
   }, []);
 
   const getAssistantCount = useCallback((org) => {
-    if (!org) return 1;
-    try {
-      const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-      const extra = staffList
-        .filter(
-          (s) =>
-            (s.designation === 'Assistant' || s.role === 'assistant') &&
-            (String(s.client) === String(org.id) ||
-              String(s.organisation_id) === String(org.id) ||
-              s.client_name === org.name ||
-              s.school_name === org.name)
-        )
-        .filter((s) => !s.is_default);
-      return 1 + extra.length;
-    } catch {
-      return 1;
-    }
+    if (!org) return 0;
+    return org.assistants_count ?? org.assistant_count ?? 0;
   }, []);
 
   const getOrgManagers = useCallback(() => {
@@ -593,7 +582,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
               <button
                 className="btn"
                 disabled={!selected}
-                onClick={() => onNavigate?.('cards')}
+                onClick={() => selClient && onNavigate?.('cards', { clientId: selClient.id, clientName: selClient.name || selClient.school_name, org: selClient })}
                 title="View Tables"
                 style={{
                   background: selected ? '#3b82f6' : 'rgba(255, 255, 255, 0.08)',
@@ -725,7 +714,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                     key={c.id}
                     className={isSel ? 'selected' : ''}
                     onClick={() => setSelected(isSel ? null : c.id)}
-                    onDoubleClick={() => onNavigate?.('cards', { clientId: c.id })}
+                    onDoubleClick={() => onNavigate?.('cards', { clientId: c.id, clientName: c.name || c.school_name, org: c })}
                     data-client-id={c.id}
                     style={{ fontSize: '13px', cursor: 'pointer' }}
                     title="Single-click to select | Double-click to open Tables"
@@ -1851,23 +1840,15 @@ function ManagerInlineForm({ manager, orgName, onSave, onCancel }) {
             >
               Account Status
             </label>
-            <select
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={{
-                width: '100%',
-                height: '34px',
-                padding: '0 12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '5px',
-                fontSize: '12px',
-                background: '#fff',
-                outline: 'none',
-              }}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              onChange={(val) => setStatus(val)}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+              height="34px"
+            />
           </div>
 
           <div>
@@ -1876,23 +1857,15 @@ function ManagerInlineForm({ manager, orgName, onSave, onCancel }) {
             >
               Password Option
             </label>
-            <select
+            <CustomSelect
               value={passwordOption}
-              onChange={(e) => setPasswordOption(e.target.value)}
-              style={{
-                width: '100%',
-                height: '34px',
-                padding: '0 12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '5px',
-                fontSize: '12px',
-                background: '#fff',
-                outline: 'none',
-              }}
-            >
-              <option value="custom">Custom Password</option>
-              <option value="auto">Use Phone Number / Auto Generate</option>
-            </select>
+              onChange={(val) => setPasswordOption(val)}
+              options={[
+                { value: 'custom', label: 'Custom Password' },
+                { value: 'auto', label: 'Use Phone Number / Auto Generate' },
+              ]}
+              height="34px"
+            />
           </div>
         </div>
 
@@ -2239,23 +2212,15 @@ function AssistantInlineForm({ assistant, orgName, onSave, onCancel }) {
             >
               Account Status
             </label>
-            <select
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={{
-                width: '100%',
-                height: '34px',
-                padding: '0 12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '5px',
-                fontSize: '12px',
-                background: '#fff',
-                outline: 'none',
-              }}
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+              onChange={(val) => setStatus(val)}
+              options={[
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+              height="34px"
+            />
           </div>
 
           <div>
@@ -2264,23 +2229,15 @@ function AssistantInlineForm({ assistant, orgName, onSave, onCancel }) {
             >
               Password Option
             </label>
-            <select
+            <CustomSelect
               value={passwordOption}
-              onChange={(e) => setPasswordOption(e.target.value)}
-              style={{
-                width: '100%',
-                height: '34px',
-                padding: '0 12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '5px',
-                fontSize: '12px',
-                background: '#fff',
-                outline: 'none',
-              }}
-            >
-              <option value="custom">Custom Password</option>
-              <option value="auto">Use Phone Number / Auto Generate</option>
-            </select>
+              onChange={(val) => setPasswordOption(val)}
+              options={[
+                { value: 'custom', label: 'Custom Password' },
+                { value: 'auto', label: 'Use Phone Number / Auto Generate' },
+              ]}
+              height="34px"
+            />
           </div>
         </div>
 
@@ -2362,3 +2319,5 @@ function AssistantInlineForm({ assistant, orgName, onSave, onCancel }) {
     </form>
   );
 }
+
+export { ClientDirectoryView as OrganisationDirectoryView };

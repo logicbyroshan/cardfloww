@@ -21,12 +21,34 @@ import {
 
 // Role-gated nav structure — exact per role requirements
 const NAV_CONFIG = {
+  prime_admin: [
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+    {
+      section: 'Admin Management',
+      items: [
+        { id: 'operators', label: 'Manage Operator', Icon: UserCog },
+        { id: 'photographers', label: 'Manage Photographer', Icon: Camera },
+      ],
+    },
+    {
+      section: 'Client Management',
+      items: [{ id: 'organisations', label: 'Manage Organisation', Icon: Building }],
+    },
+    {
+      section: 'CardFlow Management',
+      items: [
+        { id: 'panel', label: 'Manage CardFlow', Icon: SlidersHorizontal },
+        { id: 'pro', label: 'Manage Pro Features', Icon: Gem },
+      ],
+    },
+  ],
+
   super_admin: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
       section: 'Admin Management',
       items: [
-        { id: 'staff', label: 'Manage Operator', Icon: UserCog },
+        { id: 'operators', label: 'Manage Operator', Icon: UserCog },
         { id: 'photographers', label: 'Manage Photographer', Icon: Camera },
       ],
     },
@@ -70,6 +92,17 @@ const NAV_CONFIG = {
     },
   ],
 
+  super_manager: [
+    { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
+    {
+      section: 'Organisation Management',
+      items: [
+        { id: 'assistants', label: 'Manage Assistant', Icon: UsersRound },
+        { id: 'cards', label: 'Manage Tables', Icon: ShieldCheck },
+      ],
+    },
+  ],
+
   manager: [
     { id: 'dashboard', label: 'Manage Dashboard', Icon: Home },
     {
@@ -100,61 +133,50 @@ const NAV_CONFIG = {
   ],
 };
 
-// Map role aliases cleanly
-NAV_CONFIG.client = NAV_CONFIG.prime_manager;
-NAV_CONFIG.guest_prime_manager = NAV_CONFIG.prime_manager;
-NAV_CONFIG.admin_staff = NAV_CONFIG.operator;
-NAV_CONFIG.client_staff = NAV_CONFIG.assistant;
-NAV_CONFIG.pro_user = NAV_CONFIG.super_admin;
-
 const ROLE_COLORS = {
+  prime_admin: { bg: 'linear-gradient(145deg, #0ea5e9, #0284c7)', color: '#e0f2fe' },
   super_admin: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
-  pro_user: { bg: 'linear-gradient(145deg, #7c3aed, #6d28d9)', color: '#ede9fe' },
   operator: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
-  admin_staff: { bg: 'linear-gradient(145deg, #2563eb, #1d4ed8)', color: '#dbeafe' },
   prime_manager: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
+  super_manager: { bg: 'linear-gradient(145deg, #0d9488, #0f766e)', color: '#ccfbf1' },
   manager: { bg: 'linear-gradient(145deg, #0d9488, #0f766e)', color: '#ccfbf1' },
-  guest_prime_manager: { bg: 'linear-gradient(145deg, #65a30d, #4d7c0f)', color: '#ecfccb' },
   assistant: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
   photographer: { bg: 'linear-gradient(145deg, #d97706, #b45309)', color: '#fef3c7' },
-  // Compat aliases
-  client: { bg: 'linear-gradient(145deg, #059669, #047857)', color: '#d1fae5' },
-  client_staff: { bg: 'linear-gradient(145deg, #0891b2, #0e7490)', color: '#cffafe' },
 };
 
 const ROLE_LABELS = {
+  prime_admin: 'Prime Admin',
   super_admin: 'Super Admin',
-  pro_user: 'Pro Admin',
   operator: 'Operator',
-  admin_staff: 'Operator',
-  prime_manager: 'Organisation (Prime Manager)',
-  manager: 'Manager',
-  guest_prime_manager: 'Guest Manager',
+  prime_manager: 'Prime Manager',
+  super_manager: 'Super Manager',
+  manager: 'Super Manager',
   assistant: 'Assistant',
   photographer: 'Photographer',
-  // Compat aliases
-  client: 'Organisation (Prime Manager)',
-  client_staff: 'Assistant',
 };
 
 const APP_VERSION = 'v5.0.0';
 
 export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_admin', currentUser, onLogout }) {
   const normalizedRole = String(userRole || '').toLowerCase();
-  let roleKey = 'prime_manager';
-  if (normalizedRole === 'admin' || normalizedRole === 'super_admin' || normalizedRole === 'pro_user') {
+  let roleKey = 'super_admin';
+  if (normalizedRole === 'prime_admin' || normalizedRole === 'pro_user') {
+    roleKey = 'prime_admin';
+  } else if (normalizedRole === 'super_admin' || normalizedRole === 'admin') {
     roleKey = 'super_admin';
-  } else if (normalizedRole === 'prime_manager' || normalizedRole === 'client' || normalizedRole === 'guest_prime_manager') {
-    roleKey = 'prime_manager';
-  } else if (normalizedRole === 'operator' || normalizedRole === 'admin_staff' || normalizedRole === 'manager') {
+  } else if (normalizedRole === 'operator' || normalizedRole === 'admin_staff') {
     roleKey = 'operator';
+  } else if (normalizedRole === 'prime_manager' || normalizedRole === 'client') {
+    roleKey = 'prime_manager';
+  } else if (normalizedRole === 'super_manager' || normalizedRole === 'manager') {
+    roleKey = 'super_manager';
   } else if (normalizedRole === 'assistant' || normalizedRole === 'client_staff') {
     roleKey = 'assistant';
   } else if (normalizedRole === 'photographer') {
     roleKey = 'photographer';
   }
 
-  const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.prime_manager;
+  const navConfig = NAV_CONFIG[roleKey] || NAV_CONFIG.super_admin;
 
   const displayName = currentUser?.first_name
     ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim()

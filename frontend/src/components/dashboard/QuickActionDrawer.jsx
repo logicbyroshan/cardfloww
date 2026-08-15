@@ -7,7 +7,10 @@ import {
   Mail,
   Send,
   Shield,
+  ShieldCheck,
   User,
+  UserCheck,
+  KeyRound,
   Cog,
   List,
   RefreshCw,
@@ -20,8 +23,12 @@ import {
   Save,
   Layers,
   CheckSquare,
+  CreditCard,
+  Download,
+  Smartphone,
 } from 'lucide-react';
-import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, panelApi } from '../../services/api';
+import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, panelApi, organisationManagerApi } from '../../services/api';
+import CustomSelect from '../common/CustomSelect';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Custom Toggle Switch Component matching original UI toggle-slider
@@ -127,6 +134,9 @@ export default function QuickActionDrawer({ isOpen, actionType, initialData, onC
         {(actionType === 'add-client' || actionType === 'edit-client') && (
           <OriginalClientDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
         )}
+        {(actionType === 'add-manager' || actionType === 'edit-manager') && (
+          <OriginalClientManagerDrawerForm onClose={onClose} addToast={addToast} initialData={initialData} />
+        )}
         {(actionType === 'add-operator' ||
           actionType === 'edit-operator' ||
           actionType === 'add-staff' ||
@@ -178,6 +188,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
   const isEditing = !!initialData;
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
+    username: initialData?.username || '',
     email: initialData?.email || '',
     phone: initialData?.phone || '',
     status: initialData
@@ -185,21 +196,17 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
         ? 'true'
         : 'false'
       : 'true',
-    passwordOption: 'custom',
-    password: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name || '',
+        username: initialData.username || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
         status:
           initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false',
-        passwordOption: 'custom',
-        password: '',
       });
     }
   }, [initialData]);
@@ -210,6 +217,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_approved_list: true,
     perm_idcard_download_list: true,
     perm_idcard_pool_list: true,
+    perm_idcard_reprint_list: true,
     perm_reprint_request_list: true,
     perm_confirmed_list: true,
   });
@@ -220,9 +228,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_delete: true,
     perm_idcard_verify: true,
     perm_idcard_approve: true,
-    perm_idcard_info: true,
     perm_idcard_retrieve: true,
-    perm_idcard_delete_from_pool: true,
   });
 
   const [bulkPerms, setBulkPerms] = useState({
@@ -230,15 +236,11 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_bulk_download: true,
     perm_idcard_download_image_rename_mode: true,
     perm_idcard_download_image_generate_mode: true,
-    perm_reupload_idcard_image: true,
-    perm_idcard_bulk_reupload: true,
-    perm_idcard_upgrade_all: true,
   });
 
   const [systemPerms, setSystemPerms] = useState({
     perm_mobile_app: true,
     perm_manage_assistant: true,
-    perm_set_temp_password: true,
   });
 
   useEffect(() => {
@@ -249,6 +251,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
         perm_idcard_approved_list: initialData.perm_idcard_approved_list !== false,
         perm_idcard_download_list: initialData.perm_idcard_download_list !== false,
         perm_idcard_pool_list: initialData.perm_idcard_pool_list !== false,
+        perm_idcard_reprint_list: initialData.perm_idcard_reprint_list !== false,
         perm_reprint_request_list: initialData.perm_reprint_request_list !== false,
         perm_confirmed_list: initialData.perm_confirmed_list !== false,
       });
@@ -258,23 +261,17 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
         perm_idcard_delete: initialData.perm_idcard_delete !== false,
         perm_idcard_verify: initialData.perm_idcard_verify !== false,
         perm_idcard_approve: initialData.perm_idcard_approve !== false,
-        perm_idcard_info: initialData.perm_idcard_info !== false,
         perm_idcard_retrieve: initialData.perm_idcard_retrieve !== false,
-        perm_idcard_delete_from_pool: initialData.perm_idcard_delete_from_pool !== false,
       });
       setBulkPerms({
         perm_idcard_bulk_upload: initialData.perm_idcard_bulk_upload !== false,
         perm_idcard_bulk_download: initialData.perm_idcard_bulk_download !== false,
         perm_idcard_download_image_rename_mode: initialData.perm_idcard_download_image_rename_mode !== false,
         perm_idcard_download_image_generate_mode: initialData.perm_idcard_download_image_generate_mode !== false,
-        perm_reupload_idcard_image: initialData.perm_reupload_idcard_image !== false,
-        perm_idcard_bulk_reupload: initialData.perm_idcard_bulk_reupload !== false,
-        perm_idcard_upgrade_all: initialData.perm_idcard_upgrade_all !== false,
       });
       setSystemPerms({
         perm_mobile_app: initialData.perm_mobile_app !== false,
         perm_manage_assistant: initialData.perm_manage_assistant !== false && initialData.perm_manage_assistants !== false,
-        perm_set_temp_password: initialData.perm_set_temp_password !== false,
       });
     }
   }, [initialData]);
@@ -291,19 +288,19 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
     const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms, ...systemPerms };
     const payload = {
       name: formData.name,
+      username: formData.username ? formData.username.trim() : undefined,
       email: formData.email,
       phone: formData.phone,
       status: formData.status === 'true' ? 'active' : 'inactive',
-      password_option: formData.passwordOption,
-      password: formData.passwordOption === 'custom' ? formData.password : undefined,
       ...allPermissions,
       permissions: allPermissions,
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
       name: formData.name,
+      username: formData.username || formData.email.split('@')[0],
       email: formData.email,
-      phone: formData.phone || 'â€”',
+      phone: formData.phone || '—',
       status: formData.status === 'true' ? 'active' : 'inactive',
       is_active: formData.status === 'true',
       created_at: initialData?.created_at || new Date().toISOString(),
@@ -526,11 +523,13 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Status
+                  Username <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="e.g. school_admin (or auto from email)"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -540,84 +539,51 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                     fontSize: '13px',
                     outline: 'none',
                     fontFamily: 'var(--font-family)',
-                    background: '#fff',
                   }}
-                >
-                  <option value="false">Inactive</option>
-                  <option value="true">Active</option>
-                </select>
+                />
               </div>
               <div>
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Password Option
+                  Status
                 </label>
-                <select
-                  value={formData.passwordOption}
-                  onChange={(e) => setFormData({ ...formData, passwordOption: e.target.value })}
-                  style={{
-                    width: '100%',
-                    height: '36px',
-                    padding: '0 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    fontFamily: 'var(--font-family)',
-                    background: '#fff',
-                  }}
-                >
-                  <option value="custom">Custom Password</option>
-                  <option value="phone">Use Phone Number</option>
-                </select>
+                <CustomSelect
+                  value={formData.status}
+                  onChange={(val) => setFormData({ ...formData, status: val })}
+                  options={[
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
+                  ]}
+                  height="36px"
+                />
               </div>
             </div>
 
-            {formData.passwordOption === 'custom' && (
+            {/* Auto-PIN Password Information Notice */}
+            <div
+              style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                fontSize: '12px',
+                color: '#1e40af',
+              }}
+            >
+              <KeyRound size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#2563eb' }} />
               <div>
-                <label
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
-                >
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Enter custom password"
-                    style={{
-                      width: '100%',
-                      height: '36px',
-                      padding: '0 36px 0 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      outline: 'none',
-                      fontFamily: 'var(--font-family)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      background: 'none',
-                      color: '#6b7280',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+                <div style={{ fontWeight: 700, marginBottom: '2px', color: '#1e3a8a' }}>
+                  Auto-Generated Temporary Password (PIN)
+                </div>
+                <div style={{ color: '#3b82f6', lineHeight: '1.4', fontSize: '11.5px' }}>
+                  If a phone number is provided, it is set as the initial PIN. Otherwise, an 8–10 character PIN is auto-generated and sent directly to the user by email. Temporary credentials can also be viewed in Pro Features &rarr; Manage Passwords.
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -676,8 +642,9 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'perm_idcard_verified_list', label: 'Verified List' },
                 { key: 'perm_idcard_approved_list', label: 'Approved List' },
                 { key: 'perm_idcard_download_list', label: 'Download List' },
-                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
-                { key: 'perm_reprint_request_list', label: 'Reprint Request List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted List' },
+                { key: 'perm_idcard_reprint_list', label: 'Reprint List' },
+                { key: 'perm_reprint_request_list', label: 'Request List' },
                 { key: 'perm_confirmed_list', label: 'Confirmed List' },
               ].map(({ key, label }) => (
                 <div
@@ -734,14 +701,12 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_add', label: 'Add Single Card' },
-                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_add', label: 'Add Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Card' },
                 { key: 'perm_idcard_delete', label: 'Delete Card' },
                 { key: 'perm_idcard_verify', label: 'Verify Card' },
                 { key: 'perm_idcard_approve', label: 'Approve Card' },
-                { key: 'perm_idcard_info', label: 'View Card Info' },
-                { key: 'perm_idcard_retrieve', label: 'Retrieve from Pool' },
-                { key: 'perm_idcard_delete_from_pool', label: 'Delete from Pool' },
+                { key: 'perm_idcard_retrieve', label: 'Retrieve Card' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -797,13 +762,10 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_idcard_bulk_upload', label: 'Upload XLSX' },
                 { key: 'perm_idcard_bulk_download', label: 'Bulk Photo Download' },
                 { key: 'perm_idcard_download_image_rename_mode', label: 'Image Rename Download' },
                 { key: 'perm_idcard_download_image_generate_mode', label: 'Image Generate Download' },
-                { key: 'perm_reupload_idcard_image', label: 'Re-upload Card Image' },
-                { key: 'perm_idcard_bulk_reupload', label: 'Bulk Reupload' },
-                { key: 'perm_idcard_upgrade_all', label: 'Upgrade All Cards' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -861,7 +823,6 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
               {[
                 { key: 'perm_mobile_app', label: 'Mobile App Access' },
                 { key: 'perm_manage_assistant', label: 'Manage Assistants' },
-                { key: 'perm_set_temp_password', label: 'Set Temporary Password' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -952,6 +913,7 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
 function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
   const isEditing = !!initialData;
   const [operatorName, setOperatorName] = useState(initialData?.name || initialData?.full_name || '');
+  const [username, setUsername] = useState(initialData?.username || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
@@ -961,13 +923,11 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
         : 'false'
       : 'true'
   );
-  const [passwordOption, setPasswordOption] = useState('custom');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setOperatorName(initialData.name || initialData.full_name || '');
+      setUsername(initialData.username || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
       setStatus(
@@ -982,6 +942,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_approved_list: true,
     perm_idcard_download_list: true,
     perm_idcard_pool_list: true,
+    perm_idcard_reprint_list: true,
     perm_reprint_request_list: true,
     perm_confirmed_list: true,
   });
@@ -992,9 +953,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_delete: true,
     perm_idcard_verify: true,
     perm_idcard_approve: true,
-    perm_idcard_info: true,
     perm_idcard_retrieve: true,
-    perm_idcard_delete_from_pool: true,
   });
 
   const [bulkPerms, setBulkPerms] = useState({
@@ -1002,9 +961,6 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     perm_idcard_bulk_download: true,
     perm_idcard_download_image_rename_mode: true,
     perm_idcard_download_image_generate_mode: true,
-    perm_reupload_idcard_image: true,
-    perm_idcard_bulk_reupload: true,
-    perm_idcard_upgrade_all: true,
   });
 
   const [systemPerms, setSystemPerms] = useState({
@@ -1023,6 +979,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
         perm_idcard_approved_list: initialData.perm_idcard_approved_list !== false,
         perm_idcard_download_list: initialData.perm_idcard_download_list !== false,
         perm_idcard_pool_list: initialData.perm_idcard_pool_list !== false,
+        perm_idcard_reprint_list: initialData.perm_idcard_reprint_list !== false,
         perm_reprint_request_list: initialData.perm_reprint_request_list !== false,
         perm_confirmed_list: initialData.perm_confirmed_list !== false,
       });
@@ -1032,18 +989,13 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
         perm_idcard_delete: initialData.perm_idcard_delete !== false,
         perm_idcard_verify: initialData.perm_idcard_verify !== false,
         perm_idcard_approve: initialData.perm_idcard_approve !== false,
-        perm_idcard_info: initialData.perm_idcard_info !== false,
         perm_idcard_retrieve: initialData.perm_idcard_retrieve !== false,
-        perm_idcard_delete_from_pool: initialData.perm_idcard_delete_from_pool !== false,
       });
       setBulkPerms({
         perm_idcard_bulk_upload: initialData.perm_idcard_bulk_upload !== false,
         perm_idcard_bulk_download: initialData.perm_idcard_bulk_download !== false,
         perm_idcard_download_image_rename_mode: initialData.perm_idcard_download_image_rename_mode !== false,
         perm_idcard_download_image_generate_mode: initialData.perm_idcard_download_image_generate_mode !== false,
-        perm_reupload_idcard_image: initialData.perm_reupload_idcard_image !== false,
-        perm_idcard_bulk_reupload: initialData.perm_idcard_bulk_reupload !== false,
-        perm_idcard_upgrade_all: initialData.perm_idcard_upgrade_all !== false,
       });
       setSystemPerms({
         perm_mobile_app: initialData.perm_mobile_app !== false,
@@ -1067,11 +1019,10 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
     const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms, ...systemPerms };
     const payload = {
       name: operatorName,
+      username: username ? username.trim() : undefined,
       email,
       phone,
       status: status === 'true',
-      password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : phone || '12345678',
       ...allPermissions,
       permissions: allPermissions,
     };
@@ -1079,7 +1030,7 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
       id: initialData?.id || Date.now(),
       name: operatorName,
       email: email,
-      phone: phone || 'â€”',
+      phone: phone || '—',
       designation: initialData?.designation || 'Operator',
       status: status === 'true' ? 'active' : 'inactive',
       is_active: status === 'true',
@@ -1269,11 +1220,13 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Status
+                  Username <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. operator_1 (or auto from email)"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -1283,84 +1236,51 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                     fontSize: '13px',
                     outline: 'none',
                     fontFamily: 'var(--font-family)',
-                    background: '#fff',
                   }}
-                >
-                  <option value="false">Inactive</option>
-                  <option value="true">Active</option>
-                </select>
+                />
               </div>
               <div>
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Password Option
+                  Status
                 </label>
-                <select
-                  value={passwordOption}
-                  onChange={(e) => setPasswordOption(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '36px',
-                    padding: '0 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    fontFamily: 'var(--font-family)',
-                    background: '#fff',
-                  }}
-                >
-                  <option value="custom">Custom Password</option>
-                  <option value="phone">Use Phone Number</option>
-                </select>
+                <CustomSelect
+                  value={status}
+                  onChange={(val) => setStatus(val)}
+                  options={[
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
+                  ]}
+                  height="36px"
+                />
               </div>
             </div>
 
-            {passwordOption === 'custom' && (
+            {/* Auto-PIN Password Information Notice */}
+            <div
+              style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                fontSize: '12px',
+                color: '#1e40af',
+              }}
+            >
+              <KeyRound size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#2563eb' }} />
               <div>
-                <label
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
-                >
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter custom password"
-                    style={{
-                      width: '100%',
-                      height: '36px',
-                      padding: '0 36px 0 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      outline: 'none',
-                      fontFamily: 'var(--font-family)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      background: 'none',
-                      color: '#6b7280',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+                <div style={{ fontWeight: 700, marginBottom: '2px', color: '#1e3a8a' }}>
+                  Auto-Generated Temporary Password (PIN)
+                </div>
+                <div style={{ color: '#3b82f6', lineHeight: '1.4', fontSize: '11.5px' }}>
+                  If a phone number is provided, it is set as the initial PIN. Otherwise, an 8–10 character PIN is auto-generated and sent directly to the operator by email. Temporary credentials can also be viewed in Pro Features &rarr; Manage Passwords.
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -1419,8 +1339,9 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
                 { key: 'perm_idcard_verified_list', label: 'Verified List' },
                 { key: 'perm_idcard_approved_list', label: 'Approved List' },
                 { key: 'perm_idcard_download_list', label: 'Download List' },
-                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
-                { key: 'perm_reprint_request_list', label: 'Reprint Request List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted List' },
+                { key: 'perm_idcard_reprint_list', label: 'Reprint List' },
+                { key: 'perm_reprint_request_list', label: 'Request List' },
                 { key: 'perm_confirmed_list', label: 'Confirmed List' },
               ].map(({ key, label }) => (
                 <div
@@ -1477,14 +1398,12 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_add', label: 'Add Single Card' },
-                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_add', label: 'Add Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Card' },
                 { key: 'perm_idcard_delete', label: 'Delete Card' },
                 { key: 'perm_idcard_verify', label: 'Verify Card' },
                 { key: 'perm_idcard_approve', label: 'Approve Card' },
-                { key: 'perm_idcard_info', label: 'View Card Info' },
-                { key: 'perm_idcard_retrieve', label: 'Retrieve from Pool' },
-                { key: 'perm_idcard_delete_from_pool', label: 'Delete from Pool' },
+                { key: 'perm_idcard_retrieve', label: 'Retrieve Card' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -1540,13 +1459,10 @@ function OriginalOperatorDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_idcard_bulk_upload', label: 'Upload XLSX' },
                 { key: 'perm_idcard_bulk_download', label: 'Bulk Photo Download' },
                 { key: 'perm_idcard_download_image_rename_mode', label: 'Image Rename Download' },
                 { key: 'perm_idcard_download_image_generate_mode', label: 'Image Generate Download' },
-                { key: 'perm_reupload_idcard_image', label: 'Re-upload Card Image' },
-                { key: 'perm_idcard_bulk_reupload', label: 'Bulk Reupload' },
-                { key: 'perm_idcard_upgrade_all', label: 'Upgrade All Cards' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -1943,7 +1859,7 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
             gap: '6px',
           }}
         >
-          <Save size={14} /> {saving ? 'Savingâ€¦' : 'Save Assignments'}
+          <Save size={14} /> {saving ? 'Saving…' : 'Save Assignments'}
         </button>
       </div>
     </form>
@@ -1953,15 +1869,22 @@ function AssignOperatorOrganisationsForm({ onClose, addToast }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    2b. Add / Edit Manager Drawer Form
    ───────────────────────────────────────────────────────────────────────────── */
-function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
+/* ─────────────────────────────────────────────────────────────────────────────
+   2b. Add / Edit Manager Drawer Form
+   ───────────────────────────────────────────────────────────────────────────── */
+function OriginalClientManagerDrawerForm({ onClose, addToast, initialData }) {
   const isEditing = !!initialData;
   const [organisations, setOrganisations] = useState([]);
-  const [selectedOrgId, setSelectedOrgId] = useState(
-    initialData?.organisation_id || initialData?.organisation?.id || ''
-  );
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [managerType, setManagerType] = useState(initialData?.manager_type || 'super_manager');
   const [managerName, setManagerName] = useState(initialData?.name || initialData?.full_name || '');
+  const [username, setUsername] = useState(initialData?.username || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
+  const [department, setDepartment] = useState(initialData?.department || '');
+  const [designation, setDesignation] = useState(initialData?.designation || '');
+  const [orgTables, setOrgTables] = useState([]);
+  const [selectedTableIds, setSelectedTableIds] = useState(initialData?.assigned_table_ids || []);
   const [status, setStatus] = useState(
     initialData
       ? initialData.is_active || initialData.status === 'active' || initialData.status === true
@@ -1969,26 +1892,17 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
         : 'false'
       : 'true'
   );
-  const [passwordOption, setPasswordOption] = useState('custom');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const local = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
       try {
         const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
-        const merged = [...api];
-        local.forEach((lc) => {
-          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
-        });
-        setOrganisations(merged);
-        if (merged.length > 0 && !selectedOrgId) setSelectedOrgId(String(merged[0].id));
+        setOrganisations(api);
+        if (api.length > 0 && !selectedOrgId) setSelectedOrgId(String(api[0].id));
       } catch {
-        setOrganisations(local);
-        if (local.length > 0 && !selectedOrgId) setSelectedOrgId(String(local[0].id));
+        // Fallback
       }
     })();
   }, []);
@@ -1998,19 +1912,46 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
       const orgObj = initialData.organisation || (initialData.name && !initialData.client_type ? initialData : null);
       if (orgObj) {
         setSelectedOrgId(String(orgObj.id || ''));
-      } else if (initialData.organisation_id) {
-        setSelectedOrgId(String(initialData.organisation_id));
+      } else if (initialData.organisation_id || initialData.client_id) {
+        setSelectedOrgId(String(initialData.organisation_id || initialData.client_id));
       }
-      if (initialData.client_type === 'manager' || initialData.designation === 'Manager' || initialData.email) {
-        setManagerName(initialData.name || initialData.full_name || '');
-        setEmail(initialData.email || '');
-        setPhone(initialData.phone || '');
-        setStatus(
-          initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
-        );
+      setManagerName(initialData.name || initialData.full_name || '');
+      setUsername(initialData.username || '');
+      setEmail(initialData.email || '');
+      setPhone(initialData.phone || '');
+      setDepartment(initialData.department || '');
+      setDesignation(initialData.designation || '');
+      setManagerType(initialData.manager_type || 'super_manager');
+      if (initialData.assigned_table_ids) {
+        setSelectedTableIds(initialData.assigned_table_ids);
       }
+      setStatus(
+        initialData.is_active || initialData.status === 'active' || initialData.status === true ? 'true' : 'false'
+      );
     }
   }, [initialData]);
+
+  // Load tables when selectedOrgId changes
+  useEffect(() => {
+    if (!selectedOrgId) {
+      setOrgTables([]);
+      return;
+    }
+    (async () => {
+      try {
+        const data = await clientApi.getClientTables?.(selectedOrgId);
+        const tbls = data?.tables || data?.results || (Array.isArray(data) ? data : []);
+        setOrgTables(tbls);
+      } catch {
+        setOrgTables([]);
+      }
+    })();
+  }, [selectedOrgId]);
+
+  const toggleTable = (id) => {
+    const numId = Number(id);
+    setSelectedTableIds((prev) => (prev.includes(numId) ? prev.filter((x) => x !== numId) : [...prev, numId]));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2019,61 +1960,38 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
       return;
     }
     setSaving(true);
-    const selOrg = organisations.find((o) => String(o.id) === String(selectedOrgId)) || {
-      id: selectedOrgId,
-      name: 'Organisation',
-    };
 
     const payload = {
-      name: managerName,
-      email,
-      phone,
-      client_type: 'manager',
-      is_default: false,
-      organisation_id: selOrg.id,
-      status: status === 'true' ? 'active' : 'inactive',
-      password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : phone || '12345678',
-    };
-
-    const itemToSave = {
-      id: initialData?.id || mgr_,
-      name: managerName,
-      username: email || managerName.toLowerCase().replace(/\s+/g, ''),
-      email: email,
-      phone: phone || '—',
-      client_type: 'manager',
-      is_default: false,
-      organisation_id: selOrg.id,
-      organisation: { id: selOrg.id, name: selOrg.name },
-      school_name: selOrg.name,
-      status: status === 'true' ? 'active' : 'inactive',
+      name: managerName.trim(),
+      username: username ? username.trim() : undefined,
+      email: email.trim(),
+      phone: phone.trim(),
+      manager_type: managerType,
+      department: department.trim(),
+      designation: designation.trim(),
+      organisation_id: parseInt(selectedOrgId),
       is_active: status === 'true',
-      created_at: initialData?.created_at || new Date().toISOString(),
+      assigned_table_ids: selectedTableIds,
     };
 
     try {
       if (isEditing) {
-        await clientApi.updateClient(initialData.id, payload);
+        await organisationManagerApi.update(initialData.id, payload);
+        addToast?.(`Manager "${managerName}" updated successfully!`, 'success');
       } else {
-        await clientApi.createClient(payload);
+        const res = await organisationManagerApi.create(payload);
+        addToast?.(res?.message || `Super Manager "${managerName}" created successfully!`, 'success');
       }
-    } catch (_) {}
-
-    try {
-      const storedMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const updatedMgrs = [
-        itemToSave,
-        ...storedMgrs.filter((m) => String(m.id) !== String(itemToSave.id) && m.email !== itemToSave.email),
-      ];
-      localStorage.setItem('cf_custom_managers', JSON.stringify(updatedMgrs));
-    } catch (_) {}
-
-    addToast?.(`Manager "${managerName}" ${isEditing ? 'updated' : 'created'} for ${selOrg.name}!`, 'success');
-    onClose();
-    window.__reloadClientAccounts?.();
-    window.__reloadDashboard?.();
-    setSaving(false);
+      onClose();
+      window.__reloadClientAccounts?.();
+      window.__reloadDashboard?.();
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to save Manager';
+      addToast?.(errorMsg, 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -2094,7 +2012,7 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '15px' }}>
           <UserPlus size={18} />
-          <span>{isEditing ? 'Edit Manager Account' : 'Add New Manager Account'}</span>
+          <span>{isEditing ? 'Edit Manager Account' : 'Add Super / Guest Manager'}</span>
         </div>
         <button
           type="button"
@@ -2116,6 +2034,7 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
           background: '#ffffff',
         }}
       >
+        {/* Section 1: Organisation */}
         <div>
           <div
             style={{
@@ -2137,34 +2056,19 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
             <label
               style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}
             >
-              Select Organisation to which this Manager belongs <span style={{ color: '#ef4444' }}>*</span>
+              Organisation <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <select
+            <CustomSelect
               value={selectedOrgId}
-              onChange={(e) => setSelectedOrgId(e.target.value)}
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '0 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#1e293b',
-                outline: 'none',
-                background: '#f8fafc',
-                cursor: 'pointer',
-              }}
-            >
-              {organisations.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedOrgId(val)}
+              options={organisations.map((o) => ({ value: String(o.id), label: o.name }))}
+              placeholder="Select Organisation..."
+              height="38px"
+            />
           </div>
         </div>
 
+        {/* Section 2: Manager Type & Basic Details */}
         <div>
           <div
             style={{
@@ -2183,18 +2087,53 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
             <User size={15} /> Manager Information
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Manager Type <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <CustomSelect
+                  value={managerType}
+                  onChange={(val) => setManagerType(val)}
+                  options={[
+                    { value: 'super_manager', label: 'Super Manager (Autonomous Manager)' },
+                    { value: 'guest_manager', label: 'Guest Manager (Temporary / Reviewer)' },
+                  ]}
+                  height="36px"
+                />
+              </div>
+              <div>
+                <label
+                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
+                >
+                  Status
+                </label>
+                <CustomSelect
+                  value={status}
+                  onChange={(val) => setStatus(val)}
+                  options={[
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
+                  ]}
+                  height="36px"
+                />
+              </div>
+            </div>
+
             <div>
               <label
                 style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
               >
-                Manager Name <span style={{ color: '#ef4444' }}>*</span>
+                Full Name <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <input
                 type="text"
                 required
                 value={managerName}
                 onChange={(e) => setManagerName(e.target.value)}
-                placeholder="Enter manager name"
+                placeholder="e.g. Dr. Rajesh Sharma"
                 style={{
                   width: '100%',
                   height: '36px',
@@ -2206,6 +2145,7 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                 }}
               />
             </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label
@@ -2218,7 +2158,7 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter email"
+                  placeholder="manager@school.edu"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -2234,13 +2174,13 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Phone
+                  Phone Number
                 </label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Enter phone"
+                  placeholder="e.g. 9876543210"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -2253,16 +2193,19 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                 />
               </div>
             </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Status
+                  Department <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                <input
+                  type="text"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="e.g. Senior Wing"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -2271,22 +2214,20 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                     borderRadius: '4px',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#fff',
                   }}
-                >
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
-                </select>
+                />
               </div>
               <div>
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Password Option
+                  Designation <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <select
-                  value={passwordOption}
-                  onChange={(e) => setPasswordOption(e.target.value)}
+                <input
+                  type="text"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  placeholder="e.g. Vice Principal"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -2295,57 +2236,101 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
                     borderRadius: '4px',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#fff',
                   }}
-                >
-                  <option value="custom">Custom Password</option>
-                  <option value="phone">Use Phone Number</option>
-                </select>
+                />
               </div>
             </div>
-            {passwordOption === 'custom' && (
-              <div>
-                <label
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
-                >
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+          </div>
+        </div>
+
+        {/* Section 3: Delegated Tables */}
+        <div>
+          <div
+            style={{
+              background: '#2563eb',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px',
+            }}
+          >
+            <Layers size={15} /> Delegated Tables ({selectedTableIds.length} Selected)
+          </div>
+          <div
+            style={{
+              maxHeight: '180px',
+              overflowY: 'auto',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              background: '#f8fafc',
+            }}
+          >
+            {orgTables.length === 0 ? (
+              <div style={{ color: '#94a3b8', fontSize: '12px', textAlign: 'center', padding: '12px 0' }}>
+                No tables found in this Organisation. Tables can be delegated later by the Prime Manager.
+              </div>
+            ) : (
+              orgTables.map((tbl) => {
+                const isChecked = selectedTableIds.includes(tbl.id);
+                return (
+                  <label
+                    key={tbl.id}
                     style={{
-                      width: '100%',
-                      height: '36px',
-                      padding: '0 36px 0 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      outline: 'none',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      background: 'none',
-                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '6px 4px',
                       cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#334155',
+                      borderBottom: '1px solid #f1f5f9',
                     }}
                   >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-              </div>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleTable(tbl.id)}
+                      style={{ accentColor: '#2563eb' }}
+                    />
+                    <span style={{ fontWeight: 600 }}>{tbl.name}</span>
+                    <span style={{ color: '#64748b', fontSize: '11px', marginLeft: 'auto' }}>
+                      {tbl.total_cards ?? 0} cards
+                    </span>
+                  </label>
+                );
+              })
             )}
+          </div>
+        </div>
+
+        {/* Auto-PIN Password Information Notice */}
+        <div
+          style={{
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            fontSize: '12px',
+            color: '#1e40af',
+          }}
+        >
+          <KeyRound size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#2563eb' }} />
+          <div>
+            <div style={{ fontWeight: 700, marginBottom: '2px', color: '#1e3a8a' }}>
+              Credentials & Security
+            </div>
+            <div style={{ color: '#3b82f6', lineHeight: '1.4', fontSize: '11.5px' }}>
+              The Super Manager will receive their login credentials via email. Super Managers have their own independent login and manage tables delegated to them by the Prime Manager.
+            </div>
           </div>
         </div>
       </div>
@@ -2392,23 +2377,18 @@ function OriginalManagerDrawerForm({ onClose, addToast, initialData }) {
             cursor: 'pointer',
           }}
         >
-          <Save size={14} /> {saving ? 'Saving...' : isEditing ? 'Save Changes' : '+ Add Manager'}
+          <Save size={14} /> {saving ? 'Saving…' : isEditing ? 'Save Changes' : '+ Create Super Manager'}
         </button>
       </div>
     </form>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   3. Add New Assistant Drawer (SINGLE CLIENT SELECTION + ASSISTANT DETAILS + PERMISSIONS)
-
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   3. Add New Assistant Drawer (SINGLE CLIENT SELECTION + ASSISTANT DETAILS + PERMISSIONS)
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
   const isEditing = !!initialData;
   const [selectedClient, setSelectedClient] = useState('1');
   const [assistantName, setAssistantName] = useState(initialData?.name || initialData?.full_name || '');
+  const [username, setUsername] = useState(initialData?.username || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [status, setStatus] = useState(
@@ -2418,13 +2398,11 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
         : 'false'
       : 'true'
   );
-  const [passwordOption, setPasswordOption] = useState('custom');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setAssistantName(initialData.name || initialData.full_name || '');
+      setUsername(initialData.username || '');
       setEmail(initialData.email || '');
       setPhone(initialData.phone || '');
       setStatus(
@@ -2514,20 +2492,20 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
     const allPermissions = { ...listPerms, ...actionPerms, ...bulkPerms };
     const payload = {
       name: assistantName,
+      username: username ? username.trim() : undefined,
       email,
       phone,
       status: status === 'true',
       client: selectedClient || undefined,
-      password_option: passwordOption,
-      password: passwordOption === 'custom' ? password : phone || '12345678',
       ...allPermissions,
       permissions: allPermissions,
     };
     let itemToSave = {
       id: initialData?.id || Date.now(),
       name: assistantName,
+      username: username || email.split('@')[0],
       email: email,
-      phone: phone || 'â€”',
+      phone: phone || '—',
       designation: 'Assistant',
       status: status === 'true' ? 'active' : 'inactive',
       is_active: status === 'true',
@@ -2635,30 +2613,13 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               Select Organisation / Client to which this Assistant is created for{' '}
               <span style={{ color: '#ef4444' }}>*</span>
             </label>
-            <select
+            <CustomSelect
               value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '0 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: '#1e293b',
-                outline: 'none',
-                fontFamily: 'var(--font-family)',
-                background: '#f8fafc',
-                cursor: 'pointer',
-              }}
-            >
-              {allClients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedClient(val)}
+              options={allClients.map((c) => ({ value: String(c.id), label: c.name }))}
+              placeholder="Select Organisation / Client..."
+              height="38px"
+            />
           </div>
         </div>
 
@@ -2762,11 +2723,13 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Status
+                  Username <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
                 </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="e.g. asst_1 (or auto from email)"
                   style={{
                     width: '100%',
                     height: '36px',
@@ -2776,88 +2739,54 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
                     fontSize: '13px',
                     outline: 'none',
                     fontFamily: 'var(--font-family)',
-                    background: '#fff',
                   }}
-                >
-                  <option value="false">Inactive</option>
-                  <option value="true">Active</option>
-                </select>
+                />
               </div>
               <div>
                 <label
                   style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
                 >
-                  Password Option
+                  Status
                 </label>
-                <select
-                  value={passwordOption}
-                  onChange={(e) => setPasswordOption(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: '36px',
-                    padding: '0 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    fontFamily: 'var(--font-family)',
-                    background: '#fff',
-                  }}
-                >
-                  <option value="custom">Custom Password</option>
-                  <option value="phone">Use Phone Number</option>
-                </select>
+                <CustomSelect
+                  value={status}
+                  onChange={(val) => setStatus(val)}
+                  options={[
+                    { value: 'true', label: 'Active' },
+                    { value: 'false', label: 'Inactive' },
+                  ]}
+                  height="36px"
+                />
               </div>
             </div>
 
-            {passwordOption === 'custom' && (
+            {/* Auto-PIN Password Information Notice */}
+            <div
+              style={{
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '6px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                fontSize: '12px',
+                color: '#1e40af',
+              }}
+            >
+              <KeyRound size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#2563eb' }} />
               <div>
-                <label
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}
-                >
-                  Password <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter custom password"
-                    style={{
-                      width: '100%',
-                      height: '36px',
-                      padding: '0 36px 0 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      fontSize: '13px',
-                      outline: 'none',
-                      fontFamily: 'var(--font-family)',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      background: 'none',
-                      color: '#6b7280',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+                <div style={{ fontWeight: 700, marginBottom: '2px', color: '#1e3a8a' }}>
+                  Auto-Generated Temporary Password (PIN)
+                </div>
+                <div style={{ color: '#3b82f6', lineHeight: '1.4', fontSize: '11.5px' }}>
+                  If a phone number is provided, it is set as the initial PIN. Otherwise, an 8–10 character PIN is auto-generated and sent directly to the assistant by email. Temporary credentials can also be viewed in Pro Features &rarr; Manage Passwords.
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Section 3: Assistant Permissions */}
         <div>
           <div
             style={{
@@ -2870,14 +2799,12 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              marginBottom: '14px',
+              marginBottom: '12px',
             }}
           >
-            <Shield size={15} /> Assistant Permissions
+            <ShieldCheck size={15} /> Assistant Permissions
           </div>
 
-          {/* Category 1: GROUP SETTINGS */}
-          {/* Category 1: ID CARD LISTS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -2892,7 +2819,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <List size={13} /> ID CARD LIST ACCESS
+                <List size={13} /> ID CARD LIST PERMISSIONS
               </div>
               <ToggleSwitch
                 checked={Object.values(listPerms).every(Boolean)}
@@ -2911,7 +2838,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
               {[
                 { key: 'perm_idcard_pending_list', label: 'Pending List' },
                 { key: 'perm_idcard_verified_list', label: 'Verified List' },
-                { key: 'perm_idcard_pool_list', label: 'Deleted / Pool List' },
+                { key: 'perm_idcard_pool_list', label: 'Deleted List' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -2935,7 +2862,6 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
           </div>
 
-          {/* Category 2: CARD ACTIONS */}
           <div style={{ marginBottom: '14px' }}>
             <div
               style={{
@@ -2967,10 +2893,9 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_add', label: 'Add Single Card' },
-                { key: 'perm_idcard_edit', label: 'Edit Single Card' },
+                { key: 'perm_idcard_add', label: 'Add Card' },
+                { key: 'perm_idcard_edit', label: 'Edit Card' },
                 { key: 'perm_idcard_verify', label: 'Verify Card' },
-                { key: 'perm_idcard_info', label: 'View Card Info' },
               ].map(({ key, label }) => (
                 <div
                   key={key}
@@ -3026,7 +2951,7 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
               {[
-                { key: 'perm_idcard_bulk_upload', label: 'Bulk Upload (Excel / ZIP)' },
+                { key: 'perm_idcard_bulk_upload', label: 'Upload XLSX' },
                 { key: 'perm_mobile_app', label: 'Mobile App Access' },
               ].map(({ key, label }) => (
                 <div
@@ -3433,7 +3358,7 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
       id: initialData?.id || Date.now(),
       name: photographerName,
       email: email,
-      phone: phone || 'â€”',
+      phone: phone || '—',
       designation: 'Photographer',
       status: status === 'true' ? 'active' : 'inactive',
       is_active: status === 'true',
@@ -3980,25 +3905,16 @@ function OriginalMessageDrawerForm({ onClose, addToast }) {
             >
               Message Type / Visibility
             </label>
-            <select
+            <CustomSelect
               value={visibility}
-              onChange={(e) => setVisibility(e.target.value)}
-              style={{
-                width: '100%',
-                height: '34px',
-                padding: '0 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '4px',
-                fontSize: '12px',
-                outline: 'none',
-                fontFamily: 'var(--font-family)',
-                background: '#fff',
-              }}
-            >
-              <option value="permanent">Permanent Dashboard Notification Banner</option>
-              <option value="temporary_24h">Temporary Banner (Expires in 24 Hours)</option>
-              <option value="urgent">Urgent Announcement Modal Alert</option>
-            </select>
+              onChange={(val) => setVisibility(val)}
+              options={[
+                { value: 'permanent', label: 'Permanent Dashboard Notification Banner' },
+                { value: 'temporary_24h', label: 'Temporary Banner (Expires in 24 Hours)' },
+                { value: 'urgent', label: 'Urgent Announcement Modal Alert' },
+              ]}
+              height="34px"
+            />
           </div>
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

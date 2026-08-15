@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
 import WatermarkLogo from '../common/WatermarkLogo';
+import CustomSelect from '../common/CustomSelect';
 import { panelApi } from '../../services/api';
 
 /* ── Standard pagination bar — matches StaffManagementView / ClientDirectoryView ── */
@@ -533,40 +534,43 @@ function EmailLogsTab({ addToast }) {
               </button>
             )}
           </div>
-          <select
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="">All Statuses</option>
-            <option value="on_hold">On Hold</option>
-            <option value="pending">Pending</option>
-            <option value="sent">Sent</option>
-            <option value="failed">Failed</option>
-          </select>
-          <select
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: '', label: 'All Statuses' },
+              { value: 'on_hold', label: 'On Hold' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'sent', label: 'Sent' },
+              { value: 'failed', label: 'Failed' },
+            ]}
+            height="28px"
+            style={{ width: '120px' }}
+          />
+          <CustomSelect
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="">All Types</option>
-            <option value="welcome">Welcome / Activation</option>
-            <option value="temp_password">Temp Password</option>
-            <option value="password_change">Password Change Notice</option>
-            <option value="otp_reset">Password Reset OTP</option>
-            <option value="system">System / Custom</option>
-          </select>
-          <select
+            onChange={(val) => setTypeFilter(val)}
+            options={[
+              { value: '', label: 'All Types' },
+              { value: 'welcome', label: 'Welcome / Activation' },
+              { value: 'temp_password', label: 'Temp Password' },
+              { value: 'password_change', label: 'Password Change Notice' },
+              { value: 'otp_reset', label: 'Password Reset OTP' },
+              { value: 'system', label: 'System / Custom' },
+            ]}
+            height="28px"
+            style={{ width: '160px' }}
+          />
+          <CustomSelect
             value={sortFilter}
-            onChange={(e) => setSortFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="latest">Latest</option>
-            <option value="oldest">Oldest</option>
-          </select>
+            onChange={(val) => setSortFilter(val)}
+            options={[
+              { value: 'latest', label: 'Latest' },
+              { value: 'oldest', label: 'Oldest' },
+            ]}
+            height="28px"
+            style={{ width: '100px' }}
+          />
           <button className="btn btn-sm btn-primary" onClick={() => setShowComposeModal(true)}>
             <Plus size={12} color="#ffffff" /> Add New Email
           </button>
@@ -881,16 +885,17 @@ function EmailLogsTab({ addToast }) {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                     Email Type
                   </label>
-                  <select
+                  <CustomSelect
                     value={emailForm.email_type}
-                    onChange={(e) => setEmailForm({ ...emailForm, email_type: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                  >
-                    <option value="system">System / General</option>
-                    <option value="welcome">Welcome / Activation</option>
-                    <option value="temp_password">Temporary Password</option>
-                    <option value="otp_reset">Password Reset OTP</option>
-                  </select>
+                    onChange={(val) => setEmailForm({ ...emailForm, email_type: val })}
+                    options={[
+                      { value: 'system', label: 'System / General' },
+                      { value: 'welcome', label: 'Welcome / Activation' },
+                      { value: 'temp_password', label: 'Temporary Password' },
+                      { value: 'otp_reset', label: 'Password Reset OTP' },
+                    ]}
+                    height="36px"
+                  />
                 </div>
 
                 <div>
@@ -1051,59 +1056,67 @@ function LogHistoryTab({ addToast }) {
               </button>
             )}
           </div>
-          <select
+          <CustomSelect
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="logs">System Logs</option>
-            <option value="all">All Sources</option>
-            <option value="tasks">Background Tasks</option>
-            <option value="backups">Backup Tasks</option>
-          </select>
-          <select
+            onChange={(val) => setSourceFilter(val)}
+            options={[
+              { value: 'logs', label: 'System Logs' },
+              { value: 'all', label: 'All Sources' },
+              { value: 'tasks', label: 'Background Tasks' },
+              { value: 'backups', label: 'Backup Tasks' },
+            ]}
+            height="28px"
+            style={{ width: '130px' }}
+          />
+          <CustomSelect
             value={userTypeFilter}
-            onChange={(e) => setUserTypeFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="">All User Types</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="admin_staff">Operator</option>
-            <option value="prime_manager">Prime Manager</option>
-            <option value="manager">Manager</option>
-            <option value="assistant">Assistant</option>
-            <option value="guest_prime_manager">Guest Prime Manager</option>
-          </select>
-          <select
+            onChange={(val) => setUserTypeFilter(val)}
+            options={[
+              { value: '', label: 'All User Types' },
+              { value: 'super_admin', label: 'Super Admin' },
+              { value: 'operator', label: 'Operator' },
+              { value: 'prime_manager', label: 'Prime Manager' },
+              { value: 'manager', label: 'Manager' },
+              { value: 'assistant', label: 'Assistant' },
+              { value: 'photographer', label: 'Photographer' },
+            ]}
+            height="28px"
+            style={{ width: '140px' }}
+          />
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="">All Task Status</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <select
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: '', label: 'All Task Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'processing', label: 'Processing' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'failed', label: 'Failed' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ]}
+            height="28px"
+            style={{ width: '140px' }}
+          />
+          <CustomSelect
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="">All Update Actions</option>
-            <option value="login">Login</option>
-            <option value="logout">Logout</option>
-            <option value="password_reset">Password Reset</option>
-            <option value="client_create">Client Create</option>
-            <option value="client_update">Client Update</option>
-            <option value="card_create">Card Create</option>
-            <option value="card_update">Card Update</option>
-          </select>
+            onChange={(val) => setActionFilter(val)}
+            options={[
+              { value: '', label: 'All Update Actions' },
+              { value: 'login', label: 'Login' },
+              { value: 'logout', label: 'Logout' },
+              { value: 'create', label: 'Create' },
+              { value: 'update', label: 'Update' },
+              { value: 'delete', label: 'Delete' },
+              { value: 'export', label: 'Export' },
+              { value: 'password_reset', label: 'Password Reset' },
+              { value: 'client_create', label: 'Client Create' },
+              { value: 'client_update', label: 'Client Update' },
+              { value: 'card_create', label: 'Card Create' },
+              { value: 'card_update', label: 'Card Update' },
+            ]}
+            height="28px"
+            style={{ width: '150px' }}
+          />
         </div>
         <div className="notif-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="btn btn-sm btn-neutral" onClick={resetFilters} title="Reset filters">
@@ -1328,18 +1341,19 @@ function BackupsTab({ addToast }) {
               </button>
             )}
           </div>
-          <select
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="form-select form-select-sm"
-            style={{ height: '28px', fontSize: '12px', padding: '0 6px', width: 'auto' }}
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-          </select>
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'processing', label: 'Processing' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'failed', label: 'Failed' },
+            ]}
+            height="28px"
+            style={{ width: '130px' }}
+          />
           <input
             type="date"
             value={dateFrom}

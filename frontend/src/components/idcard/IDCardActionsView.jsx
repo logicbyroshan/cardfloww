@@ -2702,12 +2702,13 @@ export default function IDCardActionsView({
   initialStatus = 'pending',
   onBack,
   onNavigate,
+  onStatusChange,
   addToast,
   currentUser,
   userRole = 'super_admin',
 }) {
   const role = String(currentUser?.role || userRole || '').toLowerCase();
-  const isAssistant = role === 'assistant' || role === 'client_staff';
+  const isAssistant = role === 'assistant';
 
   /* ── Table metadata ── */
   const [table, setTable] = useState(null);
@@ -2721,6 +2722,27 @@ export default function IDCardActionsView({
     return initialStatus;
   });
   const [statusCounts, setStatusCounts] = useState({ pending: 0, verified: 0, approved: 0, download: 0, pool: 0 });
+
+  const onStatusChangeRef = useRef(onStatusChange);
+  useEffect(() => {
+    onStatusChangeRef.current = onStatusChange;
+  }, [onStatusChange]);
+
+  useEffect(() => {
+    if (initialStatus && initialStatus !== status) {
+      setStatus(initialStatus);
+    }
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (tableId && status) {
+      const targetRoute = `/table/${tableId}/${status}`;
+      if (typeof window !== 'undefined' && window.location.pathname !== targetRoute) {
+        window.history.replaceState({}, document.title, targetRoute);
+      }
+      onStatusChangeRef.current?.(status);
+    }
+  }, [tableId, status]);
 
   useEffect(() => {
     if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(status)) {
@@ -2760,13 +2782,37 @@ export default function IDCardActionsView({
   /* ── Selection state ── */
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  /* Dispatch footer data count */
+  /* Dispatch footer data count & selection */
   useEffect(() => {
     const selectedCount = selectedIds ? selectedIds.size : 0;
-    const text =
-      selectedCount > 0 ? `Selected: ${selectedCount} / Total Cards: ${cards.length}` : `Total Cards: ${cards.length}`;
-    window.dispatchEvent(new CustomEvent('cardflow:data-count', { detail: { text } }));
-  }, [cards.length, selectedIds]);
+    let selectedText = '';
+    if (selectedCount === 1) {
+      const selectedId = Array.from(selectedIds)[0];
+      const selectedCard = cards.find((c) => String(c.id) === String(selectedId));
+      const fd = selectedCard?.field_data || {};
+      const cardName =
+        fd['FULL NAME'] ||
+        fd['Full Name'] ||
+        fd['STUDENT NAME'] ||
+        fd['Student Name'] ||
+        fd['NAME'] ||
+        fd['name'] ||
+        selectedCard?.name ||
+        `Card #${selectedId}`;
+      selectedText = `Selected: 1 Card (${cardName})`;
+    } else if (selectedCount > 1) {
+      selectedText = `Selected: ${selectedCount} Cards`;
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Cards: ${cards.length}`,
+          selectedText,
+          count: cards.length,
+        },
+      })
+    );
+  }, [cards, selectedIds]);
 
   /* Dynamic Filter Options computation */
   const classOptions = useMemo(() => {

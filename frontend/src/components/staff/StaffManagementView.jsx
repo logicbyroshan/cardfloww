@@ -140,6 +140,28 @@ export default function StaffManagementView({
     };
   }, [load, getStoredStaff]);
 
+  /* Dispatch footer data count & selection */
+  useEffect(() => {
+    const label = isAssistant ? 'Total Assistants' : isPhotographer ? 'Total Photographers' : 'Total Operators';
+    let selectedText = '';
+    if (selected) {
+      const selStaff = staffList.find((s) => String(s.id) === String(selected));
+      if (selStaff) {
+        const staffName = selStaff.name || selStaff.full_name || selStaff.username || `Staff #${selected}`;
+        selectedText = `Selected: ${staffName}`;
+      }
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `${label}: ${staffList.length}`,
+          selectedText,
+          count: staffList.length,
+        },
+      })
+    );
+  }, [staffList.length, selected, isAssistant, isPhotographer]);
+
   const handleToggleStatus = async () => {
     if (!selected) return;
     const selStaff = staffList.find((s) => s.id === selected);
@@ -314,7 +336,7 @@ export default function StaffManagementView({
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              placeholder="Search staff..."
+              placeholder={`Search ${isAssistant ? 'assistants' : isPhotographer ? 'photographers' : 'operators'}...`}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -659,8 +681,8 @@ export default function StaffManagementView({
               </h4>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
                 {search
-                  ? `No staff records match "${search}"`
-                  : `There are no ${title.toLowerCase()} accounts registered yet.`}
+                  ? `No ${isAssistant ? 'assistant' : isPhotographer ? 'photographer' : 'operator'} records match "${search}"`
+                  : `There are no ${isAssistant ? 'assistant' : isPhotographer ? 'photographer' : 'operator'} accounts registered yet.`}
               </p>
             </div>
             {!search && (
@@ -690,3 +712,9 @@ export default function StaffManagementView({
     </div>
   );
 }
+
+export {
+  StaffManagementView as OperatorManagementView,
+  StaffManagementView as AssistantManagementView,
+  StaffManagementView as PhotographerManagementView,
+};

@@ -5,9 +5,12 @@ import Header from './components/layout/Header';
 import DashboardView from './components/dashboard/DashboardView';
 import Footer from './components/layout/Footer';
 
-import ClientDirectoryView from './components/client/ClientDirectoryView';
-import ClientAccountsView from './components/client/ClientAccountsView';
-import StaffManagementView from './components/staff/StaffManagementView';
+import OrganisationDirectoryView from './components/client/ClientDirectoryView';
+import OrganisationAccountsView from './components/client/ClientAccountsView';
+import OperatorManagementView, {
+  AssistantManagementView,
+  PhotographerManagementView,
+} from './components/staff/StaffManagementView';
 import ManagePanelView from './components/panel/ManagePanelView';
 import CardActionBar from './components/idcard/CardActionBar';
 import CardTableView from './components/idcard/CardTableView';
@@ -179,38 +182,58 @@ function MobileAppFallback({ onForceDesktop }) {
   );
 }
 
+function parsePathToRoute(pathname) {
+  const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
+
+  // Match /table/:tableId/:status or /tables/:tableId/:status or /cards/:tableId/:status or /table/:tableId
+  const tableMatch = path.match(/^\/(?:table|tables|cards)\/([^/]+)(?:\/([^/]+))?\/?$/);
+  if (tableMatch) {
+    const tableId = tableMatch[1];
+    const status = tableMatch[2] || 'pending';
+    return {
+      tab: 'idcard-actions',
+      idcardActionsState: { tableId, status },
+    };
+  }
+
+  const map = {
+    '/': { tab: 'dashboard', idcardActionsState: null },
+    '/dashboard': { tab: 'dashboard', idcardActionsState: null },
+    '/tables': { tab: 'cards', idcardActionsState: null },
+    '/cards': { tab: 'cards', idcardActionsState: null },
+    '/reprints': { tab: 'reprints', idcardActionsState: null },
+    '/organisations': { tab: 'organisations', idcardActionsState: null },
+    '/organisation': { tab: 'organisations', idcardActionsState: null },
+    '/clients': { tab: 'organisations', idcardActionsState: null },
+    '/operators': { tab: 'operators', idcardActionsState: null },
+    '/operator': { tab: 'operators', idcardActionsState: null },
+    '/staff': { tab: 'operators', idcardActionsState: null },
+    '/assistants': { tab: 'assistants', idcardActionsState: null },
+    '/assistant': { tab: 'assistants', idcardActionsState: null },
+    '/photographers': { tab: 'photographers', idcardActionsState: null },
+    '/photographer': { tab: 'photographers', idcardActionsState: null },
+    '/panel': { tab: 'panel', idcardActionsState: null },
+    '/tutorial': { tab: 'tutorial', idcardActionsState: null },
+    '/settings': { tab: 'settings', idcardActionsState: null },
+    '/pro': { tab: 'pro', idcardActionsState: null },
+    '/profile': { tab: 'profile', idcardActionsState: null },
+  };
+
+  return map[path] || { tab: 'dashboard', idcardActionsState: null };
+}
+
 export default function App() {
   const [bootState, setBootState] = useState(BOOT.LOADING);
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState('super_admin');
   const [impersonatedUser, setImpersonatedUser] = useState(null);
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      const pathToTab = {
-        '/': 'dashboard',
-        '/dashboard': 'dashboard',
-        '/cards': 'cards',
-        '/reprints': 'reprints',
-        '/organisations': 'organisations',
-        '/clients': 'clients',
-        '/staff': 'staff',
-        '/assistants': 'assistants',
-        '/photographers': 'photographers',
-        '/panel': 'panel',
-        '/tutorial': 'tutorial',
-        '/settings': 'settings',
-        '/pro': 'pro',
-        '/profile': 'profile',
-      };
-      return pathToTab[path] || 'dashboard';
-    }
-    return 'dashboard';
-  });
+  const [activeTab, setActiveTab] = useState(() => parsePathToRoute().tab);
   const [activeTableId, setActiveTableId] = useState(null); // set when navigating from cardflow → cards
-  const [idcardActionsState, setIdcardActionsState] = useState(null); // { tableId, status }
+  const [idcardActionsState, setIdcardActionsState] = useState(() => parsePathToRoute().idcardActionsState); // { tableId, status }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState('all');
+  const [scopedClientId, setScopedClientId] = useState(null);
+  const [scopedClientOrg, setScopedClientOrg] = useState(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [forceDesktop, setForceDesktop] = useState(false);
 
@@ -246,14 +269,21 @@ export default function App() {
       const path = window.location.pathname;
       if (path === '/auth/login' || path === '/login') {
         window.history.replaceState({}, document.title, '/');
+      } else if (activeTab === 'idcard-actions' && idcardActionsState?.tableId) {
+        const targetRoute = `/table/${idcardActionsState.tableId}/${idcardActionsState.status || 'pending'}`;
+        if (path !== targetRoute) {
+          window.history.pushState({}, document.title, targetRoute);
+        }
       } else {
         const routeMap = {
           dashboard: '/',
-          cards: '/cards',
+          cards: '/tables',
+          tables: '/tables',
           reprints: '/reprints',
           organisations: '/organisations',
-          clients: '/clients',
-          staff: '/staff',
+          clients: '/organisations',
+          operators: '/operators',
+          staff: '/operators',
           assistants: '/assistants',
           photographers: '/photographers',
           panel: '/panel',
@@ -263,37 +293,19 @@ export default function App() {
           profile: '/profile',
         };
         const targetRoute = routeMap[activeTab] || '/';
-        if (path !== targetRoute && path !== '/dashboard' && !path.includes('table/')) {
+        if (path !== targetRoute && path !== '/dashboard') {
           window.history.pushState({}, document.title, targetRoute);
         }
       }
     }
-  }, [bootState, activeTab]);
+  }, [bootState, activeTab, idcardActionsState]);
 
   // Handle browser back/forward buttons (popstate)
   useEffect(() => {
     const handlePopState = () => {
-      const path = window.location.pathname;
-      const pathToTab = {
-        '/': 'dashboard',
-        '/dashboard': 'dashboard',
-        '/cards': 'cards',
-        '/reprints': 'reprints',
-        '/organisations': 'organisations',
-        '/clients': 'clients',
-        '/staff': 'staff',
-        '/assistants': 'assistants',
-        '/photographers': 'photographers',
-        '/panel': 'panel',
-        '/tutorial': 'tutorial',
-        '/settings': 'settings',
-        '/pro': 'pro',
-        '/profile': 'profile',
-      };
-      const matchedTab = pathToTab[path];
-      if (matchedTab) {
-        setActiveTab(matchedTab);
-      }
+      const parsed = parsePathToRoute(window.location.pathname);
+      setActiveTab(parsed.tab);
+      setIdcardActionsState(parsed.idcardActionsState || null);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -337,6 +349,14 @@ export default function App() {
     else if (type === 'error') toast.error(message);
     else if (type === 'warning') toast.warning(message);
     else toast.info(message);
+  }, []);
+
+  const handleStatusChange = useCallback((newStatus) => {
+    setIdcardActionsState((prev) => {
+      if (!prev) return prev;
+      if (prev.status === newStatus) return prev;
+      return { ...prev, status: newStatus };
+    });
   }, []);
 
   // Auth bootstrap & impersonation re-sync
@@ -476,9 +496,9 @@ export default function App() {
   }
 
   const normRole = String(userRole || '').toLowerCase();
-  const isAdminRole = normRole === 'super_admin' || normRole === 'pro_user' || normRole === 'admin';
-  const isOrgRole = normRole === 'prime_manager' || normRole === 'client' || normRole === 'guest_prime_manager' || normRole === 'manager';
-  const isOperatorRole = normRole === 'operator' || normRole === 'staff';
+  const isAdminRole = normRole === 'prime_admin' || normRole === 'super_admin' || normRole === 'pro_user' || normRole === 'admin';
+  const isOrgRole = normRole === 'prime_manager' || normRole === 'super_manager' || normRole === 'manager' || normRole === 'client';
+  const isOperatorRole = normRole === 'operator';
 
   return (
     <div className="app-container">
@@ -593,11 +613,21 @@ export default function App() {
                   addToast={addToast}
                   currentUser={currentUser}
                   userRole={userRole}
+                  selectedClientId={scopedClientId}
+                  selectedClientOrg={scopedClientOrg}
+                  onClearSelectedClient={() => {
+                    setScopedClientId(null);
+                    setScopedClientOrg(null);
+                  }}
                   onNavigate={(tabOrObj, params) => {
                     if (typeof tabOrObj === 'string' && tabOrObj === 'idcard-actions' && params) {
                       setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
                       setActiveTab('idcard-actions');
                     } else if (typeof tabOrObj === 'string') {
+                      if (tabOrObj !== 'cards') {
+                        setScopedClientId(null);
+                        setScopedClientOrg(null);
+                      }
                       setActiveTab(tabOrObj);
                     }
                   }}
@@ -609,6 +639,7 @@ export default function App() {
                 <IDCardActionsView
                   tableId={idcardActionsState.tableId}
                   initialStatus={idcardActionsState.status || 'pending'}
+                  onStatusChange={handleStatusChange}
                   addToast={addToast}
                   currentUser={currentUser}
                   userRole={userRole}
@@ -635,10 +666,20 @@ export default function App() {
 
               {/* ── Manage Organisation ── */}
               {activeTab === 'organisations' && ((isAdminRole || isOperatorRole) ? (
-                <ClientDirectoryView
+                <OrganisationDirectoryView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
-                  onNavigate={(tab) => setActiveTab(tab)}
+                  onNavigate={(tab, params) => {
+                    if (tab === 'cards' && params?.clientId) {
+                      setScopedClientId(params.clientId);
+                      setScopedClientOrg(params.org || { id: params.clientId, name: params.clientName });
+                      setActiveTab('cards');
+                    } else {
+                      setScopedClientId(null);
+                      setScopedClientOrg(null);
+                      setActiveTab(tab);
+                    }
+                  }}
                   onOpenDeleteModal={(cfg) =>
                     setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
                   }
@@ -647,9 +688,9 @@ export default function App() {
                 <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
               ))}
 
-              {/* ── Manage Client ── */}
+              {/* ── Manage Organisation Accounts / Managers ── */}
               {activeTab === 'clients' && ((isAdminRole || isOperatorRole) ? (
-                <ClientAccountsView
+                <OrganisationAccountsView
                   addToast={addToast}
                   onOpenActionDrawer={handleOpenActionDrawer}
                   onNavigate={(tab) => setActiveTab(tab)}
@@ -661,10 +702,11 @@ export default function App() {
                 <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
               ))}
 
-              {/* ── Manage Staff/Operator ── */}
-              {activeTab === 'staff' && (isAdminRole ? (
-                <StaffManagementView
+              {/* ── Manage Operator ── */}
+              {(activeTab === 'operators' || activeTab === 'staff') && (isAdminRole ? (
+                <OperatorManagementView
                   addToast={addToast}
+                  staffType="operator"
                   onOpenActionDrawer={handleOpenActionDrawer}
                   onNavigate={(tab) => setActiveTab(tab)}
                   onOpenDeleteModal={(cfg) =>
@@ -677,7 +719,7 @@ export default function App() {
 
               {/* ── Manage Assistants ── */}
               {activeTab === 'assistants' && ((isAdminRole || isOrgRole) ? (
-                <StaffManagementView
+                <AssistantManagementView
                   addToast={addToast}
                   staffType="assistant"
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -692,7 +734,7 @@ export default function App() {
 
               {/* ── Manage Photographers ── */}
               {activeTab === 'photographers' && ((isAdminRole || isOperatorRole) ? (
-                <StaffManagementView
+                <PhotographerManagementView
                   addToast={addToast}
                   staffType="photographer"
                   onOpenActionDrawer={handleOpenActionDrawer}
@@ -720,7 +762,7 @@ export default function App() {
 
               {/* ── Settings / Profile ── */}
               {(activeTab === 'settings' || activeTab === 'profile') && (
-                <ProfileSettingsView addToast={addToast} currentUser={currentUser} />
+                <ProfileSettingsView addToast={addToast} currentUser={currentUser} onLogout={handleLogout} />
               )}
 
               {/* ── Manage Features / Pro Features ── */}
@@ -734,20 +776,33 @@ export default function App() {
         </div>
 
         {/* Global Black Footer */}
-        <Footer activeTab={activeTab} onNavigate={setActiveTab} idcardActionsState={idcardActionsState} />
+        <Footer
+          activeTab={activeTab}
+          onNavigate={(dest) => {
+            if (dest === 'organisations') {
+              setScopedClientId(null);
+              setScopedClientOrg(null);
+            }
+            setActiveTab(dest);
+          }}
+          idcardActionsState={idcardActionsState}
+          scopedOrgName={scopedClientOrg?.name || null}
+        />
       </div>
 
       {/* ── Global Modals & Drawers ── */}
-      <QuickActionDrawer
-        isOpen={!!drawerAction}
-        actionType={drawerAction}
-        initialData={drawerInitialData}
-        onClose={() => {
-          setDrawerAction(null);
-          setDrawerInitialData(null);
-        }}
-        addToast={addToast}
-      />
+      <ErrorBoundary>
+        <QuickActionDrawer
+          isOpen={!!drawerAction}
+          actionType={drawerAction}
+          initialData={drawerInitialData}
+          onClose={() => {
+            setDrawerAction(null);
+            setDrawerInitialData(null);
+          }}
+          addToast={addToast}
+        />
+      </ErrorBoundary>
       <CardDownloadsModal isOpen={showDownloadsModal} onClose={() => setShowDownloadsModal(false)} />
 
       <GlobalSearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />

@@ -20,6 +20,7 @@ import {
   X,
   Send,
   Printer,
+  RotateCcw,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -93,48 +94,65 @@ function WelcomeBanner({ currentUser }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   7 Stat Cards Row (Connected 1px border lines, NO GAPS)
+   9 Stat Cards Row (Pending, Verified, Approved, Printed, Deleted, Reprinting, Requested, Confirmed, Total ID Cards)
 ───────────────────────────────────────────────────────────────────────── */
 const STAT_CARDS_DEF = [
-  { key: 'pending_cards', growthKey: 'pending', label: 'Pending Cards', defaultVal: 0, bg: '#f59e0b', Icon: Clock },
-  { key: 'verified_cards', growthKey: 'verified', label: 'Verified Cards', defaultVal: 0, bg: '#10b981', Icon: CheckCircle2 },
-  { key: 'approved_cards', growthKey: 'approved', label: 'Approved Cards', defaultVal: 0, bg: '#3b82f6', Icon: ThumbsUp },
-  { key: 'printed_cards', growthKey: 'printed', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
-  { key: 'requested_cards', growthKey: 'requested', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
-  { key: 'deleted_cards', growthKey: 'deleted', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
-  { key: 'total_id_cards', growthKey: 'total', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
+  { key: 'pending_cards', statusNav: 'pending', label: 'Pending Cards', defaultVal: 0, bg: '#f59e0b', Icon: Clock },
+  { key: 'verified_cards', statusNav: 'verified', label: 'Verified Cards', defaultVal: 0, bg: '#10b981', Icon: CheckCircle2 },
+  { key: 'approved_cards', statusNav: 'approved', label: 'Approved Cards', defaultVal: 0, bg: '#3b82f6', Icon: ThumbsUp },
+  { key: 'printed_cards', statusNav: 'printed', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
+  { key: 'deleted_cards', statusNav: 'deleted', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
+  { key: 'reprinting_cards', statusNav: 'reprint', label: 'Reprinting Cards', defaultVal: 0, bg: '#d97706', Icon: RotateCcw },
+  { key: 'requested_cards', statusNav: 'request', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
+  { key: 'confirmed_cards', statusNav: 'confirm', label: 'Confirmed Cards', defaultVal: 0, bg: '#059669', Icon: CheckCircle2 },
+  { key: 'total_id_cards', statusNav: 'all', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
 ];
 
 function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'super_admin' }) {
   const isAdminOrOperator = [
+    'prime_admin',
     'super_admin',
     'pro_user',
-    'admin',
     'operator',
-    'admin_staff',
   ].includes(String(userRole || '').toLowerCase());
 
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(7, 1fr)',
+        gridTemplateColumns: 'repeat(9, 1fr)',
         gap: 0,
         background: '#fff',
         borderBottom: '1px solid #cbd5e1',
         flexShrink: 0,
       }}
     >
-      {STAT_CARDS_DEF.map(({ key, growthKey, label, defaultVal, bg, Icon }, idx) => {
+      {STAT_CARDS_DEF.map(({ key, statusNav, label, defaultVal, bg, Icon }, idx) => {
         let clientSum = null;
         if (Array.isArray(clients) && clients.length > 0) {
           if (key === 'pending_cards') clientSum = clients.reduce((acc, c) => acc + (c.pending || 0), 0);
           else if (key === 'verified_cards') clientSum = clients.reduce((acc, c) => acc + (c.verified || 0), 0);
           else if (key === 'approved_cards') clientSum = clients.reduce((acc, c) => acc + (c.approved || 0), 0);
           else if (key === 'printed_cards') clientSum = clients.reduce((acc, c) => acc + (c.downloaded || c.download || 0), 0);
-          else if (key === 'requested_cards') clientSum = clients.reduce((acc, c) => acc + (c.request || c.requested || 0), 0);
           else if (key === 'deleted_cards') clientSum = clients.reduce((acc, c) => acc + (c.pool || c.deleted || 0), 0);
-          else if (key === 'total_id_cards') clientSum = clients.reduce((acc, c) => acc + (c.pending || 0) + (c.verified || 0) + (c.approved || 0) + (c.downloaded || c.download || 0) + (c.request || c.requested || 0) + (c.pool || c.deleted || 0), 0);
+          else if (key === 'reprinting_cards') clientSum = clients.reduce((acc, c) => acc + (c.reprint || c.reprinting || 0), 0);
+          else if (key === 'requested_cards') clientSum = clients.reduce((acc, c) => acc + (c.request || c.requested || 0), 0);
+          else if (key === 'confirmed_cards') clientSum = clients.reduce((acc, c) => acc + (c.confirm || c.confirmed || 0), 0);
+          else if (key === 'total_id_cards') {
+            clientSum = clients.reduce(
+              (acc, c) =>
+                acc +
+                (c.pending || 0) +
+                (c.verified || 0) +
+                (c.approved || 0) +
+                (c.downloaded || c.download || 0) +
+                (c.pool || c.deleted || 0) +
+                (c.reprint || c.reprinting || 0) +
+                (c.request || c.requested || 0) +
+                (c.confirm || c.confirmed || 0),
+              0
+            );
+          }
         }
 
         const apiVal =
@@ -144,25 +162,24 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
             ? (stats?.download_cards ?? stats?.downloaded ?? stats?.download)
             : key === 'deleted_cards'
               ? (stats?.pool_cards ?? stats?.pool)
-              : key === 'requested_cards'
-                ? (stats?.requested_cards ?? stats?.requested ?? stats?.reprint_count)
-                : undefined);
+              : key === 'reprinting_cards'
+                ? (stats?.reprinting_cards ?? stats?.reprint_cards ?? stats?.reprint ?? stats?.reprinting)
+                : key === 'requested_cards'
+                  ? (stats?.requested_cards ?? stats?.request_cards ?? stats?.requested ?? stats?.request)
+                  : key === 'confirmed_cards'
+                    ? (stats?.confirmed_cards ?? stats?.confirm_cards ?? stats?.confirmed ?? stats?.confirm)
+                    : undefined);
 
         const val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientSum !== null ? clientSum : (apiVal ?? defaultVal));
-        const statusKey = key.replace('_cards', '');
         const isLast = idx === STAT_CARDS_DEF.length - 1;
-
-        const growthVal = stats?.growth?.[growthKey] ?? stats?.[`${growthKey}_growth`] ?? 0;
-        const isPositive = growthVal > 0;
-        const isNegative = growthVal < 0;
 
         return (
           <button
             key={key}
-            onClick={() => onNavigate('cards', { statusFilter: statusKey })}
+            onClick={() => onNavigate('cards', { statusFilter: statusNav })}
             className="stat-card-glass"
             style={{
-              padding: '10px 8px',
+              padding: '8px 6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -172,31 +189,36 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
               cursor: 'pointer',
               textAlign: 'left',
               boxSizing: 'border-box',
+              minWidth: 0,
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
             onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
           >
-            <div>
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
               <div
                 style={{
-                  fontSize: '18px',
+                  fontSize: '16px',
                   fontWeight: 700,
                   color: '#0f172a',
                   lineHeight: 1.1,
                   fontFamily: 'var(--font-family)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {loading && !stats ? '—' : val.toLocaleString()}
               </div>
               <div
                 style={{
-                  fontSize: '10px',
+                  fontSize: '9.5px',
                   fontWeight: 600,
                   color: '#64748b',
                   marginTop: '2px',
                   fontFamily: 'var(--font-family)',
                   whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
+                title={label}
               >
                 {label}
               </div>
@@ -204,8 +226,8 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
 
             <div
               style={{
-                width: '32px',
-                height: '32px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '6px',
                 background: bg,
                 color: '#fff',
@@ -213,9 +235,10 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
+                marginLeft: '4px',
               }}
             >
-              <Icon size={15} />
+              <Icon size={14} />
             </div>
           </button>
         );
@@ -358,7 +381,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 12px',
                 textAlign: 'left',
                 fontWeight: 700,
-                width: '40%',
+                width: '45%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -410,7 +433,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '10%',
+                width: '11%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -428,7 +451,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '10%',
+                width: '11%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -446,7 +469,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '10%',
+                width: '11%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -464,7 +487,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '10%',
+                width: '11%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
@@ -477,30 +500,12 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
               PRINTED{renderSortIcon('printed')}
             </th>
             <th
-              onClick={() => handleSort('request')}
-              style={{
-                padding: '0 6px',
-                textAlign: 'center',
-                fontWeight: 700,
-                width: '10%',
-                fontSize: '11px',
-                letterSpacing: '0.04em',
-                borderRight: '1px solid #334155',
-                cursor: 'pointer',
-                userSelect: 'none',
-                height: '38px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              REQUESTED{renderSortIcon('request')}
-            </th>
-            <th
               onClick={() => handleSort('deleted')}
               style={{
                 padding: '0 6px',
                 textAlign: 'center',
                 fontWeight: 700,
-                width: '10%',
+                width: '11%',
                 fontSize: '11px',
                 letterSpacing: '0.04em',
                 cursor: 'pointer',
@@ -608,7 +613,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       color: '#0f172a',
                       fontSize: '12px',
                       borderRight: '1px solid #e2e8f0',
-                      width: '40%',
+                      width: '45%',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -654,9 +659,9 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       </button>
                     </div>
                   </td>
-                  {/* REDESIGNED STATUS COUNT BUTTON BADGES */}
+                  {/* STATUS COUNT BUTTON BADGES */}
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '11%' }}
                   >
                     <StatusChangeBadge
                       count={cPending}
@@ -669,7 +674,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                     />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '11%' }}
                   >
                     <StatusChangeBadge
                       count={cVerified}
@@ -682,7 +687,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                     />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '11%' }}
                   >
                     <StatusChangeBadge
                       count={cApproved}
@@ -695,7 +700,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                     />
                   </td>
                   <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
+                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '11%' }}
                   >
                     <StatusChangeBadge
                       count={cDownloaded}
@@ -707,20 +712,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       }}
                     />
                   </td>
-                  <td
-                    style={{ padding: '6px 6px', textAlign: 'center', borderRight: '1px solid #e2e8f0', width: '10%' }}
-                  >
-                    <StatusChangeBadge
-                      count={cRequest}
-                      statusKey="request"
-                      entityId={`client_${clientId}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleBadgeClick(subTables[0] || c, 'request');
-                      }}
-                    />
-                  </td>
-                  <td style={{ padding: '6px 6px', textAlign: 'center', width: '10%' }}>
+                  <td style={{ padding: '6px 6px', textAlign: 'center', width: '11%' }}>
                     <StatusChangeBadge
                       count={cPool}
                       statusKey="pool"
@@ -733,7 +725,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                   </td>
                 </tr>
 
-                {/* EXPANDABLE DROPDOWN SUB-ROWS — SAME TO SAME HEIGHT & BUTTON DIMENSIONS */}
+                {/* EXPANDABLE DROPDOWN SUB-ROWS */}
                 {isExpanded &&
                   subTables.map((sub, sIdx) => {
                     const sc = getTableCounts(sub);
@@ -749,7 +741,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             fontSize: '12px',
                             fontWeight: 600,
                             borderRight: '1px solid #e2e8f0',
-                            width: '40%',
+                            width: '45%',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -781,7 +773,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '10%',
+                            width: '11%',
                           }}
                         >
                           <StatusChangeBadge
@@ -800,7 +792,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '10%',
+                            width: '11%',
                           }}
                         >
                           <StatusChangeBadge
@@ -819,7 +811,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '10%',
+                            width: '11%',
                           }}
                         >
                           <StatusChangeBadge
@@ -838,7 +830,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             padding: '6px 6px',
                             textAlign: 'center',
                             borderRight: '1px solid #e2e8f0',
-                            width: '10%',
+                            width: '11%',
                           }}
                         >
                           <StatusChangeBadge
@@ -852,26 +844,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             }}
                           />
                         </td>
-                        <td
-                          style={{
-                            padding: '6px 6px',
-                            textAlign: 'center',
-                            borderRight: '1px solid #e2e8f0',
-                            width: '10%',
-                          }}
-                        >
-                          <StatusChangeBadge
-                            count={sc.request}
-                            statusKey="request"
-                            entityId={`table_${sub.id}`}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleBadgeClick(sub, 'request');
-                            }}
-                          />
-                        </td>
-                        <td style={{ padding: '6px 6px', textAlign: 'center', width: '10%' }}>
+                        <td style={{ padding: '6px 6px', textAlign: 'center', width: '11%' }}>
                           <StatusChangeBadge
                             count={sc.pool}
                             statusKey="pool"
@@ -1500,8 +1473,8 @@ function RightSidePanels({
   userRole = 'super_admin',
 }) {
   const role = String(currentUser?.role || userRole || '').toLowerCase();
-  const isAdmin = role === 'super_admin' || role === 'pro_user' || role === 'admin';
-  const isOrg = role === 'prime_manager' || role === 'client' || role === 'guest_prime_manager';
+  const isAdmin = role === 'prime_admin' || role === 'super_admin' || role === 'pro_user' || role === 'admin';
+  const isOrg = role === 'prime_manager' || role === 'super_manager' || role === 'manager' || role === 'client' || role === 'guest_prime_manager';
   const isAssistant = role === 'assistant' || role === 'client_staff';
 
   const approvedCount = (clients || []).reduce((acc, c) => acc + (c.approved || 0), 0) || (stats?.approved ?? stats?.approved_cards ?? 0);
@@ -1513,14 +1486,14 @@ function RightSidePanels({
   if (isAdmin) {
     quickActions = [
       { label: 'Add New Organisation', action: () => onOpenActionDrawer('add-client'), Icon: Plus },
-      { label: 'Add New Operator', action: () => onNavigate('staff'), Icon: Shield },
-      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Users },
+      { label: 'Add New Operator', action: () => onNavigate('operators'), Icon: Shield },
+      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-assistant'), Icon: Users },
       { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   } else if (isOrg) {
     quickActions = [
       { label: 'Manage Tables', action: () => onNavigate('cards'), Icon: CreditCard },
-      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-staff'), Icon: Plus },
+      { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-assistant'), Icon: Plus },
       { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   } else {
@@ -1547,7 +1520,7 @@ function RightSidePanels({
       {
         label: 'Operators',
         count: stats?.total_operators ?? stats?.guest_users ?? 0,
-        action: () => onNavigate('staff'),
+        action: () => onNavigate('operators'),
         Icon: Shield,
         color: '#7c3aed',
         bg: '#f5f3ff',
@@ -2055,7 +2028,7 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
   }, [load]);
 
   const currentRole = String(currentUser?.role || userRole || '').toLowerCase();
-  const isOrg = currentRole === 'prime_manager' || currentRole === 'client' || currentRole === 'guest_prime_manager' || currentRole === 'manager';
+  const isOrg = currentRole === 'prime_manager' || currentRole === 'super_manager' || currentRole === 'manager' || currentRole === 'client' || currentRole === 'guest_prime_manager';
   const isAssistant = currentRole === 'assistant' || currentRole === 'client_staff';
 
   const getSectionTitle = () => {

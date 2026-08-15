@@ -6,93 +6,67 @@ import {
   Trash2,
   ToggleRight,
   Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   RefreshCw,
   Loader2,
-  AlertCircle,
   ShieldCheck,
   Building,
+  Layers,
   X,
 } from 'lucide-react';
-import { clientApi } from '../../services/api';
+import { managerApi, clientApi } from '../../services/api';
 import { SkeletonTableRows } from '../common/Skeleton';
+import CustomSelect from '../common/CustomSelect';
 import { formatDT } from '../../utils/formatters';
-import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
+import { STATUS_TABS } from '../../utils/constants';
 
-const TYPE_TABS = ['All', 'Client (Primary)', 'Manager'];
+const TYPE_TABS = ['All', 'Prime Manager', 'Super Manager', 'Guest Manager'];
 
 export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNavigate, onOpenDeleteModal }) {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState({
+    max_super_managers: 4,
+    super_manager_count: 0,
+    available_super_manager_slots: 4,
+    organisation_name: '',
+  });
 
   const [search, setSearch] = useState('');
   const [statusTab, setStatusTab] = useState('All');
   const [typeTab, setTypeTab] = useState('All');
   const [selected, setSelected] = useState(null);
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
-
-  const getStoredManagers = useCallback(() => {
-    try {
-      const customMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const customClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-      const autoPrimary = customClients.map((c) => ({
-        id: `mgr_${c.id}`,
-        name: c.name,
-        username: c.email || c.name.toLowerCase().replace(/\s+/g, ''),
-        email: c.email,
-        phone: c.phone,
-        client_type: 'primary',
-        is_default: true,
-        organisation: { id: c.id, name: c.name },
-        school_name: c.name,
-        status: c.status || 'active',
-        is_active: c.is_active !== false,
-        created_at: c.created_at || new Date().toISOString(),
-      }));
-      return [...customMgrs, ...autoPrimary];
-    } catch {
-      return [];
-    }
-  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const localItems = getStoredManagers();
     try {
-      const data = await clientApi.getActive({
-        page,
-        search,
-        status: statusTab !== 'All' ? statusTab.toLowerCase() : '',
-        page_size: pageSize,
-      });
-      const apiList = Array.isArray(data) ? data : data?.clients || data?.results || [];
-      const combined = [...localItems];
-      apiList.forEach((item) => {
-        if (
-          !combined.some(
-            (c) =>
-              String(c.id) === String(item.id) ||
-              (c.email && item.email && c.email.toLowerCase() === item.email.toLowerCase())
-          )
-        ) {
-          combined.push(item);
-        }
-      });
-      setAccounts(combined);
-      setTotal(combined.length);
+      const data = await managerApi.list();
+      if (data && data.success) {
+        setAccounts(data.managers || []);
+        setMeta({
+          max_super_managers: data.max_super_managers ?? 4,
+          super_manager_count: data.super_manager_count ?? 0,
+          available_super_manager_slots: data.available_super_manager_slots ?? 4,
+          organisation_name: data.organisation_name ?? '',
+        });
+      } else {
+        // Fallback to active clients if manager endpoint returned alternative format
+        const clientsData = await clientApi.getActive({ page_size: 200 });
+        const list = clientsData?.clients || clientsData?.results || (Array.isArray(clientsData) ? clientsData : []);
+        setAccounts(list);
+      }
     } catch (err) {
-      console.warn('Load manager accounts warning, using stored managers:', err);
-      setAccounts(localItems);
-      setTotal(localItems.length);
+      console.warn('Manager API fetch failed, falling back:', err);
+      try {
+        const clientsData = await clientApi.getActive({ page_size: 200 });
+        const list = clientsData?.clients || clientsData?.results || (Array.isArray(clientsData) ? clientsData : []);
+        setAccounts(list);
+      } catch {
+        setAccounts([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusTab, pageSize, getStoredManagers]);
+  }, []);
 
   useEffect(() => {
     load();
@@ -102,44 +76,91 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
     };
   }, [load]);
 
-  const selAccount = accounts.find((c) => c.id === selected);
+  /* Dispatch footer data count & selection */
+  useEffect(() => {
+    let selectedText = '';
+    if (selected) {
+      const match = accounts.find((c) => String(c.id) === String(selected));
+      if (match) {
+        selectedText = `Selected: ${match.name || match.username || `Account #${selected}`}`;
+      }
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Managers: ${accounts.length}`,
+          selectedText,
+          count: accounts.length,
+        },
+      })
+    );
+  }, [accounts.length, selected]);
+
+  const selAccount = accounts.find((c) => String(c.id) === String(selected));
 
   const filteredAccounts = accounts.filter((acc) => {
-    if (typeTab === 'Client (Primary)' && (acc.client_type === 'manager' || !acc.is_default)) return false;
-    if (typeTab === 'Manager' && acc.client_type !== 'manager' && acc.is_default) return false;
+    // Filter by status
+    if (statusTab !== 'All') {
+      const accStatus = (acc.status || (acc.is_active ? 'active' : 'inactive')).toLowerCase();
+      if (accStatus !== statusTab.toLowerCase()) return false;
+    }
+    // Filter by type
+    if (typeTab === 'Prime Manager') {
+      if (acc.manager_type !== 'prime_manager' && !acc.is_default && acc.client_type === 'manager') return false;
+    } else if (typeTab === 'Super Manager') {
+      if (acc.manager_type !== 'super_manager' && (acc.is_default || acc.manager_type === 'prime_manager')) return false;
+    } else if (typeTab === 'Guest Manager') {
+      if (acc.manager_type !== 'guest_manager') return false;
+    }
+    // Search query
+    if (search) {
+      const q = search.toLowerCase();
+      const matchName = (acc.name || '').toLowerCase().includes(q);
+      const matchUser = (acc.username || '').toLowerCase().includes(q);
+      const matchEmail = (acc.email || '').toLowerCase().includes(q);
+      if (!matchName && !matchUser && !matchEmail) return false;
+    }
     return true;
   });
 
   const handleToggleStatus = async () => {
-    if (!selected) {
-      addToast?.('Select a client account first.', 'warning');
+    if (!selAccount) {
+      addToast?.('Select a manager account first.', 'warning');
       return;
     }
     try {
-      await clientApi.toggleStatus(selected);
-      addToast?.('Status updated successfully.', 'success');
+      const currentActive = selAccount.is_active !== false && selAccount.status !== 'inactive';
+      await managerApi.update(selAccount.id, { is_active: !currentActive });
+      addToast?.('Manager status updated successfully.', 'success');
       load();
-    } catch {
-      addToast?.('Failed to toggle status.', 'error');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to toggle status.';
+      addToast?.(msg, 'error');
     }
   };
 
   const handleDelete = () => {
     if (!selAccount) {
-      addToast?.('Select a client account to delete.', 'warning');
+      addToast?.('Select a manager account to delete.', 'warning');
       return;
     }
+    if (selAccount.manager_type === 'prime_manager' || selAccount.is_default) {
+      addToast?.('Prime Manager (Organisation Owner) cannot be deleted.', 'error');
+      return;
+    }
+
     onOpenDeleteModal?.({
-      title: 'Delete Client Account',
-      itemDescription: `client account "${selAccount.name}"`,
+      title: 'Delete Manager Account',
+      itemDescription: `Super Manager account "${selAccount.name}"`,
       onConfirm: async () => {
         try {
-          await clientApi.deleteClient(selected);
-          addToast?.('Client account deleted.', 'success');
+          await managerApi.delete(selAccount.id);
+          addToast?.('Manager account deleted.', 'success');
           setSelected(null);
           load();
-        } catch {
-          addToast?.('Could not delete account.', 'error');
+        } catch (err) {
+          const msg = err.response?.data?.message || 'Could not delete manager account.';
+          addToast?.(msg, 'error');
         }
       },
     });
@@ -219,27 +240,13 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
           />
 
           {/* Type Filter */}
-          <select
+          <CustomSelect
             value={typeTab}
-            onChange={(e) => setTypeTab(e.target.value)}
-            className="form-input"
-            style={{
-              height: '28px',
-              fontSize: '12px',
-              padding: '0 8px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: '4px',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              outline: 'none',
-            }}
-          >
-            {TYPE_TABS.map((t) => (
-              <option key={t} value={t} style={{ background: '#1e1e2e', color: '#ffffff' }}>
-                {t}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setTypeTab(val)}
+            options={TYPE_TABS.map((t) => ({ value: t, label: t }))}
+            height="28px"
+            style={{ width: '190px' }}
+          />
 
           <div
             className="action-divider"
@@ -300,7 +307,26 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
         </div>
 
         {/* Right */}
-        <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Super Manager limit badge */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: '20px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: meta.available_super_manager_slots <= 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
+              border: meta.available_super_manager_slots <= 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(59, 130, 246, 0.4)',
+              color: meta.available_super_manager_slots <= 0 ? '#fca5a5' : '#93c5fd',
+            }}
+          >
+            <Users size={12} />
+            <span>Super Managers: {meta.super_manager_count} / {meta.max_super_managers} max</span>
+          </div>
+
           <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <button
@@ -322,7 +348,7 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
                   boxSizing: 'border-box',
                 }}
               >
-                <Plus size={13} /> Add Manager Account
+                <Plus size={13} /> Add Manager
               </button>
               <button
                 className="btn"
@@ -401,11 +427,12 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
           <thead>
             <tr>
               <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
-              <th style={{ width: 'auto' }}>ACCOUNT NAME</th>
+              <th style={{ width: 'auto' }}>MANAGER NAME</th>
               <th style={{ width: '130px' }}>USERNAME</th>
-              <th style={{ width: '130px' }}>ACCOUNT TYPE</th>
+              <th style={{ width: '130px' }}>ROLE / TYPE</th>
               <th style={{ width: '180px' }}>ORGANISATION</th>
-              <th style={{ width: '140px', textAlign: 'center' }}>ASSISTANTS (MAX 100)</th>
+              <th style={{ width: '130px', textAlign: 'center' }}>DELEGATED TABLES</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>ASSISTANTS (MAX 100)</th>
               <th style={{ width: '80px', textAlign: 'center' }}>STATUS</th>
               <th style={{ width: '120px', textAlign: 'center' }}>CREATED AT</th>
             </tr>
@@ -415,10 +442,21 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
               <SkeletonTableRows count={10} cols={9} dark={false} />
             ) : (
               filteredAccounts.map((acc, idx) => {
-                const isSel = selected === acc.id;
-                const isPrimary = acc.client_type !== 'manager' && acc.is_default;
-                const orgName = acc.organisation?.name || acc.school_name || 'Global Organisation';
-                const assistantCount = acc.assistant_count ?? acc.assistants?.length ?? 0;
+                const isSel = String(selected) === String(acc.id);
+                const isPrimary = acc.manager_type === 'prime_manager' || (acc.client_type !== 'manager' && acc.is_default);
+                const isGuest = acc.manager_type === 'guest_manager';
+                const orgName = acc.organisation_name || acc.organisation?.name || acc.school_name || meta.organisation_name || 'Global Organisation';
+                const assistantCount = acc.assistants_count ?? acc.assistant_count ?? 0;
+                const sharedTablesCount = acc.shared_tables_count ?? 0;
+
+                const roleLabel = isPrimary
+                  ? 'Prime Manager'
+                  : isGuest
+                  ? 'Guest Manager'
+                  : 'Super Manager';
+
+                const badgeBg = isPrimary ? '#dbeafe' : isGuest ? '#fef3c7' : '#f3e8ff';
+                const badgeColor = isPrimary ? '#1d4ed8' : isGuest ? '#b45309' : '#6b21a8';
 
                 return (
                   <tr
@@ -432,7 +470,7 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
                     </td>
                     <td style={{ width: 'auto', fontWeight: 600, color: '#0f172a' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Users size={13} style={{ color: isPrimary ? '#2563eb' : '#7c3aed' }} />
+                        <Users size={13} style={{ color: isPrimary ? '#2563eb' : isGuest ? '#d97706' : '#7c3aed' }} />
                         <span>{acc.name}</span>
                       </div>
                     </td>
@@ -456,11 +494,11 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
                           borderRadius: '4px',
                           fontSize: '10px',
                           fontWeight: 700,
-                          background: isPrimary ? '#dbeafe' : '#f3e8ff',
-                          color: isPrimary ? '#1d4ed8' : '#6b21a8',
+                          background: badgeBg,
+                          color: badgeColor,
                         }}
                       >
-                        {isPrimary ? 'Client (Primary)' : 'Manager'}
+                        {roleLabel}
                       </span>
                     </td>
                     <td
@@ -477,14 +515,29 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
                         <span>{orgName}</span>
                       </div>
                     </td>
-                    <td style={{ width: '140px', textAlign: 'center' }}>
+                    <td style={{ width: '130px', textAlign: 'center' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          background: isPrimary ? '#f1f5f9' : sharedTablesCount > 0 ? '#ecfdf5' : '#f8fafc',
+                          color: isPrimary ? '#64748b' : sharedTablesCount > 0 ? '#059669' : '#94a3b8',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                        }}
+                      >
+                        {isPrimary ? 'All Tables (Owner)' : `${sharedTablesCount} Table(s)`}
+                      </span>
+                    </td>
+                    <td style={{ width: '120px', textAlign: 'center' }}>
                       <span style={{ fontWeight: 700, color: assistantCount >= 100 ? '#dc2626' : '#059669' }}>
                         {assistantCount} / 100
                       </span>
                     </td>
                     <td style={{ width: '80px', textAlign: 'center' }}>
-                      <span className={`badge ${acc.status === 'inactive' ? 'badge-danger' : 'badge-success'}`}>
-                        {acc.status || 'active'}
+                      <span className={`badge ${acc.status === 'inactive' || acc.is_active === false ? 'badge-danger' : 'badge-success'}`}>
+                        {acc.status || (acc.is_active ? 'active' : 'inactive')}
                       </span>
                     </td>
                     <td style={{ width: '120px', textAlign: 'center', color: '#64748b', fontSize: '11px' }}>
@@ -559,3 +612,8 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
     </div>
   );
 }
+
+export {
+  ClientAccountsView as OrganisationAccountsView,
+  ClientAccountsView as ManagerAccountsView,
+};

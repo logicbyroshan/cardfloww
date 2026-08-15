@@ -21,13 +21,21 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
+export default function Footer({ activeTab, onNavigate, idcardActionsState, scopedOrgName }) {
   const [dataCountText, setDataCountText] = useState('');
+  const [selectedText, setSelectedText] = useState('');
+
+  // Clear selection and count on tab switch
+  useEffect(() => {
+    setSelectedText('');
+    setDataCountText('');
+  }, [activeTab]);
 
   // Listen for custom data-count updates from any active view component
   useEffect(() => {
     const handleCountUpdate = (e) => {
-      if (e.detail?.text) setDataCountText(e.detail.text);
+      if (e.detail?.text !== undefined) setDataCountText(e.detail.text || '');
+      if (e.detail?.selectedText !== undefined) setSelectedText(e.detail.selectedText || '');
     };
     window.addEventListener('cardflow:data-count', handleCountUpdate);
     return () => window.removeEventListener('cardflow:data-count', handleCountUpdate);
@@ -39,11 +47,30 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
       case 'dashboard':
         return [{ label: 'CardFlow', isCurrent: true, icon: Home }];
       case 'cards':
+        if (scopedOrgName) {
+          return [
+            { label: 'CardFlow', tab: 'dashboard', icon: Home },
+            { label: 'Manage Organisation', tab: 'organisations', icon: Users },
+            { label: `${scopedOrgName} Tables`, isCurrent: true, icon: Layers },
+          ];
+        }
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Tables', isCurrent: true, icon: Layers },
         ];
       case 'idcard-actions':
+        if (scopedOrgName) {
+          return [
+            { label: 'CardFlow', tab: 'dashboard', icon: Home },
+            { label: 'Manage Organisation', tab: 'organisations', icon: Users },
+            { label: `${scopedOrgName} Tables`, tab: 'cards', icon: Layers },
+            {
+              label: `Table Actions (${(idcardActionsState?.status || 'pending').toUpperCase()})`,
+              isCurrent: true,
+              icon: Table,
+            },
+          ];
+        }
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Tables', tab: 'cards', icon: Layers },
@@ -59,12 +86,14 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
           { label: 'Tables', tab: 'cards', icon: Layers },
           { label: 'Table Settings', isCurrent: true, icon: Settings },
         ];
+      case 'organisations':
       case 'clients':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Client Management' },
           { label: 'Manage Organisation', isCurrent: true, icon: Users },
         ];
+      case 'operators':
       case 'staff':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
@@ -189,8 +218,35 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
         })}
       </nav>
 
-      {/* Right: Modern Data Count / System Badge */}
+      {/* Right: Modern Data Count / System & Selection Badges */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {selectedText ? (
+          <span
+            className="footer-selected-badge"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: '4px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#38bdf8',
+              userSelect: 'none',
+              maxWidth: '360px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={selectedText}
+          >
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8', flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedText}</span>
+          </span>
+        ) : null}
+
         {dataCountText ? (
           <span
             className="footer-badge"
@@ -206,14 +262,15 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState }) {
               fontWeight: 600,
               color: '#e2e8f0',
               userSelect: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
             {dataCountText}
           </span>
-        ) : (
+        ) : !selectedText ? (
           <span style={{ fontSize: '11px', color: '#64748b' }}>CardFlow System Active</span>
-        )}
+        ) : null}
       </div>
     </footer>
   );

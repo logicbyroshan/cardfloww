@@ -42,6 +42,7 @@ import {
 
 import WatermarkLogo from '../common/WatermarkLogo';
 import CreateXlsxModal from '../common/CreateXlsxModal';
+import CustomSelect from '../common/CustomSelect';
 import { schemaApi, clientApi } from '../../services/api';
 
 const STATUS_TABS = ['All', 'Active', 'Inactive'];
@@ -279,6 +280,26 @@ export default function TableSettingsView({ addToast, onNavigate }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  /* Dispatch footer data count & selection */
+  useEffect(() => {
+    let selectedText = '';
+    if (selected) {
+      const match = tables.find((t) => String(t.id) === String(selected));
+      if (match) {
+        selectedText = `Selected: ${match.name || `Table #${selected}`}`;
+      }
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Tables: ${tables.length}`,
+          selectedText,
+          count: tables.length,
+        },
+      })
+    );
+  }, [tables.length, selected]);
 
   const filtered = tables.filter((t) => {
     if (!t) return false;
@@ -1298,20 +1319,15 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
                 {/* Field Type */}
                 <div>
                   <label style={labelStyle}>Field Type</label>
-                  <select
+                  <CustomSelect
                     value={newType}
-                    onChange={(e) => {
-                      setNewType(e.target.value);
+                    onChange={(val) => {
+                      setNewType(val);
                       setTypeAutoField(false);
                     }}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    {FIELD_TYPES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={FIELD_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                    height="32px"
+                  />
                 </div>
               </div>
 
@@ -1511,29 +1527,14 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
                       </div>
 
                       {/* Field Type */}
-                      <select
-                        value={f.type || 'text'}
-                        onChange={(e) => setFieldProp(f.id, 'type', e.target.value)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        style={{
-                          height: '30px',
-                          padding: '0 6px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          background: '#fff',
-                          color: '#374151',
-                          outline: 'none',
-                          cursor: 'pointer',
-                          maxWidth: '130px',
-                        }}
-                      >
-                        {FIELD_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div style={{ width: '130px' }} onMouseDown={(e) => e.stopPropagation()}>
+                        <CustomSelect
+                          value={f.type || 'text'}
+                          onChange={(val) => setFieldProp(f.id, 'type', val)}
+                          options={FIELD_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+                          height="28px"
+                        />
+                      </div>
 
                       {/* Required toggle — ON = required (red left border), OFF = optional */}
                       <div

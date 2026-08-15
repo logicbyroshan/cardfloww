@@ -16,53 +16,49 @@ import {
   ToggleRight,
   Calendar,
   UserCheck,
+  LogOut,
 } from 'lucide-react';
 import { profileApi } from '../../services/api';
+import CustomSelect from '../common/CustomSelect';
 
 const APP_VERSION = 'v4.19.01';
 
 const ROLE_LABELS = {
+  prime_admin: 'Prime Admin',
   super_admin: 'Super Admin',
-  pro_user: 'Pro Admin',
-  admin: 'Super Admin',
-  prime_manager: 'Organisation (Prime Manager)',
-  client: 'Organisation (Prime Manager)',
-  guest_prime_manager: 'Guest Manager',
   operator: 'Operator',
-  admin_staff: 'Operator',
-  manager: 'Manager',
+  prime_manager: 'Prime Manager',
+  super_manager: 'Super Manager',
+  manager: 'Super Manager',
   assistant: 'Assistant',
-  client_staff: 'Assistant',
   photographer: 'Photographer',
 };
 
 const ROLE_COLORS = {
+  prime_admin: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
   super_admin: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-  pro_user: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-  prime_manager: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-  client: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-  guest_prime_manager: 'linear-gradient(135deg, #65a30d 0%, #4d7c0f 100%)',
   operator: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+  prime_manager: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+  super_manager: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
   manager: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
   assistant: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
-  client_staff: 'linear-gradient(135deg, #0891b2 0%, #0e7490 100%)',
   photographer: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
 };
 
-export default function ProfileSettingsView({ addToast, currentUser }) {
-  const [loading, setLoading] = useState(true);
+export default function ProfileSettingsView({ addToast, currentUser, onLogout }) {
+  const [loading, setLoading] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  // Form states
-  const [profileData, setProfileData] = useState({
-    first_name: '',
-    last_name: '',
-    username: '',
-    email: '',
-    phone: '',
-    date_joined: '',
-  });
+  // Form states initialized with currentUser immediately
+  const [profileData, setProfileData] = useState(() => ({
+    first_name: currentUser?.first_name || '',
+    last_name: currentUser?.last_name || '',
+    username: currentUser?.username || '',
+    email: currentUser?.email || '',
+    phone: currentUser?.phone || '',
+    date_joined: currentUser?.date_joined || '',
+  }));
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -83,19 +79,18 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
 
   useEffect(() => {
     async function fetchProfile() {
-      setLoading(true);
       try {
         const res = await profileApi.getProfile();
-        if (res.user || res.data || res.success) {
-          const u = res.user || res.data || res;
-          setProfileData({
-            first_name: u.first_name || '',
-            last_name: u.last_name || '',
-            username: u.username || '',
-            email: u.email || '',
-            phone: u.phone || '',
-            date_joined: u.date_joined || u.created_at || '',
-          });
+        const u = res?.profile || res?.user || res?.data || res;
+        if (u && typeof u === 'object') {
+          setProfileData((prev) => ({
+            first_name: u.first_name !== undefined ? u.first_name : prev.first_name || currentUser?.first_name || '',
+            last_name: u.last_name !== undefined ? u.last_name : prev.last_name || currentUser?.last_name || '',
+            username: u.username !== undefined ? u.username : prev.username || currentUser?.username || '',
+            email: u.email !== undefined ? u.email : prev.email || currentUser?.email || '',
+            phone: u.phone !== undefined ? u.phone : prev.phone || currentUser?.phone || '',
+            date_joined: u.date_joined || u.created_at || u.member_since || prev.date_joined || currentUser?.date_joined || '',
+          }));
         }
       } catch (err) {
         if (currentUser) {
@@ -108,8 +103,6 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
             date_joined: currentUser.date_joined || '',
           });
         }
-      } finally {
-        setLoading(false);
       }
     }
     fetchProfile();
@@ -162,7 +155,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
   };
 
   const role = String(currentUser?.role || '').toLowerCase();
-  const isAdminUser = role === 'super_admin' || role === 'pro_user' || role === 'admin';
+  const isAdminUser = role === 'prime_admin' || role === 'super_admin' || role === 'pro_user' || role === 'admin';
   const roleLabel = ROLE_LABELS[role] || (currentUser?.role ? currentUser.role : 'User');
   const roleBg = ROLE_COLORS[role] || 'linear-gradient(135deg, rgb(0, 80, 210) 0%, rgb(0, 180, 255) 100%)';
 
@@ -664,25 +657,20 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
                     Automatically logout after inactivity
                   </p>
                 </div>
-                <select
-                  value={sessionTimeout}
-                  onChange={(e) => setSessionTimeout(e.target.value)}
-                  style={{
-                    height: '36px',
-                    padding: '0 12px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    color: '#334155',
-                    outline: 'none',
-                  }}
-                >
-                  <option value="1440">1 day</option>
-                  <option value="2880">2 days</option>
-                  <option value="10080">7 days (default)</option>
-                  <option value="21600">15 days</option>
-                  <option value="43200">30 days</option>
-                </select>
+                <div style={{ width: '180px' }}>
+                  <CustomSelect
+                    value={sessionTimeout}
+                    onChange={(val) => setSessionTimeout(val)}
+                    options={[
+                      { value: '1440', label: '1 day' },
+                      { value: '2880', label: '2 days' },
+                      { value: '10080', label: '7 days (default)' },
+                      { value: '21600', label: '15 days' },
+                      { value: '43200', label: '30 days' },
+                    ]}
+                    height="36px"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -758,7 +746,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
               }}
             >
               <Mail size={12} style={{ color: 'rgb(0, 80, 210)' }} />
-              <span>{profileData.email || 'admin@adarsh.com'}</span>
+              <span>{profileData.email || currentUser?.email || 'user@cardflow.com'}</span>
             </div>
           </div>
 
@@ -804,7 +792,7 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
 
           {/* Super Mode Action — Admin only */}
           {isAdminUser && (
-          <div style={{ padding: '16px', marginTop: 'auto' }}>
+          <div style={{ padding: '16px 16px 8px', marginTop: 'auto' }}>
             <button
               type="button"
               onClick={() => {
@@ -836,6 +824,46 @@ export default function ProfileSettingsView({ addToast, currentUser }) {
               )}
             </button>
           </div>
+          )}
+
+          {/* Logout Action */}
+          {onLogout && (
+            <div style={{ padding: '16px', marginTop: isAdminUser ? '0' : 'auto', borderTop: '1px solid #e2e8f0' }}>
+              <button
+                type="button"
+                onClick={onLogout}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid #fecaca',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-family)',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#dc2626';
+                  e.currentTarget.style.color = '#ffffff';
+                  e.currentTarget.style.borderColor = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                  e.currentTarget.style.borderColor = '#fecaca';
+                }}
+              >
+                <LogOut size={16} />
+                <span>Logout Account</span>
+              </button>
+            </div>
           )}
         </div>
       </div>

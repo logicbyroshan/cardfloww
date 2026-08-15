@@ -715,6 +715,18 @@ export const schemaApi = {
     return res.data;
   },
 
+  /** GET /api/table/<id>/shared-managers/ — get super managers and access state */
+  getSharedManagers: async (tableId) => {
+    const res = await apiClient.get(`/api/table/${tableId}/shared-managers/`);
+    return res.data;
+  },
+
+  /** POST /api/table/<id>/share-managers/ — update super manager table delegation */
+  shareManagers: async (tableId, data) => {
+    const res = await apiClient.post(`/api/table/${tableId}/share-managers/`, data);
+    return res.data;
+  },
+
   /** GET /client/<client_id>/groups/ — HTML page that contains group_id;
    *  Instead use the client list API to get group_id from client data */
   getClientGroups: async (clientId) => {
@@ -783,9 +795,63 @@ export const reprintApi = {
   },
 };
 
+// ─── Group 13: Temporary Passwords & PIN Management ────────────────────────
+export const tempPasswordApi = {
+  /** GET /api/panel/temp-passwords/ */
+  list: async (params = {}) => {
+    const res = await apiClient.get('/api/panel/temp-passwords/', { params });
+    return res.data;
+  },
+
+  /** POST /api/panel/temp-passwords/reset/ */
+  reset: async (userId) => {
+    const res = await apiClient.post('/api/panel/temp-passwords/reset/', { user_id: userId });
+    return res.data;
+  },
+
+  /** POST /api/panel/temp-passwords/resend-email/ */
+  resendEmail: async (userId) => {
+    const res = await apiClient.post('/api/panel/temp-passwords/resend-email/', { user_id: userId });
+    return res.data;
+  },
+};
+
+// ─── Group 14: Organisation Managers Management ────────────────────────────
+export const organisationManagerApi = {
+  /** GET /api/organisation-managers/ */
+  list: async (params = {}) => {
+    const res = await apiClient.get('/api/organisation-managers/', { params });
+    return res.data;
+  },
+
+  /** POST /api/organisation-managers/ */
+  create: async (data) => {
+    const res = await apiClient.post('/api/organisation-managers/', data);
+    return res.data;
+  },
+
+  /** GET /api/organisation-managers/<id>/ */
+  get: async (managerId) => {
+    const res = await apiClient.get(`/api/organisation-managers/${managerId}/`);
+    return res.data;
+  },
+
+  /** PUT /api/organisation-managers/<id>/ */
+  update: async (managerId, data) => {
+    const res = await apiClient.put(`/api/organisation-managers/${managerId}/`, data);
+    return res.data;
+  },
+
+  /** DELETE /api/organisation-managers/<id>/ */
+  delete: async (managerId) => {
+    const res = await apiClient.delete(`/api/organisation-managers/${managerId}/`);
+    return res.data;
+  },
+};
+
 // ─── Domain Renaming Aliases ───────────────────────────────────────────────
 export const organisationApi = clientApi;
-export const managerApi = clientApi;
+export const managerApi = organisationManagerApi;
 export const tableGroupApi = schemaApi;
 
 export { apiClient };

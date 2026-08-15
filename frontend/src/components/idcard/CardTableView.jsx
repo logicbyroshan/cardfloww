@@ -21,9 +21,12 @@ import {
   Briefcase,
   Settings2,
   FolderKanban,
-  CheckCircle2,
   Pencil,
   Save,
+  Building,
+  Users,
+  Share2,
+  Shield,
 } from 'lucide-react';
 import StatusChangeBadge, { StatusChangeDeltaPill } from '../common/StatusChangeBadge';
 import WatermarkLogo from '../common/WatermarkLogo';
@@ -157,26 +160,44 @@ function getTableCounts(t) {
   return { pending, verified, approved, download, pool, rpCnt, reqCnt, confCnt };
 }
 
-function getDisplayOrgName(clientName, activeOrg) {
+function getDisplayOrgName(table, fallbackOrg) {
+  if (!table) return '';
+  const orgName = table.organisation_name || table.client_name || table.school_name || '';
   const ignoreList = ['—', 'Primary Org', 'Default Organisation', 'Default Organization', 'null', 'undefined'];
-  if (clientName && !ignoreList.includes(String(clientName).trim())) {
-    return String(clientName).trim();
+  if (orgName && !ignoreList.includes(String(orgName).trim())) {
+    return String(orgName).trim();
   }
-  if (activeOrg && !ignoreList.includes(String(activeOrg).trim())) {
-    return String(activeOrg).trim();
+  if (fallbackOrg && !ignoreList.includes(String(fallbackOrg).trim())) {
+    return String(fallbackOrg).trim();
   }
   return '';
 }
 
-export default function CardTableView({ addToast, onNavigate, currentUser, userRole = 'super_admin' }) {
+export default function CardTableView({
+  addToast,
+  onNavigate,
+  currentUser,
+  userRole = 'super_admin',
+  selectedClientId = null,
+  selectedClientOrg = null,
+  onClearSelectedClient = null,
+}) {
   const role = String(currentUser?.role || userRole || '').toLowerCase();
-  const isAssistant = role === 'assistant' || role === 'client_staff';
+  const isAssistant = role === 'assistant';
+  const isAdminOrOperator = ['prime_admin', 'super_admin', 'pro_user', 'operator'].includes(role);
+  const isPrimeManager = ['prime_manager', 'client', 'guest_prime_manager'].includes(role);
+  const isSuperManager = role === 'super_manager' || role === 'manager' || role === 'guest_manager';
+  const isOrg = isPrimeManager || isSuperManager || isAssistant || role === 'photographer' || !isAdminOrOperator;
+  const canCreateTable = isAdminOrOperator || isPrimeManager;
+  const canShareTable = isAdminOrOperator || isPrimeManager;
 
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState('All');
-  const [clientOrg, setClientOrg] = useState('');
+  const [filterOrgId, setFilterOrgId] = useState(selectedClientId ? String(selectedClientId) : 'all');
+  const [allOrganisations, setAllOrganisations] = useState([]);
   const [showCreateXlsxModal, setShowCreateXlsxModal] = useState(false);
+  const [shareModalTable, setShareModalTable] = useState(null);
 
   /* Table selection in main view (Default to NULL so buttons are only active when selected!) */
   const [selectedTableId, setSelectedTableId] = useState(null);
@@ -191,17 +212,22 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
   const [activeModal, setActiveModal] = useState(null);
   const [deleteCodeInput, setDeleteCodeInput] = useState('');
 
-  /* Fetch client org name */
+  /* Sync with selectedClientId prop */
+  useEffect(() => {
+    if (selectedClientId) {
+      setFilterOrgId(String(selectedClientId));
+    }
+  }, [selectedClientId]);
+
+  /* Load all organisations for dropdown/assignment */
   useEffect(() => {
     (async () => {
       try {
-        const data = await clientApi.getActive?.({ page_size: 1 });
-        const clients = data?.results || data?.clients || (Array.isArray(data) ? data : []);
-        if (clients.length > 0) {
-          setClientOrg(clients[0].name || clients[0].client_name || '');
-          if (clients[0].group_id || clients[0].id) {
-            setGroupId(clients[0].group_id || clients[0].id);
-          }
+        const data = await clientApi.getAllForAssignment?.();
+        const clients = data?.clients || data?.results || (Array.isArray(data) ? data : []);
+        setAllOrganisations(clients);
+        if (clients.length > 0 && (!groupId || groupId === 1)) {
+          setGroupId(clients[0].group_id || clients[0].id || 1);
         }
       } catch {
         /* fallback */
@@ -222,12 +248,15 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
     }
 
     try {
-      const data = await schemaApi.getSchemas();
+      const params = filterOrgId && filterOrgId !== 'all' ? { client_id: filterOrgId } : {};
+      const data = await schemaApi.getSchemas(params);
       const list = data?.tables || data?.results || (Array.isArray(data) ? data : []);
-      const merged = [...local];
-      (list || []).forEach((item) => {
+      const merged = [...list];
+      local.forEach((item) => {
         if (!merged.some((t) => String(t.id) === String(item.id) || t.name === item.name)) {
-          merged.push(item);
+          if (!filterOrgId || filterOrgId === 'all' || String(item.organisation_id) === String(filterOrgId)) {
+            merged.push(item);
+          }
         }
       });
       setTables(merged);
@@ -236,16 +265,38 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterOrgId]);
 
   useEffect(() => {
     loadTables();
   }, [loadTables]);
 
+  const activeScopedOrg = useMemo(() => {
+    if (!filterOrgId || filterOrgId === 'all') return null;
+    return allOrganisations.find((o) => String(o.id) === String(filterOrgId)) || selectedClientOrg || null;
+  }, [filterOrgId, allOrganisations, selectedClientOrg]);
+
   const selectedTable = useMemo(
     () => tables.find((t) => String(t.id) === String(selectedTableId)),
     [tables, selectedTableId]
   );
+
+  /* Dispatch footer data count & selection */
+  useEffect(() => {
+    let selectedText = '';
+    if (selectedTable) {
+      selectedText = `Selected: ${selectedTable.name || `Table #${selectedTable.id}`}`;
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Tables: ${tables.length}`,
+          selectedText,
+          count: tables.length,
+        },
+      })
+    );
+  }, [tables.length, selectedTable]);
 
   /* Toggle Row Selection */
   const handleSelectRow = (tableId) => {
@@ -416,37 +467,84 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                 {t}
               </button>
             ))}
+          </div>
+
+          {/* Active Organisation Filter Indicator */}
+          {Boolean(filterOrgId && filterOrgId !== 'all') && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0 8px 0 10px',
+                height: '28px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid #3b82f6',
+                borderRadius: '5px',
+                color: '#93c5fd',
+                fontSize: '11px',
+                fontWeight: 600,
+                boxSizing: 'border-box',
+              }}
+            >
+              <Building size={12} style={{ color: '#60a5fa' }} />
+              <span>Org: <strong style={{ color: '#ffffff' }}>{activeScopedOrg?.name || activeScopedOrg?.school_name || `Org #${filterOrgId}`}</strong></span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterOrgId('all');
+                  onClearSelectedClient?.();
+                }}
+                title="Clear organisation filter and show all tables"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0 2px',
+                  marginLeft: '4px',
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+
           {/* | Divider & Section 2: Table Buttons (Hidden for Assistant) */}
           {!isAssistant && (
             <>
               <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
               <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {/* 1. Add Button */}
-                <button
-                  className="btn"
-                  onClick={() => {
-                    setEditingTable(null);
-                    setShowAddEditDrawer(true);
-                  }}
-                  title="Add New Table Setting"
-                  style={{
-                    background: '#2563eb',
-                    color: '#ffffff',
-                    border: '1px solid #2563eb',
-                    height: '28px',
-                    padding: '0 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  <Plus size={13} /> <span>Add</span>
-                </button>
+                {/* 1. Add Button (Only for Prime Managers / Platform Admins) */}
+                {canCreateTable && (
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      setEditingTable(null);
+                      setShowAddEditDrawer(true);
+                    }}
+                    title="Add New Table Setting"
+                    style={{
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: '1px solid #2563eb',
+                      height: '28px',
+                      padding: '0 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <Plus size={13} /> <span>Add</span>
+                  </button>
+                )}
 
                 {/* 2. Edit Button */}
                 <button
@@ -532,15 +630,41 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                   <ToggleRight size={13} />{' '}
                   <span>{selectedTable && selectedTable.is_active === false ? 'Activate' : 'Active'}</span>
                 </button>
+
+                {/* 5. Share / Table Delegation Button (For Prime Managers) */}
+                {canShareTable && (
+                  <button
+                    className="btn"
+                    disabled={!selectedTable}
+                    onClick={() => selectedTable && setShareModalTable(selectedTable)}
+                    title={!selectedTable ? 'Select a table row to delegate' : `Delegate ${selectedTable.name} to Super Managers`}
+                    style={{
+                      background: selectedTable ? '#7c3aed' : 'rgba(255, 255, 255, 0.08)',
+                      color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                      border: selectedTable ? '1px solid #7c3aed' : '1px solid rgba(255, 255, 255, 0.15)',
+                      height: '28px',
+                      padding: '0 10px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      cursor: selectedTable ? 'pointer' : 'not-allowed',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <Share2 size={13} /> <span>Share</span>
+                  </button>
+                )}
               </div>
             </>
           )}
-          </div>
 
           {/* | Divider */}
           <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
 
-          {/* Section 3: 2 XLSX Buttons Together (Download Template & Create with XLSX) */}
+          {/* Section 3: XLSX Buttons */}
           <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
               className="btn"
@@ -565,28 +689,30 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
               <Download size={13} /> <span>Download Template</span>
             </button>
 
-            <button
-              className="btn"
-              onClick={() => setShowCreateXlsxModal(true)}
-              title="Create table directly from an XLSX file"
-              style={{
-                background: '#10b981',
-                color: '#ffffff',
-                border: '1px solid #10b981',
-                height: '28px',
-                padding: '0 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
-            </button>
+            {canCreateTable && (
+              <button
+                className="btn"
+                onClick={() => setShowCreateXlsxModal(true)}
+                title="Create table directly from an XLSX file"
+                style={{
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: '1px solid #10b981',
+                  height: '28px',
+                  padding: '0 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -762,11 +888,29 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                       fontSize: '11px',
                       letterSpacing: '0.05em',
                       background: '#2d3748',
-                      borderRight: 'none',
+                      borderRight: isAdminOrOperator ? '1px solid #4a5568' : 'none',
                     }}
                   >
                     STATUS
                   </th>
+                  {isAdminOrOperator && (
+                    <th
+                      rowSpan="2"
+                      style={{
+                        width: '95px',
+                        textAlign: 'center',
+                        padding: '10px 8px',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        letterSpacing: '0.05em',
+                        background: '#2d3748',
+                        borderRight: 'none',
+                      }}
+                    >
+                      SETTINGS
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -775,7 +919,7 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                   const counts = getTableCounts(t);
                   const isActive = t.is_active !== false;
 
-                  const displayOrg = getDisplayOrgName(t.client_name, clientOrg);
+                  const displayOrg = getDisplayOrgName(t, activeScopedOrg?.name || '');
 
                   return (
                     <tr
@@ -798,7 +942,9 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                       <td style={{ padding: '8px 12px', textAlign: 'left' }}>
                         <span style={{ color: '#0f172a', fontWeight: 700, fontSize: '13px' }}>{t.name}</span>
                         {Boolean(displayOrg) && (
-                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{displayOrg}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', fontWeight: 500 }}>
+                            {displayOrg}
+                          </div>
                         )}
                       </td>
 
@@ -1107,6 +1253,43 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
                           <ToggleRight size={12} /> {isActive ? 'Active' : 'Inactive'}
                         </button>
                       </td>
+
+                      {/* SETTINGS Column (Visible for Super Admin, Pro User, Admin, Operator — Hidden for Org roles) */}
+                      {isAdminOrOperator && (
+                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSettingModalTable(t);
+                            }}
+                            style={{
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: '#eff6ff',
+                              color: '#2563eb',
+                              border: '1px solid #bfdbfe',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.15s',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#2563eb';
+                              e.currentTarget.style.color = '#ffffff';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#eff6ff';
+                              e.currentTarget.style.color = '#2563eb';
+                            }}
+                            title={`Configure Table Schema & Settings for ${t.name}`}
+                          >
+                            <Settings size={12} /> <span>Settings</span>
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -1187,6 +1370,15 @@ export default function CardTableView({ addToast, onNavigate, currentUser, userR
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Table Delegation / Sharing Modal ── */}
+      {shareModalTable && (
+        <TableShareModal
+          table={shareModalTable}
+          onClose={() => setShareModalTable(null)}
+          addToast={addToast}
+        />
       )}
     </div>
   );
@@ -1449,6 +1641,237 @@ function TableSettingSchemaModal({ table, orgName, onClose }) {
             }}
           >
             Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Table Delegation / Sharing Modal (Prime Manager assigns table access to Super Managers) ─── */
+function TableShareModal({ table, onClose, addToast, onSuccess }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [superManagers, setSuperManagers] = useState([]);
+  const [selectedManagerIds, setSelectedManagerIds] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await schemaApi.getSharedManagers(table.id);
+        if (res && res.success) {
+          const list = res.super_managers || [];
+          setSuperManagers(list);
+          setSelectedManagerIds(list.filter((m) => m.is_shared).map((m) => m.manager_id));
+        }
+      } catch (err) {
+        addToast?.('Failed to load Super Managers for this table.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [table.id]);
+
+  const toggleManager = (id) => {
+    setSelectedManagerIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await schemaApi.shareManagers(table.id, {
+        manager_ids: selectedManagerIds,
+        can_edit_cards: true,
+        can_approve_print: false,
+      });
+      addToast?.(res?.message || 'Table delegation updated successfully!', 'success');
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update table delegation.';
+      addToast?.(msg, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 99999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          width: '480px',
+          maxWidth: '95vw',
+          background: '#ffffff',
+          borderRadius: '8px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          maxHeight: '90vh',
+        }}
+      >
+        <div
+          style={{
+            background: '#7c3aed',
+            color: '#fff',
+            padding: '14px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '14px' }}>
+            <Share2 size={16} />
+            <span>Delegate Table: {table.name}</span>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ padding: '16px 20px', flex: 1, overflowY: 'auto' }}>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+            Select Super Managers who are permitted to manage this table. Super Managers can only view and edit cards for tables delegated to them.
+          </p>
+
+          {loading ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '30px 0' }}>
+              <Loader2 size={24} className="animate-spin" style={{ color: '#7c3aed' }} />
+            </div>
+          ) : superManagers.length === 0 ? (
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                background: '#f8fafc',
+                borderRadius: '6px',
+                border: '1px dashed #cbd5e1',
+                fontSize: '12px',
+                color: '#64748b',
+              }}
+            >
+              No Super Managers found for this Organisation. You can create Super Managers from the <strong>Manager Accounts</strong> section.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {superManagers.map((sm) => {
+                const isChecked = selectedManagerIds.includes(sm.manager_id);
+                return (
+                  <label
+                    key={sm.manager_id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      border: isChecked ? '1px solid #7c3aed' : '1px solid #e2e8f0',
+                      background: isChecked ? '#f5f3ff' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleManager(sm.manager_id)}
+                      style={{ accentColor: '#7c3aed', width: '16px', height: '16px' }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: '13px', color: '#0f172a' }}>{sm.name}</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        @{sm.username} {sm.email ? `• ${sm.email}` : ''}
+                      </div>
+                    </div>
+                    {isChecked && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          background: '#ede9fe',
+                          color: '#6d28d9',
+                        }}
+                      >
+                        Delegated
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            padding: '12px 18px',
+            background: '#f8fafc',
+            borderTop: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: '8px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '7px 14px',
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '4px',
+              color: '#64748b',
+              fontWeight: 600,
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={saving || loading || superManagers.length === 0}
+            onClick={handleSave}
+            style={{
+              padding: '7px 16px',
+              background: '#7c3aed',
+              border: 'none',
+              borderRadius: '4px',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: saving || superManagers.length === 0 ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+            <span>{saving ? 'Saving...' : 'Save Delegation'}</span>
           </button>
         </div>
       </div>

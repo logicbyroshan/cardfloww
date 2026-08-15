@@ -61,6 +61,28 @@ export default function ReprintCardsManagerView({ addToast }) {
     load();
   }, [load]);
 
+  /* Dispatch footer data count & selection */
+  useEffect(() => {
+    let selectedText = '';
+    if (selected) {
+      const sel = reprints.find((r) => String(r.id) === String(selected));
+      if (sel) {
+        const reprintName =
+          sel.name || sel.card_name || sel.field_data?.NAME || sel.field_data?.name || `Reprint #${selected}`;
+        selectedText = `Selected: ${reprintName}`;
+      }
+    }
+    window.dispatchEvent(
+      new CustomEvent('cardflow:data-count', {
+        detail: {
+          text: `Total Reprints: ${reprints.length}`,
+          selectedText,
+          count: reprints.length,
+        },
+      })
+    );
+  }, [reprints.length, selected]);
+
   const filtered = reprints.filter((r) => {
     const q = search.toLowerCase();
     const name = r.name || r.field_data?.NAME || '';
