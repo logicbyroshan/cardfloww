@@ -83,6 +83,10 @@ class Organisation(models.Model):
 
     # Basic Information
     name = models.CharField(max_length=200, db_index=True)
+    max_super_managers = models.PositiveIntegerField(
+        default=4,
+        help_text='Configurable maximum number of Super Managers allowed for this organisation',
+    )
     org_type = models.CharField(
         max_length=20,
         choices=ORG_TYPE_CHOICES,
@@ -343,6 +347,92 @@ class Organisation(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['status', 'created_at'], name='core_client_status_created_idx'),
         ]
+
+
+class OrganisationManager(models.Model):
+    """
+    OrganisationManager model — represents independent Organisation-level managers
+    (Prime Manager, Super Managers, Guest Managers) belonging directly to an Organisation.
+    Super Managers are peers at Organisation level, NOT subordinates/children of the Prime Manager.
+    """
+    MANAGER_TYPE_CHOICES = [
+        ('prime_manager', 'Prime Manager'),
+        ('super_manager', 'Super Manager'),
+        ('guest_manager', 'Guest Manager'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='org_manager_profile',
+    )
+    organisation = models.ForeignKey(
+        Organisation,
+        on_delete=models.CASCADE,
+        related_name='managers',
+        db_column='client_id',
+    )
+    manager_type = models.CharField(
+        max_length=20,
+        choices=MANAGER_TYPE_CHOICES,
+        default='super_manager',
+        db_index=True,
+    )
+    department = models.CharField(max_length=100, blank=True, null=True)
+    designation = models.CharField(max_length=100, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    # Granular permission flags (inherits from Organisation by default)
+    perm_organisation_list = models.BooleanField(default=False)
+    perm_manage_assistants = models.BooleanField(default=True)
+    perm_idcard_setting_list = models.BooleanField(default=True)
+    perm_idcard_setting_add = models.BooleanField(default=False)  # Only Prime Manager can create tables!
+    perm_idcard_setting_edit = models.BooleanField(default=True)
+    perm_idcard_setting_delete = models.BooleanField(default=False)
+    perm_idcard_setting_status = models.BooleanField(default=True)
+
+    perm_idcard_pending_list = models.BooleanField(default=True)
+    perm_idcard_verified_list = models.BooleanField(default=True)
+    perm_idcard_pool_list = models.BooleanField(default=True)
+    perm_idcard_approved_list = models.BooleanField(default=True)
+    perm_idcard_download_list = models.BooleanField(default=True)
+    perm_idcard_reprint_list = models.BooleanField(default=True)
+    perm_reprint_request_list = models.BooleanField(default=True)
+    perm_confirmed_list = models.BooleanField(default=True)
+
+    perm_idcard_add = models.BooleanField(default=True)
+    perm_idcard_edit = models.BooleanField(default=True)
+    perm_idcard_delete = models.BooleanField(default=True)
+    perm_idcard_info = models.BooleanField(default=True)
+    perm_idcard_approve = models.BooleanField(default=True)
+    perm_idcard_verify = models.BooleanField(default=True)
+    perm_idcard_updated_at = models.BooleanField(default=True)
+    perm_idcard_delete_from_pool = models.BooleanField(default=False)
+    perm_reupload_idcard_image = models.BooleanField(default=True)
+    perm_idcard_retrieve = models.BooleanField(default=True)
+
+    perm_idcard_bulk_upload = models.BooleanField(default=True)
+    perm_idcard_bulk_download = models.BooleanField(default=True)
+    perm_idcard_download_image_rename_mode = models.BooleanField(default=True)
+    perm_idcard_download_image_generate_mode = models.BooleanField(default=True)
+    perm_idcard_bulk_reupload = models.BooleanField(default=False)
+    perm_delete_all_idcard = models.BooleanField(default=False)
+    perm_idcard_upgrade_all = models.BooleanField(default=False)
+    perm_mobile_app = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'organisation_manager'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['organisation', 'manager_type']),
+            models.Index(fields=['manager_type', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} ({self.get_manager_type_display()}) - {self.organisation.name}"
 
 
 # ── Backward compatibility aliases ─────────────────────────────────────

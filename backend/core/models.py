@@ -36,14 +36,14 @@ class User(AbstractUser):
     are now synchronized. Setting one will automatically set the other.
     """
     ROLE_CHOICES = [
-        ('pro_user', 'Pro User'),
+        ('prime_admin', 'Prime Admin'),
         ('super_admin', 'Super Admin'),
         ('operator', 'Operator'),
-        ('prime_manager', 'Prime Manager'),     # org owner — auto-created with Organisation
-        ('manager', 'Manager'),                  # regular manager under org (up to 4)
-        ('guest_prime_manager', 'Guest Prime Manager'),  # guest version of prime_manager
-        ('assistant', 'Assistant'),
         ('photographer', 'Photographer'),
+        ('prime_manager', 'Prime Manager'),     # org owner — exactly 1 per Organisation
+        ('super_manager', 'Super Manager'),     # independent org-level manager (0..N, max configurable)
+        ('guest_manager', 'Guest Manager'),     # org demonstration / showcase manager
+        ('assistant', 'Assistant'),             # workload assistant under a specific manager
     ]
 
     phone = models.CharField(max_length=15, blank=True, null=True)
@@ -53,6 +53,10 @@ class User(AbstractUser):
     is_active = models.BooleanField(default=True)
     # Tracks whether the welcome email has been sent (set True on first activation)
     welcome_email_sent = models.BooleanField(default=False)
+    # Temporary password management (visible to Prime Admin / Pro User until changed)
+    temp_password = models.CharField(max_length=128, blank=True, null=True, default='')
+    temp_password_created_at = models.DateTimeField(blank=True, null=True)
+    must_change_password = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -62,38 +66,28 @@ class User(AbstractUser):
         return f"{self.username} ({self.get_role_display()})"
     
     @property
-    def staff_profile(self):
-        from staff.models import StaffCompatWrapper
-        try:
-            if hasattr(self, 'operator_profile') and self.operator_profile:
-                return StaffCompatWrapper(self.operator_profile, 'operator')
-        except Exception:
-            pass
-        try:
-            if hasattr(self, 'manager_profile') and self.manager_profile:
-                return StaffCompatWrapper(self.manager_profile, 'manager')
-        except Exception:
-            pass
-        try:
-            if hasattr(self, 'photographer_profile') and self.photographer_profile:
-                return StaffCompatWrapper(self.photographer_profile, 'photographer')
-        except Exception:
-            pass
-        return None
-
-    @property
     def client_profile(self):
         try:
             profile = getattr(self, '_organisation_profile_cache', None)
             if profile is not None:
                 return profile
-            return self.organisation_profile
+            if hasattr(self, 'organisation_profile') and self.organisation_profile:
+                return self.organisation_profile
+            if hasattr(self, 'org_manager_profile') and self.org_manager_profile and self.org_manager_profile.organisation:
+                return self.org_manager_profile.organisation
+            if hasattr(self, 'assistant_profile') and self.assistant_profile and self.assistant_profile.organisation:
+                return self.assistant_profile.organisation
         except Exception:
-            try:
-                from organisation.models import Organisation
-                return Organisation.objects.filter(user=self).first()
-            except Exception:
-                return None
+            pass
+        try:
+            from organisation.models import Organisation
+            return Organisation.objects.filter(user=self).first()
+        except Exception:
+            return None
+
+    @property
+    def organisation(self):
+        return self.client_profile
 
     @property
     def staff_profile(self):
@@ -171,15 +165,20 @@ class User(AbstractUser):
         ]
 
     @property
+    def is_prime_admin(self):
+        """Check if user is Prime Admin (topmost power user with Pro features)."""
+        return self.role in ('prime_admin', 'pro_user')
+
+    @property
     def is_pro_user(self):
-        return self.role == 'pro_user'
+        return self.is_prime_admin
 
     @property
     def is_super_admin(self):
         """
-        Check if user is super admin (or pro_user, which has all super_admin powers).
+        Check if user is super admin or prime admin.
         """
-        return self.is_superuser or self.role in ('super_admin', 'pro_user')
+        return self.is_superuser or self.role in ('prime_admin', 'super_admin', 'pro_user')
     
     @property
     def is_operator(self):
@@ -192,21 +191,31 @@ class User(AbstractUser):
     @property
     def is_prime_manager(self):
         """True for org owners — the single account created with the Organisation."""
-        return self.role in ('prime_manager', 'guest_prime_manager')
+        return self.role in ('prime_manager', 'guest_prime_manager', 'client')
+
+    @property
+    def is_guest_manager(self):
+        """True for Guest Managers (organisation demonstration/showcase accounts)."""
+        return self.role in ('guest_manager', 'guest_prime_manager')
 
     @property
     def is_guest_prime_manager(self):
-        return self.role == 'guest_prime_manager'
+        return self.is_guest_manager
+
+    @property
+    def is_super_manager(self):
+        """True for Super Managers under an org (independent managers with delegated tables)."""
+        return self.role in ('super_manager', 'manager')
 
     @property
     def is_manager(self):
-        """True for regular managers under an org (up to 4 per org)."""
-        return self.role == 'manager'
+        """Compat for Super Manager."""
+        return self.is_super_manager
 
     @property
     def is_any_manager(self):
-        """True for both prime_manager and manager roles."""
-        return self.role in ('prime_manager', 'manager', 'guest_prime_manager')
+        """True for prime_manager, super_manager, and guest_manager roles."""
+        return self.role in ('prime_manager', 'super_manager', 'manager', 'guest_manager', 'guest_prime_manager', 'client')
 
     @property
     def is_assistant(self):
@@ -215,6 +224,16 @@ class User(AbstractUser):
     @property
     def is_admin_staff(self):
         return self.is_operator
+
+    @property
+    def is_platform_user(self):
+        """Platform-side users: Prime Admin, Super Admin, Operators, Photographers."""
+        return self.role in ('prime_admin', 'super_admin', 'pro_user', 'operator', 'photographer')
+
+    @property
+    def is_organisation_user(self):
+        """Organisation-side users: Prime Manager, Super Managers, Guest Managers, Assistants."""
+        return self.role in ('prime_manager', 'super_manager', 'guest_manager', 'guest_prime_manager', 'manager', 'assistant', 'client')
 
     # ── Legacy compat aliases ──────────────────────
     @property

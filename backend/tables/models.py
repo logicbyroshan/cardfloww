@@ -308,6 +308,37 @@ class IDCard(models.Model):
         ]
 
 
+class TableAccess(models.Model):
+    """
+    TableAccess model — relational table delegation between Organisation Tables
+    and Super Managers / Guest Managers.
+    Enforces that Super Managers only receive access to specific tables delegated by Prime Manager.
+    """
+    table = models.ForeignKey(
+        Table,
+        on_delete=models.CASCADE,
+        related_name='manager_accesses',
+    )
+    manager = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='table_accesses',
+    )
+    can_view = models.BooleanField(default=True)
+    can_edit_cards = models.BooleanField(default=True)
+    can_approve_print = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'tables_tableaccess'
+        constraints = [
+            models.UniqueConstraint(fields=['table', 'manager'], name='unique_table_manager_access')
+        ]
+
+    def __str__(self):
+        return f"{self.manager.username} -> {self.table.name}"
+
+
 # ── Cache invalidation signals ──────────────────────────────────────────
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
