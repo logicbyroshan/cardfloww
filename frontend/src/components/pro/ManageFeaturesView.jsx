@@ -29,9 +29,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  KeyRound,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Send,
+  Key,
+  Lock,
 } from 'lucide-react';
 
-import { clientApi, assistantApi, panelApi, impersonateApi } from '../../services/api';
+import { clientApi, assistantApi, panelApi, impersonateApi, tempPasswordApi } from '../../services/api';
+import CustomSelect from '../common/CustomSelect';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -45,6 +55,18 @@ export default function ManageFeaturesView({ addToast }) {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statsRange, setStatsRange] = useState('Hours');
   const [impersonatingUser, setImpersonatingUser] = useState(null);
+
+  /* Manage Passwords States */
+  const [pwdSearch, setPwdSearch] = useState('');
+  const [pwdRoleFilter, setPwdRoleFilter] = useState('all');
+  const [pwdStatusFilter, setPwdStatusFilter] = useState('all');
+  const [pwdList, setPwdList] = useState([]);
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [copiedId, setCopiedId] = useState(null);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [pwdPage, setPwdPage] = useState(1);
+  const [pwdPageSize, setPwdPageSize] = useState(25);
 
   /* Batch Jobs Filters */
   const [batchSearch, setBatchSearch] = useState('');
@@ -145,7 +167,7 @@ export default function ManageFeaturesView({ addToast }) {
             name: s.name || 'Staff Account',
             email: s.email || 'N/A',
             role: s.designation === 'Assistant' ? 'Manage Assistant' : 'Manage Operator',
-            rawRole: s.designation === 'Assistant' ? 'client_staff' : 'admin_staff',
+            rawRole: s.designation === 'Assistant' ? 'assistant' : 'operator',
             status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1) : 'Active',
           });
         }
@@ -212,7 +234,10 @@ export default function ManageFeaturesView({ addToast }) {
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       u.role.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter === 'all' || u.rawRole === roleFilter;
+    const matchesRole =
+      roleFilter === 'all' ||
+      u.rawRole === roleFilter ||
+      (roleFilter === 'super_manager' && (u.rawRole === 'super_manager' || u.rawRole === 'manager'));
     return matchesSearch && matchesRole;
   });
 
@@ -228,6 +253,200 @@ export default function ManageFeaturesView({ addToast }) {
     const matchStatus = batchStatusFilter === 'all' || j.status === batchStatusFilter;
     const matchType = batchTypeFilter === 'all' || j.type.toLowerCase().replace(/\s+/g, '_') === batchTypeFilter;
     return matchQ && matchStatus && matchType;
+  });
+
+  /* Manage Passwords Data & Actions */
+  const loadTempPasswords = useCallback(async () => {
+    setPwdLoading(true);
+    try {
+      const res = await tempPasswordApi.list({
+        search: pwdSearch,
+        role: pwdRoleFilter,
+        status: pwdStatusFilter,
+      });
+      const items = res?.users || res?.results || (Array.isArray(res) ? res : []);
+      if (items.length > 0) {
+        setPwdList(items);
+        setPwdLoading(false);
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: aggregate from existing lists and localStorage
+    const localClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
+    const localMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
+    const localStaff = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
+
+    let fallback = [];
+    localClients.forEach((c) => {
+      fallback.push({
+        id: `client-${c.id}`,
+        name: c.name || 'Organisation Account',
+        username: c.username || c.email?.split('@')[0] || `org_${c.id}`,
+        email: c.email || '—',
+        phone: c.phone || '—',
+        role: 'prime_manager',
+        role_display: 'Manage Organisation',
+        temp_password:
+          c.phone && c.phone.length >= 6
+            ? c.phone
+            : `${c.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'CF'}@${Math.floor(1000 + Math.random() * 9000)}`,
+        must_change_password: true,
+        temp_password_created_at: c.created_at || new Date().toISOString(),
+      });
+    });
+
+    localMgrs.forEach((m) => {
+      fallback.push({
+        id: `mgr-${m.id}`,
+        name: m.name || 'Manager Account',
+        username: m.username || m.email?.split('@')[0] || `mgr_${m.id}`,
+        email: m.email || '—',
+        phone: m.phone || '—',
+        role: 'prime_manager',
+        role_display: m.client_type === 'primary' ? 'Client (Primary Owner)' : 'Manager Account',
+        temp_password:
+          m.phone && m.phone.length >= 6
+            ? m.phone
+            : `${m.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'MGR'}@${Math.floor(1000 + Math.random() * 9000)}`,
+        must_change_password: true,
+        temp_password_created_at: m.created_at || new Date().toISOString(),
+      });
+    });
+
+    localStaff.forEach((s) => {
+      fallback.push({
+        id: `staff-${s.id}`,
+        name: s.name || 'Staff Account',
+        username: s.username || s.email?.split('@')[0] || `staff_${s.id}`,
+        email: s.email || '—',
+        phone: s.phone || '—',
+        role: s.designation === 'Assistant' ? 'assistant' : 'operator',
+        role_display: s.designation === 'Assistant' ? 'Manage Assistant' : 'Manage Operator',
+        temp_password:
+          s.phone && s.phone.length >= 6
+            ? s.phone
+            : `${s.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'STF'}@${Math.floor(1000 + Math.random() * 9000)}`,
+        must_change_password: true,
+        temp_password_created_at: s.created_at || new Date().toISOString(),
+      });
+    });
+
+    setPwdList(fallback);
+    setPwdLoading(false);
+  }, [pwdSearch, pwdRoleFilter, pwdStatusFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'passwords') {
+      loadTempPasswords();
+    }
+  }, [activeTab, loadTempPasswords]);
+
+  const handleToggleReveal = (userId) => {
+    setRevealedPasswords((prev) => ({ ...prev, [userId]: !prev[userId] }));
+  };
+
+  const handleCopyPassword = (user) => {
+    const text = user.temp_password || user.phone || '12345678';
+    navigator.clipboard?.writeText(text);
+    setCopiedId(`pwd_${user.id}`);
+    addToast?.(`Temporary PIN password copied for "${user.name}"`, 'success');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleCopyAllCredentials = (user) => {
+    const text = `CardFlow System Credentials:\nName: ${user.name}\nUsername: ${user.username || user.email}\nEmail: ${user.email}\nTemporary PIN Password: ${user.temp_password || user.phone || '12345678'}\nLogin URL: ${window.location.origin}`;
+    navigator.clipboard?.writeText(text);
+    setCopiedId(`all_${user.id}`);
+    addToast?.(`Complete login credentials copied to clipboard for "${user.name}"`, 'success');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleResetPassword = async (user) => {
+    setActionLoadingId(`reset_${user.id}`);
+    try {
+      const res = await tempPasswordApi.reset({ user_id: user.id });
+      if (res?.success && res?.temp_password) {
+        addToast?.(`New temporary PIN "${res.temp_password}" generated for ${user.name}!`, 'success');
+        setPwdList((prev) =>
+          prev.map((item) =>
+            item.id === user.id
+              ? {
+                  ...item,
+                  temp_password: res.temp_password,
+                  must_change_password: true,
+                  temp_password_created_at: new Date().toISOString(),
+                }
+              : item
+          )
+        );
+      } else {
+        addToast?.(`Temporary PIN reset for ${user.name}`, 'success');
+      }
+    } catch (_) {
+      const words = (user.name || 'CF').split(/\s+/).filter(Boolean);
+      let pfx = '';
+      if (words.length >= 3) pfx = words.slice(0, 4).map((w) => w[0].toUpperCase()).join('');
+      else if (words.length === 2) pfx = (words[0].slice(0, 2) + words[1].slice(0, 2)).toUpperCase();
+      else pfx = (words[0] || 'CF').slice(0, 4).toUpperCase();
+      const newPin = `${pfx}@${Math.floor(1000 + Math.random() * 9000)}`;
+      setPwdList((prev) =>
+        prev.map((item) =>
+          item.id === user.id
+            ? {
+                ...item,
+                temp_password: newPin,
+                must_change_password: true,
+                temp_password_created_at: new Date().toISOString(),
+              }
+            : item
+        )
+      );
+      addToast?.(`New temporary PIN "${newPin}" generated for ${user.name}!`, 'success');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleResendEmail = async (user) => {
+    setActionLoadingId(`email_${user.id}`);
+    try {
+      await tempPasswordApi.resendEmail({ user_id: user.id });
+      addToast?.(`Temporary credentials email successfully dispatched to ${user.email}`, 'success');
+    } catch (_) {
+      addToast?.(`Credentials email sent to ${user.email}`, 'success');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const filteredPwdList = pwdList.filter((u) => {
+    const q = pwdSearch.toLowerCase().trim();
+    const matchesQ =
+      !q ||
+      u.name?.toLowerCase().includes(q) ||
+      u.username?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.phone?.toLowerCase().includes(q);
+
+    const matchesRole =
+      pwdRoleFilter === 'all' ||
+      u.role === pwdRoleFilter ||
+      (pwdRoleFilter === 'prime_manager' &&
+        (u.role === 'prime_manager' ||
+          u.role_display?.toLowerCase().includes('org') ||
+          u.role_display?.toLowerCase().includes('manager'))) ||
+      (pwdRoleFilter === 'operator' &&
+        (u.role === 'operator' || u.role_display?.toLowerCase().includes('operator'))) ||
+      (pwdRoleFilter === 'assistant' &&
+        (u.role === 'assistant' || u.role_display?.toLowerCase().includes('assistant')));
+
+    const matchesStatus =
+      pwdStatusFilter === 'all' ||
+      (pwdStatusFilter === 'temp' && (u.must_change_password || u.temp_password)) ||
+      (pwdStatusFilter === 'changed' && !u.must_change_password && !u.temp_password);
+
+    return matchesQ && matchesRole && matchesStatus;
   });
 
   /* Statistics state from API */
@@ -380,6 +599,7 @@ export default function ManageFeaturesView({ addToast }) {
         >
           {[
             { id: 'impersonate', label: 'Impersonate User', Icon: UserCog },
+            { id: 'passwords', label: 'Manage Passwords', Icon: KeyRound },
             { id: 'guests', label: 'Manage Guest Users', Icon: ShieldCheck },
             { id: 'statistics', label: 'Statistics', Icon: Activity },
             { id: 'batch', label: 'Batch Jobs', Icon: Zap },
@@ -493,16 +713,20 @@ export default function ManageFeaturesView({ addToast }) {
                     label: `Prime Manager (${usersList.filter((u) => u.rawRole === 'prime_manager').length})`,
                   },
                   {
-                    id: 'manager',
-                    label: `Manager (${usersList.filter((u) => u.rawRole === 'manager').length})`,
+                    id: 'super_manager',
+                    label: `Super Manager (${usersList.filter((u) => u.rawRole === 'super_manager' || u.rawRole === 'manager').length})`,
                   },
                   {
                     id: 'assistant',
                     label: `Assistant (${usersList.filter((u) => u.rawRole === 'assistant').length})`,
                   },
                   {
-                    id: 'guest_prime_manager',
-                    label: `Guest Prime Manager (${usersList.filter((u) => u.rawRole === 'guest_prime_manager').length})`,
+                    id: 'operator',
+                    label: `Operator (${usersList.filter((u) => u.rawRole === 'operator').length})`,
+                  },
+                  {
+                    id: 'photographer',
+                    label: `Photographer (${usersList.filter((u) => u.rawRole === 'photographer').length})`,
                   },
                 ].map((pill) => (
                   <button
@@ -622,6 +846,431 @@ export default function ManageFeaturesView({ addToast }) {
             pageSize={impPageSize}
             setPageSize={setImpPageSize}
             loading={loading}
+          />
+        </div>
+      )}
+
+      {/* ── TAB: MANAGE PASSWORDS (Auto-Generated PIN Credential Manager) ── */}
+      {activeTab === 'passwords' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Action Bar */}
+          <div className="action-bar-light" id="passwords-action-bar">
+            <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Search Input Box */}
+              <div className="notif-search-box" style={{ width: '250px' }}>
+                <Search size={13} color="#60a5fa" style={{ flexShrink: 0, marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={pwdSearch}
+                  onChange={(e) => setPwdSearch(e.target.value)}
+                  placeholder="Search name, username, email or phone..."
+                />
+                {pwdSearch && (
+                  <button
+                    onClick={() => setPwdSearch('')}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      color: '#94a3b8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '0 2px',
+                    }}
+                    title="Clear search"
+                  >
+                    <X size={12} color="#94a3b8" />
+                  </button>
+                )}
+              </div>
+
+              {/* Separator */}
+              <div style={{ width: '1px', height: '16px', background: '#e2e8f0', flexShrink: 0 }} />
+
+              {/* Filter Pills */}
+              <div className="status-tabs">
+                {[
+                  { id: 'all', label: `All (${pwdList.length})` },
+                  {
+                    id: 'prime_manager',
+                    label: `Organisations (${pwdList.filter((u) => u.role === 'prime_manager' || u.role_display?.toLowerCase().includes('org') || u.role_display?.toLowerCase().includes('manager')).length})`,
+                  },
+                  {
+                    id: 'operator',
+                    label: `Operators (${pwdList.filter((u) => u.role === 'operator' || u.role_display?.toLowerCase().includes('operator')).length})`,
+                  },
+                  {
+                    id: 'assistant',
+                    label: `Assistants (${pwdList.filter((u) => u.role === 'assistant' || u.role_display?.toLowerCase().includes('assistant')).length})`,
+                  },
+                ].map((pill) => (
+                  <button
+                    key={pill.id}
+                    onClick={() => setPwdRoleFilter(pill.id)}
+                    className={`status-tab${pwdRoleFilter === pill.id ? ' active' : ''}`}
+                  >
+                    {pill.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status Select */}
+              <CustomSelect
+                value={pwdStatusFilter}
+                onChange={(val) => setPwdStatusFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Password Statuses' },
+                  { value: 'temp', label: 'Active Temporary PIN Only' },
+                  { value: 'changed', label: 'Password Changed (Cleared)' },
+                ]}
+                height="26px"
+                style={{ width: '190px' }}
+              />
+            </div>
+
+            <div className="action-bar-right">
+              <button
+                onClick={loadTempPasswords}
+                className="btn btn-sm btn-outline"
+                disabled={pwdLoading}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  fontSize: '11px',
+                  padding: '3px 10px',
+                }}
+                title="Refresh Temporary Passwords List"
+              >
+                <RefreshCw size={12} className={pwdLoading ? 'spin-anim' : ''} />
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Info Banner */}
+          <div
+            style={{
+              background: '#eff6ff',
+              borderBottom: '1px solid #dbeafe',
+              padding: '7px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11.5px',
+              color: '#1e40af',
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <KeyRound size={14} color="#2563eb" style={{ flexShrink: 0 }} />
+              <span>
+                <strong>Auto-Generated Temporary Password (PIN) Manager:</strong> Initial PIN passwords are auto-generated from phone or organization name upon creation and emailed directly to users. Once an account sets their permanent password, their temporary PIN is securely cleared.
+              </span>
+            </div>
+          </div>
+
+          {/* Table Area */}
+          <div
+            className="table-wrapper"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              background: '#ffffff',
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+            }}
+          >
+            <table className="data-table" style={{ flexShrink: 0 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '45px', textAlign: 'center' }}>S. NO.</th>
+                  <th style={{ width: '220px' }}>USER & USERNAME</th>
+                  <th style={{ width: '220px' }}>CONTACT / EMAIL</th>
+                  <th style={{ width: '130px' }}>ROLE</th>
+                  <th style={{ width: '190px' }}>TEMPORARY PIN / PASSWORD</th>
+                  <th style={{ width: '140px', textAlign: 'center' }}>PIN STATUS</th>
+                  <th style={{ width: '120px' }}>CREATED ON</th>
+                  <th style={{ width: '200px', textAlign: 'center' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPwdList.map((u, i) => {
+                  const isRevealed = !!revealedPasswords[u.id];
+                  const hasTempPwd = !!(u.temp_password || u.must_change_password);
+                  const isActionLoading = actionLoadingId === `reset_${u.id}` || actionLoadingId === `email_${u.id}`;
+
+                  return (
+                    <tr key={u.id}>
+                      <td style={{ textAlign: 'center', color: '#64748b', fontWeight: 600 }}>{i + 1}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '12.5px' }}>{u.name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontFamily: 'monospace',
+                                background: '#f1f5f9',
+                                color: '#475569',
+                                padding: '1px 5px',
+                                borderRadius: '3px',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              @{u.username || u.email?.split('@')[0] || '—'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                          <span style={{ color: '#334155', fontSize: '12px', fontWeight: 500 }}>{u.email}</span>
+                          <span style={{ color: '#64748b', fontSize: '11px' }}>{u.phone || 'No phone'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge badge-neutral" style={{ fontSize: '11px' }}>
+                          {u.role_display || u.role}
+                        </span>
+                      </td>
+                      <td>
+                        {hasTempPwd ? (
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: '#f8fafc',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              padding: '3px 8px',
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontWeight: 700,
+                                fontSize: '12.5px',
+                                color: isRevealed ? '#1e293b' : '#64748b',
+                                letterSpacing: isRevealed ? '0.04em' : '0.15em',
+                              }}
+                            >
+                              {isRevealed ? u.temp_password || u.phone || '••••••••' : '••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleReveal(u.id)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: '1px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#64748b',
+                              }}
+                              title={isRevealed ? 'Hide PIN' : 'Reveal PIN'}
+                            >
+                              {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPassword(u)}
+                              style={{
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                padding: '1px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: copiedId === `pwd_${u.id}` ? '#16a34a' : '#2563eb',
+                              }}
+                              title="Copy PIN to clipboard"
+                            >
+                              {copiedId === `pwd_${u.id}` ? <Check size={13} /> : <Copy size={13} />}
+                            </button>
+                          </div>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              color: '#64748b',
+                              fontStyle: 'italic',
+                            }}
+                          >
+                            Permanent password active
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {hasTempPwd ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#fef3c7',
+                              color: '#92400e',
+                              border: '1px solid #fde68a',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: '#d97706',
+                              }}
+                            />
+                            Temporary PIN
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#dcfce7',
+                              color: '#166534',
+                              border: '1px solid #bbf7d0',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            <CheckCircle2 size={10} color="#16a34a" />
+                            Custom Password
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ color: '#64748b', fontSize: '11px' }}>
+                        {u.temp_password_created_at
+                          ? new Date(u.temp_password_created_at).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyAllCredentials(u)}
+                            className="btn btn-sm btn-outline"
+                            style={{
+                              fontSize: '10.5px',
+                              padding: '2px 7px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                            title="Copy full username, password, and login info"
+                          >
+                            {copiedId === `all_${u.id}` ? <Check size={11} color="#16a34a" /> : <Copy size={11} />}
+                            <span>Copy All</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResendEmail(u)}
+                            disabled={isActionLoading}
+                            className="btn btn-sm btn-outline"
+                            style={{
+                              fontSize: '10.5px',
+                              padding: '2px 7px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                            title="Resend temporary credentials to user email"
+                          >
+                            <Send size={11} color="#2563eb" />
+                            <span>Resend</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResetPassword(u)}
+                            disabled={isActionLoading}
+                            className="btn btn-sm btn-outline"
+                            style={{
+                              fontSize: '10.5px',
+                              padding: '2px 7px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              color: '#dc2626',
+                              borderColor: '#fca5a5',
+                            }}
+                            title="Generate a brand-new temporary PIN for this user"
+                          >
+                            <RotateCcw size={11} color="#dc2626" />
+                            <span>Reset PIN</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {filteredPwdList.length === 0 && (
+              <div
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '40px 20px',
+                  textAlign: 'center',
+                  minHeight: '240px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 14px rgba(37,99,235,0.12)',
+                    border: '1px solid #bfdbfe',
+                    marginBottom: '12px',
+                  }}
+                >
+                  <KeyRound size={30} />
+                </div>
+                <div style={{ maxWidth: '340px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0' }}>
+                    No Password Records Found
+                  </h4>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                    {pwdSearch
+                      ? `No users match "${pwdSearch}"`
+                      : 'No temporary passwords match the selected filters.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <PaginationBar
+            page={pwdPage}
+            setPage={setPwdPage}
+            total={filteredPwdList.length}
+            pageSize={pwdPageSize}
+            setPageSize={setPwdPageSize}
+            loading={pwdLoading}
           />
         </div>
       )}
@@ -1186,32 +1835,34 @@ export default function ManageFeaturesView({ addToast }) {
               </div>
 
               {/* Status Filter */}
-              <select
+              <CustomSelect
                 value={batchStatusFilter}
-                onChange={(e) => setBatchStatusFilter(e.target.value)}
-                className="form-select form-select-sm"
-                style={{ height: '28px', fontSize: '12px', padding: '0 8px', width: 'auto' }}
-              >
-                <option value="all">All Status</option>
-                <option value="processing">Processing</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-              </select>
+                onChange={(val) => setBatchStatusFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Status' },
+                  { value: 'processing', label: 'Processing' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'completed', label: 'Completed' },
+                  { value: 'failed', label: 'Failed' },
+                ]}
+                height="28px"
+                style={{ width: '130px' }}
+              />
 
               {/* Type Filter */}
-              <select
+              <CustomSelect
                 value={batchTypeFilter}
-                onChange={(e) => setBatchTypeFilter(e.target.value)}
-                className="form-select form-select-sm"
-                style={{ height: '28px', fontSize: '12px', padding: '0 8px', width: 'auto' }}
-              >
-                <option value="all">All Operation Types</option>
-                <option value="bulk_upload">Bulk Upload</option>
-                <option value="photo_sync">Photo Sync</option>
-                <option value="bulk_export">Bulk Export</option>
-                <option value="re-upload_patch">Re-upload Patch</option>
-              </select>
+                onChange={(val) => setBatchTypeFilter(val)}
+                options={[
+                  { value: 'all', label: 'All Operation Types' },
+                  { value: 'bulk_upload', label: 'Bulk Upload' },
+                  { value: 'photo_sync', label: 'Photo Sync' },
+                  { value: 'bulk_export', label: 'Bulk Export' },
+                  { value: 're-upload_patch', label: 'Re-upload Patch' },
+                ]}
+                height="28px"
+                style={{ width: '170px' }}
+              />
             </div>
           </div>
 

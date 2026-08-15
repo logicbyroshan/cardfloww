@@ -54,7 +54,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         )}
 
         <div className="auth-field">
-          <label className="auth-label">Username or Email</label>
+          <label className="auth-label">Email or Username</label>
           <div className="auth-input-wrapper">
             <User size={16} className="auth-input-icon" />
             <input
@@ -63,7 +63,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="username@example.com"
+              placeholder="Enter email or username"
               className="auth-input"
             />
           </div>

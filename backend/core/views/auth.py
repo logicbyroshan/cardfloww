@@ -86,17 +86,12 @@ def api_auth_me(request):
     role = getattr(user, 'role', None) or ('super_admin' if user.is_superuser else 'prime_manager')
 
     ROLE_LABELS = {
+        'prime_admin': 'Prime Admin',
         'super_admin': 'Super Admin',
-        'pro_user': 'Pro Admin',
-        'admin': 'Super Admin',
-        'prime_manager': 'Organisation (Prime Manager)',
-        'client': 'Organisation (Prime Manager)',
-        'guest_prime_manager': 'Guest Manager',
         'operator': 'Operator',
-        'admin_staff': 'Operator',
-        'manager': 'Manager',
+        'prime_manager': 'Organisation (Prime Manager)',
+        'super_manager': 'Super Manager',
         'assistant': 'Assistant',
-        'client_staff': 'Assistant',
         'photographer': 'Photographer',
     }
     role_label = ROLE_LABELS.get(role, role)
@@ -104,7 +99,7 @@ def api_auth_me(request):
     # Resolve org context for non-admin users
     org_id = None
     org_name = None
-    if role in ('prime_manager', 'client', 'guest_prime_manager'):
+    if role in ('prime_manager', 'super_manager', 'manager'):
         try:
             from organisation.models import Organisation
             org = Organisation.objects.filter(user=user).first()
@@ -113,7 +108,7 @@ def api_auth_me(request):
                 org_name = org.name
         except Exception:
             pass
-    elif role in ('assistant', 'client_staff'):
+    elif role == 'assistant':
         try:
             from assistants.models import Assistant
             ast = Assistant.objects.filter(user=user).select_related('client').first()
