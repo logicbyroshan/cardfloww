@@ -1,23 +1,27 @@
-# 🎴 CardFloww ID Cards — Enterprise Management Platform
+# 🎴 CardFlow ID Cards — Enterprise Management Platform
 
 A high-performance, production-grade ID card operations platform designed for schools, colleges, institutions, and enterprise organizations.
 
-> **Live Production Panel**: [https://panel.adarshbhopal.in](https://panel.adarshbhopal.in) | **Current Build Version**: `v4.19.01`
+> **Live Production Panel**: [https://panel.adarshbhopal.in](https://panel.adarshbhopal.in) | **Current Build Version**: `v5.3.0`
 
 ---
 
 ## 🌟 Feature Showcase & Visual Modules
 
-CardFlow brings together web management, real-time biometrics, dynamic template engines, and automated export pipelines. Below is an interactive overview of each core platform module:
+CardFlow brings together web management, real-time biometrics, dynamic template engines, automated export pipelines, and granular multi-tenant access control. Below is an interactive overview of each core platform module:
 
 ---
 
-### 🏛️ 1. Control Panel & Organization Schema Management
+### 🏛️ 1. Two-Domain Role Architecture & Organisation Manager Management
 
 **Overview & Key Capabilities:**
-- **Multi-Tenant Administration**: Manage multiple schools, colleges, and enterprise clients from a unified control panel with isolated scope boundaries.
-- **Dynamic Schema Design Lab**: Create custom ID card schemas (`IDCardTable`) with dynamic field types (text, numbers, dates, dropdowns, photos, signatures, QR codes) without needing database migrations.
-- **Real-Time Data Table & Filters**: High-density data grid featuring inline editing, dynamic column sorting, and instant search filter dropdowns powered by Redis caching.
+- **Two-Domain Separation**:
+  - **Platform Domain**: `Prime Admin` (Platform Owner) $\rightarrow$ `Super Admin` $\rightarrow$ `Operator` / `Photographer`.
+  - **Organisation Domain**: `Organisation` $\rightarrow$ `Prime Manager` (1, Org Owner) + `Super Managers` (0..N, configurable cap, default 4) + `Guest Manager` + `Assistants`.
+- **Autonomous Super Managers**: Independent user accounts with separate credentials and login sessions. Super Managers are strictly forbidden from creating tables (`403 Forbidden`) and can only view/edit cards for tables delegated to them.
+- **Relational Table Delegation (`TableAccess`)**: Prime Managers delegate table workload to Super Managers via an interactive modal in real time.
+- **Scoped Assistants**: Assistants are owned by their specific creating Manager (`assistant.manager_id = user.id`) and restricted to that Manager's delegated tables.
+- **Auto-Generated Temporary Passwords (PIN)**: Automatically generates 8–10 character PINs (e.g. `MATH@5080`) based on entity name or phone, supporting dual Email/Username login.
 
 <table width="100%">
   <tr>
@@ -144,10 +148,13 @@ CardFlow brings together web management, real-time biometrics, dynamic template 
 
 For complete technical specifications, architecture diagrams, and operational guides, explore our dedicated documentation in [`docs/`](docs/):
 
-- 🏗️ [**System Architecture & Topology Guide**](docs/SYSTEM_ARCHITECTURE.md): Deep dive into Django 5.2, React 18 SPA, Daphne WebSockets, Celery task workers, Redis caching, and zero-trust security middleware.
+- 🏗️ [**System Architecture & Topology Guide**](docs/SYSTEM_ARCHITECTURE.md): Deep dive into Django 5.2, React 19 SPA, Two-Domain Hierarchy, Super Manager delegation, Daphne WebSockets, Celery task workers, and security middleware.
+- 🛠️ [**Backend Architecture Specification**](docs/BACKEND_ARCHITECTURE.md): Database models (`OrganisationManager`, `TableAccess`), service layer abstractions, automated password lifecycle, and REST API route map.
+- 🎨 [**Frontend Architecture Specification**](docs/FRONTEND_ARCHITECTURE.md): React 19 SPA, Vanilla CSS token engine, Manager Accounts view, `TableShareModal`, and Pro Features Manage Passwords tab.
 - ⚙️ [**Core Features & Workflows Guide**](docs/FEATURES_AND_WORKFLOWS.md): Detailed workflows covering dynamic schema design, card status transitions (`pending ➔ verified ➔ pool ➔ approved`), reprint queues, and multi-tenant roles.
 - ⚡ [**Bulk Ingestion, Face Cropper & Export Engine Guide**](docs/BULK_INGESTION_AND_EXPORTS.md): Complete guide to semantic image matching, standalone PyInstaller OpenCV Face Cropper, PDF grid printing, and Word `.docx` section page breaks.
 - 📱 [**Mobile Companion App Guide**](docs/MOBILE_APP_COMPANION.md): Technical overview of the Expo React Native app, native SVG iconography, real-time optical biometric scanner, and Android build specs.
+- 📝 [**Platform Version Log**](docs/VERSION_LOG.md): Complete chronological release history and changelog.
 
 ---
 
@@ -191,20 +198,3 @@ npm run build
 ## 📄 License & Intellectual Property
 
 All rights reserved. Property of **CardFlow Platform / Adarsh ID Cards**.
-
-
-- Mobile upload timeout hardening for 3-image updates.
-- Dashboard caching/runtime optimization improvements.
-- Mobile action overlay and image upload regression fixes.
-
-```bash
-git log --oneline
-```
-
----
-
-## License
-
-Proprietary. All rights reserved.
-
-Unauthorized copying, distribution, or modification is prohibited.

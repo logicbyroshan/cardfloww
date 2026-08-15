@@ -44,7 +44,8 @@ CardFlow is architected as a **fully decoupled** enterprise platform:
 ### 2.1 Backend Core (`backend/`) — **Pure REST API**
 - **Django 5.2.12**: Core ORM, user management, JSON REST APIs, and service controllers.
 - **API-Only Policy**: The backend **never renders HTML pages** (except `/app/*` mobile download and Django debug mode). Every response is JSON.
-- **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`). Views remain thin.
+- **Service Layer Abstraction**: Encapsulates all business logic inside dedicated service modules (e.g. `CardService`, `BulkUploadService`, `ExportService`, `OrganisationManagerService`, `AutoPasswordService`). Views remain thin.
+- **Dual Login Authentication**: Supports both **Email** and **Username** (or Phone) credentials with automated temporary PIN password lifecycle.
 - **Auth via CSRF+Session**: Browser SPA uses Django session cookies + CSRF tokens. Mobile app uses token-based auth (`/api/mobile/`).
 
 ### 2.2 Modern React Web SPA (`frontend/`) — **All UI Pages**
@@ -75,34 +76,80 @@ CardFlow enforces a zero-trust multi-tier security pipeline on every incoming re
 
 ---
 
-## 4. Multi-Tenant Role Permission Hierarchy
+## 4. Multi-Tenant Role & Domain Permission Hierarchy
+
+CardFlow features a strictly separated **Two-Domain Architecture** that isolates Platform Administration from Tenant Organisations:
 
 ```text
-                           [ Super Administrator ]
-                           (Full Bypass Authority)
-                                      │
-                                      ▼
-                             [ Pro Administrator ]
-                          (Guarded Feature Access)
-                                      │
-                                      ▼
-                            [ Admin Staff User ]
-                        (Assigned Client Scope Only)
-                                      │
-                                      ▼
-                        ┌─────────────┴─────────────┐
-                        ▼                           ▼
-                 [ Client Admin ]           [ Client Staff ]
-               (Tenant Scope Only)     (Double-Gated Delegated)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. PLATFORM DOMAIN (Multi-Tenant Administration)                             │
+│                                                                             │
+│                        [ Prime Admin (Platform Owner) ]                     │
+│                                       │                                     │
+│                                       ▼                                     │
+│                         [ Super Admin (Global Admin) ]                      │
+│                                       │                                     │
+│                         ┌─────────────┴─────────────┐                       │
+│                         ▼                           ▼                       │
+│                    [ Operator ]              [ Photographer ]               │
+│                (Assigned Orgs Only)        (Field Photo Capture)            │
+└───────────────────────────────────────┬─────────────────────────────────────┘
+                                        │ (Supervises / Onboards)
+┌───────────────────────────────────────▼─────────────────────────────────────┐
+│ 2. ORGANISATION DOMAIN (Tenant Schools, Colleges, Offices)                  │
+│                                                                             │
+│                         [ Organisation (Tenant Entity) ]                    │
+│                                       │                                     │
+│                         [ Prime Manager (Org Owner) ]                       │
+│                                       │                                     │
+│               ┌───────────────────────┼───────────────────────┐             │
+│               │ (Delegates Tables)    │ (Delegates Tables)    │             │
+│               ▼                       ▼                       ▼             │
+│       [ Super Manager 1 ]     [ Super Manager 2 ]     [ Guest Manager ]     │
+│       (Max limit: 4 default)  (Max limit: 4 default)  (Temporary Reviewer)  │
+│       • Autonomous Account    • Autonomous Account    • Cannot add tables   │
+│       • Cannot create tables  • Cannot create tables  • Delegated tables    │
+│               │                       │                       │             │
+│               ▼                       ▼                       ▼             │
+│          [ Assistant ]           [ Assistant ]           [ Assistant ]      │
+│       (Scoped to SM1 Tables)  (Scoped to SM2 Tables)  (Scoped to GM Tables) │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Super Administrator (`super_admin`)**: Full system access, database operations, and user creation.
-- **Client Admin (`client`)**: Restricted to their own institution’s students, staff, templates, and exports.
-- **Client Staff (`client_staff`)**: Double-gated by both staff feature flags and parent client organization active state.
+### Domain & Role Breakdown:
+
+1. **Platform Domain**:
+   - **Prime Admin (`prime_admin`)**: Ultimate platform owner; creates and manages Super Admins, Pro Features, and system backups.
+   - **Super Admin (`super_admin`)**: Global operations manager; manages organisations, operators, and platform analytics.
+   - **Operator (`operator`)**: Production and print manager; restricted strictly to organisations assigned by Super Admin.
+   - **Photographer (`photographer`)**: Field agent capturing ID card photos via Mobile App; scoped to assigned organisations.
+
+2. **Organisation Domain**:
+   - **Prime Manager (`prime_manager`)**: Primary owner and administrator of the Organisation. Full authority to create tables, configure schemas, manage organisation staff, and delegate tables to Super Managers.
+   - **Super Manager (`super_manager`)**: Autonomous manager with independent credentials. Created by Prime Manager (capped at `Organisation.max_super_managers`, default=4). **Strictly forbidden from creating tables** (`403 Forbidden`). Can only view and edit cards for tables delegated to them via `TableAccess`.
+   - **Guest Manager (`guest_manager`)**: Temporary or guest reviewer with read/delegated edit permissions on specific tables.
+   - **Assistant (`assistant`)**: Subordinate data entry / verification assistant owned by their specific creating Manager (`assistant.manager_id = user.id`), restricted strictly to that Manager's delegated tables.
 
 ---
 
-## 5. Storage & Deployment Architecture
+## 5. Table Delegation Architecture (`TableAccess`)
+
+The `TableAccess` relational model enables granular table delegation within an Organisation:
+
+```text
+[ Table (e.g. Class 10 Students) ] ──◄ (TableAccess) ►── [ Super Manager ]
+                                             │
+                                   • can_view: True
+                                   • can_edit_cards: True
+                                   • can_approve_print: False
+```
+
+- **Prime Manager Access**: Retains implicit full access to all tables in the organisation and controls delegation via `/api/table/<id>/share-managers/`.
+- **Super Manager Scoping**: `GET /api/schemas/` dynamically filters table schemas to only return tables with an active `TableAccess` grant for `request.user`.
+
+---
+
+## 6. Storage & Deployment Architecture
 
 - **Media Normalization (`mediafiles/`)**: Protected media paths validate user access authorization before serving uploaded card photos, signatures, or generated card thumbnails.
 - **Production Server Handoff**: Supports Nginx `X-Accel-Redirect` (`MEDIA_USE_XACCEL=True`) to offload file serving from Python worker threads to Nginx.
