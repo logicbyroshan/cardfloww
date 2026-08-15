@@ -33,11 +33,17 @@ class Assistant(models.Model):
     def __init__(self, *args, **kwargs):
         if 'client' in kwargs:
             kwargs['organisation'] = kwargs.pop('client')
+        if 'client_id' in kwargs:
+            kwargs['organisation_id'] = kwargs.pop('client_id')
         super().__init__(*args, **kwargs)
 
     @property
     def client_id(self):
         return self.organisation_id
+
+    @client_id.setter
+    def client_id(self, value):
+        self.organisation_id = value
 
     @property
     def client(self):
@@ -46,6 +52,35 @@ class Assistant(models.Model):
     @client.setter
     def client(self, value):
         self.organisation = value
+
+    @property
+    def perm_idcard_client_list(self):
+        return self.perm_organisation_list
+
+    @perm_idcard_client_list.setter
+    def perm_idcard_client_list(self, value):
+        self.perm_organisation_list = value
+
+    @property
+    def perm_manage_client_staff(self):
+        return self.perm_manage_assistants
+
+    @perm_manage_client_staff.setter
+    def perm_manage_client_staff(self, value):
+        self.perm_manage_assistants = value
+
+    def save(self, *args, **kwargs):
+        if 'update_fields' in kwargs and kwargs['update_fields'] is not None:
+            mapped_fields = []
+            for f in kwargs['update_fields']:
+                if f == 'perm_idcard_client_list':
+                    mapped_fields.append('perm_organisation_list')
+                elif f in ('perm_manage_client_staff', 'perm_manage_assistant', 'perm_manage_staff'):
+                    mapped_fields.append('perm_manage_assistants')
+                else:
+                    mapped_fields.append(f)
+            kwargs['update_fields'] = mapped_fields
+        super().save(*args, **kwargs)
 
     # Tables this assistant can access (empty = all tables in the organisation)
     assigned_groups = models.ManyToManyField(

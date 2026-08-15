@@ -501,7 +501,7 @@ def api_client_groups_list(request):
         # modal — previously for_auto_create=true bypassed this, hiding tables.
         tables_qs = Table.objects.filter(
             organisation=client,
-            deleted_by_client=False,
+            deleted_by_manager=False,
         ).order_by('name').values('id', 'name', 'group_id')
         groups_data = [
             {
@@ -565,7 +565,7 @@ def api_class_section_options(request):
             group_ids = []
 
     # Resolve effective tables.
-    tables_qs = Table.objects.filter(organisation=client, deleted_by_client=False)
+    tables_qs = Table.objects.filter(organisation=client, deleted_by_manager=False)
 
     if group_ids:
         valid_group_ids = set(

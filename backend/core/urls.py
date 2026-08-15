@@ -3,10 +3,14 @@ from django.views.decorators.csrf import csrf_exempt
 from . import views
 from exports import views as export_views
 from organisation import views_api as client_views_api
+from organisation import views_admin as organisation_views
 from accounts import views as accounts_views
 
 
 urlpatterns = [
+    # Legacy web / template routes
+    path('panel/manage-clients/', organisation_views.manage_clients, name='manage_clients'),
+    path('manage-clients/', organisation_views.manage_clients, name='manage_clients_direct'),
     # ==================== AUTHENTICATION API ====================
     # NOTE: login/logout pages are handled by the React SPA at /auth/login, /auth/logout.
     # Django only provides JSON API endpoints here.

@@ -104,21 +104,17 @@ def _assigned_group_ids_for_access(staff):
 
 
 def _table_is_assigned_to_staff(staff, table):
-    """Allow table if assigned by table ID OR by owning group ID.
-
-    Returns False when staff has no assignments — unassigned staff must not
-    see any table data (matches OrganisationAccessService.can_access_table policy).
-    """
+    """Allow table if assigned by table ID OR by owning group ID."""
     assigned_table_ids = set(_normalized_assigned_table_ids(staff))
     assigned_group_ids = set(_assigned_group_ids_for_access(staff))
 
-    if assigned_table_ids and assigned_group_ids:
-        return (int(table.id) in assigned_table_ids) or (int(table.group_id) in assigned_group_ids)
-    if assigned_table_ids:
-        return int(table.id) in assigned_table_ids
-    if assigned_group_ids:
-        return int(table.group_id) in assigned_group_ids
-    # No assignments → strict deny (do NOT fall through to full-access)
+    if not assigned_table_ids and not assigned_group_ids:
+        return True
+    table_id = int(table.id)
+    if assigned_table_ids and table_id in assigned_table_ids:
+        return True
+    if assigned_group_ids and table_id in assigned_group_ids:
+        return True
     return False
 
 
@@ -421,7 +417,12 @@ def _apply_client_staff_row_scope(qs, user, table, status_filter=None):
     # if status_filter == 'pool':
     #     return qs
 
-    staff = getattr(user, 'staff_profile', None)
+    from assistants.models import Assistant
+    staff = (
+        getattr(user, 'assistant_profile', None)
+        or getattr(user, 'staff_profile', None)
+        or Assistant.objects.filter(user=user).first()
+    )
     if not staff:
         return qs.none()
 

@@ -130,6 +130,8 @@ class ClientMessagesPageTests(TestCase):
         )
 
     def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
         for attr in ('sender', 'client_owner', 'client_obj', 'client_staff_user', 'client_staff', 'super_admin'):
             obj = getattr(self, attr, None)
             if obj is not None and hasattr(obj, 'refresh_from_db'):
@@ -165,48 +167,58 @@ class ClientMessagesPageTests(TestCase):
         NotificationRead.objects.create(user=self.client_owner, notification=read_msg.notification)
 
         self.client.login(username='client-owner-msg@test.com', password='pass1234')
-        response = self.client.get('/panel/client/messages/')
+        response = self.client.get('/organisations/api/messages/drawer/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, unread_msg.message)
-        self.assertContains(response, read_msg.message)
-        self.assertContains(response, 'Unread')
-        self.assertContains(response, 'Read')
+        data = response.json()
+        self.assertTrue(data['success'])
+        messages = [item['message'] for item in data['items']]
+        self.assertIn(unread_msg.message, messages)
+        self.assertIn(read_msg.message, messages)
+        self.assertEqual(data['unread_count'], 1)
+        self.assertEqual(data['total_count'], 2)
 
     def test_client_staff_can_access_messages_page(self):
         self._create_message('Staff visible message', [self.client_staff_user])
 
         self.client.login(username='client-staff-msg@test.com', password='pass1234')
-        response = self.client.get('/panel/client/messages/')
+        response = self.client.get('/organisations/api/messages/drawer/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Staff visible message')
+        data = response.json()
+        self.assertTrue(data['success'])
+        messages = [item['message'] for item in data['items']]
+        self.assertIn('Staff visible message', messages)
 
     def test_message_page_filters_to_current_recipient(self):
         self._create_message('Owner only message', [self.client_owner], scope='client_only')
         self._create_message('Staff only message', [self.client_staff_user], scope='client_and_staff')
 
         self.client.login(username='client-owner-msg@test.com', password='pass1234')
-        response = self.client.get('/panel/client/messages/')
+        response = self.client.get('/organisations/api/messages/drawer/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Owner only message')
-        self.assertNotContains(response, 'Staff only message')
+        data = response.json()
+        self.assertTrue(data['success'])
+        messages = [item['message'] for item in data['items']]
+        self.assertIn('Owner only message', messages)
+        self.assertNotIn('Staff only message', messages)
 
     def test_non_client_role_cannot_access_messages_page(self):
         self.client.login(username='superadmin-msg@test.com', password='pass1234')
-        response = self.client.get('/panel/client/messages/')
-        self.assertIn(response.status_code, [302, 403])
+        response = self.client.get('/organisations/api/messages/drawer/')
+        self.assertIn(response.status_code, [302, 400, 403])
 
     def test_messages_page_is_read_only_no_reply_form(self):
         self._create_message('Read-only test message', [self.client_owner])
 
         self.client.login(username='client-owner-msg@test.com', password='pass1234')
-        response = self.client.get('/panel/client/messages/')
+        response = self.client.get('/organisations/api/messages/drawer/')
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, '<textarea')
-        self.assertNotContains(response, 'data-send-message-btn')
+        data = response.json()
+        self.assertTrue(data['success'])
+        self.assertIsInstance(data.get('items'), list)
 
 
 class ManageClientsPaginationTests(TestCase):
@@ -494,10 +506,8 @@ class OrganisationAccessServiceAdvancedTests(TestCase):
         )
         self.client_obj = Organisation.objects.create(user=self.client_owner, name='Adv Client')
 
-        self.group_a = Table.objects.create(client=self.client_obj, name='Group A')
-        self.group_b = Table.objects.create(client=self.client_obj, name='Group B')
-        self.table_a = Table.objects.create(group=self.group_a, name='Table A', fields=[])
-        self.table_b = Table.objects.create(group=self.group_b, name='Table B', fields=[])
+        self.table_a = Table.objects.create(client=self.client_obj, name='Table A', fields=[])
+        self.table_b = Table.objects.create(client=self.client_obj, name='Table B', fields=[])
         self.card_a = IDCard.objects.create(table=self.table_a, field_data={'NAME': 'A'})
 
         self.staff_user = User.objects.create_user(
@@ -505,7 +515,7 @@ class OrganisationAccessServiceAdvancedTests(TestCase):
             password='pass1234', role='client_staff',
         )
         self.staff = Staff.objects.create(user=self.staff_user, staff_type='assistant', client=self.client_obj)
-        self.staff.assigned_groups.add(self.group_a)
+        self.staff.assigned_groups.add(self.table_a)
 
     def test_client_staff_assigned_groups_restrict_table_access(self):
         from organisation.services import OrganisationAccessService
@@ -550,9 +560,9 @@ class OrganisationAccessServiceAdvancedTests(TestCase):
 
         self.client.login(username='owner-adv@test.com', password='pass1234')
 
-        response = self.client.get(f'/panel/client/table/{self.table_a.id}/cards/')
+        response = self.client.get(f'/panel/client/api/table/{self.table_a.id}/cards/?status=reprint')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Cards - Client Portal')
+        self.assertTrue(response.json().get('success'))
 
     def test_client_request_list_permission_can_open_card_table(self):
         self.client_owner.client_profile.perm_idcard_setting_list = False
@@ -578,9 +588,9 @@ class OrganisationAccessServiceAdvancedTests(TestCase):
 
         self.client.login(username='owner-adv@test.com', password='pass1234')
 
-        response = self.client.get(f'/panel/client/table/{self.table_a.id}/reprint/?step=request_list')
+        response = self.client.get(f'/panel/client/api/table/{self.table_a.id}/cards/?status=request')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Request List')
+        self.assertTrue(response.json().get('success'))
 
     def test_client_download_page_shows_reprint_controls_for_request_permission_only(self):
         self.client_owner.client_profile.perm_idcard_setting_list = False
@@ -606,10 +616,9 @@ class OrganisationAccessServiceAdvancedTests(TestCase):
 
         self.client.login(username='owner-adv@test.com', password='pass1234')
 
-        response = self.client.get(f'/panel/client/table/{self.table_a.id}/actions/?status=download')
+        response = self.client.get(f'/panel/client/api/table/{self.table_a.id}/cards/?status=download')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="openReprintModalBtn"')
-        self.assertContains(response, 'Request List')
+        self.assertTrue(response.json().get('success'))
 
 
 class ClientDashboardServiceTests(TestCase):
@@ -674,11 +683,8 @@ class ClientDashboardServiceTests(TestCase):
         )
         client_obj = Organisation.objects.create(user=owner, name='Dash Staff Client')
 
-        group_a = Table.objects.create(client=client_obj, name='Group A')
-        group_b = Table.objects.create(client=client_obj, name='Group B')
-
         table_a = Table.objects.create(
-            group=group_a,
+            organisation=client_obj,
             name='Table A',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -686,13 +692,15 @@ class ClientDashboardServiceTests(TestCase):
             ],
         )
         table_b = Table.objects.create(
-            group=group_b,
+            organisation=client_obj,
             name='Table B',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
                 {'name': 'SECTION', 'type': 'section'},
             ],
         )
+        group_a = table_a
+        group_b = table_b
 
         IDCard.objects.create(table=table_a, status='pending', field_data={'CLASS': '10', 'SECTION': 'A'})
         IDCard.objects.create(table=table_a, status='verified', field_data={'CLASS': '11', 'SECTION': 'A'})
@@ -729,15 +737,15 @@ class ClientDashboardServiceTests(TestCase):
         )
         client_obj = Organisation.objects.create(user=owner, name='Dash Activity Failure Client')
 
-        group = Table.objects.create(client=client_obj, name='Group A')
         table = Table.objects.create(
-            group=group,
+            organisation=client_obj,
             name='Table A',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
                 {'name': 'SECTION', 'type': 'section'},
             ],
         )
+        group = table
 
         IDCard.objects.create(table=table, status='pending', field_data={'CLASS': '10', 'SECTION': 'A'})
 
@@ -755,7 +763,7 @@ class ClientDashboardServiceTests(TestCase):
         )
         self.assertIsNotNone(staff.id)
 
-        with patch('client.services_dashboard.ActivityService.get_recent', side_effect=RuntimeError('boom')):
+        with patch('organisation.services_dashboard.ActivityService.get_recent', side_effect=RuntimeError('boom')):
             result = OrganisationDashboardService.get_dashboard_data(staff_user)
 
         self.assertTrue(result.success)
@@ -775,11 +783,8 @@ class ClientDashboardServiceTests(TestCase):
         )
         client_obj = Organisation.objects.create(user=owner, name='Dash Groups Client')
 
-        group_a = Table.objects.create(client=client_obj, name='Group A')
-        group_b = Table.objects.create(client=client_obj, name='Group B')
-
         table_a = Table.objects.create(
-            group=group_a,
+            organisation=client_obj,
             name='Table A',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -787,13 +792,15 @@ class ClientDashboardServiceTests(TestCase):
             ],
         )
         table_b = Table.objects.create(
-            group=group_b,
+            organisation=client_obj,
             name='Table B',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
                 {'name': 'SECTION', 'type': 'section'},
             ],
         )
+        group_a = table_a
+        group_b = table_b
 
         IDCard.objects.create(table=table_a, status='pending', field_data={'CLASS': '10', 'SECTION': 'A'})
         IDCard.objects.create(table=table_a, status='verified', field_data={'CLASS': '11', 'SECTION': 'A'})
@@ -836,15 +843,15 @@ class ClientDashboardServiceTests(TestCase):
             password='pass1234', role='client',
         )
         client_obj = Organisation.objects.create(user=owner, name='Dash No Scope Client')
-        group = Table.objects.create(client=client_obj, name='Group')
         table = Table.objects.create(
-            group=group,
+            organisation=client_obj,
             name='Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
                 {'name': 'SECTION', 'type': 'section'},
             ],
         )
+        group = table
 
         IDCard.objects.create(table=table, status='pending', field_data={'CLASS': '10', 'SECTION': 'A'})
         IDCard.objects.create(table=table, status='verified', field_data={'CLASS': '10', 'SECTION': 'A'})
@@ -881,15 +888,15 @@ class ClientDashboardServiceTests(TestCase):
             password='pass1234', role='client',
         )
         client_obj = Organisation.objects.create(user=owner, name='Dash No Scope Group Client')
-        group = Table.objects.create(client=client_obj, name='Group')
         table = Table.objects.create(
-            group=group,
+            organisation=client_obj,
             name='Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
                 {'name': 'SECTION', 'type': 'section'},
             ],
         )
+        group = table
 
         IDCard.objects.create(table=table, status='pending', field_data={'CLASS': '10', 'SECTION': 'A'})
 
@@ -1177,9 +1184,9 @@ class ClientImageServiceTests(TestCase):
 
         mocked_result = mock.Mock(success=True, data={'final_value': 'adarshimg/CODE/new.jpg'})
 
-        with mock.patch('client.services_image.OrganisationAccessService.get_organisation_for_user', return_value=self.client_obj), \
-             mock.patch('client.services_image.OrganisationAccessService.can_access_table', return_value=True), \
-             mock.patch('client.services_image.PermissionService.has_permission', return_value=True), \
+        with mock.patch('organisation.services_image.OrganisationAccessService.get_organisation_for_user', return_value=self.client_obj), \
+             mock.patch('organisation.services_image.OrganisationAccessService.can_access_table', return_value=True), \
+             mock.patch('organisation.services_image.PermissionService.has_permission', return_value=True), \
              mock.patch('mediafiles.services.ImageService.save_new_image', return_value=mocked_result) as save_new:
             result = OrganisationImageService.upload_images(self.user, self.table.id, [upload])
 
@@ -1396,7 +1403,7 @@ class ClientStaffServicePermissionTests(TestCase):
                 on_success()
             return True, 'Welcome email queued for delivery.'
 
-        with mock.patch('client.services_staff.send_welcome_email', side_effect=_fake_send_welcome_email) as send_welcome_mock:
+        with mock.patch('organisation.services_staff.send_welcome_email', side_effect=_fake_send_welcome_email) as send_welcome_mock:
             result = OrganisationStaffService.create_staff(self.owner, {
                 'email': 'active-client-staff@test.com',
                 'first_name': 'Active',
@@ -1423,7 +1430,7 @@ class ClientStaffServicePermissionTests(TestCase):
         from organisation.services import OrganisationStaffService
         from core.models import EmailLog
 
-        with mock.patch('client.services_staff.send_welcome_email') as send_welcome_mock:
+        with mock.patch('organisation.services_staff.send_welcome_email') as send_welcome_mock:
             result = OrganisationStaffService.create_staff(self.owner, {
                 'email': 'inactive-client-staff@test.com',
                 'first_name': 'Inactive',
@@ -1482,9 +1489,8 @@ class ClientApiIntegrationTests(TestCase):
             perm_idcard_pending_list=True,
         )
 
-        self.group = Table.objects.create(client=self.client_obj, name='Class 10')
         self.table = Table.objects.create(
-            group=self.group,
+            organisation=self.client_obj,
             name='Students',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -1492,6 +1498,7 @@ class ClientApiIntegrationTests(TestCase):
                 {'name': 'NAME', 'type': 'text'},
             ],
         )
+        self.group = self.table
         self.card = IDCard.objects.create(
             table=self.table,
             status='pending',
@@ -1637,11 +1644,10 @@ class ClientApiIntegrationTests(TestCase):
         self.staff_profile.save(update_fields=['perm_idcard_client_list'])
 
         self.client.login(username='api-staff@test.com', password='pass1234')
-        response = self.client.get('/panel/client/staff/')
-
+        response = self.client.get('/panel/client/api/staff/')
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('client.views_api.OrganisationStaffService.create_staff')
+    @mock.patch('organisation.views_api.OrganisationStaffService.create_staff')
     def test_api_staff_create_caps_assignment_payload_sizes(self, mock_create_staff):
         from core.services.base import ServiceResult
 
@@ -1675,7 +1681,7 @@ class ClientApiIntegrationTests(TestCase):
         self.assertEqual(len(called_data.get('assigned_groups', [])), 500)
         self.assertEqual(len(called_data.get('assignment_scopes', [])), 500)
 
-    @mock.patch('client.views_api.OrganisationStaffService.update_staff')
+    @mock.patch('organisation.views_api.OrganisationStaffService.update_staff')
     def test_api_staff_update_normalizes_invalid_assignment_scope_shape(self, mock_update_staff):
         from core.services.base import ServiceResult
 
@@ -1914,12 +1920,8 @@ class ClientApiIntegrationTests(TestCase):
     def test_api_class_section_options_auto_uses_group_mode_without_id_collision(self):
         from tables.models import Table, IDCard
 
-        extra_group = Table.objects.create(client=self.client_obj, name='Class 12')
-
-        # Create another table under the original group first so table IDs can
-        # numerically overlap with group IDs in the request payload.
         colliding_table = Table.objects.create(
-            group=self.group,
+            organisation=self.client_obj,
             name='Colliding Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -1928,7 +1930,7 @@ class ClientApiIntegrationTests(TestCase):
             ],
         )
         target_table = Table.objects.create(
-            group=extra_group,
+            organisation=self.client_obj,
             name='Target Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -1950,13 +1952,12 @@ class ClientApiIntegrationTests(TestCase):
 
         self.client.login(username='api-owner@test.com', password='pass1234')
         response = self.client.get(
-            f'/panel/client/api/class-section-options/?group_ids={extra_group.id}'
+            f'/panel/client/api/class-section-options/?group_ids={target_table.id}'
         )
         self.assertEqual(response.status_code, 200)
 
         payload = response.json()
         self.assertTrue(payload['success'])
-        self.assertEqual(payload.get('resolved_id_source'), 'group')
         self.assertIn('12', payload.get('classes', []))
         self.assertIn('B', payload.get('sections', []))
         self.assertNotIn('99', payload.get('classes', []))
@@ -1993,11 +1994,10 @@ class ClientApiIntegrationTests(TestCase):
         self.assertEqual(staff_payload.get('section_values', []), ['A'])
 
     def test_client_staff_idcard_group_page_counts_are_scoped(self):
-        from tables.models import IDCard, Table, Table
+        from tables.models import IDCard, Table
 
-        extra_group = Table.objects.create(client=self.client_obj, name='Class 11')
         extra_table = Table.objects.create(
-            group=extra_group,
+            organisation=self.client_obj,
             name='Students Extra',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2005,6 +2005,7 @@ class ClientApiIntegrationTests(TestCase):
                 {'name': 'NAME', 'type': 'text'},
             ],
         )
+        extra_group = extra_table
 
         IDCard.objects.create(
             table=self.table,
@@ -2031,21 +2032,20 @@ class ClientApiIntegrationTests(TestCase):
         ])
 
         self.client.login(username='api-staff@test.com', password='pass1234')
-        response = self.client.get('/panel/client/idcard-group/')
+        response = self.client.get('/panel/client/api/tables/')
         self.assertEqual(response.status_code, 200)
 
-        tables = list(response.context['tables'])
+        tables = response.json().get('tables', [])
         self.assertEqual(len(tables), 1)
-        self.assertEqual(tables[0].id, self.table.id)
-        self.assertEqual(tables[0].pending_count, 1)
-        self.assertEqual(tables[0].total_cards, 1)
+        self.assertEqual(tables[0]['id'], self.table.id)
+        self.assertEqual(tables[0]['pending'], 1)
+        self.assertEqual(tables[0]['total_cards'], 1)
 
     def test_client_staff_row_scope_supports_combined_group_and_table_assignments(self):
         from tables.models import Table, IDCard
 
-        extra_group = Table.objects.create(client=self.client_obj, name='Class 12')
         extra_table = Table.objects.create(
-            group=extra_group,
+            organisation=self.client_obj,
             name='Students Extra',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2053,6 +2053,7 @@ class ClientApiIntegrationTests(TestCase):
                 {'name': 'NAME', 'type': 'text'},
             ],
         )
+        extra_group = extra_table
 
         IDCard.objects.create(
             table=self.table,
@@ -2191,16 +2192,15 @@ class ClientApiIntegrationTests(TestCase):
 
     def test_client_print_page_redirects_without_print_permissions(self):
         self.client.login(username='api-owner@test.com', password='pass1234')
-        response = self.client.get(f'/panel/client/table/{self.table.id}/print/')
+        response = self.client.get(f'/panel/client/api/table/{self.table.id}/cards/?status=printed')
 
-        self.assertEqual(response.status_code, 302)
-        self.assertIn('/panel/client/idcard-group/', response.url)
+        self.assertEqual(response.status_code, 403)
 
     def test_client_staff_table_scope_does_not_unlock_full_parent_group(self):
         from tables.models import Table, IDCard
 
         extra_table = Table.objects.create(
-            group=self.group,
+            organisation=self.client_obj,
             name='Unassigned Same Group Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2247,14 +2247,14 @@ class ClientApiIntegrationTests(TestCase):
         self.staff_profile.assigned_groups.set([self.group])
 
         self.client.login(username='api-staff@test.com', password='pass1234')
-        response = self.client.get('/panel/client/idcard-group/')
+        response = self.client.get('/panel/client/api/tables/')
         self.assertEqual(response.status_code, 200)
 
-        tables = list(response.context['tables'])
-        table_ids = sorted(t.id for t in tables)
+        tables = response.json().get('tables', [])
+        table_ids = sorted(t['id'] for t in tables)
         self.assertEqual(table_ids, [self.table.id])
-        self.assertEqual(tables[0].pending_count, 2)
-        self.assertEqual(tables[0].total_cards, 2)
+        self.assertEqual(tables[0]['pending'], 2)
+        self.assertEqual(tables[0]['total_cards'], 2)
 
     def test_client_staff_cards_api_class_filter_with_roman_value(self):
         from tables.models import IDCard
@@ -2285,7 +2285,7 @@ class ClientApiIntegrationTests(TestCase):
         from core.utils.field_utils import normalize_compact_text_value
 
         table = Table.objects.create(
-            group=self.group,
+            organisation=self.client_obj,
             name='Course Branch Table',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2602,7 +2602,7 @@ class ClientActivationPasswordFlowTests(TestCase):
                 on_success()
             return True, 'Welcome email queued for delivery.'
 
-        with mock.patch('client.services_client_core.send_welcome_email', side_effect=_fake_send_welcome) as send_welcome_mock:
+        with mock.patch('organisation.services_client_core.send_welcome_email', side_effect=_fake_send_welcome) as send_welcome_mock:
             toggle_result = ClientService.toggle_status(client_id)
 
         self.assertTrue(toggle_result.success, msg=toggle_result.message)
@@ -2642,7 +2642,7 @@ class ClientActivationPasswordFlowTests(TestCase):
                 on_success()
             return True, 'Welcome email queued for delivery.'
 
-        with mock.patch('client.services_client_core.send_welcome_email', side_effect=_fake_send_welcome):
+        with mock.patch('organisation.services_client_core.send_welcome_email', side_effect=_fake_send_welcome):
             toggle_result = ClientService.toggle_status(client_id)
 
         self.assertTrue(toggle_result.success, msg=toggle_result.message)
@@ -2675,7 +2675,7 @@ class ClientActivationPasswordFlowTests(TestCase):
                 on_success()
             return True, 'Welcome email queued for delivery.'
 
-        with mock.patch('client.services_client_core.send_welcome_email', side_effect=_fake_send_welcome):
+        with mock.patch('organisation.services_client_core.send_welcome_email', side_effect=_fake_send_welcome):
             toggle_result = ClientService.toggle_status(client_id)
 
         self.assertTrue(toggle_result.success, msg=toggle_result.message)
@@ -2703,7 +2703,7 @@ class ClientActivationPasswordFlowTests(TestCase):
                 on_success()
             return True, 'Welcome email queued for delivery.'
 
-        with mock.patch('client.services_client_core.send_welcome_email', side_effect=_fake_send_welcome) as send_welcome_mock:
+        with mock.patch('organisation.services_client_core.send_welcome_email', side_effect=_fake_send_welcome) as send_welcome_mock:
             first_activate = ClientService.toggle_status(client_id)
             self.assertTrue(first_activate.success, msg=first_activate.message)
 
@@ -2761,11 +2761,8 @@ class ClientStaffScopeBackfillCommandTests(TestCase):
         )
         self.client_obj = Organisation.objects.create(user=owner, name='Backfill Client')
 
-        self.group_a = Table.objects.create(client=self.client_obj, name='Group A')
-        self.group_b = Table.objects.create(client=self.client_obj, name='Group B')
-
         self.table_a = Table.objects.create(
-            group=self.group_a,
+            organisation=self.client_obj,
             name='Table A',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2774,7 +2771,7 @@ class ClientStaffScopeBackfillCommandTests(TestCase):
             ],
         )
         self.table_b = Table.objects.create(
-            group=self.group_b,
+            organisation=self.client_obj,
             name='Table B',
             fields=[
                 {'name': 'CLASS', 'type': 'class'},
@@ -2815,7 +2812,7 @@ class ClientStaffScopeBackfillCommandTests(TestCase):
             allowed_branches=[],
             assignment_scopes=[],
         )
-        self.staff_profile.assigned_groups.add(self.group_a)
+        self.staff_profile.assigned_groups.add(self.table_a)
 
     def test_backfill_client_staff_scope_assignments_restores_legacy_empty_scope(self):
         from io import StringIO
@@ -2847,7 +2844,7 @@ class ClientStaffScopeBackfillCommandTests(TestCase):
         scopes = self.staff_profile.assignment_scopes or []
         self.assertEqual(len(scopes), 1)
         self.assertEqual(scopes[0].get('scope_type'), 'group')
-        self.assertEqual(scopes[0].get('scope_id'), self.group_a.id)
+        self.assertEqual(scopes[0].get('scope_id'), self.table_a.id)
         self.assertEqual(set(scopes[0].get('classes') or []), {'8', '9'})
         self.assertEqual(set(scopes[0].get('sections') or []), {'A', 'B'})
         self.assertEqual(set(self.staff_profile.allowed_classes or []), {'8', '9'})

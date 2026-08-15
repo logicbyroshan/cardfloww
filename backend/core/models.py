@@ -94,6 +94,27 @@ class User(AbstractUser):
                 return Organisation.objects.filter(user=self).first()
             except Exception:
                 return None
+
+    @property
+    def staff_profile(self):
+        try:
+            if hasattr(self, 'assistant_profile') and self.assistant_profile is not None:
+                from staff.models import StaffCompatWrapper
+                return StaffCompatWrapper(self.assistant_profile, 'assistant')
+            if hasattr(self, 'operator_profile') and self.operator_profile is not None:
+                from staff.models import StaffCompatWrapper
+                return StaffCompatWrapper(self.operator_profile, 'operator')
+            if hasattr(self, 'photographer_profile') and self.photographer_profile is not None:
+                from staff.models import StaffCompatWrapper
+                return StaffCompatWrapper(self.photographer_profile, 'photographer')
+            from assistants.models import Assistant
+            ast = Assistant.objects.filter(user=self).first()
+            if ast:
+                from staff.models import StaffCompatWrapper
+                return StaffCompatWrapper(ast, 'assistant')
+        except Exception:
+            pass
+        return None
     
     def save(self, *args, **kwargs):
         """

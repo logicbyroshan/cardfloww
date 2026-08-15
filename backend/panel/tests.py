@@ -13,7 +13,7 @@ from organisation.models import Organisation
 from staff.models import Staff
 from core.models import ActivityLog, BackgroundTask, BackupTask, EmailLog, Notification, NotificationRead
 from core.services.notification_service import NotificationService
-from tables.models import IDCard, Table, Table
+from tables.models import IDCard, Table
 
 
 User = get_user_model()

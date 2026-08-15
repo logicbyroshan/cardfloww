@@ -403,7 +403,7 @@ def api_staff_detail(request, staff_id):
     """
     API: Get, Update, or Delete a specific staff member.
     """
-    raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+    raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
     if request.method == 'GET':
         result = OrganisationStaffService.get_staff_detail(request.user, staff_id)
         
@@ -547,7 +547,7 @@ def api_staff_toggle_status(request, staff_id):
     """
     API: Toggle staff member active/inactive status.
     """
-    raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+    raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
     try:
         result = OrganisationStaffService.toggle_staff_status(request.user, staff_id)
         
@@ -590,7 +590,7 @@ def api_staff_toggle_status(request, staff_id):
 @rate_limit(max_requests=5, window_seconds=60, key_prefix='client_staff_temp_pw')
 def api_staff_set_temp_password(request, staff_id):
     """API: Set temporary password for a client-owned staff member."""
-    raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+    raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
@@ -662,20 +662,20 @@ def api_client_groups_list(request):
     if not client:
         return JsonResponse({'success': False, 'message': 'Client not found'}, status=400)
     
-    groups_qs = Table.objects.filter(client=client).order_by('name')
+    groups_qs = Table.objects.filter(organisation=client).order_by('name')
     group_count = groups_qs.count()
     for_auto_create = request.GET.get('for_auto_create') == 'true'
 
     if group_count <= 1 and not for_auto_create:
         tables_qs = Table.objects.filter(
-            group__client=client,
-            deleted_by_client=False,
-        ).order_by('name').values('id', 'name', 'group_id')
+            organisation=client,
+            deleted_by_manager=False,
+        ).order_by('name').values('id', 'name')
         groups_data = [
             {
                 'id': t['id'],
                 'name': t['name'],
-                'group_id': t['group_id'],
+                'group_id': t['id'],
                 'source': 'table',
             }
             for t in tables_qs
@@ -705,7 +705,6 @@ def api_class_section_options(request):
     Used in staff drawer for class/section filter assignment.
     """
     from tables.models import IDCard, Table
-    from tables.models import Table
 
     user = request.user
     client = OrganisationAccessService.get_organisation_for_user(user)
@@ -719,7 +718,7 @@ def api_class_section_options(request):
 
     resolved_id_source = id_source
     if resolved_id_source == 'auto':
-        group_count = Table.objects.filter(client=client).count()
+        group_count = Table.objects.filter(organisation=client).count()
         resolved_id_source = 'table' if group_count <= 1 else 'group'
 
     group_ids = []
@@ -733,14 +732,14 @@ def api_class_section_options(request):
     # Accepts either:
     # - group IDs (legacy behavior), or
     # - table IDs (client fallback assignment mode).
-    tables_qs = Table.objects.filter(group__client=client, deleted_by_client=False)
+    tables_qs = Table.objects.filter(organisation=client, deleted_by_manager=False)
 
     if group_ids:
         valid_group_ids = set(
-            Table.objects.filter(client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(organisation=client, id__in=group_ids).values_list('id', flat=True)
         )
         valid_table_ids = set(
-            Table.objects.filter(group__client=client, id__in=group_ids).values_list('id', flat=True)
+            Table.objects.filter(organisation=client, id__in=group_ids).values_list('id', flat=True)
         )
 
         if resolved_id_source == 'table':
@@ -748,12 +747,12 @@ def api_class_section_options(request):
                 tables_qs = tables_qs.filter(id__in=list(valid_table_ids))
             elif valid_group_ids:
                 # Backward-compatible fallback for legacy group-id payloads.
-                tables_qs = tables_qs.filter(group_id__in=list(valid_group_ids))
+                tables_qs = tables_qs.filter(id__in=list(valid_group_ids))
             else:
                 tables_qs = tables_qs.none()
         elif resolved_id_source == 'group':
             if valid_group_ids:
-                tables_qs = tables_qs.filter(group_id__in=list(valid_group_ids))
+                tables_qs = tables_qs.filter(id__in=list(valid_group_ids))
             elif valid_table_ids:
                 # Graceful fallback for stale clients accidentally sending table IDs.
                 tables_qs = tables_qs.filter(id__in=list(valid_table_ids))
@@ -949,12 +948,22 @@ def api_tables_list(request):
     """
     API: Get list of tables with card counts.
     """
-    # Check permission (matches the groups page gate)
-    if not PermissionService.has_permission(request.user, 'perm_idcard_setting_list'):
-        return JsonResponse({
-            'success': False,
-            'message': 'Permission denied'
-        }, status=403)
+    # For client owner, require perm_idcard_setting_list.
+    # For client staff, require perm_idcard_setting_list or any card list perm.
+    if PermissionService.is_client(request.user) and not PermissionService.is_client_staff(request.user):
+        if not PermissionService.has(request.user, 'perm_idcard_setting_list'):
+            return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+    else:
+        has_access = (
+            PermissionService.has(request.user, 'perm_idcard_setting_list') or
+            PermissionService.has(request.user, 'perm_idcard_pending_list') or
+            PermissionService.has(request.user, 'perm_idcard_verified_list') or
+            PermissionService.has(request.user, 'perm_idcard_approved_list') or
+            PermissionService.has(request.user, 'perm_idcard_download_list') or
+            PermissionService.has(request.user, 'perm_idcard_pool_list')
+        )
+        if not has_access:
+            return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
 
     result = OrganisationCardService.get_tables_for_client(request.user)
     

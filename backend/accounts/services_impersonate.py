@@ -89,8 +89,14 @@ class ImpersonateService:
 
         # Impersonation should not revoke the target user's real device sessions.
         request._skip_device_session_enforcement = True
+        saved_keys = {
+            k: request.session[k] for k in ('mobile_auth_ok', '_auth_login_surface', 'selected_role')
+            if k in request.session
+        }
         # Switch to target user — login() flushes and recreates the session
         login(request, target_user, backend='django.contrib.auth.backends.ModelBackend')
+        for k, v in saved_keys.items():
+            request.session[k] = v
 
         # Set impersonation markers in the new session
         request.session[cls.SESSION_KEY] = original_user_id
@@ -163,8 +169,16 @@ class ImpersonateService:
 
         # Returning from impersonation should also avoid side-effect session revocations.
         request._skip_device_session_enforcement = True
+        saved_keys = {
+            k: request.session[k] for k in ('mobile_auth_ok', '_auth_login_surface', 'selected_role')
+            if k in request.session
+        }
         # Switch back — login() flushes the session but preserves dict, so we manually deleted markers above
         login(request, original_user, backend='django.contrib.auth.backends.ModelBackend')
+        for k, v in saved_keys.items():
+            request.session[k] = v
+        request.session.modified = True
+        request.session.save()
 
         try:
             from core.middleware import PermissionValidationMiddleware
@@ -203,7 +217,7 @@ class ImpersonateService:
         users = (
             UserModel.objects
             .filter(is_active=True)
-            .select_related('client_profile', 'assistant_profile__client', 'operator_profile')
+            .select_related('organisation_profile', 'assistant_profile__organisation', 'operator_profile')
             .exclude(pk=request.user.pk)
             .exclude(role__in=['pro_user', 'operator', 'photographer'])
             .order_by('role', 'first_name', 'username')
@@ -218,7 +232,7 @@ class ImpersonateService:
                 client_name = getattr(client_profile, 'name', '') or ''
             elif u.role == 'assistant':
                 assistant_profile = getattr(u, 'assistant_profile', None)
-                client_name = getattr(getattr(assistant_profile, 'client', None), 'name', '') or ''
+                client_name = getattr(getattr(assistant_profile, 'organisation', None) or getattr(assistant_profile, 'client', None), 'name', '') or ''
             elif u.role == 'operator':
                 client_name = ''
 

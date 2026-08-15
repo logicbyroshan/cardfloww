@@ -1,8 +1,11 @@
+import logging
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.sessions.models import Session
 from .models import UserDeviceSession
+
+logger = logging.getLogger(__name__)
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -203,24 +206,41 @@ def cleanup_device_session(sender, request, user, **kwargs):
         UserDeviceSession.objects.filter(session_key=session_key).delete()
 
         # Clean up guest sandbox database and connections
+        import gc
+        import os
         from django.conf import settings
         from django.db import connections
-        import os
 
         db_alias = f"guest_{session_key}"
         db_file = os.path.join(settings.BASE_DIR, 'guest_sandboxes', f"{session_key}.sqlite3")
 
         try:
             if db_alias in connections:
-                connections[db_alias].close()
-                del connections.databases[db_alias]
+                try:
+                    connections[db_alias].close()
+                except Exception:
+                    pass
+                try:
+                    del connections[db_alias]
+                except Exception:
+                    pass
+            if db_alias in connections.databases:
+                try:
+                    del connections.databases[db_alias]
+                except Exception:
+                    pass
             if db_alias in settings.DATABASES:
-                del settings.DATABASES[db_alias]
+                try:
+                    del settings.DATABASES[db_alias]
+                except Exception:
+                    pass
+            gc.collect()
         except Exception as conn_err:
             logger.warning("Failed to clean up sandbox DB connections for alias %s: %s", db_alias, conn_err)
 
         if os.path.exists(db_file):
             try:
+                gc.collect()
                 os.remove(db_file)
             except Exception as e:
                 logger.warning("Failed to delete guest sandbox database file %s: %s", db_file, e)

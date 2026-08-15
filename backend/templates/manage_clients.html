@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Clients</title>
+</head>
+<body>
+    <h1>Manage Clients</h1>
+    <div id="reprint-settings">
+        <h3>Reprint Lists</h3>
+        <label>Request List (Reprint)</label>
+        <label>Confirmed List (Reprint)</label>
+    </div>
+    {% if request.user.is_superuser %}
+        <button id="deleteClientBtn">Delete Client</button>
+    {% endif %}
+    <div class="client-list">
+        {% for client in clients %}
+            <div class="client-item" data-id="{{ client.id }}">
+                <span>{{ client.name }}</span>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

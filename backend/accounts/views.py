@@ -227,7 +227,7 @@ class LoginAPIView(View):
                 )
                 
                 # Log activity
-                if user.role in ('assistant') and has_different_browser_session:
+                if user.role in ('client', 'assistant') and has_different_browser_session:
                     display_name = user.get_full_name() or user.username
                     ActivityService.log(
                         'login',
@@ -553,7 +553,7 @@ class ProUserAuditUsersAPIView(APILoginRequiredMixin, View):
 
         search = str(request.GET.get('search', '') or '').strip()
         role_filter = str(request.GET.get('role', '') or '').strip()
-        users_qs = User.objects.select_related('client_profile', 'assistant_profile__client').all().order_by('role', 'first_name', 'username')
+        users_qs = User.objects.select_related('organisation_profile', 'assistant_profile__organisation').all().order_by('role', 'first_name', 'username')
 
         if role_filter and role_filter in {'pro_user', 'super_admin', 'operator', 'client', 'assistant'}:
             users_qs = users_qs.filter(role=role_filter)
@@ -573,7 +573,7 @@ class ProUserAuditUsersAPIView(APILoginRequiredMixin, View):
                 client_name = getattr(client_profile, 'name', '') or ''
             elif entry.role == 'assistant':
                 assistant_profile = getattr(entry, 'assistant_profile', None)
-                client_name = getattr(getattr(assistant_profile, 'client', None), 'name', '') or ''
+                client_name = getattr(getattr(assistant_profile, 'organisation', None) or getattr(assistant_profile, 'client', None), 'name', '') or ''
 
             users.append({
                 'id': entry.pk,

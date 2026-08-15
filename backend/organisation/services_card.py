@@ -29,7 +29,7 @@ class OrganisationCardService(BaseService):
     Clients can view and manage cards within their tables.
     """
     
-    VALID_STATUSES = ['pending', 'verified', 'pool', 'approved', 'download', 'reprint', 'captured', 'uncaptured']
+    VALID_STATUSES = ['pending', 'verified', 'pool', 'approved', 'download', 'reprint', 'request', 'requested', 'confirmed', 'printed', 'print', 'captured', 'uncaptured']
 
     @staticmethod
     def _normalize_positive_int_ids(raw_ids) -> List[int]:
@@ -322,12 +322,13 @@ class OrganisationCardService(BaseService):
         assigned_table_ids = set(cls._assigned_table_ids_for_access(staff))
         assigned_group_ids = set(cls._assigned_group_ids_for_access(staff))
 
-        if assigned_table_ids and assigned_group_ids:
-            return (int(table.id) in assigned_table_ids) or (int(table.group_id) in assigned_group_ids)
-        if assigned_table_ids:
-            return int(table.id) in assigned_table_ids
-        if assigned_group_ids:
-            return int(table.group_id) in assigned_group_ids
+        if not assigned_table_ids and not assigned_group_ids:
+            return True
+        table_id = int(table.id)
+        if assigned_table_ids and table_id in assigned_table_ids:
+            return True
+        if assigned_group_ids and table_id in assigned_group_ids:
+            return True
         return False
 
     @classmethod
@@ -344,7 +345,14 @@ class OrganisationCardService(BaseService):
         #     if status_filter == 'pool':
         #         return qs
 
-        staff = getattr(user, 'staff_profile', None)
+        staff = (
+            getattr(user, 'assistant_profile', None)
+            or getattr(user, 'staff_profile', None)
+            or getattr(user, 'assistant', None)
+        )
+        if not staff:
+            from assistants.models import Assistant
+            staff = Assistant.objects.filter(user=user).first()
         if not staff:
             return qs.none()
 
@@ -472,8 +480,8 @@ class OrganisationCardService(BaseService):
                 return ServiceResult(success=False, message='Client profile not found')
             
             tables = Table.objects.filter(
-                group__client=client
-            ).select_related('group').annotate(
+                organisation=client
+            ).annotate(
                 total_cards=Count('id_cards'),
                 pending=Count('id_cards', filter=Q(id_cards__status='pending')),
                 verified=Count('id_cards', filter=Q(id_cards__status='verified')),
@@ -484,7 +492,14 @@ class OrganisationCardService(BaseService):
             )
 
             if PermissionService.is_client_staff(user):
-                staff = getattr(user, 'staff_profile', None)
+                staff = (
+                    getattr(user, 'assistant_profile', None)
+                    or getattr(user, 'staff_profile', None)
+                    or getattr(user, 'assistant', None)
+                )
+                if not staff:
+                    from assistants.models import Assistant
+                    staff = Assistant.objects.filter(user=user).first()
                 if not staff:
                     tables = tables.none()
                 else:
@@ -492,17 +507,17 @@ class OrganisationCardService(BaseService):
                     assigned_group_ids = cls._assigned_group_ids_for_access(staff)
 
                     if assigned_table_ids and assigned_group_ids:
-                        tables = tables.filter(Q(id__in=assigned_table_ids) | Q(group_id__in=assigned_group_ids))
+                        tables = tables.filter(Q(id__in=assigned_table_ids) | Q(id__in=assigned_group_ids))
                     elif assigned_table_ids:
                         tables = tables.filter(id__in=assigned_table_ids)
                     elif assigned_group_ids:
-                        tables = tables.filter(group_id__in=assigned_group_ids)
+                        tables = tables.filter(id__in=assigned_group_ids)
             
             tables_data = [{
                 'id': t.id,
                 'name': t.name,
-                'group_name': t.group.name,
-                'group_id': t.group.id,
+                'group_name': t.name,
+                'group_id': t.id,
                 'is_active': t.is_active,
                 'total_cards': t.total_cards,
                 'pending': t.pending,
@@ -512,6 +527,19 @@ class OrganisationCardService(BaseService):
                 'download': t.download,
                 'reprint': t.reprint,
             } for t in tables]
+
+            if PermissionService.is_client_staff(user):
+                for td in tables_data:
+                    tbl = Table.objects.filter(id=td['id']).first()
+                    if tbl:
+                        cards_qs = cls._apply_client_staff_row_scope(user, tbl, IDCard.objects.filter(table=tbl))
+                        td['pending'] = cards_qs.filter(status='pending').count()
+                        td['verified'] = cards_qs.filter(status='verified').count()
+                        td['pool'] = cards_qs.filter(status='pool').count()
+                        td['approved'] = cards_qs.filter(status='approved').count()
+                        td['download'] = cards_qs.filter(status='download').count()
+                        td['reprint'] = cards_qs.filter(status='reprint').count()
+                        td['total_cards'] = td['pending'] + td['verified'] + td['approved'] + td['download']
             
             return ServiceResult(success=True, data={'tables': tables_data})
             
@@ -558,7 +586,6 @@ class OrganisationCardService(BaseService):
             
             status_filter = (status_filter or '').strip().lower()
 
-            # Enforce status-view permissions for both filtered and unfiltered requests.
             perm_map = {
                 'pending': 'perm_idcard_pending_list',
                 'verified': 'perm_idcard_verified_list',
@@ -566,6 +593,11 @@ class OrganisationCardService(BaseService):
                 'approved': 'perm_idcard_approved_list',
                 'download': 'perm_idcard_download_list',
                 'reprint': 'perm_idcard_reprint_list',
+                'request': 'perm_reprint_request_list',
+                'requested': 'perm_reprint_request_list',
+                'confirmed': 'perm_confirmed_list',
+                'printed': 'perm_idcard_download_list',
+                'print': 'perm_idcard_download_list',
                 'captured': 'perm_idcard_pending_list',
                 'uncaptured': 'perm_idcard_pending_list',
             }
@@ -936,7 +968,7 @@ class OrganisationCardService(BaseService):
             
             # Get card
             try:
-                card = IDCard.objects.select_related('table', 'table__group').get(id=card_id)
+                card = IDCard.objects.select_related('table').get(id=card_id)
             except IDCard.DoesNotExist:
                 return ServiceResult(success=False, message='Card not found')
             
@@ -1069,7 +1101,7 @@ class OrganisationCardService(BaseService):
             
             # Get card
             try:
-                card = IDCard.objects.select_related('table__group').get(id=card_id)
+                card = IDCard.objects.select_related('table').get(id=card_id)
             except IDCard.DoesNotExist:
                 return ServiceResult(success=False, message='Card not found')
             
@@ -1197,7 +1229,7 @@ class OrganisationCardService(BaseService):
 
                     if apply_class_change and class_updates:
                         candidate_cards = list(
-                            IDCard.objects.select_related('table__group').filter(
+                            IDCard.objects.select_related('table').filter(
                                 table=table,
                                 id__in=forbidden_ids,
                                 status='pool',
@@ -1244,7 +1276,7 @@ class OrganisationCardService(BaseService):
                         ).exists()
                         if has_pool_mismatch:
                             pool_cards = list(
-                                IDCard.objects.select_related('table__group').filter(
+                                IDCard.objects.select_related('table').filter(
                                     table=table,
                                     id__in=forbidden_ids,
                                     status='pool',

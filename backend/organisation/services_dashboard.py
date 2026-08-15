@@ -125,6 +125,9 @@ class OrganisationDashboardService(BaseService):
     def _staff_count_cache_key(cls, client_id: int, staff_version: int) -> str:
         return f'client:dash:staff_count:v2:{client_id}:{staff_version}'
 
+    _staff_assignment_marker = _scope_marker
+    _group_counts_cache_key = _groups_counts_cache_key
+
     @classmethod
     def _accumulate_status_rows(cls, counts: dict, rows):
         for row in rows:
@@ -289,8 +292,8 @@ class OrganisationDashboardService(BaseService):
 
             reprint_qs = (
                 ReprintRequest.objects
-                .select_related('card', 'table', 'table__group')
-                .filter(table__group__client=client)
+                .select_related('card', 'table')
+                .filter(table__organisation_id=client.id)
                 .order_by('-created_at', '-id')
             )
 
@@ -324,7 +327,7 @@ class OrganisationDashboardService(BaseService):
 
             counts = (
                 ReprintRequest.objects
-                .filter(table__group__client=client)
+                .filter(table__organisation_id=client.id)
                 .aggregate(
                     reprint_requested=Count('id', filter=Q(status='requested')),
                     reprint_confirmed=Count('id', filter=Q(status='confirmed')),
@@ -397,7 +400,7 @@ class OrganisationDashboardService(BaseService):
                     cls._accumulate_status_rows(counts, status_rows)
 
             table_count = len(table_ids)
-            group_count = len({table.group_id for table in tables})
+            group_count = len({getattr(table, 'group_id', getattr(getattr(table, 'group', None), 'id', table.id)) for table in tables})
             
             # Total cards - exclude 'pool' status
             total_cards = counts['pending'] + counts['verified'] + counts['approved'] + counts['download']
@@ -465,15 +468,15 @@ class OrganisationDashboardService(BaseService):
                         has_assignments = has_group_assign or has_table_assign or has_scope_assign or has_legacy_assign
      
                         has_list_perms = any([
-                            s.perm_idcard_client_list,
-                            s.perm_idcard_pending_list,
-                            s.perm_idcard_verified_list,
-                            s.perm_idcard_pool_list,
-                            s.perm_idcard_approved_list,
-                            s.perm_idcard_download_list,
-                            s.perm_idcard_reprint_list,
-                            s.perm_reprint_request_list,
-                            s.perm_confirmed_list,
+                            getattr(s, 'perm_idcard_client_list', getattr(s, 'perm_organisation_list', False)),
+                            getattr(s, 'perm_idcard_pending_list', False),
+                            getattr(s, 'perm_idcard_verified_list', False),
+                            getattr(s, 'perm_idcard_pool_list', False),
+                            getattr(s, 'perm_idcard_approved_list', False),
+                            getattr(s, 'perm_idcard_download_list', False),
+                            getattr(s, 'perm_idcard_reprint_list', False),
+                            getattr(s, 'perm_reprint_request_list', False),
+                            getattr(s, 'perm_confirmed_list', False),
                         ])
      
                         recent_staff.append({
@@ -522,7 +525,17 @@ class OrganisationDashboardService(BaseService):
                         'cards_verified': counts['verified'],
                         'cards_approved': counts['approved'],
                         'cards_download': counts['download'],
+                        'pending': counts['pending'],
+                        'verified': counts['verified'],
+                        'approved': counts['approved'],
+                        'download': counts['download'],
+                        'pool': counts['pool'],
+                        'total_cards': total_cards,
                     },
+                    'group_count': group_count,
+                    'table_count': table_count,
+                    'staff_count': staff_count,
+                    'total_cards': total_cards,
                     'recent_staff': recent_staff,
                     'recent_activity': recent_activity,
                 }
@@ -550,7 +563,6 @@ class OrganisationDashboardService(BaseService):
             if cached_data is not None:
                 return ServiceResult(success=True, data={'groups': cached_data})
 
-            from organisation.services import OrganisationAccessService
             tables_qs = Table.objects.filter(organisation=client, is_active=True)
             tables_qs = OrganisationAccessService.get_scoped_tables_qs(user, client, base_qs=tables_qs)
             accessible_tables = list(
@@ -622,7 +634,7 @@ class OrganisationDashboardService(BaseService):
                 tables_by_group[table.id].append(table)
 
             groups_data = []
-            for group in groups:
+            for group in tables:
                 group_tables = tables_by_group.get(group.id, [])
                 counts = group_counts_map.get(group.id, {})
                 total = sum(int(v or 0) for v in counts.values())

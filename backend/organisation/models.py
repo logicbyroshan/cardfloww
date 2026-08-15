@@ -311,6 +311,17 @@ class Organisation(models.Model):
                 logger.warning("Could not delete thumbs folder %s: %s", self.image_folder_code, e)
 
     def save(self, *args, **kwargs):
+        if 'update_fields' in kwargs and kwargs['update_fields'] is not None:
+            mapped_fields = []
+            for f in kwargs['update_fields']:
+                if f == 'perm_idcard_client_list':
+                    mapped_fields.append('perm_organisation_list')
+                elif f in ('perm_manage_client_staff', 'perm_manage_staff'):
+                    mapped_fields.append('perm_manage_assistants')
+                else:
+                    mapped_fields.append(f)
+            kwargs['update_fields'] = mapped_fields
+
         if self.pk and (not kwargs.get('update_fields') or 'name' in (kwargs.get('update_fields') or [])):
             if self._original_name and self._original_name != self.name and self.image_folder_code:
                 self.rename_image_folder()

@@ -211,7 +211,7 @@ class OrganisationAccessService:
         if PermissionService.is_client_staff(user):
             staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
-                return staff.client
+                return getattr(staff, 'organisation', None) or getattr(staff, 'client', None)
 
         return None
 
@@ -266,17 +266,15 @@ class OrganisationAccessService:
                 if assigned_table_ids and assigned_group_ids:
                     return (group.id in assigned_group_ids) or Table.objects.filter(
                         id__in=assigned_table_ids,
-                        group_id=group.id,
-                        group__client_id=group.client_id,
-                        deleted_by_client=False,
+                        organisation_id=group.organisation_id,
+                        deleted_by_manager=False,
                     ).exists()
 
                 if assigned_table_ids:
                     return Table.objects.filter(
                         id__in=assigned_table_ids,
-                        group_id=group.id,
-                        group__client_id=group.client_id,
-                        deleted_by_client=False,
+                        organisation_id=group.organisation_id,
+                        deleted_by_manager=False,
                     ).exists()
 
                 if assigned_group_ids:
@@ -297,7 +295,7 @@ class OrganisationAccessService:
         if PermissionService.is_super_admin(user):
             return True
         if PermissionService.is_operator(user) or PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
-            return PermissionService.can_access_client(user, table.organisation_id)
+            return OrganisationAccessService.can_access_organisation(user, table.organisation_id)
 
         client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
@@ -327,8 +325,13 @@ class OrganisationAccessService:
                     if not OrganisationAccessService.can_access_table(staff.manager, table):
                         return False
                 assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
+                if assigned_table_ids and assigned_group_ids:
+                    return (table.id in assigned_table_ids) or (table.id in assigned_group_ids)
                 if assigned_table_ids:
                     return table.id in assigned_table_ids
+                if assigned_group_ids:
+                    return table.id in assigned_group_ids
                 # If no specific table restrictions, assistant inherits manager's access
                 return True
             return False
@@ -378,8 +381,13 @@ class OrganisationAccessService:
                 qs = cls.get_scoped_tables_qs(staff.manager, client, base_qs=qs)
             
             assigned_table_ids = cls._assigned_table_ids_for_access(staff)
+            assigned_group_ids = cls._assigned_group_ids_for_access(staff)
+            if assigned_table_ids and assigned_group_ids:
+                return qs.filter(Q(id__in=assigned_table_ids) | Q(id__in=assigned_group_ids))
             if assigned_table_ids:
                 return qs.filter(id__in=assigned_table_ids)
+            if assigned_group_ids:
+                return qs.filter(id__in=assigned_group_ids)
             return qs
         
         return base_qs
@@ -393,7 +401,7 @@ class OrganisationAccessService:
         if PermissionService.is_super_admin(user):
             return True
         if PermissionService.is_operator(user) or PermissionService.is_admin_staff(user) or PermissionService.is_photographer(user):
-            return PermissionService.can_access_client(user, card.table.organisation_id)
+            return OrganisationAccessService.can_access_organisation(user, card.table.organisation_id)
 
         client = OrganisationAccessService.get_organisation_for_user(user)
         if client is None:
@@ -406,8 +414,14 @@ class OrganisationAccessService:
             staff = OrganisationAccessService._get_staff_profile(user)
             if staff:
                 assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
+                if assigned_table_ids and assigned_group_ids:
+                    return (card.table_id in assigned_table_ids) or (card.table_id in assigned_group_ids)
                 if assigned_table_ids:
                     return card.table_id in assigned_table_ids
+                if assigned_group_ids:
+                    return card.table_id in assigned_group_ids
+                return True
                 
             return False
         return True
@@ -421,6 +435,12 @@ class OrganisationAccessService:
         if client is None:
             return []
         if PermissionService.is_client_staff(user):
+            staff = OrganisationAccessService._get_staff_profile(user)
+            if staff:
+                assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
+                if (not assigned_table_ids) and (not assigned_group_ids):
+                    return None
             qs = OrganisationAccessService.get_scoped_tables_qs(user, client)
             return list(qs.values_list('id', flat=True))
         return None

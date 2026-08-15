@@ -92,6 +92,10 @@ class Table(models.Model):
     def __init__(self, *args, **kwargs):
         if 'client' in kwargs:
             kwargs['organisation'] = kwargs.pop('client')
+        if 'group' in kwargs:
+            group_val = kwargs.pop('group')
+            if 'organisation' not in kwargs:
+                kwargs['organisation'] = getattr(group_val, 'organisation', getattr(group_val, 'client', group_val))
         super().__init__(*args, **kwargs)
 
     @property
@@ -101,6 +105,14 @@ class Table(models.Model):
     @client.setter
     def client(self, value):
         self.organisation = value
+
+    @property
+    def group(self):
+        return self
+
+    @property
+    def group_id(self):
+        return self.id
 
     # ── Field introspection helpers ──────────────────────────
 
@@ -228,9 +240,9 @@ class IDCard(models.Model):
             return self.table.organisation
         return None
 
-    # Legacy: old code accessed card.client / card.group
     @property
-    def Organisation(self):
+    def client(self):
+        """Legacy compat — returns the organisation this card belongs to."""
         return self.organisation
 
     @property

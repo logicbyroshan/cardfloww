@@ -166,20 +166,9 @@ class PermissionService:
 
     # Sensitive permissions that assistant can never hold
     CLIENT_ASSISTANT_BLOCKED_PERMS: set = {
-        'perm_manage_assistant',          # Assistants cannot manage other staff
         'perm_manage_photographer_staff', # Assistants cannot manage photographers
-        'perm_idcard_setting_add',        # Assistants cannot create new tables
-        'perm_idcard_setting_delete',     # Assistants cannot delete tables
-        'perm_idcard_setting_edit',       # Assistants cannot edit table structure
         'perm_manage_panel_backup',       # Admin-only
         'perm_manage_panel_email',        # Admin-only
-        'perm_idcard_approved_list',      # Assistants cannot see approved list
-        'perm_idcard_download_list',      # Assistants cannot see download list
-        'perm_idcard_reprint_list',       # Assistants cannot see reprint list
-        'perm_reprint_request_list',      # Assistants cannot see reprint requests
-        'perm_confirmed_list',            # Assistants cannot see confirmed reprints
-        'perm_idcard_approve',            # Assistants cannot approve cards
-        'perm_idcard_bulk_download',      # Assistants cannot bulk download cards
     }
 
     # Status → list-permission mapping (shared across views)
@@ -275,6 +264,13 @@ class PermissionService:
         return getattr(user, 'role', None) in ('client_staff', 'assistant')
 
     @staticmethod
+    def is_assistant(user) -> bool:
+        """Check if user is assistant or client staff."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return False
+        return getattr(user, 'role', None) in ('assistant', 'client_staff')
+
+    @staticmethod
     def is_client_role(user) -> bool:
         """Check if user has client, client-staff, assistant, or admin role."""
         if not user or not getattr(user, 'is_authenticated', False):
@@ -283,7 +279,6 @@ class PermissionService:
         res_cs = PermissionService.is_client_staff(user)
         res_a = PermissionService.is_assistant(user)
         res_sa = PermissionService.is_super_admin(user)
-        print(f"DEBUG IS_CLIENT_ROLE: is_c={res_c}, is_cs={res_cs}, is_a={res_a}, is_sa={res_sa}")
         return res_c or res_cs or res_a or res_sa
 
     @staticmethod
@@ -297,18 +292,6 @@ class PermissionService:
     def is_guest_user(user) -> bool:
         """Alias for is_guest_prime_manager."""
         return PermissionService.is_guest_prime_manager(user)
-
-    @staticmethod
-    def is_assistant(user) -> bool:
-        """Check if user is assistant."""
-        if not user or not getattr(user, 'is_authenticated', False):
-            return False
-        return getattr(user, 'role', None) == 'assistant'
-
-    @staticmethod
-    def is_client_staff(user) -> bool:
-        """Alias for is_assistant."""
-        return PermissionService.is_assistant(user)
 
     @staticmethod
     def is_any_admin(user) -> bool:
@@ -460,6 +443,10 @@ class PermissionService:
             if cls.is_client(user) or cls.is_assistant(user):
                 return False
 
+        # --- PRO Feature permissions — ONLY pro_user and super_admin can hold these ---
+        if perm_key in cls.PRO_FEATURE_PERMISSIONS:
+            return bool(cls.is_pro_user(user) or cls.is_super_admin(user))
+
         # --- Permissions auto-granted to operator/photographer (no profile toggle needed) ---
         if cls.is_operator(user) and perm_key in cls.OPERATOR_AUTO_PERMS:
             return True
@@ -547,8 +534,22 @@ class PermissionService:
             if cls.is_guest_user(user) and perm_key == 'perm_mobile_app':
                 return True
 
-            # Prime Manager owns their organisation — grant core ID card & table settings permissions
-            return True
+            # Map legacy permission names to Organisation model fields if needed
+            field_name = perm_key
+            if perm_key in ('perm_idcard_client_list', 'perm_client_list'):
+                field_name = 'perm_organisation_list'
+            elif perm_key in ('perm_manage_client_staff', 'perm_manage_assistant', 'perm_manage_assistants', 'perm_manage_staff'):
+                field_name = 'perm_manage_assistants'
+            elif perm_key == 'perm_idcard_group_list':
+                field_name = 'perm_idcard_setting_list'
+
+            if hasattr(client_profile, field_name):
+                return bool(getattr(client_profile, field_name, False))
+
+            if hasattr(client_profile, perm_key):
+                return bool(getattr(client_profile, perm_key, False))
+
+            return False
 
         # --- 4. assistant (double-gated) ---
         if cls.is_assistant(user):
@@ -576,16 +577,20 @@ class PermissionService:
                 mgr = User.objects.filter(id=assistant.manager_id).first()
                 if not mgr or not mgr.is_active:
                     return False
-                if not cls.has(mgr, perm_key, client=client_obj or assistant.organisation):
-                    return False
+            # Map legacy permission names to Assistant model fields if needed
+            field_name = perm_key
+            if perm_key in ('perm_idcard_client_list', 'perm_client_list'):
+                field_name = 'perm_organisation_list'
+            elif perm_key in ('perm_manage_client_staff', 'perm_manage_assistant', 'perm_manage_staff'):
+                field_name = 'perm_manage_assistants'
+            elif perm_key == 'perm_idcard_group_list':
+                field_name = 'perm_idcard_setting_list'
 
-            # ID card lists and tables are auto-granted to active assistants (unless explicitly blocked)
-            if perm_key in ('perm_idcard_setting_list', 'perm_idcard_pending_list', 'perm_idcard_verified_list', 'perm_idcard_add', 'perm_idcard_edit', 'perm_idcard_info', 'perm_idcard_retrieve', 'perm_idcard_bulk_upload'):
-                return True
-
+            if hasattr(assistant, field_name):
+                return bool(getattr(assistant, field_name, False))
             if hasattr(assistant, perm_key):
                 return bool(getattr(assistant, perm_key, False))
-            return True
+            return False
 
         # Unknown role
         logger.warning("PermissionService.has: user %s has unrecognised role '%s'", user.pk, getattr(user, 'role', '?'))
@@ -644,7 +649,11 @@ class PermissionService:
         """
         if not user.is_authenticated:
             return False
-        if cls.is_client(user) or hasattr(user, 'client_profile'):
+        if cls.is_assistant(user):
+            from assistants.models import Assistant
+            ast = getattr(user, 'assistant_profile', None) or getattr(user, 'staff_profile', None) or Assistant.objects.filter(user=user).first()
+            return bool(ast and (ast.organisation_id == int(client_id) or getattr(ast, 'client_id', None) == int(client_id)))
+        if cls.is_client(user):
             from organisation.models import Organisation
             org = Organisation.objects.filter(user=user).first()
             if org and org.id == int(client_id):
@@ -657,10 +666,6 @@ class PermissionService:
             if first_asst and first_asst.organisation_id == int(client_id):
                 return True
             return False
-        if cls.is_assistant(user):
-            from assistants.models import Assistant
-            ast = Assistant.objects.filter(user=user).first() or getattr(user, 'assistant_profile', None)
-            return bool(ast and ast.client_id == int(client_id))
         if cls.is_super_admin(user) and not cls.is_operator(user):
             return True
         if cls.is_operator(user) or cls.is_photographer(user):

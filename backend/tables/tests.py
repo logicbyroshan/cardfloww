@@ -17,9 +17,8 @@ class IDCardsModelTests(TestCase):
 			role='client',
 		)
 		self.client_obj = Organisation.objects.create(user=self.owner, name='Model IDCards Client')
-		self.group = Table.objects.create(client=self.client_obj, name='Class 10')
 		self.table = Table.objects.create(
-			group=self.group,
+			organisation=self.client_obj,
 			name='Students',
 			fields=[
 				{'name': 'Name', 'type': 'text', 'mandatory': True},
@@ -60,7 +59,7 @@ class IDCardsModelTests(TestCase):
 			status='pending',
 		)
 
-		self.assertEqual(card.group.id, self.group.id)
+		self.assertEqual(card.table.id, self.table.id)
 		self.assertEqual(card.client.id, self.client_obj.id)
 
 
@@ -92,9 +91,8 @@ class WorkflowServiceTests(TestCase):
 			perm_idcard_reprint_list=True,
 		)
 
-		self.group = Table.objects.create(client=self.client_obj, name='Workflow Group')
 		self.table = Table.objects.create(
-			group=self.group,
+			organisation=self.client_obj,
 			name='Workflow Table',
 			fields=[
 				{'name': 'Name', 'type': 'text', 'mandatory': True},
@@ -244,7 +242,7 @@ class WorkflowServiceTests(TestCase):
 			status='download',
 		)
 
-		with mock.patch('idcards.services_workflow.PermissionService.has', side_effect=lambda _u, perm: perm == 'perm_idcard_retrieve'):
+		with mock.patch('tables.services_workflow.PermissionService.has', side_effect=lambda _u, perm: perm == 'perm_idcard_retrieve'):
 			result = WorkflowService.bulk_transition(
 				table=self.table,
 				card_ids=[card.id],
@@ -389,9 +387,8 @@ class WorkflowServiceTests(TestCase):
 		from tables.models import Table, IDCard
 		from tables.services_workflow import WorkflowService
 
-		other_group = Table.objects.create(client=self.client_obj, name='Other Group')
 		other_table = Table.objects.create(
-			group=other_group,
+			organisation=self.client_obj,
 			name='Other Table',
 			fields=self.table.fields,
 		)
@@ -427,9 +424,8 @@ class RowScopingCacheTests(TestCase):
 			role='client',
 		)
 		self.client_obj = Organisation.objects.create(user=self.owner, name='Scoping Client')
-		self.group = Table.objects.create(client=self.client_obj, name='Group A')
 		self.table = Table.objects.create(
-			group=self.group,
+			organisation=self.client_obj,
 			name='Scoping Table',
 			fields=[
 				{'name': 'Name', 'type': 'text'},

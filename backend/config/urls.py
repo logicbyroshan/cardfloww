@@ -168,9 +168,14 @@ urlpatterns += [
     # All REST API endpoints are mounted at their canonical /api/* paths.
     # The /panel/ prefixed aliases are removed — all clients use /api/* directly.
     path('', include('core.urls')),
+    path('panel/', include('core.urls')),
     path('', include(('accounts.urls', 'accounts'), namespace='accounts_root')),
+    path('', include(('panel.urls', 'panel'), namespace='panel_root')),
+    path('panel/', include(('panel.urls', 'panel'), namespace='panel_legacy_root')),
     path('auth/', include(('accounts.urls', 'accounts'), namespace='accounts_auth_root')),
     path('organisations/', include(('organisation.urls', 'organisation'), namespace='organisations_root')),
+    path('panel/client/', include(('organisation.urls', 'organisation'), namespace='panel_client_root')),
+    path('client/', include(('organisation.urls', 'organisation'), namespace='client_root')),
     path('assistants/', include(('assistants.urls', 'assistants'), namespace='assistants_root')),
     path('exports/', include(('exports.urls', 'exports'), namespace='exports_root')),
     path('images/', include(('mediafiles.urls', 'mediafiles'), namespace='mediafiles_root')),

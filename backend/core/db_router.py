@@ -24,17 +24,17 @@ class GuestSandboxRouter:
     def db_for_read(self, model, **hints):
         guest_db = self.get_guest_db()
         if guest_db and guest_db in settings.DATABASES:
-            # Route core models and mediafiles to the guest sandbox database.
+            # Route business models to the guest sandbox database.
             # Avoid routing django internal models (sessions, contenttypes, admin)
-            if model._meta.app_label in ('core', 'mediafiles', 'reprintcard'):
+            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprintcard'):
                 return guest_db
         return None
 
     def db_for_write(self, model, **hints):
         guest_db = self.get_guest_db()
         if guest_db and guest_db in settings.DATABASES:
-            # Route core models and mediafiles to the guest sandbox database.
-            if model._meta.app_label in ('core', 'mediafiles', 'reprintcard'):
+            # Route business models to the guest sandbox database.
+            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprintcard'):
                 return guest_db
         return None
 

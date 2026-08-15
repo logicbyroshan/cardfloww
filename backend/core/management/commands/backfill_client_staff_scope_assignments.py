@@ -74,7 +74,14 @@ class Command(BaseCommand):
         if client_id > 0:
             qs = qs.filter(client_id=client_id)
         if staff_id > 0:
-            qs = qs.filter(id=staff_id)
+            raw_staff_id = staff_id
+            if raw_staff_id >= 300000:
+                raw_staff_id -= 300000
+            elif raw_staff_id >= 200000:
+                raw_staff_id -= 200000
+            elif raw_staff_id >= 100000:
+                raw_staff_id -= 100000
+            qs = [s for s in qs if s.id == staff_id or getattr(s, 'delegate', s).id == raw_staff_id]
 
         candidates: List[Tuple[Staff, Dict[str, object]]] = []
         skipped_not_legacy = 0
@@ -148,7 +155,7 @@ class Command(BaseCommand):
             allowed_branches = list(plan.get("allowed_branches") or [])
 
             with transaction.atomic():
-                valid_groups = Table.objects.filter(client_id=staff.client_id, id__in=group_ids)
+                valid_groups = Table.objects.filter(organisation=staff.client, id__in=group_ids)
                 staff.assigned_groups.set(valid_groups)
                 staff.assigned_table_ids = table_ids
                 staff.assignment_scopes = scopes
@@ -330,13 +337,13 @@ class Command(BaseCommand):
 
     def _build_backfill_plan(self, staff: Staff) -> Dict[str, object]:
         client = staff.client
-        groups = list(Table.objects.filter(client=client).only("id").order_by("id"))
+        groups = list(Table.objects.filter(organisation=client).only("id").order_by("id"))
         if not groups:
             return {}
 
         tables = list(
-            Table.objects.filter(group__client=client, deleted_by_client=False)
-            .only("id", "group_id", "fields")
+            Table.objects.filter(organisation=client, deleted_by_manager=False)
+            .only("id", "fields")
             .order_by("id")
         )
         if not tables:
@@ -348,7 +355,7 @@ class Command(BaseCommand):
         table_group_map: Dict[int, int] = {}
         for table in tables:
             tid = int(table.id)
-            gid = int(table.group_id)
+            gid = int(table.id)
             table_ids_by_group[gid].append(tid)
             table_group_map[tid] = gid
 

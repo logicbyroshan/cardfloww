@@ -114,16 +114,13 @@ class AssistantService(BaseService):
         valid_table_ids = set(
             Table.objects.filter(
                 organisation=client,
-                deleted_by_client=False,
+                deleted_by_manager=False,
                 id__in=normalized_ids,
             ).values_list('id', flat=True)
         )
 
         if valid_table_ids:
-            table_group_ids = Table.objects.filter(
-                id__in=valid_table_ids,
-            ).values_list('group_id', flat=True)
-            valid_group_ids.update(table_group_ids)
+            valid_group_ids.update(valid_table_ids)
             return sorted(valid_group_ids), sorted(valid_table_ids)
 
         return sorted(valid_group_ids), []
@@ -215,11 +212,11 @@ class AssistantService(BaseService):
         valid_table_rows = list(
             Table.objects.filter(
                 organisation=client,
-                deleted_by_client=False,
+                deleted_by_manager=False,
                 id__in=list(requested_table_ids),
-            ).values_list('id', 'group_id')
+            ).values_list('id', flat=True)
         )
-        valid_table_map = {int(tid): int(gid) for tid, gid in valid_table_rows}
+        valid_table_map = {int(tid): int(tid) for tid in valid_table_rows}
 
         normalized_by_key: Dict[str, Dict[str, Any]] = {}
         for scope in pending_scopes:
@@ -296,11 +293,11 @@ class AssistantService(BaseService):
             return False
         if user.is_superuser:
             return True
-        if getattr(user, 'role', '') in ('prime_manager', 'manager', 'guest_prime_manager', 'client', 'organisation'):
+        if getattr(user, 'role', '') in ('prime_manager', 'manager', 'guest_prime_manager'):
             return True
-        if PermissionService.has(user, 'perm_idcard_client_list'):
+        if PermissionService.has(user, 'perm_idcard_client_list') or PermissionService.has(user, 'perm_organisation_list'):
             return True
-        if PermissionService.is_client(user) and PermissionService.has(user, 'perm_manage_assistant'):
+        if PermissionService.has(user, 'perm_manage_assistant') or PermissionService.has(user, 'perm_manage_assistants') or PermissionService.has(user, 'perm_manage_client_staff'):
             return True
         return False
 
@@ -325,25 +322,6 @@ class AssistantService(BaseService):
             if not cls._has_staff_management_access(user):
                 return ServiceResult(success=False, message='Permission denied')
 
-            assistant_only_fields = [
-                'id',
-                'user',
-                'organisation',
-                'created_at',
-                'department',
-                'designation',
-                'assigned_table_ids',
-                'allowed_classes',
-                'allowed_sections',
-                'assignment_scopes',
-                'user__first_name',
-                'user__last_name',
-                'user__username',
-                'user__email',
-                'user__phone',
-                'user__is_active',
-            ] + list(cls.ASSISTANT_PERMISSION_FIELDS)
-            
             assistant_filters = {}
             if client:
                 assistant_filters['organisation'] = client
@@ -352,7 +330,7 @@ class AssistantService(BaseService):
 
             assistant_list = Assistant.objects.filter(
                 **assistant_filters
-            ).select_related('user', 'organisation', 'manager').only(*assistant_only_fields, 'manager__first_name', 'manager__last_name', 'manager__username')
+            ).select_related('user', 'organisation', 'manager')
             
             assistant_data = []
             for assistant in assistant_list:
@@ -418,7 +396,7 @@ class AssistantService(BaseService):
         """Get details of a specific assistant."""
         try:
             try:
-                assistant = Assistant.objects.select_related('user', 'client').prefetch_related(
+                assistant = Assistant.objects.select_related('user', 'organisation').prefetch_related(
                     Prefetch('assigned_groups', queryset=Table.objects.only('id'))
                 ).get(id=assistant_id)
             except Assistant.DoesNotExist:
@@ -801,7 +779,7 @@ class AssistantService(BaseService):
         try:
             if user.is_superuser:
                 try:
-                    assistant = Assistant.objects.select_related('user', 'client').get(id=assistant_id)
+                    assistant = Assistant.objects.select_related('user', 'organisation').get(id=assistant_id)
                     client = assistant.client
                 except Assistant.DoesNotExist:
                     return ServiceResult(success=False, message='Assistant not found')
@@ -821,7 +799,7 @@ class AssistantService(BaseService):
                             Assistant.objects
                             .select_for_update()
                             .select_related('user')
-                            .get(id=assistant_id, client=client)
+                            .get(id=assistant_id, organisation=client)
                         )
                     except Assistant.DoesNotExist:
                         return ServiceResult(success=False, message='Assistant not found')
@@ -971,7 +949,7 @@ class AssistantService(BaseService):
         try:
             # First fetch without locking to do permission checks cheaply
             try:
-                assistant = Assistant.objects.select_related('user', 'client').get(id=assistant_id)
+                assistant = Assistant.objects.select_related('user', 'organisation').get(id=assistant_id)
             except Assistant.DoesNotExist:
                 return ServiceResult(success=False, message='Assistant not found')
 
@@ -1010,7 +988,7 @@ class AssistantService(BaseService):
         """Delete an assistant."""
         try:
             try:
-                assistant = Assistant.objects.select_related('user', 'client').get(id=assistant_id)
+                assistant = Assistant.objects.select_related('user', 'organisation').get(id=assistant_id)
             except Assistant.DoesNotExist:
                 return ServiceResult(success=False, message='Assistant not found')
 
@@ -1047,7 +1025,7 @@ class AssistantService(BaseService):
     def set_temp_password(cls, user, assistant_id: int, new_password: str, request=None) -> ServiceResult:
         """Set temporary password for an assistant account."""
         try:
-            assistant = Assistant.objects.select_related('client').filter(id=assistant_id).first()
+            assistant = Assistant.objects.select_related('organisation').filter(id=assistant_id).first()
             if not assistant:
                 return ServiceResult(success=False, message='Assistant not found')
 
@@ -1183,7 +1161,7 @@ class AssistantService(BaseService):
           - neither → all tables for the client
         """
         from tables.models import Table, IDCard
-        tables = Table.objects.filter(organisation=client, deleted_by_client=False)
+        tables = Table.objects.filter(organisation=client, deleted_by_manager=False)
         if table:
             tables = tables.filter(id=table.id)
         elif group:
@@ -1314,33 +1292,23 @@ class AssistantService(BaseService):
                             else:
                                 assistant_kwargs[perm] = False
                         assistant = Assistant.objects.create(**assistant_kwargs)
-                        if group:
-                            assistant.assigned_groups.add(group)
+                        target_tbl = table or group
+                        if target_tbl:
+                            assistant.assigned_groups.add(target_tbl)
                             if auto_assign:
                                 _cs = {} if is_fallback_mode else ({cls_name: []} if allowed_classes else {})
-                                if table:
-                                    # Scoped to a specific table
-                                    assistant.assignment_scopes = [{
-                                        'scope_type': 'table',
-                                        'scope_id': table.id,
-                                        'group_id': group.id,
-                                        'table_id': table.id,
-                                        'classes': allowed_classes,
-                                        'sections': [],
-                                        'branches': [],
-                                        'class_sections': _cs,
-                                    }]
-                                else:
-                                    # Scoped to the whole group
-                                    assistant.assignment_scopes = [{
-                                        'scope_type': 'group',
-                                        'scope_id': group.id,
-                                        'group_id': group.id,
-                                        'classes': allowed_classes,
-                                        'sections': [],
-                                        'branches': [],
-                                        'class_sections': _cs,
-                                    }]
+                                gid = group.id if group else target_tbl.id
+                                tid = table.id if table else target_tbl.id
+                                assistant.assignment_scopes = [{
+                                    'scope_type': 'table' if table else 'group',
+                                    'scope_id': tid if table else gid,
+                                    'group_id': gid,
+                                    'table_id': tid,
+                                    'classes': allowed_classes,
+                                    'sections': [],
+                                    'branches': [],
+                                    'class_sections': _cs,
+                                }]
                                 assistant.save(update_fields=['assignment_scopes'])
                         existing_emails.add(email)
                         existing_usernames.add(email)
@@ -1395,33 +1363,23 @@ class AssistantService(BaseService):
                                 else:
                                     assistant_kwargs[perm] = False
                             assistant = Assistant.objects.create(**assistant_kwargs)
-                            if group:
-                                assistant.assigned_groups.add(group)
+                            target_tbl = table or group
+                            if target_tbl:
+                                assistant.assigned_groups.add(target_tbl)
                                 if auto_assign:
                                     _cs = {} if is_fallback_mode else ({cls_name: allowed_sections} if allowed_classes else {})
-                                    if table:
-                                        # Scoped to a specific table
-                                        assistant.assignment_scopes = [{
-                                            'scope_type': 'table',
-                                            'scope_id': table.id,
-                                            'group_id': group.id,
-                                            'table_id': table.id,
-                                            'classes': allowed_classes,
-                                            'sections': allowed_sections,
-                                            'branches': [],
-                                            'class_sections': _cs,
-                                        }]
-                                    else:
-                                        # Scoped to the whole group
-                                        assistant.assignment_scopes = [{
-                                            'scope_type': 'group',
-                                            'scope_id': group.id,
-                                            'group_id': group.id,
-                                            'classes': allowed_classes,
-                                            'sections': allowed_sections,
-                                            'branches': [],
-                                            'class_sections': _cs,
-                                        }]
+                                    gid = group.id if group else target_tbl.id
+                                    tid = table.id if table else target_tbl.id
+                                    assistant.assignment_scopes = [{
+                                        'scope_type': 'table' if table else 'group',
+                                        'scope_id': tid if table else gid,
+                                        'group_id': gid,
+                                        'table_id': tid,
+                                        'classes': allowed_classes,
+                                        'sections': allowed_sections,
+                                        'branches': [],
+                                        'class_sections': _cs,
+                                    }]
                                     assistant.save(update_fields=['assignment_scopes'])
                             existing_emails.add(email)
                             existing_usernames.add(email)

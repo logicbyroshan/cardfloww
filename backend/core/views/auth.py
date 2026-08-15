@@ -156,6 +156,15 @@ def api_auth_logout(request):
     # Support both GET (for quick links) and POST (preferred)
     if request.method not in ('POST', 'GET'):
         return JsonResponse({'success': False, 'message': 'Method not allowed.'}, status=405)
+
+    from accounts.services_impersonate import ImpersonateService
+    if request.user.is_authenticated and ImpersonateService.is_impersonating(request):
+        next_url = request.POST.get('next', '') or request.GET.get('next', '')
+        result = ImpersonateService.stop(request, next_url=next_url)
+        if result.get('success'):
+            redirect_url = result.get('redirect_url') or '/'
+            return JsonResponse({'success': True, 'redirect': redirect_url})
+
     if request.user.is_authenticated:
         django_logout(request)
     return JsonResponse({'success': True, 'message': 'Logged out successfully.'})

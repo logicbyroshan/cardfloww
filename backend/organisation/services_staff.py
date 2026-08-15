@@ -54,7 +54,7 @@ class OrganisationStaffService(BaseService):
 
     @classmethod
     def get_staff_detail(cls, user, staff_id: int) -> ServiceResult:
-        raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+        raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
         res = AssistantService.get_assistant_detail(user, raw_id)
         if res.success and res.data and 'id' in res.data:
             res.data['id'] = res.data['id'] + 200000
@@ -80,20 +80,20 @@ class OrganisationStaffService(BaseService):
 
     @classmethod
     def update_staff(cls, user, staff_id: int, data: Dict[str, Any], target_client=None) -> ServiceResult:
-        raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+        raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
         return AssistantService.update_assistant(user, raw_id, data, target_client=target_client)
 
     @classmethod
     def toggle_staff_status(cls, user, staff_id: int) -> ServiceResult:
-        raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+        raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
         return AssistantService.toggle_assistant_status(user, raw_id)
 
     @classmethod
     def delete_staff(cls, user, staff_id: int) -> ServiceResult:
-        raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+        raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
         return AssistantService.delete_assistant(user, raw_id)
 
     @classmethod
     def set_temp_password(cls, user, staff_id: int, new_password: str, request=None) -> ServiceResult:
-        raw_id = staff_id - 200000 if staff_id >= 200000 else staff_id
+        raw_id = staff_id % 100000 if staff_id >= 100000 else staff_id
         return AssistantService.set_temp_password(user, raw_id, new_password, request=request)

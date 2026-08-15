@@ -490,7 +490,7 @@ class OrganisationService(BaseService):
         
         # Get all assistants for this client
         client_staff = Assistant.objects.filter(
-            client=client
+            organisation=client
         )
         
         if not client_staff.exists():
@@ -768,7 +768,7 @@ class OrganisationService(BaseService):
         """
         # Get all active assistants for this client
         active_staff = Assistant.objects.filter(
-            client=client,
+            organisation=client,
             user__is_active=True
         ).select_related('user')
         
@@ -800,9 +800,9 @@ class OrganisationService(BaseService):
     def get_staff(cls, client_id: int) -> ServiceResult:
         """Get all assistants for a client"""
         try:
-            client = get_object_or_404(Client, id=client_id)
+            client = get_object_or_404(Organisation, id=client_id)
             staff_members = Assistant.objects.filter(
-                client=client
+                organisation=client
             ).select_related('user')
             
             staff_list = []
@@ -840,7 +840,7 @@ class OrganisationService(BaseService):
             return ServiceResult(
                 success=True,
                 data={
-                    'client_name': Organisation.name,
+                    'client_name': client.name,
                     'staff': staff_list,
                     'total': len(staff_list),
                     'active': active_count,
@@ -854,11 +854,11 @@ class OrganisationService(BaseService):
     def toggle_client_staff_status(cls, client_id: int, staff_id: int) -> ServiceResult:
         """Toggle an assistant member's active/inactive status (atomic, Super Admin only)"""
         try:
-            client = get_object_or_404(Client, id=client_id)
+            client = get_object_or_404(Organisation, id=client_id)
             with transaction.atomic():
                 staff = Assistant.objects.select_for_update().select_related('user').filter(
                     id=staff_id,
-                    client=client
+                    organisation=client
                 ).first()
                 
                 if not staff:
@@ -892,10 +892,10 @@ class OrganisationService(BaseService):
         Enforces that assistant permissions cannot exceed client permissions.
         """
         try:
-            client = get_object_or_404(Client, id=client_id)
+            client = get_object_or_404(Organisation, id=client_id)
             staff = Assistant.objects.filter(
                 id=staff_id,
-                client=client
+                organisation=client
             ).first()
             
             if not staff:

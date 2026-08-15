@@ -34,9 +34,9 @@ class StaffCompatWrapper:
         except Exception:
             pass
 
-        if self.staff_type == 'operator':
+        if self.staff_type in ('operator', 'admin_staff'):
             return self.delegate.id + 100000
-        elif self.staff_type == 'assistant':
+        elif self.staff_type in ('assistant', 'client_staff'):
             return self.delegate.id + 200000
         else:
             return self.delegate.id + 300000
@@ -54,16 +54,39 @@ class StaffCompatWrapper:
         return self.delegate.user_id
 
     @property
-    def Organisation(self):
+    def client(self):
         if hasattr(self.delegate, 'client'):
             return self.delegate.client
+        if hasattr(self.delegate, 'organisation'):
+            return self.delegate.organisation
         return None
+
+    @client.setter
+    def client(self, val):
+        if hasattr(self.delegate, 'organisation'):
+            self.delegate.organisation = val
+        elif hasattr(self.delegate, 'client'):
+            self.delegate.client = val
+
+    @property
+    def organisation(self):
+        return self.client
+
+    @organisation.setter
+    def organisation(self, val):
+        self.client = val
 
     @property
     def client_id(self):
         if hasattr(self.delegate, 'client_id'):
             return self.delegate.client_id
+        if hasattr(self.delegate, 'organisation_id'):
+            return self.delegate.organisation_id
         return None
+
+    @property
+    def organisation_id(self):
+        return self.client_id
 
     @property
     def created_at(self):
@@ -130,6 +153,9 @@ class StaffCompatWrapper:
 
     def save(self, *args, **kwargs):
         return self.delegate.save(*args, **kwargs)
+
+    def refresh_from_db(self, *args, **kwargs):
+        return self.delegate.refresh_from_db(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         user = self.delegate.user
@@ -202,7 +228,8 @@ class StaffCompatQuerySet:
         filtered = self.items
         for key, val in kwargs.items():
             if key == 'staff_type':
-                filtered = [item for item in filtered if item.staff_type == val]
+                matching_types = ('assistant', 'client_staff') if val in ('assistant', 'client_staff') else (val,)
+                filtered = [item for item in filtered if item.staff_type in matching_types]
                 continue
 
             lookup_type = 'exact'
@@ -222,13 +249,13 @@ class StaffCompatQuerySet:
                 if val_int is not None:
                     if val_int >= 300000:
                         # Photographer
-                        filtered = [item for item in filtered if item.delegate.id == (val_int - 300000) and item.staff_type == 'photographer']
+                        filtered = [item for item in filtered if item.delegate.id == (val_int - 300000) and item.staff_type in ('photographer',)]
                     elif val_int >= 200000:
                         # Assistant (client_staff)
-                        filtered = [item for item in filtered if item.delegate.id == (val_int - 200000) and item.staff_type == 'assistant']
+                        filtered = [item for item in filtered if item.delegate.id == (val_int - 200000) and item.staff_type in ('assistant', 'client_staff')]
                     elif val_int >= 100000:
                         # Operator (admin_staff)
-                        filtered = [item for item in filtered if item.delegate.id == (val_int - 100000) and item.staff_type == 'operator']
+                        filtered = [item for item in filtered if item.delegate.id == (val_int - 100000) and item.staff_type in ('operator', 'admin_staff')]
                     else:
                         filtered = [item for item in filtered if item.delegate.id == val_int]
                 else:
@@ -300,7 +327,7 @@ class StaffCompatManager:
         for o in Operator.objects.all():
             items.append(StaffCompatWrapper(o, 'operator'))
         for a in Assistant.objects.all():
-            items.append(StaffCompatWrapper(a, 'client_staff'))
+            items.append(StaffCompatWrapper(a, 'assistant'))
         for p in Photographer.objects.all():
             items.append(StaffCompatWrapper(p, 'photographer'))
         return StaffCompatQuerySet(items)
@@ -336,17 +363,17 @@ class StaffCompatManager:
                     setattr(op, k, v)
             op.save()
             return StaffCompatWrapper(op, 'operator')
-        elif staff_type == 'assistant':
+        elif staff_type in ('assistant', 'client_staff'):
             client = kwargs.get('client')
             client_id = kwargs.get('client_id')
             if not client_id and client:
                 client_id = client.id
-            ast = Assistant.objects.create(user=user, client_id=client_id)
+            ast = Assistant.objects.create(user=user, organisation_id=client_id)
             for k, v in list(kwargs.items()):
                 if k not in ('user', 'staff_type', 'client', 'client_id', 'id', 'pk') and hasattr(ast, k):
                     setattr(ast, k, v)
             ast.save()
-            return StaffCompatWrapper(ast, 'client_staff')
+            return StaffCompatWrapper(ast, 'assistant')
         elif staff_type == 'photographer':
             ph = Photographer.objects.create(user=user)
             for k, v in list(kwargs.items()):

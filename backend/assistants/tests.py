@@ -19,11 +19,9 @@ class AutoCreateAssistantsTests(TestCase):
             perm_mobile_app=True
         )
 
-        # Create dummy Table, Table, IDCard
-        self.group = Table.objects.create(client=self.client_obj, name='Test Group')
-        
+        # Create dummy Table, IDCard
         self.table = Table.objects.create(
-            group=self.group, 
+            organisation=self.client_obj, 
             name='Test Table',
             fields=[{'name': 'Class', 'type': 'text'}, {'name': 'Section', 'type': 'text'}]
         )
@@ -43,10 +41,10 @@ class AutoCreateAssistantsTests(TestCase):
         self.assertEqual(len(df), 2)
         
         # Verify assistants were created
-        self.assertEqual(Assistant.objects.filter(client=self.client_obj).count(), 2)
+        self.assertEqual(Assistant.objects.filter(organisation=self.client_obj).count(), 2)
         
         # Verify permissions were auto-assigned matching client permissions
-        for assistant in Assistant.objects.filter(client=self.client_obj):
+        for assistant in Assistant.objects.filter(organisation=self.client_obj):
             self.assertTrue(assistant.perm_idcard_pending_list)
             self.assertTrue(assistant.perm_idcard_verified_list)
             self.assertTrue(assistant.perm_mobile_app)
@@ -61,7 +59,7 @@ class AutoCreateAssistantsTests(TestCase):
         df = pd.read_excel(buffer, engine='openpyxl')
         self.assertEqual(len(df), 3)
 
-        self.assertEqual(Assistant.objects.filter(client=self.client_obj).count(), 3)
+        self.assertEqual(Assistant.objects.filter(organisation=self.client_obj).count(), 3)
 
     def test_auto_create_fallback_mode_when_no_columns(self):
         # Create a new table with NO Class or Section fields
@@ -82,7 +80,7 @@ class AutoCreateAssistantsTests(TestCase):
         self.assertEqual(result.data['count'], 1)
 
         # Retrieve the assistant and verify properties
-        assistant = Assistant.objects.filter(client=self.client_obj, user__email__icontains='simplestafftable').first()
+        assistant = Assistant.objects.filter(organisation=self.client_obj, user__email__icontains='simplestafftable').first()
         self.assertIsNotNone(assistant)
         # Should be assigned to the table with full access (empty allowed_classes)
         self.assertEqual(assistant.allowed_classes, [])

@@ -44,6 +44,8 @@ class CacheVersionService:
             cache.set(key, 1, timeout=cls.TTL_SECONDS)
             return 1
 
+    get_version = get
+
     @classmethod
     def bump(cls, namespace: str, scope: str = 'global') -> int:
         """Increment version for a namespace/scope and return the new value."""
