@@ -14,17 +14,16 @@ Hardened against:
 NO STUBS. Real implementations only.
 """
 import os
-import time
+import re
 import logging
 import threading
 from datetime import datetime
 from typing import Optional
 
-from django.core.files.storage import default_storage
-
 from ..constants import VALID_IMAGE_EXTENSIONS
 
 logger = logging.getLogger(__name__)
+
 
 # Module-level counter to avoid collisions within the same process
 _global_counter = 0
@@ -394,16 +393,14 @@ def _b36_to_int(s: str) -> int:
     return int(s, 36)
 
 
-import re as _re
-
 # Regex for managed CardFlow filenames:
 #   O<OrgCode>_<ImageCode>V<Version>.<ext>
 # OrgCode: 2-10 alphanumeric chars
 # ImageCode: 2-10 alphanumeric chars
 # Version: integer >= 1
-_MANAGED_RE = _re.compile(
+_MANAGED_RE = re.compile(
     r'^O(?P<org>[A-Z0-9]{2,10})_(?P<code>[A-Z0-9]{2,10})V(?P<ver>\d+)$',
-    _re.IGNORECASE,
+    re.IGNORECASE,
 )
 
 
@@ -441,7 +438,7 @@ class MediaNameService:
         code = getattr(organisation, 'image_folder_code', None)
         if code:
             # Take first 5 alphanumeric chars
-            cleaned = _re.sub(r'[^A-Z0-9]', '', str(code).upper())
+            cleaned = re.sub(r'[^A-Z0-9]', '', str(code).upper())
             if len(cleaned) >= 3:
                 return cleaned[:5]
         # Fallback: use org PK in Base36 (always unique)
@@ -467,7 +464,7 @@ class MediaNameService:
             'IMAGE': 7, 'REL_1_PHOTO': 8, 'REL_2_PHOTO': 9,
         }
         # Normalize field name
-        norm = _re.sub(r'[^A-Z0-9_]', '_', str(field_name).upper().strip())
+        norm = re.sub(r'[^A-Z0-9_]', '_', str(field_name).upper().strip())
         # Check exact match first, then prefix match
         field_idx = _FIELD_INDICES.get(norm, None)
         if field_idx is None:
@@ -503,11 +500,12 @@ class MediaNameService:
         Returns:
             "O73F_A8XZV1.jpg"
         """
-        safe_org = _re.sub(r'[^A-Z0-9]', '', str(org_code).upper())[:10] or '0000'
-        safe_code = _re.sub(r'[^A-Z0-9]', '', str(image_code).upper())[:10] or '0000'
+        safe_org = re.sub(r'[^A-Z0-9]', '', str(org_code).upper())[:10] or '0000'
+        safe_code = re.sub(r'[^A-Z0-9]', '', str(image_code).upper())[:10] or '0000'
         safe_ver = max(1, int(version))
         safe_ext = ImageRenamer.normalize_extension(ext)
         return f"O{safe_org}_{safe_code}V{safe_ver}{safe_ext}"
+
 
     @classmethod
     def generate_media_name_for_card(

@@ -8,21 +8,21 @@ Tests:
 - ImportService table creation & bulk upload
 """
 import io
-import os
-import tempfile
 import zipfile
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
 from tables.models import Table, IDCard
 from organisation.models import Organisation
+from mediafiles.services import MediaNameService
 from imports.column_detector import detect_field_type, detect_table_schema_from_headers
 from imports.excel_reader import parse_excel_or_csv
 from imports.docx_reader import parse_docx_tables
 from imports.services import ImportService
-from imports.reupload_matcher import ReuploadMatcher, normalize_stem
+from imports.reupload_matcher import ReuploadMatcher, to_canonical_key
 
 User = get_user_model()
+
 
 
 class ImportsAppTests(TestCase):
@@ -208,10 +208,9 @@ class ImportsAppTests(TestCase):
         - 1 unmanaged raw image (matching Roll 202) -> matched and assigned V1
         - 1 random unmatched image -> recorded in unmatched_files
         """
-        from mediafiles.services import MediaNameService
-
         table = Table.objects.create(
             organisation=self.org,
+
             name='Dual Path Table',
             fields=[
                 {'name': 'ROLL NO', 'type': 'number'},

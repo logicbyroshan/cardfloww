@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Plus,
   Pencil,
-  Eye,
   Trash2,
   CheckCircle2,
   ThumbsUp,
@@ -28,11 +27,8 @@ import {
   Search,
   X,
   Layers,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Loader2,
+
   AlertCircle,
   Eraser,
   Check,
@@ -40,10 +36,7 @@ import {
   Square,
   MinusSquare,
   Clock,
-  SlidersHorizontal,
-  Settings,
   Printer,
-  ChevronDown,
   UserPlus,
   History,
   XCircle,
@@ -54,13 +47,14 @@ import {
 import WatermarkLogo from '../common/WatermarkLogo';
 import CustomSelect from '../common/CustomSelect';
 import CustomCheckbox from '../common/CustomCheckbox';
-import { cardApi, schemaApi, operationsApi, auditApi } from '../../services/api';
+import { cardApi, schemaApi, operationsApi } from '../../services/api';
 import apiClient from '../../services/api';
 import ImageUploadSlot from './ImageUploadSlot';
 import OperationHistoryModal from './OperationHistoryModal';
 import CardTimelineDrawer from './CardTimelineDrawer';
 import BulkTransactionsModal from './BulkTransactionsModal';
-import { isDropdownField, getOptionsForField, FORMAT_PRESETS } from '../../utils/formatPresets';
+import { isDropdownField, getOptionsForField } from '../../utils/formatPresets';
+
 
 
 
@@ -82,9 +76,8 @@ const REPRINT_STATUS_LIST = [
 
 const STATUS_LIST = [...ID_CARD_STATUS_LIST, ...REPRINT_STATUS_LIST];
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, 500];
-
 const IMAGE_FIELD_TYPES = new Set([
+
   'photo',
   'image',
   'img',
@@ -204,12 +197,8 @@ function Spinner({ size = 16 }) {
   return <Loader2 size={size} style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }} />;
 }
 
-/* Sample cards generator for demonstration & local testing when DB is empty */
-function getSampleCards(tableId) {
-  return [];
-}
-
 /* ─── Side Drawer — Add / Edit / View ───────────────────────────────────── */
+
 function CardSideDrawer({ card, mode, tableId, tableFields, onClose, onSave, addToast }) {
   const isView = mode === 'view';
   const [formData, setFormData] = useState(() => card?.field_data || {});
@@ -641,9 +630,9 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
   const [zipFiles, setZipFiles] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [embeddedPhotosCount, setEmbeddedPhotosCount] = useState(0);
 
   // Field mapping state
+
   const [excelHeaders, setExcelHeaders] = useState([]);
   const [dataRowCount, setDataRowCount] = useState(0);
   const [fieldMapping, setFieldMapping] = useState({}); // tableFieldName -> excelHeader
@@ -1671,121 +1660,8 @@ function ClearPendingPathModal({ table, status, tableFields, onClose, onSuccess,
   );
 }
 
-/* ─── Download Options Modal ───────────────────────────────────────────── */
-function DownloadModal({ table, status, onClose, addToast }) {
-  const [selected, setSelected] = useState('xlsx');
-  const [downloading, setDownloading] = useState(false);
-
-  const formats = [
-    {
-      id: 'xlsx',
-      label: 'Excel Data (.xlsx)',
-      icon: FileSpreadsheet,
-      color: '#22c55e',
-      url: `/api/table/${table?.id}/cards/download-xlsx/?status=${status}`,
-    },
-    {
-      id: 'pdf',
-      label: 'PDF Print Sheet',
-      icon: FileText,
-      color: '#ef4444',
-      url: `/api/table/${table?.id}/cards/download-pdf/?status=${status}`,
-    },
-    {
-      id: 'images',
-      label: 'ZIP Photos Only',
-      icon: ImageIcon,
-      color: '#8b5cf6',
-      url: `/api/table/${table?.id}/cards/download-images/?status=${status}`,
-    },
-  ];
-
-  const handleDownload = () => {
-    const fmt = formats.find((f) => f.id === selected);
-    if (!fmt) return;
-    setDownloading(true);
-    try {
-      window.open(fmt.url, '_blank');
-      addToast?.(`Downloading ${fmt.label}…`, 'success');
-      onClose();
-    } catch {
-      addToast?.('Download failed', 'error');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <div className="center-modal-overlay">
-      <div
-        className="center-modal-panel"
-        style={{ width: '480px', height: 'auto', maxHeight: '90vh', padding: '24px' }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Download / Export Cards</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
-            <X size={18} />
-          </button>
-        </div>
-        <div style={{ marginBottom: '16px', fontSize: '12px', color: '#64748b' }}>
-          Exporting cards from table: <strong>{table?.name || 'ID Cards'}</strong> ({status} list)
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-          {formats.map((fmt) => {
-            const Icon = fmt.icon;
-            const active = selected === fmt.id;
-            return (
-              <button
-                key={fmt.id}
-                onClick={() => setSelected(fmt.id)}
-                style={{
-                  padding: '16px 12px',
-                  borderRadius: '6px',
-                  border: `2px solid ${active ? fmt.color : '#e2e8f0'}`,
-                  background: active ? `${fmt.color}15` : '#f8fafc',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s',
-                }}
-              >
-                <Icon size={26} style={{ color: fmt.color }} />
-                <span style={{ fontSize: '12px', fontWeight: 600, color: active ? fmt.color : '#374151' }}>
-                  {fmt.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} className="btn btn-neutral btn-sm">
-            Cancel
-          </button>
-          <button
-            onClick={handleDownload}
-            disabled={!selected || downloading}
-            className="btn btn-primary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            {downloading ? (
-              <>
-                <Spinner size={14} /> …
-              </>
-            ) : (
-              <>
-                <Download size={14} /> Download
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Image Sort Modal ─────────────────────────────────────────────────── */
+
 function ImageSortModal({ tableFields, activeSort, onClose, onApply, onClear }) {
   const imageFields = useMemo(() => {
     const fields = (tableFields || []).filter((f) => isImageField(f.type, f.name)).map((f) => f.name.toUpperCase());
@@ -2497,342 +2373,8 @@ function DownloadDataModal({ table, status, cardCount, onClose, addToast }) {
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Card Log & Audit History Drawer
-───────────────────────────────────────────────────────────────────────── */
-function CardLogDrawer({ card, table, onClose }) {
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const cardId = card?.id;
-
-  const fetchLogs = useCallback(async () => {
-    if (!cardId) return;
-    setLoading(true);
-    try {
-      let historyItems = [];
-      try {
-        const res = await cardApi.getHistory(cardId);
-        historyItems = res?.logs || res?.history || res?.results || (Array.isArray(res) ? res : []);
-      } catch (_) {}
-
-      if (historyItems.length === 0) {
-        const updatedAt = card.updated_at
-          ? new Date(card.updated_at).toLocaleString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : '—';
-        const createdAt = card.created_at
-          ? new Date(card.created_at).toLocaleString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : '—';
-        const modifiedBy = card.modified_by || card.updated_by || 'Admin';
-
-        historyItems = [
-          {
-            id: 1,
-            action: `Last updated status to: ${(card.status || 'pending').toUpperCase()}`,
-            user: modifiedBy,
-            timestamp: updatedAt,
-            type: 'update',
-          },
-          {
-            id: 2,
-            action: `Created ID Card record in table "${table?.name || 'ID Card Table'}"`,
-            user: 'System Admin',
-            timestamp: createdAt,
-            type: 'create',
-          },
-        ];
-      }
-      setLogs(historyItems);
-    } catch {
-      setLogs([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [cardId, card, table]);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
-  if (!card) return null;
-
-  const fullName =
-    card.field_data?.['FULL NAME'] ||
-    card.field_data?.['NAME'] ||
-    card.field_data?.['STUDENT NAME'] ||
-    `Card #${card.id}`;
-  const statusUpper = (card.status || 'pending').toUpperCase();
-
-  return createPortal(
-    <>
-      <div className="drawer-overlay-backdrop" onClick={onClose} />
-      <aside
-        className="side-drawer-panel"
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: '640px',
-          maxWidth: '95vw',
-          height: '100vh',
-          background: '#ffffff',
-          boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.35)',
-          zIndex: 99999999,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'drawerSlideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        {/* Header */}
-        <div
-          className="drawer-header"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 20px',
-            borderBottom: '1px solid #e2e8f0',
-            background: '#1e293b',
-            color: '#ffffff',
-            flexShrink: 0,
-          }}
-        >
-          <div>
-            <h3
-              className="drawer-title"
-              style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                margin: 0,
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <History size={18} style={{ color: '#38bdf8' }} />
-              Card Audit & Log Trail
-            </h3>
-            <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px', display: 'block' }}>
-              Card ID: #{card.id} — Table: {table?.name || 'ID Card Table'}
-            </span>
-          </div>
-          <button
-            type="button"
-            className="drawer-close"
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#94a3b8',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-            title="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Card Snapshot Summary Box */}
-        <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>{fullName}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px' }}>
-            <span
-              style={{
-                padding: '3px 10px',
-                borderRadius: '4px',
-                background: '#dbeafe',
-                color: '#1d4ed8',
-                fontWeight: 700,
-                fontSize: '11px',
-              }}
-            >
-              STATUS: {statusUpper}
-            </span>
-            <span style={{ color: '#64748b' }}>
-              Last Modifier: <strong>{card.modified_by || card.updated_by || 'Admin'}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Log Timeline List */}
-        <div
-          className="drawer-body"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color: '#475569',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              Activity Log History
-            </span>
-            <button
-              onClick={fetchLogs}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#2563eb',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
-            </button>
-          </div>
-
-          {loading ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
-              Loading audit logs...
-            </div>
-          ) : logs.length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
-              No recorded logs found for this card.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative' }}>
-              {/* Vertical timeline line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '12px',
-                  bottom: '12px',
-                  left: '13px',
-                  width: '2px',
-                  background: '#cbd5e1',
-                  zIndex: 0,
-                }}
-              />
-
-              {logs.map((log, idx) => (
-                <div key={log.id || idx} style={{ display: 'flex', gap: '14px', position: 'relative', zIndex: 1 }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '50%',
-                      background: '#eff6ff',
-                      border: '2px solid #2563eb',
-                      color: '#2563eb',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      marginTop: '2px',
-                    }}
-                  >
-                    <Clock size={13} />
-                  </div>
-                  <div
-                    style={{
-                      flex: 1,
-                      background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-                    }}
-                  >
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a', lineHeight: 1.4 }}>
-                      {log.action || log.description || log.message || 'Updated card details'}
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginTop: '8px',
-                        fontSize: '11px',
-                        color: '#64748b',
-                      }}
-                    >
-                      <span>
-                        Action By: <strong style={{ color: '#334155' }}>{log.user || log.username || 'System'}</strong>
-                      </span>
-                      <span>{log.timestamp || log.created_at || ''}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div
-          className="drawer-footer"
-          style={{
-            height: '56px',
-            minHeight: '56px',
-            padding: '0 24px',
-            borderTop: '1px solid #334155',
-            display: 'flex',
-            gap: '10px',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            background: '#1e293b',
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '7px 18px',
-              background: '#334155',
-              color: '#ffffff',
-              border: '1px solid #475569',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Close Log Drawer
-          </button>
-        </div>
-      </aside>
-    </>,
-    document.body
-  );
-}
-
 /* ─── Main Component ─────────────────────────────────────────────────────── */
+
 
 export default function IDCardActionsView({
   tableId,
@@ -2869,7 +2411,8 @@ export default function IDCardActionsView({
     if (initialStatus && initialStatus !== status) {
       setStatus(initialStatus);
     }
-  }, [initialStatus]);
+  }, [initialStatus, status]);
+
 
   useEffect(() => {
     if (tableId && status) {
@@ -2897,12 +2440,10 @@ export default function IDCardActionsView({
   /* ── Cards list state ── */
   const [cards, setCards] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(100);
   const [logCard, setLogCard] = useState(null);
 
   /* ── Filters ── */
+
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -3106,25 +2647,20 @@ export default function IDCardActionsView({
 
       const data = await cardApi.getCards(tableId, params);
       const list = data?.cards || data?.results || (Array.isArray(data) ? data : []);
-      const cnt = data?.total_count ?? data?.total ?? data?.count ?? list.length;
 
       setCards(list);
-      setTotal(cnt);
       if (data?.total_duplicates !== undefined) {
         setTotalDuplicates(data.total_duplicates);
       }
     } catch (err) {
       console.warn('loadCards error:', err);
       setCards([]);
-      setTotal(0);
     } finally {
       setCardsLoading(false);
     }
   }, [
     tableId,
     status,
-    page,
-    pageSize,
     debouncedSearch,
     classFilter,
     sectionFilter,
@@ -3133,6 +2669,7 @@ export default function IDCardActionsView({
     duplicatesFilter,
     sort,
   ]);
+
 
 
   /* ── Handle Undo Operation ── */

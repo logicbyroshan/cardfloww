@@ -2,17 +2,14 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Clock,
   CheckCircle,
-  ThumbsUp,
   Download,
   Layers,
   Settings,
   Upload,
   Trash2,
   ArrowUp,
-  RefreshCw,
   X,
   Loader2,
-  SlidersHorizontal,
   FileSpreadsheet,
   Plus,
   ToggleRight,
@@ -24,17 +21,15 @@ import {
   Pencil,
   Save,
   Building,
-  Users,
   Share2,
-  Shield,
 } from 'lucide-react';
-import StatusChangeBadge, { StatusChangeDeltaPill } from '../common/StatusChangeBadge';
+import { StatusChangeDeltaPill } from '../common/StatusChangeBadge';
 import WatermarkLogo from '../common/WatermarkLogo';
 import CreateXlsxModal from '../common/CreateXlsxModal';
-import CustomSelect from '../common/CustomSelect';
 import { TableDrawerForm } from '../settings/TableSettingsView';
 import BulkTransactionsModal from './BulkTransactionsModal';
 import { cardApi, schemaApi, clientApi } from '../../services/api';
+
 
 
 const STATUS_TABS = ['All', 'Active', 'Inactive'];
@@ -80,39 +75,8 @@ function inferTableType(tableName = '', orgName = '') {
   return 'school_student';
 }
 
-function inferFieldType(name = '') {
-  const n = name.toLowerCase().trim();
-  if (/\b(photo|pic|picture|image)\b/.test(n)) return 'photo';
-  if (/\b(rel(?:ation)?[\s_-]*(?:photo|pic|image|1|2|one|two))\b/.test(n)) return 'rel_photo';
-  if (/\b(mother|father)[\s_-]*(photo|pic|image)\b/.test(n)) return 'rel_photo';
-  if (/\bsignature?\b/.test(n)) return 'signature';
-  if (/\bbarcode\b/.test(n)) return 'barcode';
-  if (/\bqr[\s_-]?code?\b/.test(n)) return 'qr_code';
-  if (/\b(class|std|standard|grade)\b/.test(n)) return 'class';
-  if (/\b(section|sec|div|division)\b/.test(n)) return 'section';
-  if (/\b(email|e-mail|mail)\b/.test(n)) return 'email';
-  if (/\b(no|number|no\.)\b/.test(n)) return 'number';
-  if (/\b(date|dob|born)\b/.test(n)) return 'date';
-  return 'text';
-}
-
-const FIELD_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'email', label: 'Email' },
-  { value: 'date', label: 'Date' },
-  { value: 'photo', label: 'Photo' },
-  { value: 'rel_photo', label: 'Relation Photo' },
-  { value: 'signature', label: 'Signature' },
-  { value: 'barcode', label: 'Barcode' },
-  { value: 'qr_code', label: 'QR Code' },
-  { value: 'class', label: 'Class' },
-  { value: 'section', label: 'Section' },
-  { value: 'select', label: 'Select / Dropdown' },
-  { value: 'textarea', label: 'Textarea' },
-];
-
 function getTableCounts(t) {
+
   if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, rpCnt: 0, reqCnt: 0, confCnt: 0 };
   const pending = t.pending_count ?? t.pending ?? 0;
   const verified = t.verified_count ?? t.verified ?? 0;
@@ -150,11 +114,8 @@ export default function CardTableView({
   onClearSelectedClient = null,
 }) {
   const role = String(currentUser?.role || userRole || '').toLowerCase();
-  const isAssistant = role === 'assistant';
   const isAdminOrOperator = ['prime_admin', 'super_admin', 'pro_user', 'operator'].includes(role);
   const isPrimeManager = ['prime_manager', 'client', 'guest_prime_manager'].includes(role);
-  const isSuperManager = role === 'super_manager' || role === 'manager' || role === 'guest_manager';
-  const isOrg = isPrimeManager || isSuperManager || isAssistant || role === 'photographer' || !isAdminOrOperator;
   const canCreateTable = isAdminOrOperator || isPrimeManager;
   const canShareTable = isAdminOrOperator || isPrimeManager;
 
@@ -189,15 +150,15 @@ export default function CardTableView({
     }
   }, [selectedClientId]);
 
-  /* Load all organisations for dropdown/assignment */
+  /* Load all organisations (Admin only) */
   useEffect(() => {
     (async () => {
       try {
         const data = await clientApi.getAllForAssignment?.();
         const clients = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         setAllOrganisations(clients);
-        if (clients.length > 0 && (!groupId || groupId === 1)) {
-          setGroupId(clients[0].group_id || clients[0].id || 1);
+        if (clients.length > 0) {
+          setGroupId((prev) => (!prev || prev === 1 ? (clients[0].group_id || clients[0].id || 1) : prev));
         }
       } catch {
         /* fallback */
@@ -1632,13 +1593,14 @@ function TableShareModal({ table, onClose, addToast, onSuccess }) {
           setSuperManagers(list);
           setSelectedManagerIds(list.filter((m) => m.is_shared).map((m) => m.manager_id));
         }
-      } catch (err) {
+      } catch {
         addToast?.('Failed to load Super Managers for this table.', 'error');
       } finally {
         setLoading(false);
       }
     })();
-  }, [table.id]);
+  }, [table.id, addToast]);
+
 
   const toggleManager = (id) => {
     setSelectedManagerIds((prev) =>
@@ -1846,92 +1808,8 @@ function TableShareModal({ table, onClose, addToast, onSuccess }) {
   );
 }
 
-function statusBtnStyle(type) {
-  const activeColors = {
-    pending: { bg: '#f97316', color: '#ffffff', border: '#f97316', badgeBg: '#ea580c' },
-    verified: { bg: '#10b981', color: '#ffffff', border: '#10b981', badgeBg: '#059669' },
-    approved: { bg: '#3b82f6', color: '#ffffff', border: '#3b82f6', badgeBg: '#2563eb' },
-    printed: { bg: '#64748b', color: '#ffffff', border: '#64748b', badgeBg: '#475569' },
-    request: { bg: '#8b5cf6', color: '#ffffff', border: '#8b5cf6', badgeBg: '#7c3aed' },
-    deleted: { bg: '#ef4444', color: '#ffffff', border: '#ef4444', badgeBg: '#dc2626' },
-  };
-  const cfg = activeColors[type] || activeColors.pending;
-  return {
-    btn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '5px',
-      padding: '3px 7px',
-      borderRadius: '5px',
-      fontSize: '11px',
-      fontWeight: 600,
-      background: cfg.bg,
-      color: cfg.color,
-      border: `1px solid ${cfg.border}`,
-      cursor: 'pointer',
-      transition: 'all 0.15s',
-      whiteSpace: 'nowrap',
-    },
-    badge: {
-      background: cfg.badgeBg,
-      color: '#ffffff',
-      minWidth: '20px',
-      height: '16px',
-      borderRadius: '8px',
-      fontSize: '10px',
-      fontWeight: 700,
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '0 4px',
-      marginLeft: '2px',
-    },
-  };
-}
-
-function reprintBtnStyle(type) {
-  const activeColors = {
-    reprint: { bg: '#06b6d4', color: '#ffffff', border: '#06b6d4', badgeBg: '#0891b2' },
-    request: { bg: '#a855f7', color: '#ffffff', border: '#a855f7', badgeBg: '#9333ea' },
-    confirm: { bg: '#10b981', color: '#ffffff', border: '#10b981', badgeBg: '#059669' },
-  };
-  const cfg = activeColors[type] || activeColors.reprint;
-  return {
-    btn: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '5px',
-      padding: '3px 7px',
-      borderRadius: '5px',
-      fontSize: '11px',
-      fontWeight: 600,
-      background: cfg.bg,
-      color: cfg.color,
-      border: `1px solid ${cfg.border}`,
-      cursor: 'pointer',
-      transition: 'all 0.15s',
-      whiteSpace: 'nowrap',
-    },
-    badge: {
-      background: cfg.badgeBg,
-      color: '#ffffff',
-      minWidth: '20px',
-      height: '16px',
-      borderRadius: '8px',
-      fontSize: '10px',
-      fontWeight: 700,
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '0 4px',
-      marginLeft: '2px',
-    },
-  };
-}
-
 function bulkBtnStyle(type, disabled) {
+
   const activeColors = {
     reupload: { bg: '#f97316', color: '#ffffff', border: '#f97316' },
     downloadAll: { bg: '#2563eb', color: '#ffffff', border: '#2563eb' },

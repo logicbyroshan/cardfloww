@@ -832,8 +832,9 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
 /* ─────────────────────────────────────────────────────────────────────────
    Recent Tables Updates Table (For Organisation Prime Manager & Assistant)
 ───────────────────────────────────────────────────────────────────────── */
-function RecentTablesUpdatesTable({ tables = [], loading, onNavigate, search, setSearch, userRole, currentUser }) {
+function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, userRole, currentUser }) {
   const isAssistant = String(userRole || currentUser?.role || '').toLowerCase() === 'assistant';
+
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
 
@@ -1436,9 +1437,9 @@ function RightSidePanels({
   const role = String(currentUser?.role || userRole || '').toLowerCase();
   const isAdmin = role === 'prime_admin' || role === 'super_admin' || role === 'pro_user' || role === 'admin';
   const isOrg = role === 'prime_manager' || role === 'super_manager' || role === 'manager' || role === 'client' || role === 'guest_prime_manager';
-  const isAssistant = role === 'assistant' || role === 'client_staff';
 
   const approvedCount = (clients || []).reduce((acc, c) => acc + (c.approved || 0), 0) || (stats?.approved ?? stats?.approved_cards ?? 0);
+
   const requestedCount = (reprintClients.length ? reprintClients : clients || []).reduce((acc, c) => acc + (c.requested || c.request || c.reprint_pending || 0), 0) || (stats?.requested ?? stats?.reprint_count ?? 0);
   const updatesCount = activities.length || (stats?.activity_count ?? 0);
 
@@ -1942,11 +1943,9 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
     };
   };
 
-  const currentSection = getSectionTitle();
-  const SectionIcon = currentSection.Icon;
-
   return (
     <div
+
       style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}
     >
       {/* 1. 7 Stat Cards Row with Daily Growth Indicators */}

@@ -17,17 +17,14 @@ Production Pipeline:
      - O(1) foreign org rejection (zero DB queries, zero disk I/O).
 
   4. BOUNDED CANDIDATE QUEUE:
-     - Only confirmed candidates enter the extraction and storage pipeline.
-
-  5. CHUNKED ATOMIC PERSISTENCE:
-     - Bounded batch updates (250 cards per transaction) preventing lock contention.
-     - Structured telemetry matching CardFlow specification.
 """
 import os
 import re
+
 import time
 import uuid
 import zipfile
+
 import logging
 from typing import Dict, Any, List, Tuple, Optional, Set
 from dataclasses import dataclass, field
@@ -39,7 +36,9 @@ from django.core.files.base import ContentFile
 from tables.models import Table, IDCard
 from mediafiles.services import ImageService, MediaNameService
 
+
 logger = logging.getLogger(__name__)
+
 
 # Fast canonical key stripper
 _NORM_CLEAN_RE = re.compile(r'[^a-zA-Z0-9]')

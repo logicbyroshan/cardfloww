@@ -9,15 +9,10 @@ import {
   Shield,
   ShieldCheck,
   User,
-  UserCheck,
   KeyRound,
-  Cog,
   List,
-  RefreshCw,
   Plus,
   Search,
-  Eye,
-  EyeOff,
   Camera,
   Link,
   Save,
@@ -27,8 +22,9 @@ import {
   Download,
   Smartphone,
 } from 'lucide-react';
-import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, panelApi, organisationManagerApi } from '../../services/api';
+import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, organisationManagerApi } from '../../services/api';
 import CustomSelect from '../common/CustomSelect';
+
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Custom Toggle Switch Component matching original UI toggle-slider
@@ -1856,12 +1852,13 @@ function OriginalClientManagerDrawerForm({ onClose, addToast, initialData }) {
         const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         setOrganisations(api);
-        if (api.length > 0 && !selectedOrgId) setSelectedOrgId(String(api[0].id));
+        if (api.length > 0) setSelectedOrgId((prev) => prev || String(api[0].id));
       } catch {
         // Fallback
       }
     })();
   }, []);
+
 
   useEffect(() => {
     if (initialData) {
@@ -2413,10 +2410,11 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
         const data = await clientApi.getAllForAssignment?.();
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
         setAllClients(api);
-        if (api.length > 0 && (!selectedClient || selectedClient === '1')) {
-          setSelectedClient(String(api[0].id));
+        if (api.length > 0) {
+          setSelectedClient((prev) => (!prev || prev === '1' ? String(api[0].id) : prev));
         }
       } catch (err) {
+
         console.warn('Failed to load organisations for assistant:', err);
       }
     })();
@@ -3230,9 +3228,9 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
         : 'false'
       : 'true'
   );
-  const [password, setPassword] = useState('');
 
   useEffect(() => {
+
     if (initialData) {
       setPhotographerName(initialData.name || initialData.full_name || '');
       setEmail(initialData.email || '');
