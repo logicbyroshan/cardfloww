@@ -239,4 +239,28 @@ Heavy tasks (ReportLab PDF compilation, Word document generation, ZIP archive pa
 * `/api/panel/temp-passwords/` — Pro Features temporary credentials management.
 
 ---
-*Documentation updated for CardFlow Engine Architecture (`v5.3.0`).*
+
+## 11. Reversible Operations & Undo/Redo Engine (`operations`)
+
+CardFlow includes a multi-user, conflict-aware **Reversible Operations Engine** (`operations`) designed for high-concurrency ID card data management:
+
+### 11.1. Delta-Based Operation Model
+* **$O(\Delta)$ Field Deltas**: Instead of storing expensive full-table snapshots, changes are recorded as granular `before_value` and `after_value` tuples on `OperationChange`.
+* **Dynamic Field & Type Fidelity**: Preserves exact native types (numbers, dates, booleans) and explicitly distinguishes `null` (absent) from empty strings `""`.
+* **Media & Crop Reversibility**: Reverses photo replacement and crop box adjustments without deleting underlying media files.
+
+### 11.2. Multi-User Conflict Detection
+* **Safe Reversals**: When User A triggers Undo, the engine verifies that `current_value == change.after_value`.
+* **Non-Destructive Rollback**: If User B modified the field after User A, the engine detects the conflict, preserves User B's change, and transitions the operation to `PARTIALLY_UNDONE` or `CONFLICTED`.
+* **Redo Invalidation (Invariant 11)**: Performing any new mutation after an Undo immediately clears the forward Redo stack for that user/table context.
+* **Immutable Audit Log**: Undo and Redo create new `UNDO_OPERATION` / `REDO_OPERATION` events and log to `ActivityLog`, preserving a permanent append-only audit trail.
+
+### 11.3. Endpoints
+* `POST /api/operations/undo/` — Undoes the latest (or specific) operation on a table.
+* `POST /api/operations/redo/` — Redoes the latest undone operation on a table.
+* `GET /api/operations/stack/` — Live status query returning `can_undo`, `can_redo`, and descriptive button tooltips.
+* `GET /api/operations/history/` — Paginated operation audit history with field delta breakdown.
+
+---
+*Documentation updated for CardFlow Engine Architecture (`v5.6.0`).*
+
