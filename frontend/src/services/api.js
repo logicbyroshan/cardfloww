@@ -949,6 +949,35 @@ export const exportApi = {
   },
 };
 
+// ─── Group 17: Reversible Operations & Undo/Redo Engine ───────────────────
+export const operationsApi = {
+  /** POST /api/operations/undo/ — { operation_id, table_id, session_id } */
+  undo: async (params = {}) => {
+    const res = await apiClient.post('/api/operations/undo/', params);
+    return res.data;
+  },
+
+  /** POST /api/operations/redo/ — { operation_id, table_id, session_id } */
+  redo: async (params = {}) => {
+    const res = await apiClient.post('/api/operations/redo/', params);
+    return res.data;
+  },
+
+  /** GET /api/operations/stack/?table_id=123 */
+  getStack: async (tableId) => {
+    const res = await apiClient.get('/api/operations/stack/', {
+      params: tableId ? { table_id: tableId } : {},
+    });
+    return res.data;
+  },
+
+  /** GET /api/operations/history/?table_id=123&limit=50&offset=0 */
+  getHistory: async (params = {}) => {
+    const res = await apiClient.get('/api/operations/history/', { params });
+    return res.data;
+  },
+};
+
 // ─── Domain Renaming Aliases ───────────────────────────────────────────────
 export const organisationApi = clientApi;
 export const managerApi = organisationManagerApi;
@@ -956,3 +985,4 @@ export const tableGroupApi = schemaApi;
 
 export { apiClient };
 export default apiClient;
+

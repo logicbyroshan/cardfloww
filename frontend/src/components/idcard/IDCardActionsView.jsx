@@ -47,13 +47,16 @@ import {
   UserPlus,
   History,
   XCircle,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import WatermarkLogo from '../common/WatermarkLogo';
 import CustomSelect from '../common/CustomSelect';
 import CustomCheckbox from '../common/CustomCheckbox';
-import { cardApi, schemaApi } from '../../services/api';
+import { cardApi, schemaApi, operationsApi } from '../../services/api';
 import apiClient from '../../services/api';
 import ImageUploadSlot from './ImageUploadSlot';
+import OperationHistoryModal from './OperationHistoryModal';
 
 /* ─── Status configuration ─────────────────────────────────────────────── */
 
@@ -2881,7 +2884,40 @@ export default function IDCardActionsView({
   const [showDownloadDataModal, setShowDownloadDataModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  /* ── Reversible Operations & Undo/Redo Engine State ── */
+  const [undoStatus, setUndoStatus] = useState({
+    canUndo: false,
+    canRedo: false,
+    undoTooltip: 'Nothing to undo',
+    redoTooltip: 'Nothing to redo',
+    undoCount: 0,
+    redoCount: 0,
+  });
+  const [undoLoading, setUndoLoading] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
   const searchTimerRef = useRef(null);
+
+  /* ── Load Undo / Redo Stack Status ── */
+  const fetchUndoStatus = useCallback(async () => {
+    if (!tableId) return;
+    try {
+      const res = await operationsApi.getStack(tableId);
+      if (res && res.success) {
+        setUndoStatus({
+          canUndo: Boolean(res.can_undo),
+          canRedo: Boolean(res.can_redo),
+          undoTooltip: res.undo_tooltip || (res.can_undo ? 'Undo (Ctrl+Z)' : 'Nothing to undo'),
+          redoTooltip: res.redo_tooltip || (res.can_redo ? 'Redo (Ctrl+Y)' : 'Nothing to redo'),
+          undoCount: res.undo_count || 0,
+          redoCount: res.redo_count || 0,
+        });
+      }
+    } catch {
+      /* non-critical */
+    }
+  }, [tableId]);
+
 
   /* ── LocalStorage helper for offline/custom tables ── */
   /* ── Load Table Metadata ── */
@@ -2968,6 +3004,47 @@ export default function IDCardActionsView({
     }
   }, [tableId, status, page, pageSize, debouncedSearch, classFilter, sectionFilter, sort]);
 
+  /* ── Handle Undo Operation ── */
+  const handleUndo = useCallback(async () => {
+
+    if (!tableId || undoLoading) return;
+    setUndoLoading(true);
+    try {
+      const res = await operationsApi.undo({ table_id: tableId });
+      if (res && res.success) {
+        addToast?.(res.message || 'Operation undone successfully.', 'success');
+        await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
+      } else {
+        addToast?.(res?.message || 'Could not undo operation.', 'warning');
+        fetchUndoStatus();
+      }
+    } catch (err) {
+      addToast?.(err.response?.data?.message || 'Failed to undo operation.', 'error');
+    } finally {
+      setUndoLoading(false);
+    }
+  }, [tableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
+
+  /* ── Handle Redo Operation ── */
+  const handleRedo = useCallback(async () => {
+    if (!tableId || undoLoading) return;
+    setUndoLoading(true);
+    try {
+      const res = await operationsApi.redo({ table_id: tableId });
+      if (res && res.success) {
+        addToast?.(res.message || 'Operation redone successfully.', 'success');
+        await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
+      } else {
+        addToast?.(res?.message || 'Could not redo operation.', 'warning');
+        fetchUndoStatus();
+      }
+    } catch (err) {
+      addToast?.(err.response?.data?.message || 'Failed to redo operation.', 'error');
+    } finally {
+      setUndoLoading(false);
+    }
+  }, [tableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
+
   /* ── Effects ── */
   useEffect(() => {
     loadTable();
@@ -2981,8 +3058,11 @@ export default function IDCardActionsView({
   useEffect(() => {
     loadCards();
   }, [loadCards]);
+  useEffect(() => {
+    fetchUndoStatus();
+  }, [fetchUndoStatus]);
 
-  /* Keyboard Shortcuts: Escape, Ctrl+A, N, T, B */
+  /* Keyboard Shortcuts: Escape, Ctrl+A, Ctrl+Z (Undo), Ctrl+Y (Redo), N, T, B */
   useEffect(() => {
     const handleKeyDown = (e) => {
       const activeEl = document.activeElement;
@@ -2995,9 +3075,29 @@ export default function IDCardActionsView({
         setShowPrintDataModal(false);
         setShowDownloadDataModal(false);
         setShowImageSortModal(false);
+        setShowHistoryModal(false);
       }
 
       if (isTyping) return;
+
+      // Undo: Ctrl+Z / Cmd+Z (without Shift)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+        e.preventDefault();
+        if (undoStatus.canUndo) {
+          handleUndo();
+        }
+      }
+
+      // Redo: Ctrl+Y / Cmd+Y OR Ctrl+Shift+Z / Cmd+Shift+Z
+      if (
+        ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))
+      ) {
+        e.preventDefault();
+        if (undoStatus.canRedo) {
+          handleRedo();
+        }
+      }
 
       if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault();
@@ -3026,7 +3126,8 @@ export default function IDCardActionsView({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [cards]);
+  }, [cards, undoStatus.canUndo, undoStatus.canRedo, handleUndo, handleRedo]);
+
 
   useEffect(() => {
     clearTimeout(searchTimerRef.current);
@@ -3081,7 +3182,7 @@ export default function IDCardActionsView({
       }
       addToast?.(`${ids.length} card(s) moved to ${newStatus}`, 'success');
       setSelectedIds(new Set());
-      await Promise.all([loadCards(), loadStatusCounts()]);
+      await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
     } catch (err) {
       console.error('Bulk status change error:', err);
       addToast?.('Failed to update card status', 'error');
@@ -3095,7 +3196,7 @@ export default function IDCardActionsView({
     try {
       await cardApi.changeStatus(card.id, newStatus);
       addToast?.(`Card moved to ${newStatus}`, 'success');
-      await Promise.all([loadCards(), loadStatusCounts()]);
+      await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
     } catch (err) {
       console.error('Single status change error:', err);
       addToast?.('Failed to update status', 'error');
@@ -3113,7 +3214,7 @@ export default function IDCardActionsView({
     try {
       await cardApi.changeStatus(card.id, 'pool');
       addToast?.('Card moved to Pool', 'info');
-      await Promise.all([loadCards(), loadStatusCounts()]);
+      await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
     } catch (err) {
       console.error('Delete card error:', err);
       addToast?.('Failed to delete card', 'error');
@@ -3168,6 +3269,7 @@ export default function IDCardActionsView({
     setEditingCell(null);
     try {
       await cardApi.updateField(cardId, field, cellValue);
+      fetchUndoStatus();
     } catch {
       /* ignore */
     }
@@ -3180,6 +3282,7 @@ export default function IDCardActionsView({
     );
     saveLocalStorageCards(updated);
   };
+
 
   /* Filter cards by Image Sort Modal conditions */
   const filteredCards = useMemo(() => {
@@ -3475,6 +3578,68 @@ export default function IDCardActionsView({
       >
         {/* Left Side: All Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'nowrap', flexShrink: 0 }}>
+          {/* ── Global Reversible Operations Controls (Undo, Redo, History) ── */}
+          <button
+            disabled={!undoStatus.canUndo || undoLoading}
+            onClick={handleUndo}
+            style={buttonStyle('#475569', !undoStatus.canUndo || undoLoading)}
+            title={undoStatus.undoTooltip || 'Undo (Ctrl+Z)'}
+          >
+            {undoLoading ? <Loader2 size={13} className="spin" /> : <Undo2 size={13} />}
+            <span>Undo</span>
+            {undoStatus.undoCount > 0 && (
+              <span
+                style={{
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  background: undoStatus.canUndo ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                  color: undoStatus.canUndo ? '#2563eb' : 'inherit',
+                  padding: '0 3px',
+                  borderRadius: '2px',
+                  lineHeight: '12px',
+                }}
+              >
+                {undoStatus.undoCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            disabled={!undoStatus.canRedo || undoLoading}
+            onClick={handleRedo}
+            style={buttonStyle('#475569', !undoStatus.canRedo || undoLoading)}
+            title={undoStatus.redoTooltip || 'Redo (Ctrl+Y)'}
+          >
+            {undoLoading ? <Loader2 size={13} className="spin" /> : <Redo2 size={13} />}
+            <span>Redo</span>
+            {undoStatus.redoCount > 0 && (
+              <span
+                style={{
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  background: undoStatus.canRedo ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
+                  color: undoStatus.canRedo ? '#2563eb' : 'inherit',
+                  padding: '0 3px',
+                  borderRadius: '2px',
+                  lineHeight: '12px',
+                }}
+              >
+                {undoStatus.redoCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setShowHistoryModal(true)}
+            style={buttonStyle('#475569')}
+            title="View Operations History & Reversible Audit Trail"
+          >
+            <History size={13} />
+            <span>History</span>
+          </button>
+
+          <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 4px', flexShrink: 0 }} />
+
           {/* Action Divider Component */}
           {/* Pending List buttons */}
           {status === 'pending' && (
@@ -3482,6 +3647,7 @@ export default function IDCardActionsView({
               <button onClick={() => setShowUploadXlsx(true)} style={buttonStyle('#2563eb')} title="Upload Excel file">
                 <FileSpreadsheet size={14} /> <span>Upload XLSX</span>
               </button>
+
 
               <button
                 onClick={() => setShowReuploadImageModal(true)}
@@ -4989,8 +5155,25 @@ export default function IDCardActionsView({
         />
       )}
 
+      {/* Reversible Operations & History Audit Modal */}
+      {showHistoryModal && (
+        <OperationHistoryModal
+          isOpen={showHistoryModal}
+          onClose={() => setShowHistoryModal(false)}
+          tableId={tableId}
+          tableName={table?.name || 'Table'}
+          onOperationReverted={() => {
+            fetchUndoStatus();
+            loadCards();
+            loadStatusCounts();
+          }}
+          addToast={addToast}
+        />
+      )}
+
       {/* Card Log & History Drawer */}
       {logCard && <CardLogDrawer card={logCard} table={table} onClose={() => setLogCard(null)} />}
     </div>
   );
 }
+
