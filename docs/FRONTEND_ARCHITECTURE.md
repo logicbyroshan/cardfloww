@@ -1,6 +1,6 @@
 # 🎨 CardFlow Frontend Architecture Specification
 
-> **Platform Version**: `v5.1.0` | **Core Engine**: React 19 Single Page Application (SPA) | **Bundler**: Vite 8 | **Styling**: Pure Vanilla CSS HSL Design System
+> **Platform Version**: `v5.3.0` | **Core Engine**: React 19 Single Page Application (SPA) | **Bundler**: Vite 8 | **Styling**: Pure Vanilla CSS HSL Design System
 
 ---
 
@@ -131,14 +131,24 @@ The design system is located in `src/index.css` and built entirely on native CSS
 The unified Axios instance in `src/services/api.js` provides organized domain namespaces:
 * `authAPI`: `login()`, `logout()`, `getProfile()`, `verifyOTP()`
 * `organisationManagerApi` / `managerApi`: `list()`, `create()`, `get()`, `update()`, `delete()`
-* `schemaApi`: `getTables()`, `createTable()`, `getSharedManagers()`, `shareManagers()`
+* `schemaApi`: `getTables()`, `createTable()`, `createTableFromData()`, `getSharedManagers()`, `shareManagers()`
+* `bulkApi` / `exportApi`: `bulkUpload()`, `reuploadImages()`, `exportPdf()`, `exportXlsx()`, `exportDocx()`, `exportImages()`, `downloadAll()`
 * `tempPasswordApi`: `list()`, `reset()`, `resendEmail()`
 
 ---
 
-## 7. Table Delegation & Dynamic Schema UI
+## 7. Table Delegation & Dynamic Ingestion UI
 
-### 7.1 Interactive Table Delegation Modal (`TableShareModal`)
+### 7.1 "Create with Data" Wizard (`CreateXlsxModal`)
+* 3-step creation wizard accepting `.xlsx`, `.xls`, `.csv`, and `.docx` Word documents.
+* Automatically queries `/api/imports/preview/` to detect schema, column types, and embedded cell photos (with live badge: `📷 {N} Embedded Photos Detected`).
+* Allows customizing column types (`Text`, `Number`, `Date`, `Photo`, `Father Photo`, `Mother Photo`, `Signature`) before committing.
+
+### 7.2 "Upload Data" Modal (`IDCardActionsView`)
+* Ingests `.xlsx`, `.xls`, `.csv`, and `.docx` data into existing tables.
+* Auto-maps document headers to table fields and extracts embedded photos.
+
+### 7.3 Interactive Table Delegation Modal (`TableShareModal`)
 * Prime Managers can click **Share** on any table row to open `TableShareModal`.
 * Fetches Super Managers via `GET /api/table/<id>/shared-managers/`.
 * Allows toggling table permissions (`can_edit_cards`, `can_approve_print`) with one-click saving via `POST /api/table/<id>/share-managers/`.
@@ -173,9 +183,9 @@ frontend/
     └── components/
         ├── auth/            # Dual Email/Username login form & OTP modals
         ├── client/          # Manager Accounts View, Quota Counters, Directory
-        ├── common/          # Reusable UI primitives (CustomSelect, Skeleton, ConfirmModal)
+        ├── common/          # Reusable UI primitives (CreateXlsxModal, CustomSelect, Skeleton, ConfirmModal)
         ├── dashboard/       # Operational Telemetry KPI cards & QuickActionDrawer
-        ├── idcard/          # TanStack Data Grid, CardTableView & TableShareModal
+        ├── idcard/          # TanStack Data Grid, CardTableView, CardDownloadsModal & TableShareModal
         ├── layout/          # Shell, Sidebar, Header, Breadcrumbs & Footer
         ├── panel/           # Control Panel settings, Task Progress & Audit Logs
         ├── pro/             # Manage Passwords Tab, Face Cropper, 3D Mockup
@@ -185,4 +195,4 @@ frontend/
 ```
 
 ---
-*Documentation updated for CardFlow Frontend Architecture (`v5.1.0`).*
+*Documentation updated for CardFlow Frontend Architecture (`v5.4.0`).*
