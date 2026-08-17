@@ -32,11 +32,16 @@ import {
   FilterX,
   X,
   RotateCw,
+  RotateCcw,
+  Download,
+  ArrowRight,
 } from 'lucide-react';
 import { BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
 import WatermarkLogo from '../common/WatermarkLogo';
 import CustomSelect from '../common/CustomSelect';
-import { panelApi } from '../../services/api';
+import BulkTransactionsModal from '../idcard/BulkTransactionsModal';
+import { panelApi, auditApi } from '../../services/api';
+
 
 /* ── Standard pagination bar — matches StaffManagementView / ClientDirectoryView ── */
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -954,8 +959,14 @@ function EmailLogsTab({ addToast }) {
 }
 
 
-/* ── Logs & Updates Tab ─────────────────────────────── */
+/* ── Logs & Updates Tab (Enhanced with Bulk Transactions & Audit Trail) ── */
 function LogHistoryTab({ addToast }) {
+  const [viewMode, setViewMode] = useState('transactions'); // 'transactions' | 'system'
+  const [transactions, setTransactions] = useState([]);
+  const [txLoading, setTxLoading] = useState(true);
+  const [selectedTxId, setSelectedTxId] = useState(null);
+  const [showTxModal, setShowTxModal] = useState(false);
+
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -967,6 +978,20 @@ function LogHistoryTab({ addToast }) {
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
 
+  /* Load Bulk Transactions */
+  const loadTransactions = useCallback(async () => {
+    setTxLoading(true);
+    try {
+      const data = await auditApi.getTransactions({ limit: 100 });
+      setTransactions(data?.transactions || []);
+    } catch {
+      setTransactions([]);
+    } finally {
+      setTxLoading(false);
+    }
+  }, []);
+
+  /* Load System Logs */
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -989,8 +1014,12 @@ function LogHistoryTab({ addToast }) {
   }, [search, sourceFilter, userTypeFilter, statusFilter, actionFilter]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (viewMode === 'transactions') {
+      loadTransactions();
+    } else {
+      load();
+    }
+  }, [viewMode, loadTransactions, load]);
 
   const filteredLogs = React.useMemo(() => {
     let result = logs;
@@ -1012,6 +1041,19 @@ function LogHistoryTab({ addToast }) {
     return result;
   }, [logs, search, sourceFilter]);
 
+  const filteredTransactions = React.useMemo(() => {
+    if (!search.trim()) return transactions;
+    const q = search.toLowerCase().trim();
+    return transactions.filter(
+      (t) =>
+        (t.tx_code && t.tx_code.toLowerCase().includes(q)) ||
+        (t.actor_name && t.actor_name.toLowerCase().includes(q)) ||
+        (t.action && t.action.toLowerCase().includes(q)) ||
+        (t.source_state && t.source_state.toLowerCase().includes(q)) ||
+        (t.destination_state && t.destination_state.toLowerCase().includes(q))
+    );
+  }, [transactions, search]);
+
   const resetFilters = () => {
     setSearch('');
     setSourceFilter('logs');
@@ -1026,17 +1068,60 @@ function LogHistoryTab({ addToast }) {
       id="tab-log-history"
       style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
     >
-      <div className="notif-actions-bar action-bar-light">
+      {/* Top Mode Selector & Actions Bar */}
+      <div className="notif-actions-bar action-bar-light" style={{ borderBottom: '1px solid #e2e8f0' }}>
         <div
           className="notif-actions-left"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}
         >
-          <div className="notif-search-box" style={{ width: '220px' }}>
+          {/* Mode Switch Pills */}
+          <div style={{ display: 'inline-flex', background: '#e2e8f0', borderRadius: '6px', padding: '2px' }}>
+            <button
+              onClick={() => setViewMode('transactions')}
+              style={{
+                border: 'none',
+                background: viewMode === 'transactions' ? '#ffffff' : 'transparent',
+                color: viewMode === 'transactions' ? '#4f46e5' : '#475569',
+                fontWeight: viewMode === 'transactions' ? 700 : 500,
+                fontSize: '12px',
+                padding: '5px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: viewMode === 'transactions' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <Layers size={13} /> Bulk Transactions & Activity
+            </button>
+            <button
+              onClick={() => setViewMode('system')}
+              style={{
+                border: 'none',
+                background: viewMode === 'system' ? '#ffffff' : 'transparent',
+                color: viewMode === 'system' ? '#0f172a' : '#475569',
+                fontWeight: viewMode === 'system' ? 700 : 500,
+                fontSize: '12px',
+                padding: '5px 12px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: viewMode === 'system' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <Activity size={13} /> System Logs
+            </button>
+          </div>
+
+          <div className="notif-search-box" style={{ width: '240px' }}>
             <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search users, updates, logs, tasks..."
+              placeholder={viewMode === 'transactions' ? "Search batch code, actor..." : "Search users, updates, logs..."}
             />
             {search && (
               <button
@@ -1056,146 +1141,229 @@ function LogHistoryTab({ addToast }) {
               </button>
             )}
           </div>
-          <CustomSelect
-            value={sourceFilter}
-            onChange={(val) => setSourceFilter(val)}
-            options={[
-              { value: 'logs', label: 'System Logs' },
-              { value: 'all', label: 'All Sources' },
-              { value: 'tasks', label: 'Background Tasks' },
-              { value: 'backups', label: 'Backup Tasks' },
-            ]}
-            height="28px"
-            style={{ width: '130px' }}
-          />
-          <CustomSelect
-            value={userTypeFilter}
-            onChange={(val) => setUserTypeFilter(val)}
-            options={[
-              { value: '', label: 'All User Types' },
-              { value: 'super_admin', label: 'Super Admin' },
-              { value: 'operator', label: 'Operator' },
-              { value: 'prime_manager', label: 'Prime Manager' },
-              { value: 'manager', label: 'Manager' },
-              { value: 'assistant', label: 'Assistant' },
-              { value: 'photographer', label: 'Photographer' },
-            ]}
-            height="28px"
-            style={{ width: '140px' }}
-          />
-          <CustomSelect
-            value={statusFilter}
-            onChange={(val) => setStatusFilter(val)}
-            options={[
-              { value: '', label: 'All Task Status' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'processing', label: 'Processing' },
-              { value: 'completed', label: 'Completed' },
-              { value: 'failed', label: 'Failed' },
-              { value: 'cancelled', label: 'Cancelled' },
-            ]}
-            height="28px"
-            style={{ width: '140px' }}
-          />
-          <CustomSelect
-            value={actionFilter}
-            onChange={(val) => setActionFilter(val)}
-            options={[
-              { value: '', label: 'All Update Actions' },
-              { value: 'login', label: 'Login' },
-              { value: 'logout', label: 'Logout' },
-              { value: 'create', label: 'Create' },
-              { value: 'update', label: 'Update' },
-              { value: 'delete', label: 'Delete' },
-              { value: 'export', label: 'Export' },
-              { value: 'password_reset', label: 'Password Reset' },
-              { value: 'client_create', label: 'Client Create' },
-              { value: 'client_update', label: 'Client Update' },
-              { value: 'card_create', label: 'Card Create' },
-              { value: 'card_update', label: 'Card Update' },
-            ]}
-            height="28px"
-            style={{ width: '150px' }}
-          />
+
+          {viewMode === 'system' && (
+            <>
+              <CustomSelect
+                value={sourceFilter}
+                onChange={(val) => setSourceFilter(val)}
+                options={[
+                  { value: 'logs', label: 'System Logs' },
+                  { value: 'all', label: 'All Sources' },
+                  { value: 'tasks', label: 'Background Tasks' },
+                  { value: 'backups', label: 'Backup Tasks' },
+                ]}
+                height="28px"
+                style={{ width: '130px' }}
+              />
+              <CustomSelect
+                value={userTypeFilter}
+                onChange={(val) => setUserTypeFilter(val)}
+                options={[
+                  { value: '', label: 'All User Types' },
+                  { value: 'super_admin', label: 'Super Admin' },
+                  { value: 'operator', label: 'Operator' },
+                  { value: 'prime_manager', label: 'Prime Manager' },
+                  { value: 'manager', label: 'Manager' },
+                  { value: 'assistant', label: 'Assistant' },
+                  { value: 'photographer', label: 'Photographer' },
+                ]}
+                height="28px"
+                style={{ width: '140px' }}
+              />
+            </>
+          )}
         </div>
+
         <div className="notif-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button className="btn btn-sm btn-neutral" onClick={resetFilters} title="Reset filters">
-            <FilterX size={12} /> Reset Filters
+          {viewMode === 'transactions' ? (
+            <a
+              href={auditApi.exportAuditUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm btn-outline"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', textDecoration: 'none' }}
+              title="Export all audit logs to CSV"
+            >
+              <Download size={13} /> Export Audit CSV
+            </a>
+          ) : (
+            <button className="btn btn-sm btn-neutral" onClick={resetFilters} title="Reset filters">
+              <FilterX size={12} /> Reset Filters
+            </button>
+          )}
+          <button
+            className="btn btn-sm btn-outline"
+            onClick={viewMode === 'transactions' ? loadTransactions : load}
+            title="Refresh list"
+          >
+            <RefreshCw size={12} /> Refresh
           </button>
         </div>
       </div>
 
+      {/* ── Table Container ── */}
       <div
         className="table-wrapper"
         style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
-        <table className="data-table" style={{ flexShrink: 0 }}>
-          <thead>
-            <tr>
-              <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
-              <th style={{ width: '100px' }}>Source</th>
-              <th>Event</th>
-              <th style={{ width: '110px' }}>Status / Action</th>
-              <th style={{ width: '120px' }}>User</th>
-              <th>Details</th>
-              <th style={{ width: '140px' }}>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 15 }).map((_, i) => (
-                  <tr key={i} className="skeleton-row">
-                    <td style={{ textAlign: 'center' }}>
-                      <div className="skeleton" style={{ height: '13px', width: '24px', margin: '0 auto' }} />
-                    </td>
-                    <td>
-                      <div className="skeleton skeleton-cell-badge" />
-                    </td>
-                    <td>
-                      <div className="skeleton" style={{ height: '13px', width: `${65 + (i % 4) * 7}%` }} />
-                    </td>
-                    <td>
-                      <div className="skeleton skeleton-cell-badge" />
-                    </td>
-                    <td>
-                      <div className="skeleton" style={{ height: '13px', width: `${50 + (i % 3) * 10}%` }} />
-                    </td>
-                    <td>
-                      <div className="skeleton" style={{ height: '13px', width: '80%' }} />
-                    </td>
-                    <td>
-                      <div className="skeleton skeleton-cell-date" />
-                    </td>
-                  </tr>
-                ))
-              : filteredLogs.map((l, i) => (
-                  <tr key={l.id || i}>
-                    <td style={{ textAlign: 'center', color: '#9ca3af' }}>{i + 1}</td>
-                    <td>
-                      <span className="badge badge-neutral">{l.source || 'Log'}</span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>{l.event || l.action || l.message || '—'}</td>
-                    <td>
-                      <span
-                        className={`badge ${l.level === 'error' ? 'badge-danger' : l.level === 'warning' ? 'badge-warning' : 'badge-neutral'}`}
-                      >
-                        {l.level || 'info'}
-                      </span>
-                    </td>
-                    <td style={{ color: '#6b7280' }}>{l.user || l.username || '—'}</td>
-                    <td style={{ fontSize: '11px', color: '#6b7280' }}>
-                      {l.details || l.description || l.ip_address || '—'}
-                    </td>
-                    <td style={{ fontSize: '12px', color: '#6b7280' }}>
-                      {l.timestamp ? new Date(l.timestamp).toLocaleString('en-IN') : '—'}
-                    </td>
-                  </tr>
-                ))}
-          </tbody>
-        </table>
+        {viewMode === 'transactions' ? (
+          /* Bulk Transactions Mode Table */
+          <table className="data-table" style={{ flexShrink: 0, fontSize: '12px' }}>
+            <thead>
+              <tr>
+                <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
+                <th style={{ width: '170px' }}>Transaction Code</th>
+                <th style={{ width: '130px' }}>Action Type</th>
+                <th>Transition / Summary</th>
+                <th style={{ width: '90px', textAlign: 'center' }}>Affected</th>
+                <th style={{ width: '160px' }}>Performed By</th>
+                <th style={{ width: '140px' }}>Timestamp</th>
+                <th style={{ width: '90px', textAlign: 'center' }}>Status</th>
+                <th style={{ width: '110px', textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {txLoading
+                ? Array.from({ length: 10 }).map((_, i) => (
+                    <tr key={i} className="skeleton-row">
+                      <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '13px', width: '20px', margin: '0 auto' }} /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: '140px' }} /></td>
+                      <td><div className="skeleton skeleton-cell-badge" /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: '75%' }} /></td>
+                      <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '13px', width: '30px', margin: '0 auto' }} /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: '100px' }} /></td>
+                      <td><div className="skeleton skeleton-cell-date" /></td>
+                      <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell-badge" /></td>
+                      <td style={{ textAlign: 'center' }}><div className="skeleton" style={{ height: '22px', width: '60px', margin: '0 auto' }} /></td>
+                    </tr>
+                  ))
+                : filteredTransactions.map((tx, idx) => (
+                    <tr key={tx.id || idx}>
+                      <td style={{ textAlign: 'center', color: '#9ca3af' }}>{idx + 1}</td>
+                      <td>
+                        <strong style={{ color: '#4f46e5', fontFamily: 'monospace', fontSize: '12px' }}>
+                          {tx.tx_code}
+                        </strong>
+                      </td>
+                      <td>
+                        <span className="badge badge-neutral" style={{ textTransform: 'uppercase', fontSize: '10px' }}>
+                          {tx.action}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600, color: '#3b82f6', textTransform: 'capitalize' }}>
+                            {tx.source_state || 'start'}
+                          </span>
+                          <ArrowRight size={11} color="#94a3b8" />
+                          <span style={{ fontWeight: 600, color: '#16a34a', textTransform: 'capitalize' }}>
+                            {tx.destination_state || 'end'}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#0f172a' }}>
+                        {tx.success_count}
+                      </td>
+                      <td>
+                        <div>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{tx.actor_name}</span>
+                          {tx.actor_role && (
+                            <span style={{ fontSize: '10px', color: '#64748b', marginLeft: '5px' }}>
+                              ({tx.actor_role})
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: '11px', color: '#64748b' }}>
+                        {new Date(tx.created_at).toLocaleString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span
+                          className={`badge ${tx.status === 'completed' ? 'badge-success' : (tx.status.includes('reversed') ? 'badge-warning' : 'badge-danger')}`}
+                          style={{ fontSize: '10px', textTransform: 'uppercase' }}
+                        >
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          className="btn btn-xs btn-primary"
+                          onClick={() => {
+                            setSelectedTxId(tx.id);
+                            setShowTxModal(true);
+                          }}
+                          style={{ fontSize: '11px', padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Eye size={11} /> View / Reverse
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        ) : (
+          /* System Logs Mode Table */
+          <table className="data-table" style={{ flexShrink: 0 }}>
+            <thead>
+              <tr>
+                <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
+                <th style={{ width: '100px' }}>Source</th>
+                <th>Event</th>
+                <th style={{ width: '110px' }}>Status / Action</th>
+                <th style={{ width: '120px' }}>User</th>
+                <th>Details</th>
+                <th style={{ width: '140px' }}>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading
+                ? Array.from({ length: 15 }).map((_, i) => (
+                    <tr key={i} className="skeleton-row">
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="skeleton" style={{ height: '13px', width: '24px', margin: '0 auto' }} />
+                      </td>
+                      <td><div className="skeleton skeleton-cell-badge" /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: `${65 + (i % 4) * 7}%` }} /></td>
+                      <td><div className="skeleton skeleton-cell-badge" /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: `${50 + (i % 3) * 10}%` }} /></td>
+                      <td><div className="skeleton" style={{ height: '13px', width: '80%' }} /></td>
+                      <td><div className="skeleton skeleton-cell-date" /></td>
+                    </tr>
+                  ))
+                : filteredLogs.map((l, i) => (
+                    <tr key={l.id || i}>
+                      <td style={{ textAlign: 'center', color: '#9ca3af' }}>{i + 1}</td>
+                      <td><span className="badge badge-neutral">{l.source || 'Log'}</span></td>
+                      <td style={{ fontWeight: 600 }}>{l.event || l.action || l.message || '—'}</td>
+                      <td>
+                        <span
+                          className={`badge ${l.level === 'error' ? 'badge-danger' : l.level === 'warning' ? 'badge-warning' : 'badge-neutral'}`}
+                        >
+                          {l.level || 'info'}
+                        </span>
+                      </td>
+                      <td style={{ color: '#6b7280' }}>{l.user || l.username || '—'}</td>
+                      <td style={{ fontSize: '11px', color: '#6b7280' }}>
+                        {l.details || l.description || l.ip_address || '—'}
+                      </td>
+                      <td style={{ fontSize: '12px', color: '#6b7280' }}>
+                        {l.timestamp ? new Date(l.timestamp).toLocaleString('en-IN') : '—'}
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        )}
 
         {/* Empty state */}
-        {!loading && filteredLogs.length === 0 && (
+        {!loading && !txLoading && (viewMode === 'transactions' ? filteredTransactions.length === 0 : filteredLogs.length === 0) && (
           <div
             style={{
               flex: 1,
@@ -1223,22 +1391,41 @@ function LogHistoryTab({ addToast }) {
                 marginBottom: '12px',
               }}
             >
-              <Activity size={30} />
+              <Layers size={30} />
             </div>
             <div style={{ maxWidth: '340px' }}>
               <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0' }}>
-                No System Logs Found
+                {viewMode === 'transactions' ? 'No Bulk Transactions Found' : 'No Activity Records Found'}
               </h4>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
                 {search
-                  ? `No logs match "${search}"`
-                  : 'System activity events, audit trails, and security updates will be displayed here when recorded.'}
+                  ? `No records match "${search}"`
+                  : viewMode === 'transactions'
+                    ? 'There are no batch movements or mass operations recorded yet.'
+                    : 'System activity and operational updates will appear here.'}
               </p>
             </div>
           </div>
         )}
       </div>
+
+      {/* Bulk Transactions Modal Mount */}
+      {showTxModal && (
+        <BulkTransactionsModal
+          isOpen={showTxModal}
+          onClose={() => {
+            setShowTxModal(false);
+            setSelectedTxId(null);
+          }}
+          tableId={null}
+          tableName="CardFlow Control Panel"
+          initialTransactionId={selectedTxId}
+          onTransactionReverted={loadTransactions}
+          addToast={addToast}
+        />
+      )}
       <PaginationBar
+
         page={page}
         setPage={setPage}
         total={total}
@@ -1249,6 +1436,7 @@ function LogHistoryTab({ addToast }) {
     </div>
   );
 }
+
 
 /* ── Backups Tab ──────────────────────────────────── */
 function BackupsTab({ addToast }) {

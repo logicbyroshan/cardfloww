@@ -26,14 +26,18 @@ import {
   Shield,
   CheckCircle2,
   User,
+  Layers,
+  Activity,
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
 import { SkeletonTableRows } from '../common/Skeleton';
 import CustomSelect from '../common/CustomSelect';
+import BulkTransactionsModal from '../idcard/BulkTransactionsModal';
 import { clientApi, managerApi, staffApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
+
 
 export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNavigate, onOpenDeleteModal }) {
   const [clients, setClients] = useState([]);
@@ -44,6 +48,9 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [total, setTotal] = useState(0);
+  const [showBulkTxModal, setShowBulkTxModal] = useState(false);
+  const [focusOrg, setFocusOrg] = useState(null);
+
 
   /* Dispatch footer data count & selection */
   useEffect(() => {
@@ -540,10 +547,37 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
               >
                 <UsersRound size={13} /> <span>Assistants</span>
               </button>
+              <button
+                className="btn"
+                disabled={!selected}
+                onClick={() => {
+                  setFocusOrg(selClient);
+                  setShowBulkTxModal(true);
+                }}
+                title="View Organisation Bulk Transactions & Activity History"
+                style={{
+                  background: selected ? '#4f46e5' : 'rgba(255, 255, 255, 0.08)',
+                  color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
+                  border: selected ? '1px solid #4f46e5' : '1px solid rgba(255, 255, 255, 0.15)',
+                  height: '28px',
+                  padding: '0 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  cursor: selected ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <Layers size={13} /> <span>Transactions</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
+
 
       {/* ── TABLE CONTAINER ── */}
       <div
@@ -753,9 +787,10 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                         className="client-history-trigger"
                         onClick={(e) => {
                           e.stopPropagation();
-                          addToast?.(`Log: ${c.name || idx + 1}`, 'info');
+                          setFocusOrg(c);
+                          setShowBulkTxModal(true);
                         }}
-                        title="View log"
+                        title={`View activity & transaction log for ${c.name || 'Organisation'}`}
                         style={{
                           width: '24px',
                           height: '24px',
@@ -769,10 +804,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                           justifyContent: 'center',
                         }}
                       >
-                        <Info size={13} />
+                        <Activity size={13} />
                       </button>
                     </td>
                   </tr>
+
                 );
               })
             )}
@@ -1461,9 +1497,24 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
           )}
         </div>
       )}
+      {/* ── BULK TRANSACTIONS & ACTIVITY MODAL ── */}
+      {showBulkTxModal && (
+        <BulkTransactionsModal
+          isOpen={showBulkTxModal}
+          onClose={() => {
+            setShowBulkTxModal(false);
+            setFocusOrg(null);
+          }}
+          tableId={null}
+          tableName={focusOrg?.name || 'Organisation'}
+          addToast={addToast}
+        />
+      )}
     </div>
   );
 }
+
+
 
 /* ── INLINE EDIT/ADD FORM FOR MANAGERS ── */
 function ManagerInlineForm({ manager, orgName, onSave, onCancel }) {

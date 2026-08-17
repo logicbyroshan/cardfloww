@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 """
-CardFlow — Reversible Operations, Bulk Transaction & Audit History Engine Services
+CardFlow -- Reversible Operations, Bulk Transaction & Audit History Engine Services
+
 
 Key Invariants Enforced:
   1. Record First, Restrict Later: Every mutation is permanently captured; visibility is enforced at query time.
@@ -350,6 +352,56 @@ class AuditService:
 
         return bulk_tx
 
+    # ── 3. HUMAN SUMMARY FORMATTER ─────────────────────────────────
+
+    @classmethod
+    def format_human_summary(cls, ev: Union[AuditEvent, Dict[str, Any]]) -> str:
+        """
+        Generate a concise, human-friendly summary instead of raw character-by-character dumps.
+        """
+
+        bulk_tx = getattr(ev, 'bulk_transaction', None) if isinstance(ev, AuditEvent) else ev.get('bulk_transaction')
+        if bulk_tx:
+            tx_code = getattr(bulk_tx, 'tx_code', '') if isinstance(bulk_tx, BulkTransaction) else bulk_tx.get('tx_code', '')
+            src = getattr(bulk_tx, 'source_state', '') if isinstance(bulk_tx, BulkTransaction) else bulk_tx.get('source_state', '')
+            dst = getattr(bulk_tx, 'destination_state', '') if isinstance(bulk_tx, BulkTransaction) else bulk_tx.get('destination_state', '')
+            return f"Bulk Moved from {src.title() if src else 'Initial'} to {dst.title() if dst else 'Destination'} [{tx_code}]"
+
+        ev_type = getattr(ev, 'event_type', '') if isinstance(ev, AuditEvent) else ev.get('event_type', '')
+        t_name = getattr(ev, 'target_name_snapshot', '') if isinstance(ev, AuditEvent) else ev.get('target_name', '')
+        t_type = getattr(ev, 'target_type', '') if isinstance(ev, AuditEvent) else ev.get('target_type', 'card')
+        deltas = getattr(ev, 'field_deltas', []) if isinstance(ev, AuditEvent) else ev.get('field_deltas', [])
+
+        if ev_type == 'create':
+            return f"Created {t_name or f'{t_type.title()}'}"
+        if ev_type == 'delete':
+            return f"Deleted {t_name or f'{t_type.title()}'}"
+        if ev_type == 'restore':
+            return f"Restored {t_name or f'{t_type.title()}'}"
+        if ev_type == 'schema_change':
+            if deltas:
+                names = [d.get('field_name', '') for d in deltas if isinstance(d, dict)]
+                return f"Schema updated ({', '.join(names[:3])})"
+            return f"Updated schema for {t_name or 'Table'}"
+
+        if deltas and isinstance(deltas, list):
+            valid_deltas = [d for d in deltas if isinstance(d, dict)]
+            if len(valid_deltas) == 1:
+                f_name = valid_deltas[0].get('field_name', 'Field')
+                b_val = valid_deltas[0].get('before_value')
+                a_val = valid_deltas[0].get('after_value')
+                if str(f_name).upper() == 'STATUS':
+                    return f"Status changed: {b_val or 'empty'} -> {a_val or 'empty'}"
+                if str(f_name).upper().startswith(('PHOTO', 'IMAGE')):
+                    return f"Updated photo for {t_name or 'card'}"
+                return f"Edited {f_name}: {b_val or 'empty'} -> {a_val or 'empty'}"
+
+            elif len(valid_deltas) > 1:
+                names = [d.get('field_name', '') for d in valid_deltas]
+                return f"Updated {len(valid_deltas)} fields ({', '.join(names[:3])}{'...' if len(names) > 3 else ''})"
+
+        return f"Updated {t_name or f'{t_type.title()}'}"
+
     # ── 3. CARD TIMELINE QUERY ─────────────────────────────────────
 
     @classmethod
@@ -359,10 +411,12 @@ class AuditService:
         user: Optional[Any],
         limit: int = 50,
         offset: int = 0,
+        consolidate_micro_edits: bool = True,
     ) -> Dict[str, Any]:
         """
         Generate a per-card chronological history timeline with actor snapshots,
         field deltas, and bulk transaction linkages.
+        Consolidates rapid consecutive single-field keystrokes within 3 minutes.
         """
         try:
             card = IDCard.objects.select_related('table', 'table__organisation').get(id=card_id)
@@ -373,36 +427,94 @@ class AuditService:
         base_qs = AuditEvent.objects.filter(target_type='card', target_id=card_id).select_related('bulk_transaction', 'actor')
         visible_qs = AuditVisibilityService.filter_events(base_qs, user, organisation=org, table_id=card.table_id)
 
-        total_count = visible_qs.count()
-        events = list(visible_qs.order_by('-created_at', '-id')[offset:offset + limit])
+        raw_events = list(visible_qs.order_by('-created_at', '-id')[:200])
 
+        # Micro-edit consolidation: group rapid consecutive edits on same field within 3 min
         timeline_items = []
-        for ev in events:
-            tx_info = None
-            if ev.bulk_transaction:
-                tx = ev.bulk_transaction
-                tx_info = {
-                    'id': tx.id,
-                    'tx_code': tx.tx_code,
-                    'action': tx.action,
-                    'source_state': tx.source_state,
-                    'destination_state': tx.destination_state,
-                    'requested_count': tx.requested_count,
-                }
+        if consolidate_micro_edits and raw_events:
+            consolidated = []
+            for ev in raw_events:
+                actor_id = ev.actor_id or 0
+                deltas = ev.field_deltas or []
+                f_name = deltas[0].get('field_name') if len(deltas) == 1 else None
 
-            timeline_items.append({
-                'id': ev.id,
-                'event_id': ev.event_id,
-                'event_type': ev.event_type,
-                'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
-                'actor_role': ev.actor_role_snapshot,
-                'actor_type': ev.actor_type,
-                'target_name': ev.target_name_snapshot,
-                'field_deltas': ev.field_deltas,
-                'bulk_transaction': tx_info,
-                'created_at': ev.created_at.isoformat(),
-                'source': ev.source,
-            })
+                # Check if can merge with last item
+                can_merge = False
+                if consolidated and not ev.bulk_transaction and f_name and consolidated[-1].get('_can_merge'):
+                    prev = consolidated[-1]
+                    if prev.get('_actor_id') == actor_id and prev.get('_field_name') == f_name:
+                        dt_diff = abs((datetime.fromisoformat(prev['created_at']) - ev.created_at).total_seconds())
+                        if dt_diff <= 180:  # within 3 minutes
+                            can_merge = True
+                            # Keep the older before_value from earlier edit
+                            prev['_merge_count'] = prev.get('_merge_count', 1) + 1
+                            if deltas:
+                                prev['field_deltas'][0]['before_value'] = deltas[0].get('before_value')
+                            prev['human_summary'] = cls.format_human_summary(prev)
+
+                if not can_merge:
+                    tx_info = None
+                    if ev.bulk_transaction:
+                        tx = ev.bulk_transaction
+                        tx_info = {
+                            'id': tx.id,
+                            'tx_code': tx.tx_code,
+                            'action': tx.action,
+                            'source_state': tx.source_state,
+                            'destination_state': tx.destination_state,
+                            'requested_count': tx.requested_count,
+                        }
+
+                    item = {
+                        'id': ev.id,
+                        'event_id': ev.event_id,
+                        'event_type': ev.event_type,
+                        'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
+                        'actor_role': ev.actor_role_snapshot,
+                        'actor_type': ev.actor_type,
+                        'target_name': ev.target_name_snapshot,
+                        'field_deltas': copy.deepcopy(deltas),
+                        'bulk_transaction': tx_info,
+                        'human_summary': cls.format_human_summary(ev),
+                        'created_at': ev.created_at.isoformat(),
+                        'source': ev.source,
+                        '_actor_id': actor_id,
+                        '_field_name': f_name,
+                        '_can_merge': bool(not ev.bulk_transaction and f_name),
+                        '_merge_count': 1,
+                    }
+                    consolidated.append(item)
+
+            timeline_items = consolidated[offset:offset + limit]
+            total_count = len(consolidated)
+        else:
+            total_count = len(raw_events)
+            for ev in raw_events[offset:offset + limit]:
+                tx_info = None
+                if ev.bulk_transaction:
+                    tx = ev.bulk_transaction
+                    tx_info = {
+                        'id': tx.id,
+                        'tx_code': tx.tx_code,
+                        'action': tx.action,
+                        'source_state': tx.source_state,
+                        'destination_state': tx.destination_state,
+                        'requested_count': tx.requested_count,
+                    }
+                timeline_items.append({
+                    'id': ev.id,
+                    'event_id': ev.event_id,
+                    'event_type': ev.event_type,
+                    'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
+                    'actor_role': ev.actor_role_snapshot,
+                    'actor_type': ev.actor_type,
+                    'target_name': ev.target_name_snapshot,
+                    'field_deltas': ev.field_deltas,
+                    'bulk_transaction': tx_info,
+                    'human_summary': cls.format_human_summary(ev),
+                    'created_at': ev.created_at.isoformat(),
+                    'source': ev.source,
+                })
 
         return {
             'success': True,
@@ -439,6 +551,18 @@ class AuditService:
 
         items = []
         for ev in events:
+            tx_info = None
+            if ev.bulk_transaction:
+                tx = ev.bulk_transaction
+                tx_info = {
+                    'id': tx.id,
+                    'tx_code': tx.tx_code,
+                    'action': tx.action,
+                    'source_state': tx.source_state,
+                    'destination_state': tx.destination_state,
+                    'requested_count': tx.requested_count,
+                }
+
             items.append({
                 'id': ev.id,
                 'event_id': ev.event_id,
@@ -448,10 +572,12 @@ class AuditService:
                 'target_name': ev.target_name_snapshot,
                 'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
                 'actor_role': ev.actor_role_snapshot,
+                'human_summary': cls.format_human_summary(ev),
                 'field_deltas': ev.field_deltas,
-                'bulk_tx_code': ev.bulk_transaction.tx_code if ev.bulk_transaction else None,
+                'bulk_transaction': tx_info,
                 'created_at': ev.created_at.isoformat(),
             })
+
 
         return {
             'success': True,
@@ -592,8 +718,9 @@ class AuditService:
         """
         Safely reverse a historical bulk transaction with multi-user conflict detection.
         Reverts non-conflicted cards, skips cards modified subsequently, and creates a
-        NEW BulkTransaction and NEW AuditEvents — preserving the permanent truth of history.
+        NEW BulkTransaction and NEW AuditEvents -- preserving the permanent truth of history.
         """
+
         try:
             tx = BulkTransaction.objects.select_related('table', 'organisation', 'actor').get(id=transaction_id)
         except BulkTransaction.DoesNotExist:
@@ -836,8 +963,9 @@ class OperationEngine:
     ) -> OperationResult:
         """
         Reverse an operation with multi-user conflict detection.
-        If operation_id is None, undoes the latest active operation in the user's stack.
+        If operation_id is None, undoes the latest active operation in the user stack.
         """
+
         if operation_id:
             try:
                 op = Operation.objects.select_related('organisation', 'target_table').get(id=operation_id)
@@ -1026,8 +1154,9 @@ class OperationEngine:
     ) -> OperationResult:
         """
         Re-apply an undone operation with conflict detection.
-        If operation_id is None, redoes the latest undone operation in the user's stack.
+        If operation_id is None, redoes the latest undone operation in the user stack.
         """
+
         if operation_id:
             try:
                 op = Operation.objects.select_related('organisation', 'target_table').get(id=operation_id)

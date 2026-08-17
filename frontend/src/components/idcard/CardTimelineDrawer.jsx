@@ -351,6 +351,13 @@ export default function CardTimelineDrawer({ card, table, onClose, onOpenTransac
                         </div>
                       )}
 
+                      {/* Human-Friendly Summary Banner */}
+                      {ev.human_summary && (
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                          {ev.human_summary}
+                        </div>
+                      )}
+
                       {/* Granular Field Deltas */}
                       {ev.field_deltas && ev.field_deltas.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
@@ -366,6 +373,7 @@ export default function CardTimelineDrawer({ card, table, onClose, onOpenTransac
                                 border: '1px solid #f1f5f9',
                                 padding: '4px 8px',
                                 borderRadius: '4px',
+                                flexWrap: 'wrap',
                               }}
                             >
                               <span style={{ fontWeight: 600, color: '#334155' }}>{d.field_name}:</span>
@@ -401,11 +409,8 @@ export default function CardTimelineDrawer({ card, table, onClose, onOpenTransac
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#475569' }}>
-                          Updated card attributes.
-                        </p>
-                      )}
+                      ) : null}
+
                     </div>
                   </div>
                 );

@@ -230,6 +230,31 @@ class IDCardTableService(BaseService):
                 is_active=True
             )
 
+            # Record Table Creation in Audit Trail
+            try:
+                from operations.services import AuditService
+                if org:
+                    field_names = [f['name'] for f in validated_fields]
+                    AuditService.record_event(
+                        organisation=org,
+                        actor=None,
+                        event_type='create',
+                        target_type='table',
+                        target_id=table.id,
+                        target_name=f"Table {table.name}",
+                        target_table=table,
+                        field_deltas=[{
+                            'field_name': 'SCHEMA',
+                            'before_value': None,
+                            'after_value': f"{len(validated_fields)} fields ({', '.join(field_names[:5])})",
+                            'change_type': 'table_create',
+                        }],
+                        visibility_scope='ORGANISATION',
+                        source='table_manager',
+                    )
+            except Exception as audit_err:
+                logger.debug("create_table audit error: %s", audit_err)
+
             return ServiceResult(
                 success=True,
                 message='Table created successfully!',
@@ -256,6 +281,8 @@ class IDCardTableService(BaseService):
         """Update an ID Card Table"""
         try:
             table = get_object_or_404(Table, id=table_id)
+            old_name = table.name
+            old_fields = [f.get('name') for f in (table.fields or []) if isinstance(f, dict)]
 
             name = data.get('name', '').strip().upper()
             if not name:
@@ -294,8 +321,9 @@ class IDCardTableService(BaseService):
                 })
 
             # Determine / update table type
-            org_name = getattr(table.group.client, 'name', '') if table.group.client_id else ''
-            org_type = getattr(table.group.client, 'org_type', '') if table.group.client_id else ''
+            org = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
+            org_name = getattr(org, 'name', '') if org else ''
+            org_type = getattr(org, 'org_type', '') if org else ''
             raw_type = str(data.get('table_type') or '').strip().lower()
             if raw_type in cls.VALID_TABLE_TYPES:
                 table_type = raw_type
@@ -306,6 +334,39 @@ class IDCardTableService(BaseService):
             table.table_type = table_type
             table.fields = validated_fields
             table.save()
+
+            # Record Schema & Column changes into Audit Trail
+            try:
+                from operations.services import AuditService
+                new_fields = [f['name'] for f in validated_fields]
+                added = [f for f in new_fields if f not in old_fields]
+                removed = [f for f in old_fields if f not in new_fields]
+
+                deltas = []
+                if old_name != name:
+                    deltas.append({'field_name': 'TABLE_NAME', 'before_value': old_name, 'after_value': name, 'change_type': 'table_rename'})
+                if added:
+                    deltas.append({'field_name': 'ADDED_COLUMNS', 'before_value': None, 'after_value': ', '.join(added), 'change_type': 'column_add'})
+                if removed:
+                    deltas.append({'field_name': 'REMOVED_COLUMNS', 'before_value': ', '.join(removed), 'after_value': None, 'change_type': 'column_delete'})
+                if not deltas:
+                    deltas.append({'field_name': 'COLUMNS_REORDERED', 'before_value': len(old_fields), 'after_value': len(new_fields), 'change_type': 'column_reorder'})
+
+                if org:
+                    AuditService.record_event(
+                        organisation=org,
+                        actor=None,
+                        event_type='schema_change',
+                        target_type='table',
+                        target_id=table.id,
+                        target_name=f"Table {table.name}",
+                        target_table=table,
+                        field_deltas=deltas,
+                        visibility_scope='ORGANISATION',
+                        source='table_manager',
+                    )
+            except Exception as audit_err:
+                logger.debug("update_table audit error: %s", audit_err)
 
             return ServiceResult(
                 success=True,
@@ -322,6 +383,32 @@ class IDCardTableService(BaseService):
         try:
             table = get_object_or_404(Table, id=table_id)
             table_name = table.name
+            org = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
+
+            # Record deletion before deleting row
+            try:
+                from operations.services import AuditService
+                if org:
+                    AuditService.record_event(
+                        organisation=org,
+                        actor=None,
+                        event_type='delete',
+                        target_type='table',
+                        target_id=table_id,
+                        target_name=f"Table {table_name}",
+                        target_table=None,
+                        field_deltas=[{
+                            'field_name': 'DELETED',
+                            'before_value': f"Table {table_name}",
+                            'after_value': 'Deleted',
+                            'change_type': 'table_delete',
+                        }],
+                        visibility_scope='ORGANISATION',
+                        source='table_manager',
+                    )
+            except Exception as audit_err:
+                logger.debug("delete_table audit error: %s", audit_err)
+
             table.delete()
 
             return ServiceResult(
@@ -343,6 +430,31 @@ class IDCardTableService(BaseService):
                 status_display = 'Active' if table.is_active else 'Inactive'
                 table.save(update_fields=['is_active', 'updated_at'])
 
+                # Record status toggle in audit trail
+                try:
+                    from operations.services import AuditService
+                    org = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
+                    if org:
+                        AuditService.record_event(
+                            organisation=org,
+                            actor=None,
+                            event_type='status_change',
+                            target_type='table',
+                            target_id=table.id,
+                            target_name=f"Table {table.name}",
+                            target_table=table,
+                            field_deltas=[{
+                                'field_name': 'STATUS',
+                                'before_value': 'Inactive' if table.is_active else 'Active',
+                                'after_value': status_display,
+                                'change_type': 'status_change',
+                            }],
+                            visibility_scope='ORGANISATION',
+                            source='table_manager',
+                        )
+                except Exception as audit_err:
+                    logger.debug("toggle_table_status audit error: %s", audit_err)
+
             return ServiceResult(
                 success=True,
                 message=f'Table status changed to {status_display}!',
@@ -352,6 +464,7 @@ class IDCardTableService(BaseService):
             return ServiceResult(success=False, message='Table not found')
         except Exception as e:
             return ServiceResult(success=False, message=str(e))
+
 
     @classmethod
     def list_tables(cls, group_id: int) -> ServiceResult:

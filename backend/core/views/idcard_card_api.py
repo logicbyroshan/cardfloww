@@ -1986,7 +1986,30 @@ def api_idcard_bulk_delete(request, table_id):
                 target_id=table_id,
                 target_name=table_name or '',
             )
+
+            # Record structured BulkTransaction in Audit Subsystem
+            try:
+                from operations.services import AuditService
+                org = getattr(_tbl, 'organisation', None) or getattr(getattr(_tbl, 'group', None), 'client', None)
+                if org:
+                    deleted_ids = card_ids if not delete_all else []
+                    card_deltas = [{'card_id': cid, 'target_name': f'Card #{cid}'} for cid in deleted_ids]
+                    AuditService.record_bulk_transaction(
+                        organisation=org,
+                        actor=request.user,
+                        action='bulk_delete',
+                        source_state='active',
+                        destination_state='pool' if delete_all else 'deleted',
+                        card_deltas=card_deltas,
+                        table=_tbl,
+                        visibility_scope='ORGANISATION',
+                        metadata={'delete_all': delete_all, 'count': count},
+                    )
+            except Exception as audit_err:
+                logger.debug("api_idcard_bulk_delete audit error: %s", audit_err)
+
         return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
+
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'message': 'Invalid JSON data!'}, status=400)
     except Exception as e:

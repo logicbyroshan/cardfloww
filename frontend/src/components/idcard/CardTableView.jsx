@@ -33,7 +33,9 @@ import WatermarkLogo from '../common/WatermarkLogo';
 import CreateXlsxModal from '../common/CreateXlsxModal';
 import CustomSelect from '../common/CustomSelect';
 import { TableDrawerForm } from '../settings/TableSettingsView';
+import BulkTransactionsModal from './BulkTransactionsModal';
 import { cardApi, schemaApi, clientApi } from '../../services/api';
+
 
 const STATUS_TABS = ['All', 'Active', 'Inactive'];
 
@@ -172,6 +174,9 @@ export default function CardTableView({
   const [editingTable, setEditingTable] = useState(null);
   const [settingModalTable, setSettingModalTable] = useState(null);
   const [groupId, setGroupId] = useState(1);
+  const [showBulkTxModal, setShowBulkTxModal] = useState(false);
+  const [focusTableForTx, setFocusTableForTx] = useState(null);
+
 
   /* Modal states for bulk actions */
   const [activeModal, setActiveModal] = useState(null);
@@ -549,7 +554,35 @@ export default function CardTableView({
                   <span>{selectedTable && selectedTable.is_active === false ? 'Activate' : 'Active'}</span>
                 </button>
 
-                {/* 5. Share / Table Delegation Button (For Prime Managers) */}
+                {/* 5. Transactions & History Button */}
+                <button
+                  className="btn"
+                  disabled={!selectedTable}
+                  onClick={() => {
+                    setFocusTableForTx(selectedTable);
+                    setShowBulkTxModal(true);
+                  }}
+                  title={!selectedTable ? 'Select a table row to view transactions' : `View Bulk Transactions & History for ${selectedTable.name}`}
+                  style={{
+                    background: selectedTable ? '#4f46e5' : 'rgba(255, 255, 255, 0.08)',
+                    color: selectedTable ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                    border: selectedTable ? '1px solid #4f46e5' : '1px solid rgba(255, 255, 255, 0.15)',
+                    height: '28px',
+                    padding: '0 10px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    cursor: selectedTable ? 'pointer' : 'not-allowed',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Layers size={13} /> <span>Transactions</span>
+                </button>
+
+                {/* 6. Share / Table Delegation Button (For Prime Managers) */}
                 {canShareTable && (
                   <button
                     className="btn"
@@ -578,6 +611,7 @@ export default function CardTableView({
               </div>
             </>
           )}
+
 
           {/* | Divider */}
           <span style={{ width: '1px', height: '16px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 4px' }} />
@@ -1298,9 +1332,24 @@ export default function CardTableView({
           addToast={addToast}
         />
       )}
+
+      {/* ── Bulk Transactions & History Modal ── */}
+      {showBulkTxModal && (
+        <BulkTransactionsModal
+          isOpen={showBulkTxModal}
+          onClose={() => {
+            setShowBulkTxModal(false);
+            setFocusTableForTx(null);
+          }}
+          tableId={focusTableForTx?.id}
+          tableName={focusTableForTx?.name || 'Table'}
+          addToast={addToast}
+        />
+      )}
     </div>
   );
 }
+
 
 /* ─── Dedicated Table Setting Schema Center Modal (No repeated buttons or stats!) ─── */
 function TableSettingSchemaModal({ table, orgName, onClose }) {
