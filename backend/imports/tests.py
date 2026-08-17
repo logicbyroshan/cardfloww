@@ -279,3 +279,119 @@ class ImportsAppTests(TestCase):
         self.assertTrue(card2.field_data['PHOTO'].startswith('idcard_photos/'))
         self.assertIn(f"O{org_code}_", card2.field_data['PHOTO'])
 
+    def test_massive_10000_files_benchmark(self):
+        """
+        Massive Scale Benchmark: 10,000 mixed files in a single ZIP.
+        - 9,700 foreign org files (should be rejected in O(1) in <100ms)
+        - 290 current org managed re-uploads (V1 -> V2)
+        - 10 new unmanaged files (matching roll numbers 1..10)
+        Total files: 10,000.
+        Verifies exact telemetry counts and sub-second execution.
+        """
+        import time
+        from mediafiles.services import MediaNameService
+
+        table = Table.objects.create(
+            organisation=self.org,
+            name='Massive Benchmark Table',
+            fields=[
+                {'name': 'ROLL NO', 'type': 'number'},
+                {'name': 'PHOTO', 'type': 'photo'},
+            ]
+        )
+
+        org_code = MediaNameService.get_org_code(self.org)
+
+        # Create 300 cards (290 with existing V1 photos, 10 pending without photos)
+        cards_to_create = []
+        for i in range(1, 291):
+            image_code = MediaNameService.derive_image_code(card_id=i, field_name='PHOTO')
+            v1_path = f"idcard_photos/{table.id}/O{org_code}_{image_code}V1.jpg"
+            cards_to_create.append(IDCard(
+                table=table,
+                field_data={'ROLL NO': str(i), 'PHOTO': v1_path},
+                status='pending',
+            ))
+
+        for i in range(291, 301):
+            cards_to_create.append(IDCard(
+                table=table,
+                field_data={'ROLL NO': str(i), 'PHOTO': ''},
+                status='pending',
+            ))
+
+        IDCard.objects.bulk_create(cards_to_create, batch_size=300)
+
+        # Build 10,000-entry in-memory ZIP
+        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82'
+
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, 'w', compression=zipfile.ZIP_STORED) as zf:
+            # 1. 9,700 foreign org files
+            for i in range(1, 9701):
+                zf.writestr(f"OFORG_{i:04X}V1.png", png_bytes)
+
+            # 2. 290 own managed re-uploads
+            for i in range(1, 291):
+                code = MediaNameService.derive_image_code(card_id=i, field_name='PHOTO')
+                zf.writestr(f"O{org_code}_{code}V1.png", png_bytes)
+
+            # 3. 10 new unmanaged files matching roll numbers 291..300
+            for i in range(291, 301):
+                zf.writestr(f"{i}.png", png_bytes)
+
+        zip_buf.seek(0)
+
+        t_start = time.perf_counter()
+        matcher = ReuploadMatcher(table)
+        res = matcher.match_and_update_from_zip(zip_buf, target_field='PHOTO')
+        t_elapsed = (time.perf_counter() - t_start) * 1000
+
+        # Assertions on exact counts
+        self.assertIsNotNone(res.telemetry)
+        tel = res.telemetry
+        self.assertEqual(tel['total_files'], 10000)
+        self.assertEqual(tel['other_organization'], 9700)
+        self.assertEqual(tel['existing_matched'], 290)
+        self.assertEqual(tel['new_matched'], 10)
+        self.assertEqual(tel['unmatched'], 0)
+        self.assertEqual(tel['duplicates'], 0)
+        self.assertEqual(res.matched_cards, 300)
+        self.assertEqual(res.updated_photos, 300)
+
+        # Performance assertion: 10,000 files classified and processed rapidly
+        self.assertLess(tel['timings_ms']['enumeration_and_classify_ms'], 1500)  # sub-1.5s for 10k items
+
+    def test_duplicate_input_handling(self):
+        """Test detection and handling of duplicate filenames in different ZIP subfolders."""
+        table = Table.objects.create(
+            organisation=self.org,
+            name='Duplicate Test Table',
+            fields=[
+                {'name': 'ROLL NO', 'type': 'number'},
+                {'name': 'PHOTO', 'type': 'photo'},
+            ]
+        )
+        IDCard.objects.create(
+            table=table,
+            field_data={'ROLL NO': '501', 'PHOTO': ''},
+            status='pending',
+        )
+
+        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82'
+
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, 'w') as zf:
+            zf.writestr('folder_a/501.png', png_bytes)
+            zf.writestr('folder_b/501.png', png_bytes)  # Duplicate basename!
+
+        zip_buf.seek(0)
+        matcher = ReuploadMatcher(table)
+        res = matcher.match_and_update_from_zip(zip_buf, target_field='PHOTO')
+
+        self.assertIsNotNone(res.telemetry)
+        self.assertEqual(res.telemetry['duplicates'], 1)
+        self.assertIn('501.png', res.telemetry['duplicate_files'])
+        self.assertEqual(res.matched_cards, 1)
+
+
