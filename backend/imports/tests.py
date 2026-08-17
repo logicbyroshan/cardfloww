@@ -158,3 +158,124 @@ class ImportsAppTests(TestCase):
 
         card1.refresh_from_db()
         self.assertTrue(card1.field_data['PHOTO'].startswith('idcard_photos/'))
+
+    def test_media_name_service_naming_and_parsing(self):
+        """Test MediaNameService compact deterministic generation and parsing."""
+        from mediafiles.services import MediaNameService
+
+        # 1. Org code generation
+        org_code = MediaNameService.get_org_code(self.org)
+        self.assertTrue(len(org_code) >= 3)
+
+        # 2. Derive deterministic image code
+        code1 = MediaNameService.derive_image_code(card_id=42, field_name='PHOTO')
+        code2 = MediaNameService.derive_image_code(card_id=42, field_name='PHOTO')
+        code_father = MediaNameService.derive_image_code(card_id=42, field_name='FATHER_PHOTO')
+
+        self.assertEqual(code1, code2)  # Deterministic!
+        self.assertNotEqual(code1, code_father)  # Different field type has different code
+
+        # 3. Generate media name
+        name_v1 = MediaNameService.generate_media_name(org_code, code1, version=1, ext='.jpg')
+        self.assertTrue(name_v1.startswith(f"O{org_code}_{code1}V1"))
+        self.assertTrue(name_v1.endswith('.jpg'))
+
+        # 4. Parse managed name
+        parsed = MediaNameService.parse_media_name(name_v1)
+        self.assertIsNotNone(parsed)
+        self.assertTrue(parsed['is_managed'])
+        self.assertEqual(parsed['org_code'], org_code)
+        self.assertEqual(parsed['image_code'], code1)
+        self.assertEqual(parsed['version'], 1)
+        self.assertEqual(parsed['ext'], '.jpg')
+
+        # 5. Check next version
+        next_ver = MediaNameService.next_version(name_v1)
+        self.assertEqual(next_ver, 2)
+
+        name_v2 = MediaNameService.generate_media_name(org_code, code1, version=next_ver, ext='.jpg')
+        self.assertTrue(name_v2.startswith(f"O{org_code}_{code1}V2"))
+
+        # 6. Parse unmanaged raw name
+        raw_parsed = MediaNameService.parse_media_name('IMG_20260817_123456.jpg')
+        self.assertIsNone(raw_parsed)
+
+    def test_dual_path_mixed_batch_reupload(self):
+        """
+        Benchmark & verify dual-path reupload handling of a mixed ZIP batch:
+        - 3 foreign managed images (different org code) -> instantly rejected
+        - 1 own managed image (re-upload of existing card) -> incremented to V2
+        - 1 unmanaged raw image (matching Roll 202) -> matched and assigned V1
+        - 1 random unmatched image -> recorded in unmatched_files
+        """
+        from mediafiles.services import MediaNameService
+
+        table = Table.objects.create(
+            organisation=self.org,
+            name='Dual Path Table',
+            fields=[
+                {'name': 'ROLL NO', 'type': 'number'},
+                {'name': 'FULL NAME', 'type': 'text'},
+                {'name': 'PHOTO', 'type': 'photo'},
+            ]
+        )
+
+        org_code = MediaNameService.get_org_code(self.org)
+        card1_code = MediaNameService.derive_image_code(card_id=1, field_name='PHOTO')
+        card1_v1_path = f"idcard_photos/{table.id}/O{org_code}_{card1_code}V1.jpg"
+
+        # Card 1: Existing card with managed V1 photo
+        card1 = IDCard.objects.create(
+            table=table,
+            field_data={'ROLL NO': '201', 'FULL NAME': 'Alice Smith', 'PHOTO': card1_v1_path},
+            status='pending',
+        )
+
+        # Card 2: Existing card with no photo yet
+        card2 = IDCard.objects.create(
+            table=table,
+            field_data={'ROLL NO': '202', 'FULL NAME': 'Bob Jones', 'PHOTO': ''},
+            status='pending',
+        )
+
+        # Create 1x1 PNG bytes
+        png_bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x00\x00\x02\x00\x01H\xaf\xa4q\x00\x00\x00\x00IEND\xaeB`\x82'
+
+        # Build mixed ZIP
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, 'w') as zf:
+            # 1. Foreign org managed files (should be skipped cheaply)
+            zf.writestr('OOTHER_XXXXV1.png', png_bytes)
+            zf.writestr('O9999_YYYYV2.png', png_bytes)
+            zf.writestr('OFOREIGN_ZZZZV1.png', png_bytes)
+
+            # 2. Own managed file (re-upload for Card 1)
+            zf.writestr(f"O{org_code}_{card1_code}V1.png", png_bytes)
+
+            # 3. Unmanaged raw file matching Card 2 by Roll No
+            zf.writestr('202.png', png_bytes)
+
+            # 4. Unrelated random file
+            zf.writestr('random_unrelated_photo.png', png_bytes)
+
+        zip_buf.seek(0)
+
+        matcher = ReuploadMatcher(table)
+        res = matcher.match_and_update_from_zip(zip_buf, target_field='PHOTO')
+
+        # Assertions
+        self.assertEqual(res.matched_cards, 2)  # Card 1 (reupload) and Card 2 (new match)
+        self.assertEqual(res.updated_photos, 2)
+        self.assertIn('random_unrelated_photo.png', res.unmatched_files)
+        # Foreign files should not be in unmatched (they were rejected in O(1) during scan)
+        self.assertNotIn('OOTHER_XXXXV1.png', res.unmatched_files)
+
+        # Check Card 1 was updated to V2
+        card1.refresh_from_db()
+        self.assertIn('V2', card1.field_data['PHOTO'])
+
+        # Check Card 2 received a managed photo
+        card2.refresh_from_db()
+        self.assertTrue(card2.field_data['PHOTO'].startswith('idcard_photos/'))
+        self.assertIn(f"O{org_code}_", card2.field_data['PHOTO'])
+

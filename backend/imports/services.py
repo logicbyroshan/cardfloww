@@ -20,7 +20,7 @@ from django.core.files.base import ContentFile
 
 from tables.models import Table, IDCard
 from organisation.models import Organisation
-from mediafiles.services import ImageService
+from mediafiles.services import ImageService, MediaNameService
 from core.services.activity_service import ActivityService
 
 from .column_detector import detect_table_schema_from_headers
@@ -184,8 +184,12 @@ class ImportService:
         user: Any = None,
     ) -> ImportResult:
         """
-        Internal batch worker to save records, extract embedded photos, match ZIP photos, and bulk insert.
+        Internal batch worker — two-pass approach:
+        Pass 1: Build card records and bulk_create to get PKs.
+        Pass 2: Save embedded/ZIP photos with managed media names and bulk_update.
         """
+        org = getattr(table, 'organisation', None)
+
         # Map embedded images by (row_idx, col_idx or field_name)
         embedded_img_map: Dict[Tuple[int, str], bytes] = {}
         for img in parsed.embedded_images:
@@ -214,10 +218,11 @@ class ImportService:
         table_fields = table.fields or []
         header_to_idx = {h: idx for idx, h in enumerate(parsed.headers)}
 
+        # ── Pass 1: Build card records (photo fields get placeholder paths) ──
         cards_to_create: List[IDCard] = []
-        photos_imported = 0
+        # Track which (row_idx, field_name) needs photo saving after PK assignment
+        deferred_photos: List[Tuple[int, str, bytes, str]] = []  # (row_idx, field_name, img_bytes, ext)
 
-        # Build card records
         for r_idx, row_values in enumerate(parsed.rows):
             card_field_data = {}
 
@@ -233,7 +238,11 @@ class ImportService:
                     if col_idx < len(row_values):
                         cell_value = str(row_values[col_idx] or '').strip()
 
-                is_photo_field = tf_type in ('photo', 'father_photo', 'mother_photo', 'sign', 'image', 'signature') or 'photo' in tf_name.lower() or 'sign' in tf_name.lower()
+                is_photo_field = (
+                    tf_type in ('photo', 'father_photo', 'mother_photo', 'sign', 'image', 'signature')
+                    or 'photo' in tf_name.lower()
+                    or 'sign' in tf_name.lower()
+                )
 
                 if is_photo_field:
                     # Check 1: Embedded cell image
@@ -244,20 +253,9 @@ class ImportService:
                         embedded_data = embedded_img_map.get((r_idx, str(col_idx)))
 
                     if embedded_data:
-                        rel_path = f"idcard_photos/{table.id}/row_{r_idx+1}_{tf_name}.jpg"
-                        try:
-                            if default_storage.exists(rel_path):
-                                default_storage.delete(rel_path)
-                            default_storage.save(rel_path, ContentFile(embedded_data))
-                            try:
-                                ImageService.create_thumbnail(rel_path)
-                            except Exception:
-                                pass
-                            card_field_data[tf_name] = rel_path
-                            photos_imported += 1
-                        except Exception as save_err:
-                            logger.warning("Failed saving embedded image: %s", save_err)
-                            card_field_data[tf_name] = ''
+                        # Defer photo save until we have card PK
+                        deferred_photos.append((r_idx, tf_name, embedded_data, '.jpg'))
+                        card_field_data[tf_name] = '__DEFERRED__'
                         continue
 
                     # Check 2: ZIP matching by cell filename value
@@ -266,19 +264,8 @@ class ImportService:
                         if stem in zip_photos_by_stem:
                             orig_fn, img_bytes = zip_photos_by_stem[stem]
                             ext = os.path.splitext(orig_fn)[1].lower() or '.jpg'
-                            rel_path = f"idcard_photos/{table.id}/row_{r_idx+1}_{tf_name}{ext}"
-                            try:
-                                if default_storage.exists(rel_path):
-                                    default_storage.delete(rel_path)
-                                default_storage.save(rel_path, ContentFile(img_bytes))
-                                try:
-                                    ImageService.create_thumbnail(rel_path)
-                                except Exception:
-                                    pass
-                                card_field_data[tf_name] = rel_path
-                                photos_imported += 1
-                            except Exception:
-                                card_field_data[tf_name] = f"PENDING:{cell_value}"
+                            deferred_photos.append((r_idx, tf_name, img_bytes, ext))
+                            card_field_data[tf_name] = '__DEFERRED__'
                         else:
                             card_field_data[tf_name] = f"PENDING:{cell_value}"
                     else:
@@ -293,9 +280,57 @@ class ImportService:
             )
             cards_to_create.append(card)
 
-        # Batch bulk insert
+        # Bulk insert to get PKs
         with transaction.atomic():
             IDCard.objects.bulk_create(cards_to_create, batch_size=250)
+
+        # ── Pass 2: Save deferred photos with managed media names ──
+        photos_imported = 0
+        cards_to_update = []
+        cards_needing_update: Dict[int, IDCard] = {}  # pk -> card
+
+        for r_idx, tf_name, img_bytes, ext in deferred_photos:
+            if r_idx >= len(cards_to_create):
+                continue
+            card = cards_to_create[r_idx]
+
+            # Generate managed filename using card PK
+            if org:
+                filename = MediaNameService.generate_media_name_for_card(
+                    org, card.id, tf_name, version=1, ext=ext
+                )
+            else:
+                filename = f"{card.id}_{tf_name}{ext}"
+
+            rel_path = f"idcard_photos/{table.id}/{filename}"
+
+            try:
+                if default_storage.exists(rel_path):
+                    default_storage.delete(rel_path)
+                default_storage.save(rel_path, ContentFile(img_bytes))
+                try:
+                    ImageService.create_thumbnail(rel_path)
+                except Exception:
+                    pass
+
+                fd = card.field_data or {}
+                fd[tf_name] = rel_path
+                card.field_data = fd
+                cards_needing_update[card.pk] = card
+                photos_imported += 1
+            except Exception as save_err:
+                logger.warning("Failed saving photo for card %s field %s: %s", card.id, tf_name, save_err)
+                fd = card.field_data or {}
+                fd[tf_name] = ''
+                card.field_data = fd
+                cards_needing_update[card.pk] = card
+
+        # Batch update cards that got photos
+        if cards_needing_update:
+            with transaction.atomic():
+                IDCard.objects.bulk_update(
+                    list(cards_needing_update.values()), ['field_data'], batch_size=200
+                )
 
         # Log Activity
         try:
@@ -309,6 +344,7 @@ class ImportService:
                 )
         except Exception:
             pass
+
 
         return ImportResult(
             success=True,
