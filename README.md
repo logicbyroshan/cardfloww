@@ -1,6 +1,7 @@
 <p align="center">
-  <img src="docs/assets/CardFlow%20Banner.png" alt="CardFlow Banner" width="100%" />
+  <img src="docs/assets/cardflow-banner.png" alt="CardFlow Banner" width="100%" />
 </p>
+
 
 <p align="center">
   <a href="https://panel.adarshbhopal.in"><img src="https://img.shields.io/badge/Platform%20Version-v5.7.0-blue.svg?style=for-the-badge&logo=appveyor" alt="Version v5.7.0" /></a>
