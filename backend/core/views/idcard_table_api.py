@@ -402,6 +402,7 @@ def api_schema_list(request):
                 'request': rp_req_cnt,
                 'requested': rp_req_cnt,
                 'confirmed': rp_conf_cnt,
+                'total': p_cnt + v_cnt + a_cnt + d_cnt + l_cnt + r_cnt,
                 'total_cards': p_cnt + v_cnt + a_cnt + d_cnt + l_cnt + r_cnt,
             })
 

@@ -112,50 +112,15 @@ const FIELD_TYPES = [
 
 function getTableCounts(t) {
   if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, rpCnt: 0, reqCnt: 0, confCnt: 0 };
-  let pending = t.pending_count ?? t.pending ?? 0;
-  let verified = t.verified_count ?? t.verified ?? 0;
-  let approved = t.approved_count ?? t.approved ?? 0;
-  let download = t.download_count ?? t.downloaded ?? t.download ?? t.printed ?? 0;
-  let pool = t.pool_count ?? t.deleted ?? t.pool ?? 0;
+  const pending = t.pending_count ?? t.pending ?? 0;
+  const verified = t.verified_count ?? t.verified ?? 0;
+  const approved = t.approved_count ?? t.approved ?? 0;
+  const download = t.download_count ?? t.downloaded ?? t.download ?? t.printed ?? 0;
+  const pool = t.pool_count ?? t.deleted ?? t.pool ?? 0;
 
-  let rpCnt = t.reprint_count ?? t.reprint ?? 0;
-  let reqCnt = t.reprint_request_count ?? t.reprint_request ?? t.request ?? t.requested ?? 0;
-  let confCnt = t.reprint_confirmed_count ?? t.reprint_confirmed ?? t.confirmed ?? 0;
-
-  try {
-    const listByTableId = JSON.parse(localStorage.getItem(`cf_custom_cards_${t.id}`) || '[]');
-    const listByTableName = JSON.parse(localStorage.getItem(`cf_custom_cards_${t.name}`) || '[]');
-    const allCustomCards = JSON.parse(localStorage.getItem('cf_custom_cards') || '[]');
-    const filteredGlobalCards = allCustomCards.filter(
-      (c) => String(c.table_id || c.table) === String(t.id) || String(c.table_name) === String(t.name)
-    );
-
-    const cardMap = new Map();
-    [...listByTableId, ...listByTableName, ...filteredGlobalCards].forEach((card) => {
-      if (card && (card.id || card.roll_number || card.name)) {
-        const key = card.id || `${card.roll_number}_${card.name}`;
-        cardMap.set(key, card);
-      }
-    });
-
-    const uniqueLocalCards = Array.from(cardMap.values());
-
-    if (uniqueLocalCards.length > 0) {
-      const localP = uniqueLocalCards.filter((c) => !c.status || c.status === 'pending').length;
-      const localV = uniqueLocalCards.filter((c) => c.status === 'verified').length;
-      const localA = uniqueLocalCards.filter((c) => c.status === 'approved').length;
-      const localD = uniqueLocalCards.filter((c) => c.status === 'download' || c.status === 'printed').length;
-      const localPool = uniqueLocalCards.filter((c) => c.status === 'pool' || c.status === 'deleted').length;
-
-      pending = Math.max(pending, localP);
-      verified = Math.max(verified, localV);
-      approved = Math.max(approved, localA);
-      download = Math.max(download, localD);
-      pool = Math.max(pool, localPool);
-    }
-  } catch {
-    /* ignore */
-  }
+  const rpCnt = t.reprint_count ?? t.reprint ?? 0;
+  const reqCnt = t.reprint_request_count ?? t.reprint_request ?? t.request ?? t.requested ?? 0;
+  const confCnt = t.reprint_confirmed_count ?? t.reprint_confirmed ?? t.confirmed ?? 0;
 
   return { pending, verified, approved, download, pool, rpCnt, reqCnt, confCnt };
 }
@@ -238,30 +203,14 @@ export default function CardTableView({
   /* Load tables list */
   const loadTables = useCallback(async () => {
     setLoading(true);
-    let local = [];
-    try {
-      local = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-      const dummyNames = ['Class 1st to 5th', 'Class 6th to 10th', 'Class 11th & 12th', 'Staff & Teachers'];
-      local = local.filter((t) => t && !dummyNames.includes(t.name));
-    } catch {
-      local = [];
-    }
-
     try {
       const params = filterOrgId && filterOrgId !== 'all' ? { client_id: filterOrgId } : {};
       const data = await schemaApi.getSchemas(params);
       const list = data?.tables || data?.results || (Array.isArray(data) ? data : []);
-      const merged = [...list];
-      local.forEach((item) => {
-        if (!merged.some((t) => String(t.id) === String(item.id) || t.name === item.name)) {
-          if (!filterOrgId || filterOrgId === 'all' || String(item.organisation_id) === String(filterOrgId)) {
-            merged.push(item);
-          }
-        }
-      });
-      setTables(merged);
-    } catch {
-      setTables(local);
+      setTables(list);
+    } catch (err) {
+      console.error('Load tables error:', err);
+      setTables([]);
     } finally {
       setLoading(false);
     }
@@ -308,35 +257,12 @@ export default function CardTableView({
     const target = tableToToggle || selectedTable;
     if (!target) return;
     try {
-      try {
-        await schemaApi.toggleTableStatus(target.id);
-      } catch {
-        /* fallback local */
-      }
-
-      const local = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-      const updated = local.map((t) => {
-        if (String(t.id) === String(target.id)) {
-          const nextActive = t.is_active === false;
-          return { ...t, is_active: nextActive, status: nextActive ? 'active' : 'inactive' };
-        }
-        return t;
-      });
-      localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
-
-      setTables((prev) =>
-        prev.map((t) => {
-          if (String(t.id) === String(target.id)) {
-            const nextActive = t.is_active === false;
-            return { ...t, is_active: nextActive, status: nextActive ? 'active' : 'inactive' };
-          }
-          return t;
-        })
-      );
-
+      await schemaApi.toggleTableStatus(target.id);
       addToast?.(`Status updated for "${target.name}"`, 'success');
-    } catch {
-      addToast?.('Error updating table status', 'error');
+      loadTables();
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Error updating table status';
+      addToast?.(msg, 'error');
     }
   };
 
@@ -347,21 +273,13 @@ export default function CardTableView({
     if (!window.confirm(`Delete table "${target.name}"? This action cannot be undone.`)) return;
 
     try {
-      try {
-        await schemaApi.deleteTable(target.id);
-      } catch {
-        /* fallback local */
-      }
-
-      const local = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-      const updated = local.filter((t) => String(t.id) !== String(target.id));
-      localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
-
+      await schemaApi.deleteTable(target.id);
       addToast?.(`Table "${target.name}" deleted`, 'success');
       if (selectedTableId === target.id) setSelectedTableId(null);
       loadTables();
-    } catch {
-      addToast?.('Error deleting table', 'error');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Error deleting table';
+      addToast?.(msg, 'error');
     }
   };
 
@@ -710,7 +628,7 @@ export default function CardTableView({
                   boxSizing: 'border-box',
                 }}
               >
-                <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
+                <FileSpreadsheet size={13} /> <span>Create with Data</span>
               </button>
             )}
           </div>

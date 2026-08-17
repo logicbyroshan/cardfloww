@@ -1,17 +1,19 @@
 /**
- * CreateXlsxModal.jsx
+ * CreateXlsxModal.jsx -> Create Table with Data
  *
- * 3-Step Center Modal for creating a new table from an XLSX/CSV file.
- * Matches original `templates/partials/components/create-xlsx-modal.html`.
- * Step 1: File selection & Optional Table Name
- * Step 2: Field preview & Column types / Mandatory checkboxes
- * Step 3: Optional photo ZIP files & Submission with progress bar
+ * 3-Step Wizard Modal for creating a new table from XLSX, XLS, CSV, or DOCX files.
+ * Features:
+ * - Supports .xlsx, .xls, .csv, and .docx Word documents containing tables.
+ * - Automatic detection of embedded cell photos inside Excel & Word files.
+ * - Schema preview & customizable column types.
+ * - Optional ZIP photo attachments.
  */
 
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import {
   FileSpreadsheet,
+  FileText,
   X,
   Upload,
   ArrowRight,
@@ -20,8 +22,11 @@ import {
   TableProperties,
   CheckCircle2,
   Loader2,
+  Sparkles,
+  Camera,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { schemaApi, apiClient } from '../../services/api';
+import { apiClient } from '../../services/api';
 import CustomSelect from './CustomSelect';
 
 export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addToast }) {
@@ -31,16 +36,19 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
   const [zipFiles, setZipFiles] = useState([]);
   const [fields, setFields] = useState([]); // [{ name: 'NAME', type: 'text', mandatory: false }]
   const [dataRowCount, setDataRowCount] = useState(0);
+  const [embeddedPhotosCount, setEmbeddedPhotosCount] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const fileInputRef = useRef(null);
   const zipInputRef = useRef(null);
 
   // Handle file selection in Step 1
-  const handleFileSelect = (selectedFile) => {
+  const handleFileSelect = async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
+    setIsAnalyzing(true);
 
     // Auto derive table name if empty
     if (!tableName) {
@@ -52,6 +60,34 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
     }
 
     try {
+      // 1. Try server-side preview first for rich docx/xlsx embedded photo detection
+      const fd = new FormData();
+      fd.append('file', selectedFile);
+      const res = await apiClient.post('/api/imports/preview/', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data && res.data.success) {
+        const pData = res.data;
+        setDataRowCount(pData.total_rows || 0);
+        setEmbeddedPhotosCount(pData.total_embedded_images || 0);
+
+        if (pData.detected_schema && pData.detected_schema.length > 0) {
+          setFields(pData.detected_schema.map(f => ({
+            name: f.name,
+            type: f.type || 'text',
+            mandatory: false,
+          })));
+          setIsAnalyzing(false);
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Server-side preview fallback to client-side parsing:', apiErr);
+    }
+
+    // 2. Client-side fallback for Excel / CSV
+    try {
       const reader = new FileReader();
       reader.onload = (e) => {
         const buf = e.target.result;
@@ -59,7 +95,6 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
         let rowsCount = 0;
 
         try {
-          // Parse spreadsheet array buffer using XLSX
           const wb = XLSX.read(buf, { type: 'array' });
           const firstSheetName = wb.SheetNames[0];
           if (firstSheetName) {
@@ -67,13 +102,10 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
             const jsonRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
             if (jsonRows.length > 0) {
               headers = (jsonRows[0] || []).map((h) => String(h || '').trim()).filter(Boolean);
-              // Count rows that contain at least one non-empty cell
               rowsCount = jsonRows.slice(1).filter((r) => Array.isArray(r) && r.some((c) => String(c || '').trim() !== '')).length;
             }
           }
-        } catch (xlsxErr) {
-          console.warn('XLSX parser fallback check:', xlsxErr);
-          // If CSV, fallback to text parsing
+        } catch {
           if (selectedFile.name.toLowerCase().endsWith('.csv')) {
             const text = new TextDecoder('utf-8').decode(buf);
             const lines = text.split(/\r?\n/).filter((l) => l.trim());
@@ -91,52 +123,66 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
           const parsedFields = headers.map((name) => {
             const lower = name.toLowerCase();
             let type = 'text';
-            if (lower.includes('photo') || lower.includes('pic') || lower.includes('image') || lower.includes('sign')) {
+            if (lower.includes('father') && (lower.includes('photo') || lower.includes('pic'))) {
+              type = 'father_photo';
+            } else if (lower.includes('mother') && (lower.includes('photo') || lower.includes('pic'))) {
+              type = 'mother_photo';
+            } else if (lower.includes('photo') || lower.includes('pic') || lower.includes('image')) {
               type = 'photo';
-            } else if (
-              lower.includes('no') ||
-              lower.includes('num') ||
-              lower.includes('mobile') ||
-              lower.includes('phone') ||
-              lower.includes('code')
-            ) {
-              type = 'number';
-            } else if (lower.includes('date') || lower.includes('dob')) {
+            } else if (lower.includes('sign')) {
+              type = 'sign';
+            } else if (lower.includes('dob') || lower.includes('birth') || lower.includes('date')) {
               type = 'date';
+            } else if (lower.includes('roll') || lower.includes('mobile') || lower.includes('phone') || lower.includes('adm')) {
+              type = 'number';
             }
-            return { name, type, mandatory: false };
+            return { name: name.toUpperCase(), type, mandatory: false };
           });
           setFields(parsedFields);
           setDataRowCount(rowsCount);
-        } else {
-          addToast?.('No headers found in the uploaded file.', 'error');
-          setFields([
-            { name: 'FULL NAME', type: 'text', mandatory: true },
-            { name: 'CLASS', type: 'text', mandatory: false },
-            { name: 'SECTION', type: 'text', mandatory: false },
-            { name: 'PHOTO', type: 'photo', mandatory: false },
-          ]);
-          setDataRowCount(0);
         }
+        setIsAnalyzing(false);
       };
       reader.readAsArrayBuffer(selectedFile);
-    } catch (err) {
-      console.error('File reading failed:', err);
-      addToast?.('Failed to read spreadsheet file.', 'error');
+    } catch {
+      setIsAnalyzing(false);
     }
   };
 
-  // Submit & create table from XLSX
+  const handleFieldTypeChange = (idx, newType) => {
+    setFields((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], type: newType };
+      return copy;
+    });
+  };
+
+  const handleFieldNameChange = (idx, newName) => {
+    setFields((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], name: newName.toUpperCase() };
+      return copy;
+    });
+  };
+
+  const handleMandatoryToggle = (idx) => {
+    setFields((prev) => {
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], mandatory: !copy[idx].mandatory };
+      return copy;
+    });
+  };
+
   const handleSubmit = async () => {
     if (!file) return;
     setIsProcessing(true);
-    setProgress(30);
+    setProgress(25);
 
     try {
       const fd = new FormData();
       fd.append('file', file);
       if (tableName) fd.append('table_name', tableName);
-      if (fields.length > 0) fd.append('fields_config', JSON.stringify(fields));
+      if (fields.length > 0) fd.append('fields', JSON.stringify(fields));
 
       if (zipFiles && zipFiles.length > 0) {
         for (let i = 0; i < zipFiles.length; i++) {
@@ -146,22 +192,18 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
 
       setProgress(60);
 
-      try {
-        await schemaApi.createTableFromXlsx(groupId, fd);
-      } catch {
-        // Direct endpoint fallback
-        await apiClient.post(`/api/table/create-from-xlsx/`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      }
+      const res = await apiClient.post(`/api/group/${groupId}/table/create-with-data/`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
       setProgress(100);
-      addToast?.(`Table "${tableName || file.name}" created successfully!`, 'success');
+      const msg = res.data?.message || `Table "${tableName || file.name}" created successfully!`;
+      addToast?.(msg, 'success');
       onSuccess?.();
       onClose();
     } catch (err) {
-      console.error('Table creation from XLSX failed:', err);
-      const msg = err?.response?.data?.message || err?.message || 'Failed to create table from XLSX.';
+      console.error('Table creation with data failed:', err);
+      const msg = err?.response?.data?.message || err?.message || 'Failed to create table with data.';
       addToast?.(msg, 'error');
     } finally {
       setIsProcessing(false);
@@ -170,45 +212,36 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
 
   return (
     <div className="center-modal-overlay">
-      <div className="center-modal-panel" style={{ width: '560px', height: 'auto', maxHeight: '90vh' }}>
+      <div className="center-modal-panel" style={{ width: '580px', height: 'auto', maxHeight: '90vh' }}>
         {/* Header */}
         <div
           style={{
             background: '#10b981',
             color: '#fff',
-            height: '46px',
-            minHeight: '46px',
-            padding: '0 16px',
+            height: '48px',
+            minHeight: '48px',
+            padding: '0 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <h3
-            style={{
-              fontSize: '14px',
-              fontWeight: 700,
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#fff',
-            }}
-          >
-            <FileSpreadsheet size={18} /> Create Table from XLSX
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TableProperties size={18} />
+            <h3 style={{ fontSize: '14px', fontWeight: 700, margin: 0 }}>Create Table with Data</h3>
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff' }}>
             <X size={18} />
           </button>
         </div>
 
-        {/* 3-Step Line Indicator */}
-        <div style={{ padding: '14px 24px 0', background: '#ffffff' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* 3-Step Indicator */}
+        <div style={{ padding: '14px 24px 0', background: '#ffffff', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px' }}>
             <div
               style={{
-                width: '22px',
-                height: '22px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '50%',
                 background: step >= 1 ? '#10b981' : '#e2e8f0',
                 color: '#fff',
@@ -221,20 +254,14 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
             >
               1
             </div>
-            <div style={{ flex: 1, height: '3px', background: '#e2e8f0', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: step >= 2 ? '100%' : '0%',
-                  height: '100%',
-                  background: '#10b981',
-                  transition: 'width 0.3s',
-                }}
-              />
-            </div>
+            <span style={{ fontSize: '12px', fontWeight: step === 1 ? 700 : 500, color: step === 1 ? '#0f172a' : '#64748b' }}>
+              File & Name
+            </span>
+            <div style={{ flex: 1, height: '2px', background: step >= 2 ? '#10b981' : '#e2e8f0' }} />
             <div
               style={{
-                width: '22px',
-                height: '22px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '50%',
                 background: step >= 2 ? '#10b981' : '#e2e8f0',
                 color: '#fff',
@@ -247,20 +274,14 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
             >
               2
             </div>
-            <div style={{ flex: 1, height: '3px', background: '#e2e8f0', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: step >= 3 ? '100%' : '0%',
-                  height: '100%',
-                  background: '#10b981',
-                  transition: 'width 0.3s',
-                }}
-              />
-            </div>
+            <span style={{ fontSize: '12px', fontWeight: step === 2 ? 700 : 500, color: step === 2 ? '#0f172a' : '#64748b' }}>
+              Schema & Types
+            </span>
+            <div style={{ flex: 1, height: '2px', background: step >= 3 ? '#10b981' : '#e2e8f0' }} />
             <div
               style={{
-                width: '22px',
-                height: '22px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '50%',
                 background: step >= 3 ? '#10b981' : '#e2e8f0',
                 color: '#fff',
@@ -273,113 +294,152 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
             >
               3
             </div>
+            <span style={{ fontSize: '12px', fontWeight: step === 3 ? 700 : 500, color: step === 3 ? '#0f172a' : '#64748b' }}>
+              Photos & Import
+            </span>
           </div>
         </div>
 
         {/* Body Area */}
-        <div
-          style={{
-            flex: 1,
-            padding: '20px 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            overflowY: 'auto',
-          }}
-        >
-          {/* STEP 1: Select XLSX & Table Name */}
+        <div style={{ flex: 1, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+          {/* ── STEP 1: File & Name ── */}
           {step === 1 && (
             <>
-              <div style={{ textAlign: 'center' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                  Step 1: Select Spreadsheet
-                </h4>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                  Select an Excel file (.xlsx, .xls, .csv). Headers will become table fields.
-                </p>
-              </div>
+              {!file ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    border: '2px dashed #10b981',
+                    borderRadius: '8px',
+                    padding: '32px 16px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: '#f0fdf4',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <FileSpreadsheet size={40} style={{ color: '#10b981', margin: '0 auto 10px' }} />
+                  <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#065f46' }}>
+                    Select Excel (.xlsx, .xls, .csv) or Word (.docx) File
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#047857', marginTop: '6px' }}>
+                    Auto-detects data columns and extracts photos embedded directly inside worksheet or Word document tables
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv,.docx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleFileSelect(e.target.files[0])}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    background: '#ecfdf5',
+                    padding: '12px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #a7f3d0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {file.name.toLowerCase().endsWith('.docx') ? (
+                      <FileText size={22} style={{ color: '#2563eb' }} />
+                    ) : (
+                      <FileSpreadsheet size={22} style={{ color: '#10b981' }} />
+                    )}
+                    <div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#065f46' }}>{file.name}</div>
+                      <div style={{ fontSize: '11px', color: '#047857' }}>
+                        {(file.size / 1024).toFixed(1)} KB • {dataRowCount} data rows detected
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setFile(null);
+                      setFields([]);
+                      setDataRowCount(0);
+                      setEmbeddedPhotosCount(0);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '4px' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              )}
 
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  border: '2px dashed #10b981',
-                  borderRadius: '8px',
-                  padding: '28px 16px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: '#ecfdf5',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <FileSpreadsheet size={36} style={{ color: '#10b981', margin: '0 auto 8px' }} />
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#065f46' }}>
-                  {file ? file.name : 'Drop XLSX/CSV here or click to browse'}
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#047857' }}>Supports .xlsx, .xls, .csv</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  style={{ display: 'none' }}
-                  onChange={(e) => handleFileSelect(e.target.files[0])}
-                />
-              </div>
+              {/* Embedded Photos Detected Badge */}
+              {embeddedPhotosCount > 0 && (
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                  }}
+                >
+                  <Camera size={20} style={{ color: '#2563eb', flexShrink: 0 }} />
+                  <div style={{ fontSize: '12px', color: '#1e40af' }}>
+                    <strong>{embeddedPhotosCount} Embedded Photos Detected!</strong>
+                    <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '2px' }}>
+                      These photos will be automatically extracted and assigned to student records without needing a ZIP file.
+                    </div>
+                  </div>
+                </div>
+              )}
 
+              {/* Table Name Input */}
               <div>
                 <label
-                  style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#475569',
+                    textTransform: 'uppercase',
+                    marginBottom: '6px',
+                    letterSpacing: '0.04em',
+                  }}
                 >
-                  Table Name{' '}
-                  <span style={{ color: '#94a3b8', fontWeight: 400 }}>(optional - auto-derived from filename)</span>
+                  Table Name
                 </label>
                 <input
                   type="text"
                   value={tableName}
                   onChange={(e) => setTableName(e.target.value)}
-                  placeholder="e.g. CLASS 10TH DATA"
+                  placeholder="e.g., ADARSH VIDYALAYA 2026-27"
                   style={{
                     width: '100%',
-                    height: '34px',
+                    padding: '8px 12px',
                     border: '1px solid #cbd5e1',
                     borderRadius: '4px',
-                    padding: '0 10px',
                     fontSize: '12px',
-                    boxSizing: 'border-box',
+                    fontWeight: 600,
                     outline: 'none',
+                    background: '#f8fafc',
                   }}
                 />
               </div>
             </>
           )}
 
-          {/* STEP 2: Field Preview & Column Types */}
+          {/* ── STEP 2: Schema & Column Types ── */}
           {step === 2 && (
             <>
-              <div style={{ textAlign: 'center' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                  Step 2: Field Preview
-                </h4>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                  Review detected columns, their data types, and mark mandatory fields.
-                </p>
-              </div>
-
-              <div
-                style={{
-                  background: '#eff6ff',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #bfdbfe',
-                  fontSize: '12px',
-                  color: '#1e40af',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <TableProperties size={15} />
-                <span>{dataRowCount} data row(s) found in spreadsheet</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
+                  Detected Columns ({fields.length})
+                </span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  {dataRowCount} student rows will be imported
+                </span>
               </div>
 
               <div
@@ -387,7 +447,7 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                   border: '1px solid #e2e8f0',
                   borderRadius: '6px',
                   overflow: 'hidden',
-                  maxHeight: '220px',
+                  maxHeight: '260px',
                   overflowY: 'auto',
                 }}
               >
@@ -402,42 +462,50 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                     }}
                   >
                     <tr>
-                      <th style={{ padding: '8px', textAlign: 'center', width: '45px' }}>#</th>
-                      <th style={{ padding: '8px', textAlign: 'left' }}>Column Name</th>
-                      <th style={{ padding: '8px', textAlign: 'left', width: '130px' }}>Type</th>
-                      <th style={{ padding: '8px', textAlign: 'center', width: '80px' }}>Mandatory</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', width: '45%' }}>Field Name</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', width: '35%' }}>Data Type</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', width: '20%' }}>Mandatory</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fields.map((f, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '6px 8px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
-                        <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1e293b' }}>{f.name}</td>
-                        <td style={{ padding: '4px 8px' }}>
+                        <td style={{ padding: '6px 10px' }}>
+                          <input
+                            type="text"
+                            value={f.name}
+                            onChange={(e) => handleFieldNameChange(idx, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '5px 8px',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              background: '#fff',
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '6px 10px' }}>
                           <CustomSelect
                             value={f.type}
-                            onChange={(val) => {
-                              const copy = [...fields];
-                              copy[idx].type = val;
-                              setFields(copy);
-                            }}
+                            onChange={(val) => handleFieldTypeChange(idx, val)}
                             options={[
                               { value: 'text', label: 'Text' },
                               { value: 'number', label: 'Number' },
-                              { value: 'photo', label: 'Photo' },
                               { value: 'date', label: 'Date' },
+                              { value: 'photo', label: 'Photo (Main)' },
+                              { value: 'father_photo', label: 'Father Photo' },
+                              { value: 'mother_photo', label: 'Mother Photo' },
+                              { value: 'sign', label: 'Signature' },
                             ]}
                           />
                         </td>
-                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
                           <input
                             type="checkbox"
-                            checked={f.mandatory}
-                            onChange={(e) => {
-                              const copy = [...fields];
-                              copy[idx].mandatory = e.target.checked;
-                              setFields(copy);
-                            }}
+                            checked={f.mandatory || false}
+                            onChange={() => handleMandatoryToggle(idx)}
                             style={{ cursor: 'pointer' }}
                           />
                         </td>
@@ -449,55 +517,63 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
             </>
           )}
 
-          {/* STEP 3: Optional ZIP Photos */}
+          {/* ── STEP 3: Photos ZIP & Submission ── */}
           {step === 3 && (
             <>
-              <div style={{ textAlign: 'center' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                  Step 3: Add Photo ZIPs (Optional)
-                </h4>
-                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                  Attach photo ZIP archive(s) to auto-match images by filename. Skip if no photos.
+              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#64748b',
+                    textTransform: 'uppercase',
+                    marginBottom: '6px',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  Upload Photos ZIP (Optional)
+                </label>
+                <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 10px' }}>
+                  {embeddedPhotosCount > 0
+                    ? `Note: ${embeddedPhotosCount} photos are already embedded in the document. You can optionally attach an additional ZIP archive.`
+                    : 'Attach photo ZIP archive(s) to match images by filename against student roll numbers or names.'}
                 </p>
-              </div>
 
-              <div
-                onClick={() => zipInputRef.current?.click()}
-                style={{
-                  border: '2px dashed #3b82f6',
-                  borderRadius: '8px',
-                  padding: '24px 16px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  background: '#eff6ff',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <FolderArchive size={36} style={{ color: '#2563eb', margin: '0 auto 8px' }} />
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#1e40af' }}>
-                  {zipFiles && zipFiles.length > 0
-                    ? `${zipFiles.length} ZIP file(s) attached`
-                    : 'Drop ZIP files here or click to browse'}
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#1d4ed8' }}>Supports .zip archives</p>
-                <input
-                  ref={zipInputRef}
-                  type="file"
-                  accept=".zip"
-                  multiple
-                  style={{ display: 'none' }}
-                  onChange={(e) => setZipFiles(Array.from(e.target.files))}
-                />
+                <div
+                  onClick={() => zipInputRef.current?.click()}
+                  style={{
+                    border: '1px dashed #10b981',
+                    borderRadius: '6px',
+                    padding: '16px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: '#f0fdf4',
+                  }}
+                >
+                  <FolderArchive size={24} style={{ color: '#10b981', margin: '0 auto 6px' }} />
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#065f46' }}>
+                    {zipFiles && zipFiles.length > 0
+                      ? `${zipFiles.length} ZIP file(s) attached`
+                      : 'Click to select ZIP photo archive(s)'}
+                  </div>
+                  <input
+                    ref={zipInputRef}
+                    type="file"
+                    accept=".zip"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => setZipFiles(e.target.files)}
+                  />
+                </div>
               </div>
 
               {isProcessing && (
-                <div
-                  style={{ background: '#ecfdf5', padding: '12px', borderRadius: '6px', border: '1px solid #a7f3d0' }}
-                >
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#047857', marginBottom: '6px' }}>
-                    Creating table and importing data...
+                <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#166534', marginBottom: '6px' }}>
+                    Creating table, extracting embedded photos & importing records...
                   </div>
-                  <div style={{ height: '6px', background: '#d1fae5', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ height: '6px', background: '#dcfce7', borderRadius: '3px', overflow: 'hidden' }}>
                     <div
                       style={{
                         height: '100%',
@@ -528,6 +604,7 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
           {step > 1 ? (
             <button
               onClick={() => setStep(step - 1)}
+              disabled={isProcessing}
               style={{
                 padding: '8px 16px',
                 background: '#fff',
@@ -541,7 +618,6 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                 alignItems: 'center',
                 gap: '4px',
               }}
-              disabled={isProcessing}
             >
               <ArrowLeft size={14} /> Back
             </button>
@@ -558,17 +634,16 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                 cursor: 'pointer',
                 fontSize: '12px',
               }}
-              disabled={isProcessing}
             >
               Cancel
             </button>
           )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
-            {step === 1 && (
+            {step < 3 ? (
               <button
-                onClick={() => setStep(2)}
-                disabled={!file}
+                onClick={() => setStep(step + 1)}
+                disabled={!file || isAnalyzing}
                 style={{
                   padding: '8px 18px',
                   background: '#10b981',
@@ -583,15 +658,22 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                   gap: '4px',
                 }}
               >
-                Next <ArrowRight size={14} />
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analyzing Document...
+                  </>
+                ) : (
+                  <>
+                    Next <ArrowRight size={14} />
+                  </>
+                )}
               </button>
-            )}
-
-            {step === 2 && (
+            ) : (
               <button
-                onClick={() => setStep(3)}
+                onClick={handleSubmit}
+                disabled={isProcessing}
                 style={{
-                  padding: '8px 18px',
+                  padding: '8px 20px',
                   background: '#10b981',
                   border: 'none',
                   borderRadius: '4px',
@@ -601,59 +683,19 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
                   fontSize: '12px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '6px',
                 }}
               >
-                Next <ArrowRight size={14} />
+                {isProcessing ? (
+                  <>
+                    <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Creating Table...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={14} /> Create Table & Import
+                  </>
+                )}
               </button>
-            )}
-
-            {step === 3 && (
-              <>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  style={{
-                    padding: '8px 14px',
-                    background: '#64748b',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: '#fff',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
-                >
-                  Skip & Create
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  style={{
-                    padding: '8px 18px',
-                    background: '#10b981',
-                    border: 'none',
-                    borderRadius: '4px',
-                    color: '#fff',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={14} /> Create Table
-                    </>
-                  )}
-                </button>
-              </>
             )}
           </div>
         </div>

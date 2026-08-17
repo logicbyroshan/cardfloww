@@ -187,20 +187,6 @@ export default function TableSettingsView({ addToast, onNavigate }) {
     }
   }, []);
 
-  const getStoredTables = useCallback(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-      const dummyNames = ['Class 1st to 5th', 'Class 6th to 10th', 'Class 11th & 12th', 'Staff & Teachers'];
-      const cleaned = stored.filter((t) => t && !dummyNames.includes(t.name));
-      if (cleaned.length !== stored.length) {
-        localStorage.setItem('cf_custom_tables', JSON.stringify(cleaned));
-      }
-      return cleaned;
-    } catch {
-      return [];
-    }
-  }, []);
-
   const load = useCallback(async () => {
     setLoading(true);
     let activeOrg = clientOrg;
@@ -221,7 +207,6 @@ export default function TableSettingsView({ addToast, onNavigate }) {
       }
     }
 
-    const local = getStoredTables();
     try {
       let list = [];
       if (groupId) {
@@ -232,18 +217,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
         list = data?.tables || data?.results || (Array.isArray(data) ? data : []);
       }
 
-      const merged = [...local];
-      (list || []).forEach((item) => {
-        if (!merged.some((t) => String(t.id) === String(item.id) || t.name === item.name)) {
-          merged.push({
-            ...item,
-            client_name: item.client_name || item.client?.name || activeOrg,
-            fields: item.fields || DEFAULT_SCHEMA_FIELDS,
-          });
-        }
-      });
-
-      const enriched = merged.map((t) => {
+      const enriched = (list || []).map((t) => {
         const rawName = t.client_name || t.client?.name || '';
         const validName =
           rawName && !['Default Organisation', 'Organisation', '—'].includes(rawName.trim())
@@ -252,27 +226,18 @@ export default function TableSettingsView({ addToast, onNavigate }) {
         return {
           ...t,
           client_name: validName,
+          fields: t.fields || DEFAULT_SCHEMA_FIELDS,
         };
       });
 
       setTables(enriched);
-    } catch {
-      const enrichedLocal = local.map((t) => {
-        const rawName = t.client_name || t.client?.name || '';
-        const validName =
-          rawName && !['Default Organisation', 'Organisation', '—'].includes(rawName.trim())
-            ? rawName.trim()
-            : activeOrg || 'Primary Organisation';
-        return {
-          ...t,
-          client_name: validName,
-        };
-      });
-      setTables(enrichedLocal);
+    } catch (err) {
+      console.error('Failed to load table schemas:', err);
+      setTables([]);
     } finally {
       setLoading(false);
     }
-  }, [groupId, clientOrg, getStoredTables]);
+  }, [clientOrg, groupId]);
 
   useEffect(() => {
     loadGroupId();
@@ -317,29 +282,12 @@ export default function TableSettingsView({ addToast, onNavigate }) {
   const handleToggleStatus = async () => {
     if (!selected) return;
     try {
-      try {
-        await schemaApi.toggleTableStatus(selected);
-      } catch (apiErr) {
-        console.warn('Backend API toggle status notice:', apiErr);
-      }
-      const local = getStoredTables();
-      const updated = local.map((t) => {
-        if (String(t.id) === String(selected)) {
-          const nextActive = t.is_active === false ? true : false;
-          return {
-            ...t,
-            is_active: nextActive,
-            status: nextActive ? 'active' : 'inactive',
-            updated_at: new Date().toISOString(),
-          };
-        }
-        return t;
-      });
-      localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
+      await schemaApi.toggleTableStatus(selected);
       addToast?.(`Status toggled for ${selTable?.name}`, 'success');
       load();
-    } catch {
-      addToast?.('Error updating table status', 'error');
+    } catch (err) {
+      console.error('Toggle status error:', err);
+      addToast?.(err?.response?.data?.message || 'Error updating table status', 'error');
     }
   };
 
@@ -347,18 +295,12 @@ export default function TableSettingsView({ addToast, onNavigate }) {
     if (!selected) return;
     if (!window.confirm(`Delete table "${selTable?.name}"? This cannot be undone.`)) return;
     try {
-      try {
-        await schemaApi.deleteTable(selected);
-      } catch (apiErr) {
-        console.warn('Backend API delete table notice:', apiErr);
-      }
-      const local = getStoredTables();
-      const updated = local.filter((t) => String(t.id) !== String(selected));
-      localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
+      await schemaApi.deleteTable(selected);
       addToast?.(`Table "${selTable?.name}" deleted`, 'success');
       setSelected(null);
       load();
     } catch (err) {
+      console.error('Delete table error:', err);
       addToast?.(err?.response?.data?.message || 'Error deleting table', 'error');
     }
   };
@@ -613,7 +555,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
               <button
                 className="btn"
                 onClick={() => setShowExcelDrawer(true)}
-                title="Create Table with XLSX"
+                title="Create Table with Data (Excel / Word / CSV)"
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   color: '#ffffff',
@@ -630,7 +572,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
                   boxSizing: 'border-box',
                 }}
               >
-                <FileSpreadsheet size={13} /> <span>Create with XLSX</span>
+                <FileSpreadsheet size={13} /> <span>Create with Data</span>
               </button>
               <button
                 className="btn"
@@ -1115,48 +1057,19 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
     setSaving(true);
     try {
       if (isEditing) {
-        try {
-          await schemaApi.updateTable(editingTable.id, payload);
-        } catch (apiErr) {
-          console.warn('Backend API update table fallback:', apiErr);
-        }
-        const stored = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-        const updated = stored.map((t) =>
-          String(t.id) === String(editingTable.id)
-            ? {
-                ...t,
-                ...payload,
-                updated_at: new Date().toISOString(),
-              }
-            : t
-        );
-        localStorage.setItem('cf_custom_tables', JSON.stringify(updated));
+        await schemaApi.updateTable(editingTable.id, payload);
         addToast?.(`Table "${payload.name}" updated successfully!`, 'success');
       } else {
-        try {
-          if (groupId) {
-            await schemaApi.createTable(groupId, payload);
-          } else {
-            await schemaApi.createSchema(payload);
-          }
-        } catch (apiErr) {
-          console.warn('Backend API create table fallback:', apiErr);
+        if (groupId) {
+          await schemaApi.createTable(groupId, payload);
+        } else {
+          await schemaApi.createSchema(payload);
         }
-        const stored = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-        const newTable = {
-          id: `tbl_${Date.now()}`,
-          ...payload,
-          client_name: orgName || '—',
-          status: 'active',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        localStorage.setItem('cf_custom_tables', JSON.stringify([newTable, ...stored]));
         addToast?.(`Table "${payload.name}" created successfully!`, 'success');
       }
       onSave();
     } catch (err) {
+      console.error('Save table error:', err);
       addToast?.(err?.response?.data?.message || err?.message || 'Error saving table', 'error');
     } finally {
       setSaving(false);

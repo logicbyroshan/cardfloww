@@ -418,6 +418,12 @@ export const assistantApi = {
 
 // ─── Group 7: Photographer Management ──────────────────────────────────────
 export const photographerApi = {
+  /** GET /api/photographers/ */
+  list: async (params = {}) => {
+    const res = await apiClient.get('/api/photographers/', { params });
+    return res.data;
+  },
+
   /** GET /api/photographer/<id>/ */
   get: async (staffId) => {
     const res = await apiClient.get(`/api/photographer/${staffId}/`);
@@ -845,6 +851,100 @@ export const organisationManagerApi = {
   /** DELETE /api/organisation-managers/<id>/ */
   delete: async (managerId) => {
     const res = await apiClient.delete(`/api/organisation-managers/${managerId}/`);
+    return res.data;
+  },
+};
+
+// ─── Group 15: Bulk Upload, Reupload & Batch Operations ────────────────────
+export const bulkApi = {
+  /** POST /api/table/<table_id>/cards/bulk-upload/ */
+  uploadCards: async (tableId, formData) => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/bulk-upload/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  /** POST /api/table/<table_id>/cards/reupload-images/ */
+  reuploadImages: async (tableId, formData) => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/reupload-images/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  /** POST /api/table/<table_id>/cards/bulk-status/ */
+  updateBulkStatus: async (tableId, cardIds, targetStatus, note = '') => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/bulk-status/`, {
+      card_ids: cardIds,
+      target_status: targetStatus,
+      note,
+    });
+    return res.data;
+  },
+
+  /** POST /api/table/<table_id>/cards/bulk-delete/ */
+  deleteBulkCards: async (tableId, cardIds, deleteCode = '') => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/bulk-delete/`, {
+      card_ids: cardIds,
+      delete_code: deleteCode,
+    });
+    return res.data;
+  },
+
+  /** POST /api/table/<table_id>/cards/clear-pending-paths/ */
+  clearPendingPaths: async (tableId, column = 'PHOTO', status = 'pending') => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/clear-pending-paths/`, {
+      column,
+      status,
+    });
+    return res.data;
+  },
+
+  /** POST /api/table/<table_id>/cards/upgrade-classes/ */
+  upgradeClasses: async (tableId, classMapping, upgradeCode = '') => {
+    const res = await apiClient.post(`/api/table/${tableId}/cards/upgrade-classes/`, {
+      class_mapping: classMapping,
+      upgrade_code: upgradeCode,
+    });
+    return res.data;
+  },
+};
+
+// ─── Group 16: Exports & Downloads ─────────────────────────────────────────
+export const exportApi = {
+  /** Trigger browser download for Excel */
+  getDownloadXlsxUrl: (tableId, status = 'approved', params = {}) => {
+    const q = new URLSearchParams({ status, ...params }).toString();
+    return `/api/table/${tableId}/cards/download-xlsx/?${q}`;
+  },
+
+  /** Trigger browser download for PDF Print Sheet */
+  getDownloadPdfUrl: (tableId, status = 'approved', params = {}) => {
+    const q = new URLSearchParams({ status, ...params }).toString();
+    return `/api/table/${tableId}/cards/download-pdf/?${q}`;
+  },
+
+  /** Trigger browser download for DOCX Word Print File */
+  getDownloadDocxUrl: (tableId, status = 'approved', params = {}) => {
+    const q = new URLSearchParams({ status, ...params }).toString();
+    return `/api/table/${tableId}/cards/download-docx/?${q}`;
+  },
+
+  /** Trigger browser download for ZIP Photos */
+  getDownloadImagesUrl: (tableId, status = 'pending', params = {}) => {
+    const q = new URLSearchParams({ status, ...params }).toString();
+    return `/api/table/${tableId}/cards/download-images/?${q}`;
+  },
+
+  /** Trigger browser download for All Cards Archive */
+  getDownloadAllCardsUrl: (tableId, status = 'all') => {
+    return `/api/table/${tableId}/cards/download-all/?status=${status}`;
+  },
+
+  /** GET async PDF generation status */
+  getExportStatus: async (taskId) => {
+    const res = await apiClient.get(`/api/export/status/${taskId}/`);
     return res.data;
   },
 };

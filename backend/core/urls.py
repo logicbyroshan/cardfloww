@@ -2,6 +2,7 @@ from django.urls import include, path
 from django.views.decorators.csrf import csrf_exempt
 from . import views
 from exports import views as export_views
+from imports import views as import_views
 from organisation import views_api as client_views_api
 from organisation import views_admin as organisation_views
 from accounts import views as accounts_views
@@ -137,6 +138,8 @@ urlpatterns = [
     path('api/staff/<int:staff_id>/set-temp-password/', views.api_staff_set_temp_password, name='api_staff_set_temp_password'),
 
     # Photographer APIs
+    path('api/photographers/', views.api_photographer_list, name='api_photographer_list'),
+    path('api/photographer/', views.api_photographer_list, name='api_photographer_list_alias'),
     path('api/photographer/create/', views.api_photographer_create, name='api_photographer_create'),
     path('api/photographer/<int:staff_id>/', views.api_photographer_get, name='api_photographer_get'),
     path('api/photographer/<int:staff_id>/update/', views.api_photographer_update, name='api_photographer_update'),
@@ -157,7 +160,8 @@ urlpatterns = [
     path('api/table/<int:table_id>/generate-delete-code/', views.api_generate_table_delete_code, name='api_generate_table_delete_code'),
     path('api/table/<int:table_id>/shared-managers/', views.api_table_shared_managers_get, name='api_table_shared_managers_get'),
     path('api/table/<int:table_id>/share-managers/', views.api_table_share_managers, name='api_table_share_managers'),
-    path('api/group/<int:group_id>/table/create-from-xlsx/', views.api_create_table_from_xlsx, name='api_create_table_from_xlsx'),
+    path('api/group/<int:group_id>/table/create-with-data/', import_views.api_create_table_with_data, name='api_create_table_with_data'),
+    path('api/group/<int:group_id>/table/create-from-xlsx/', import_views.api_create_table_with_data, name='api_create_table_from_xlsx'),
     
     # ID Card APIs
     path('api/table/<int:table_id>/cards/', views.api_idcard_list, name='api_idcard_list'),
@@ -180,11 +184,11 @@ urlpatterns = [
     path('api/table/<int:table_id>/cards/generate-delete-code/', views.api_generate_delete_code, name='api_generate_delete_code'),
     path('api/table/<int:table_id>/cards/generate-upgrade-code/', views.api_generate_upgrade_code, name='api_generate_upgrade_code'),
     path('api/table/<int:table_id>/cards/upgrade-classes/', views.api_upgrade_all_classes, name='api_upgrade_all_classes'),
-    path('api/table/<int:table_id>/cards/bulk-upload/', views.api_idcard_bulk_upload, name='api_idcard_bulk_upload'),
+    path('api/table/<int:table_id>/cards/bulk-upload/', import_views.api_bulk_upload_data, name='api_idcard_bulk_upload'),
     path('api/table/<int:table_id>/cards/search/', views.api_idcard_search, name='api_idcard_search'),
     path('api/table/<int:table_id>/status-counts/', views.api_table_status_counts, name='api_table_status_counts'),
     path('api/table/<int:table_id>/cards/download-images/', export_views.api_export_images, name='api_idcard_download_images'),
-    path('api/table/<int:table_id>/cards/reupload-images/', views.api_idcard_reupload_images, name='api_idcard_reupload_images'),
+    path('api/table/<int:table_id>/cards/reupload-images/', import_views.api_reupload_images, name='api_idcard_reupload_images'),
     path('api/table/<int:table_id>/cards/class-counts/', views.api_idcard_class_counts, name='api_idcard_class_counts'),
     path('api/table/<int:table_id>/modals-html/', views.api_idcard_modals_html, name='api_idcard_modals_html'),
     path('api/table/<int:table_id>/cards/download-docx/', export_views.api_export_docx, name='api_idcard_download_docx'),

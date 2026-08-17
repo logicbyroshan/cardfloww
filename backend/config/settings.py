@@ -157,6 +157,7 @@ INSTALLED_APPS = [
     'tables',            # Table + IDCard (merged, formerly idcards)
     # ─────────────────────────────────────────────────────────
     'exports',
+    'imports',
     'mediafiles',
     'staff',
     'operators',

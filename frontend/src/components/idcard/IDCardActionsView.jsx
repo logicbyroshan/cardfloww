@@ -531,6 +531,7 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
   const [zipFiles, setZipFiles] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [embeddedPhotosCount, setEmbeddedPhotosCount] = useState(0);
 
   // Field mapping state
   const [excelHeaders, setExcelHeaders] = useState([]);
@@ -553,9 +554,36 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
     return fields.filter((f) => !isImageField(f.type, f.name));
   }, [table]);
 
-  const handleFileChange = (selectedFile) => {
+  const handleFileChange = async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
+
+    // 1. Try server-side preview first for rich embedded photo detection & docx parsing
+    try {
+      const fd = new FormData();
+      fd.append('file', selectedFile);
+      const res = await apiClient.post('/api/imports/preview/', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data && res.data.success) {
+        const pData = res.data;
+        const headers = pData.headers || [];
+        setExcelHeaders(headers);
+        setDataRowCount(pData.total_rows || 0);
+        setEmbeddedPhotosCount(pData.total_embedded_images || 0);
+
+        const initialMapping = {};
+        tableFields.forEach((tf) => {
+          const normTf = tf.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const match = headers.find((h) => h.toLowerCase().replace(/[^a-z0-9]/g, '') === normTf);
+          if (match) initialMapping[tf.name] = match;
+        });
+        setFieldMapping(initialMapping);
+        return;
+      }
+    } catch {
+      // Fallback to client-side parsing
+    }
 
     try {
       const reader = new FileReader();
@@ -575,8 +603,7 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
               rowCount = jsonRows.slice(1).filter((r) => Array.isArray(r) && r.some((c) => String(c || '').trim() !== '')).length;
             }
           }
-        } catch (xlsxErr) {
-          console.warn('XLSX upload parse warning:', xlsxErr);
+        } catch {
           if (selectedFile.name.toLowerCase().endsWith('.csv')) {
             const text = new TextDecoder('utf-8').decode(buf);
             const lines = text.split(/\r?\n/).filter((l) => l.trim());
@@ -598,7 +625,6 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
         setExcelHeaders(headers);
         setDataRowCount(rowCount);
 
-        // Auto mapping match
         const initialMapping = {};
         tableFields.forEach((tf) => {
           const normTf = tf.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -677,7 +703,7 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
               color: '#fff',
             }}
           >
-            <FileSpreadsheet size={16} style={{ color: '#22c55e' }} /> Upload Excel File
+            <FileSpreadsheet size={16} style={{ color: '#22c55e' }} /> Upload Data (Excel / Word)
           </h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
             <X size={18} />
@@ -775,14 +801,14 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
                   }}
                 >
                   <FileSpreadsheet size={36} style={{ color: '#2563eb', margin: '0 auto 8px' }} />
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e40af' }}>Select Excel File to Upload</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1e40af' }}>Select Excel (.xlsx, .xls, .csv) or Word (.docx) File</div>
                   <div style={{ fontSize: '11px', color: '#3b82f6', marginTop: '4px' }}>
-                    Choose an Excel (.xlsx, .xls) or CSV file containing record data
+                    Auto-detects data columns and extracts photos embedded directly inside worksheet or Word document tables
                   </div>
                   <input
                     ref={fileRef}
                     type="file"
-                    accept=".xlsx,.xls,.csv"
+                    accept=".xlsx,.xls,.csv,.docx"
                     style={{ display: 'none' }}
                     onChange={(e) => handleFileChange(e.target.files[0])}
                   />
@@ -1128,6 +1154,7 @@ function ReuploadImageModal({ table, status, cardCount, onClose, onSuccess, addT
 
     try {
       const fd = new FormData();
+      fd.append('photos_zip', file);
       fd.append('zip_file', file);
       fd.append('status', status || 'pending');
 
@@ -1545,21 +1572,21 @@ function DownloadModal({ table, status, onClose, addToast }) {
       label: 'Excel Data (.xlsx)',
       icon: FileSpreadsheet,
       color: '#22c55e',
-      url: `/api/table/${table?.id}/download/xlsx/?status=${status}`,
+      url: `/api/table/${table?.id}/cards/download-xlsx/?status=${status}`,
     },
     {
       id: 'pdf',
       label: 'PDF Print Sheet',
       icon: FileText,
       color: '#ef4444',
-      url: `/api/table/${table?.id}/download/pdf/?status=${status}`,
+      url: `/api/table/${table?.id}/cards/download-pdf/?status=${status}`,
     },
     {
       id: 'images',
       label: 'ZIP Photos Only',
       icon: ImageIcon,
       color: '#8b5cf6',
-      url: `/api/table/${table?.id}/download/images/?status=${status}`,
+      url: `/api/table/${table?.id}/cards/download-images/?status=${status}`,
     },
   ];
 
@@ -2857,27 +2884,6 @@ export default function IDCardActionsView({
   const searchTimerRef = useRef(null);
 
   /* ── LocalStorage helper for offline/custom tables ── */
-  const getLocalStorageCards = useCallback(() => {
-    try {
-      const stored = localStorage.getItem(`cf_custom_cards_${tableId}`);
-      if (stored) return JSON.parse(stored);
-      return [];
-    } catch {
-      return [];
-    }
-  }, [tableId]);
-
-  const saveLocalStorageCards = useCallback(
-    (updatedCards) => {
-      try {
-        localStorage.setItem(`cf_custom_cards_${tableId}`, JSON.stringify(updatedCards));
-      } catch {
-        /* ignore */
-      }
-    },
-    [tableId]
-  );
-
   /* ── Load Table Metadata ── */
   const loadTable = useCallback(async () => {
     if (!tableId) return;
@@ -2885,14 +2891,8 @@ export default function IDCardActionsView({
     try {
       const data = await schemaApi.getTable(tableId);
       setTable(data?.table || data);
-    } catch {
-      try {
-        const local = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-        const match = local.find((t) => String(t.id) === String(tableId));
-        if (match) setTable(match);
-      } catch {
-        /* ignore */
-      }
+    } catch (err) {
+      console.error('Failed to load table metadata:', err);
     } finally {
       setTableLoading(false);
     }
@@ -2901,11 +2901,10 @@ export default function IDCardActionsView({
   /* ── Load Status Counts ── */
   const loadStatusCounts = useCallback(async () => {
     if (!tableId) return;
-    let counts = { pending: 0, verified: 0, approved: 0, printed: 0, deleted: 0, reprint: 0, request: 0, confirm: 0 };
     try {
       const data = await cardApi.getStatusCounts(tableId);
       const c = data?.counts || data?.status_counts || data || {};
-      counts = {
+      setStatusCounts({
         pending: c.pending ?? c.pending_count ?? 0,
         verified: c.verified ?? c.verified_count ?? 0,
         approved: c.approved ?? c.approved_count ?? 0,
@@ -2914,38 +2913,11 @@ export default function IDCardActionsView({
         reprint: c.reprint ?? c.reprint_count ?? c.reprinting ?? 0,
         request: c.request ?? c.reprint_request ?? c.requested ?? 0,
         confirm: c.confirm ?? c.reprint_confirmed ?? c.confirmed ?? 0,
-      };
-    } catch {
-      /* ignore */
+      });
+    } catch (err) {
+      console.warn('Failed to load status counts:', err);
     }
-
-    // Deduplicate local storage fallback without double counting
-    const local = getLocalStorageCards();
-    if (local.length > 0) {
-      const cardMap = new Map();
-      local.forEach((card) => {
-        if (card && (card.id || card.roll_number || card.name)) {
-          const key = card.id || `${card.roll_number}_${card.name}`;
-          cardMap.set(key, card);
-        }
-      });
-      const uniqueLocal = Array.from(cardMap.values());
-      const localCounts = { pending: 0, verified: 0, approved: 0, printed: 0, deleted: 0, reprint: 0, request: 0, confirm: 0 };
-      uniqueLocal.forEach((card) => {
-        let s = card.status || 'pending';
-        if (s === 'download' || s === 'downloaded') s = 'printed';
-        if (s === 'pool') s = 'deleted';
-        if (s === 'reprint_pending' || s === 'reprinting') s = 'reprint';
-        if (s === 'reprint_request' || s === 'requested') s = 'request';
-        if (s === 'reprint_confirmed' || s === 'confirmed') s = 'confirm';
-        if (localCounts[s] !== undefined) localCounts[s]++;
-      });
-      Object.keys(counts).forEach((k) => {
-        counts[k] = Math.max(counts[k], localCounts[k]);
-      });
-    }
-    setStatusCounts(counts);
-  }, [tableId, getLocalStorageCards]);
+  }, [tableId]);
 
   /* ── Load Filter Options ── */
   const loadFilterOptions = useCallback(async () => {
@@ -2981,71 +2953,20 @@ export default function IDCardActionsView({
       };
       Object.keys(params).forEach((k) => params[k] === undefined && delete params[k]);
 
-      let list = [];
-      let cnt = 0;
-      try {
-        const data = await cardApi.getCards(tableId, params);
-        list = data?.cards || data?.results || (Array.isArray(data) ? data : []);
-        cnt = data?.total_count || data?.total || data?.count || list.length;
-      } catch (apiErr) {
-        console.warn('API loadCards error:', apiErr);
-      }
+      const data = await cardApi.getCards(tableId, params);
+      const list = data?.cards || data?.results || (Array.isArray(data) ? data : []);
+      const cnt = data?.total_count ?? data?.total ?? data?.count ?? list.length;
 
-      // Helper to match card status cleanly
-      const cardMatchesStatus = (c) => {
-        let cardSt = c.status || 'pending';
-        if (cardSt === 'download' || cardSt === 'downloaded') cardSt = 'printed';
-        if (cardSt === 'pool') cardSt = 'deleted';
-        if (cardSt === 'reprint_pending' || cardSt === 'reprinting') cardSt = 'reprint';
-        if (cardSt === 'reprint_request' || cardSt === 'requested') cardSt = 'request';
-        if (cardSt === 'reprint_confirmed' || cardSt === 'confirmed') cardSt = 'confirm';
-
-        if (status === 'request') {
-          return cardSt === 'request' || cardSt === 'reprint_request' || cardSt === 'requested';
-        }
-        if (status === 'reprint') {
-          return cardSt === 'reprint' || cardSt === 'reprint_pending' || cardSt === 'reprinting';
-        }
-        if (status === 'confirm') {
-          return cardSt === 'confirm' || cardSt === 'reprint_confirmed' || cardSt === 'confirmed';
-        }
-        return cardSt === status;
-      };
-
-      // Merge Local Storage cards with API list for instant hybrid display
-      const local = getLocalStorageCards();
-      const localFiltered = local.filter(cardMatchesStatus);
-
-      const combinedMap = new Map();
-      list.forEach((c) => combinedMap.set(String(c.id), c));
-      localFiltered.forEach((c) => {
-        if (!combinedMap.has(String(c.id))) {
-          combinedMap.set(String(c.id), c);
-        }
-      });
-
-      const finalCards = Array.from(combinedMap.values());
-      setCards(finalCards);
-      setTotal(Math.max(cnt, finalCards.length));
+      setCards(list);
+      setTotal(cnt);
     } catch (err) {
       console.warn('loadCards error:', err);
-      const local = getLocalStorageCards();
-      const cardMatchesStatus = (c) => {
-        let cardSt = c.status || 'pending';
-        if (cardSt === 'download' || cardSt === 'downloaded') cardSt = 'printed';
-        if (cardSt === 'pool') cardSt = 'deleted';
-        if (cardSt === 'reprint_pending' || cardSt === 'reprinting') cardSt = 'reprint';
-        if (cardSt === 'reprint_request' || cardSt === 'requested') cardSt = 'request';
-        if (cardSt === 'reprint_confirmed' || cardSt === 'confirmed') cardSt = 'confirm';
-        return cardSt === status;
-      };
-      const localFiltered = local.filter(cardMatchesStatus);
-      setCards(localFiltered);
-      setTotal(localFiltered.length);
+      setCards([]);
+      setTotal(0);
     } finally {
       setCardsLoading(false);
     }
-  }, [tableId, status, page, pageSize, debouncedSearch, classFilter, sectionFilter, sort, getLocalStorageCards]);
+  }, [tableId, status, page, pageSize, debouncedSearch, classFilter, sectionFilter, sort]);
 
   /* ── Effects ── */
   useEffect(() => {
@@ -3158,35 +3079,29 @@ export default function IDCardActionsView({
       } catch {
         await Promise.all(ids.map((id) => cardApi.changeStatus(id, newStatus)));
       }
-    } catch {
-      /* fallback */
+      addToast?.(`${ids.length} card(s) moved to ${newStatus}`, 'success');
+      setSelectedIds(new Set());
+      await Promise.all([loadCards(), loadStatusCounts()]);
+    } catch (err) {
+      console.error('Bulk status change error:', err);
+      addToast?.('Failed to update card status', 'error');
+    } finally {
+      setActionLoading(false);
     }
-
-    // Update local storage cards as well
-    const local = getLocalStorageCards();
-    const updated = local.map((c) => (ids.includes(c.id) ? { ...c, status: newStatus } : c));
-    saveLocalStorageCards(updated);
-
-    addToast?.(`${ids.length} card(s) moved to ${newStatus}`, 'success');
-    setSelectedIds(new Set());
-    await Promise.all([loadCards(), loadStatusCounts()]);
-    setActionLoading(false);
   };
 
   const applyStatusSingle = async (card, newStatus) => {
     setActionLoading(true);
     try {
       await cardApi.changeStatus(card.id, newStatus);
-    } catch {
-      /* continue */
+      addToast?.(`Card moved to ${newStatus}`, 'success');
+      await Promise.all([loadCards(), loadStatusCounts()]);
+    } catch (err) {
+      console.error('Single status change error:', err);
+      addToast?.('Failed to update status', 'error');
+    } finally {
+      setActionLoading(false);
     }
-    const local = getLocalStorageCards();
-    const updated = local.map((c) => (c.id === card.id ? { ...c, status: newStatus } : c));
-    saveLocalStorageCards(updated);
-
-    addToast?.(`Card moved to ${newStatus}`, 'success');
-    await Promise.all([loadCards(), loadStatusCounts()]);
-    setActionLoading(false);
   };
 
   const deleteSingle = async (card) => {
@@ -3197,15 +3112,14 @@ export default function IDCardActionsView({
     setActionLoading(true);
     try {
       await cardApi.changeStatus(card.id, 'pool');
-    } catch {
-      /* continue */
+      addToast?.('Card moved to Pool', 'info');
+      await Promise.all([loadCards(), loadStatusCounts()]);
+    } catch (err) {
+      console.error('Delete card error:', err);
+      addToast?.('Failed to delete card', 'error');
+    } finally {
+      setActionLoading(false);
     }
-    const local = getLocalStorageCards();
-    const updated = local.map((c) => (c.id === card.id ? { ...c, status: 'pool' } : c));
-    saveLocalStorageCards(updated);
-    addToast?.('Card moved to Pool', 'info');
-    await Promise.all([loadCards(), loadStatusCounts()]);
-    setActionLoading(false);
   };
   const handleDelete = async () => {
     const ids = [...selectedIds];
