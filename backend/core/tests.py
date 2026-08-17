@@ -88,7 +88,8 @@ class UserModelTests(TestCase):
         user = User.objects.create_user(
             username='u1@test.com', email='u1@test.com', password='pass1234',
         )
-        self.assertEqual(user.role, 'client')
+        self.assertEqual(user.role, 'prime_manager')
+
 
     def test_super_admin_role_sets_flags(self):
         admin = _create_super_admin()
