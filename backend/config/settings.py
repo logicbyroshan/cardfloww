@@ -158,6 +158,7 @@ INSTALLED_APPS = [
     # ─────────────────────────────────────────────────────────
     'exports',
     'imports',
+    'operations',
     'mediafiles',
     'staff',
     'operators',

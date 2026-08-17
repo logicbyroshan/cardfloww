@@ -182,6 +182,8 @@ urlpatterns += [
     path('panel/exports/', include(('exports.urls', 'exports'), namespace='panel_exports_root')),
     path('imports/', include(('imports.urls', 'imports'), namespace='imports_root')),
     path('panel/imports/', include(('imports.urls', 'imports'), namespace='panel_imports_root')),
+    path('operations/', include(('operations.urls', 'operations'), namespace='operations_root')),
+    path('api/operations/', include('operations.urls')),
     path('images/', include(('mediafiles.urls', 'mediafiles'), namespace='mediafiles_root')),
     path('operators/', include(('operators.urls', 'operators'), namespace='operators_root')),
     path('panel/operators/', include(('operators.urls', 'operators'), namespace='panel_operators_root')),
