@@ -978,6 +978,42 @@ export const operationsApi = {
   },
 };
 
+// ─── Group 20: Audit & Bulk Transactions Engine ───────────────────────────
+export const auditApi = {
+  /** GET /api/operations/audit/cards/<card_id>/timeline/ */
+  getCardTimeline: async (cardId, params = {}) => {
+    const res = await apiClient.get(`/api/operations/audit/cards/${cardId}/timeline/`, { params });
+    return res.data;
+  },
+
+  /** GET /api/operations/audit/tables/<table_id>/activity/ */
+  getTableActivity: async (tableId, params = {}) => {
+    const res = await apiClient.get(`/api/operations/audit/tables/${tableId}/activity/`, { params });
+    return res.data;
+  },
+
+  /** GET /api/operations/audit/transactions/ */
+  getTransactions: async (params = {}) => {
+    const res = await apiClient.get('/api/operations/audit/transactions/', { params });
+    return res.data;
+  },
+
+  /** GET /api/operations/audit/transactions/<transaction_id>/ */
+  getTransactionDetail: async (transactionId, params = {}) => {
+    const res = await apiClient.get(`/api/operations/audit/transactions/${transactionId}/`, { params });
+    return res.data;
+  },
+
+  /** POST /api/operations/audit/transactions/<transaction_id>/reverse/ */
+  reverseTransaction: async (transactionId) => {
+    const res = await apiClient.post(`/api/operations/audit/transactions/${transactionId}/reverse/`);
+    return res.data;
+  },
+
+  /** GET /api/operations/audit/export/?table_id=123 */
+  exportAuditUrl: (tableId) => `/api/operations/audit/export/?table_id=${tableId || ''}`,
+};
+
 // ─── Domain Renaming Aliases ───────────────────────────────────────────────
 export const organisationApi = clientApi;
 export const managerApi = organisationManagerApi;
@@ -985,4 +1021,5 @@ export const tableGroupApi = schemaApi;
 
 export { apiClient };
 export default apiClient;
+
 

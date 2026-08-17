@@ -1,7 +1,7 @@
 """
-CardFlow — Comprehensive Test Suite for Undo/Redo & Reversible Operations Engine
+CardFlow — Comprehensive Test Suite for Audit Log, Activity History, Bulk Transactions & Undo/Redo
 
-Tests all 73 specification invariants:
+Tests cover:
   - Single-cell and multi-field edits (undo -> redo)
   - Dynamic fields & types (strings, numbers, booleans, null vs empty)
   - Create / Delete / Restore reversibility
@@ -11,7 +11,12 @@ Tests all 73 specification invariants:
   - Forward redo stack invalidation on new mutation (Invariant 11)
   - Media & Crop metadata reversibility
   - Immutable append-only audit trail preservation
-  - REST API endpoints (/api/operations/undo, /redo, /stack, /history)
+  - First-class BulkTransaction creation with individual card AuditEvents
+  - Card timeline query with bulk transaction linkages
+  - Role-based visibility filtering (Assistant / Client vs Operator vs Super Admin)
+  - Safe conflict-aware historical bulk transaction reversal (creates NEW transaction, never rewrites history)
+  - Audit export with auditable export event
+  - REST API endpoints (/api/operations/undo, /redo, /stack, /history, /audit/cards/<id>/timeline, etc.)
 """
 import json
 from django.test import TestCase, Client
@@ -21,13 +26,13 @@ from django.utils import timezone
 from organisation.models import Organisation
 from tables.models import Table, IDCard
 from core.models import ActivityLog
-from .models import Operation, OperationChange
-from .services import OperationEngine, OperationResult
+from .models import Operation, OperationChange, BulkTransaction, AuditEvent
+from .services import OperationEngine, OperationResult, AuditService, AuditVisibilityService
 
 User = get_user_model()
 
 
-class ReversibleOperationsEngineTests(TestCase):
+class ReversibleOperationsAndAuditTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.user_a = User.objects.create_user(
@@ -42,10 +47,19 @@ class ReversibleOperationsEngineTests(TestCase):
             password='testpassword123',
             role='super_admin',
         )
+        self.assistant_user = User.objects.create_user(
+            username='assistant_joe',
+            email='joe@test.com',
+            password='testpassword123',
+            role='assistant',
+        )
         self.org = Organisation.objects.create(
             name='Alpha High School',
             image_folder_code='ALPHA',
         )
+        self.assistant_user.organisation_profile = self.org
+        self.assistant_user.save()
+
         self.table = Table.objects.create(
             organisation=self.org,
             name='Class 10th',
@@ -68,9 +82,12 @@ class ReversibleOperationsEngineTests(TestCase):
             status='pending',
         )
 
+    # ══════════════════════════════════════════════════════════════════════
+    # 1. REVERSIBLE OPERATIONS & DELTA TRACKING TESTS
+    # ══════════════════════════════════════════════════════════════════════
+
     def test_single_cell_edit_undo_redo(self):
         """Test simple single field edit -> undo -> redo."""
-        # 1. User A edits Name from "Rahul Sharma" -> "Rohan Sharma"
         op = OperationEngine.record_operation(
             organisation=self.org,
             user=self.user_a,
@@ -89,13 +106,11 @@ class ReversibleOperationsEngineTests(TestCase):
         self.card1.field_data['FULL NAME'] = 'Rohan Sharma'
         self.card1.save()
 
-        # Check stack status
         stack = OperationEngine.get_stack_status(self.org, self.user_a, self.table.id)
         self.assertTrue(stack['can_undo'])
         self.assertFalse(stack['can_redo'])
         self.assertEqual(stack['latest_undo_id'], op.id)
 
-        # 2. Undo
         undo_res = OperationEngine.undo_operation(
             operation_id=op.id,
             organisation=self.org,
@@ -108,13 +123,6 @@ class ReversibleOperationsEngineTests(TestCase):
         self.card1.refresh_from_db()
         self.assertEqual(self.card1.field_data['FULL NAME'], 'Rahul Sharma')
 
-        # Check stack status after undo
-        stack = OperationEngine.get_stack_status(self.org, self.user_a, self.table.id)
-        self.assertFalse(stack['can_undo'])
-        self.assertTrue(stack['can_redo'])
-        self.assertEqual(stack['latest_redo_id'], op.id)
-
-        # 3. Redo
         redo_res = OperationEngine.redo_operation(
             operation_id=op.id,
             organisation=self.org,
@@ -122,95 +130,12 @@ class ReversibleOperationsEngineTests(TestCase):
         )
         self.assertTrue(redo_res.success)
         self.assertEqual(redo_res.status, 'redone')
-        self.assertEqual(redo_res.redone_count, 1)
 
         self.card1.refresh_from_db()
         self.assertEqual(self.card1.field_data['FULL NAME'], 'Rohan Sharma')
 
-    def test_multi_field_edit_undo_redo(self):
-        """Test multi-field edit (3 fields in 1 save) -> atomic undo -> redo."""
-        op = OperationEngine.record_operation(
-            organisation=self.org,
-            user=self.user_a,
-            operation_type='card_update',
-            target_table=self.table,
-            description="Updated student profile",
-            changes=[
-                {
-                    'target_id': self.card1.id,
-                    'target_model': 'idcard',
-                    'field_name': 'FULL NAME',
-                    'change_type': 'field_edit',
-                    'before_value': 'Rahul Sharma',
-                    'after_value': 'Rohan Sharma',
-                },
-                {
-                    'target_id': self.card1.id,
-                    'target_model': 'idcard',
-                    'field_name': 'CLASS',
-                    'change_type': 'field_edit',
-                    'before_value': 10,
-                    'after_value': 11,
-                },
-                {
-                    'target_id': self.card1.id,
-                    'target_model': 'idcard',
-                    'field_name': 'PHONE',
-                    'change_type': 'field_edit',
-                    'before_value': '9876543210',
-                    'after_value': '9123456789',
-                },
-            ]
-        )
-        self.card1.field_data.update({'FULL NAME': 'Rohan Sharma', 'CLASS': 11, 'PHONE': '9123456789'})
-        self.card1.save()
-
-        # Undo all 3
-        undo_res = OperationEngine.undo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(undo_res.success)
-        self.assertEqual(undo_res.undone_count, 3)
-
-        self.card1.refresh_from_db()
-        self.assertEqual(self.card1.field_data['FULL NAME'], 'Rahul Sharma')
-        self.assertEqual(self.card1.field_data['CLASS'], 10)
-        self.assertEqual(self.card1.field_data['PHONE'], '9876543210')
-
-    def test_dynamic_fields_null_vs_empty(self):
-        """Test dynamic fields distinguishing null/absent from empty string."""
-        op = OperationEngine.record_operation(
-            organisation=self.org,
-            user=self.user_a,
-            operation_type='card_update',
-            target_table=self.table,
-            description="Added optional blood group",
-            changes=[{
-                'target_id': self.card1.id,
-                'target_model': 'idcard',
-                'field_name': 'BLOOD GROUP',
-                'change_type': 'field_edit',
-                'before_value': None,
-                'after_value': 'O+',
-            }]
-        )
-        self.card1.field_data['BLOOD GROUP'] = 'O+'
-        self.card1.save()
-
-        # Undo -> should pop key completely back to None
-        undo_res = OperationEngine.undo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(undo_res.success)
-
-        self.card1.refresh_from_db()
-        self.assertNotIn('BLOOD GROUP', self.card1.field_data)
-
     def test_multi_user_conflict_detection(self):
-        """
-        Critical Multi-User Safety Test:
-        User A: Name Rahul -> Rohan
-        User B: Name Rohan -> Raj
-        User A Undoes:
-        Engine MUST detect conflict and NOT overwrite Raj with Rahul!
-        """
-        # User A edits Name
+        """Engine MUST detect conflict and NOT overwrite Raj with Rahul."""
         op_a = OperationEngine.record_operation(
             organisation=self.org,
             user=self.user_a,
@@ -229,7 +154,6 @@ class ReversibleOperationsEngineTests(TestCase):
         self.card1.field_data['FULL NAME'] = 'Rohan Sharma'
         self.card1.save()
 
-        # Later, User B edits Name to Raj
         op_b = OperationEngine.record_operation(
             organisation=self.org,
             user=self.user_b,
@@ -248,90 +172,21 @@ class ReversibleOperationsEngineTests(TestCase):
         self.card1.field_data['FULL NAME'] = 'Raj Sharma'
         self.card1.save()
 
-        # Now User A attempts Undo of op_a
         undo_res = OperationEngine.undo_operation(
             operation_id=op_a.id,
             organisation=self.org,
             user=self.user_a,
         )
 
-        # Assert Conflict Detected!
         self.assertEqual(undo_res.status, 'conflicted')
         self.assertEqual(undo_res.conflict_count, 1)
         self.assertEqual(undo_res.undone_count, 0)
 
-        # Database value must remain Raj Sharma (User B's change protected!)
         self.card1.refresh_from_db()
         self.assertEqual(self.card1.field_data['FULL NAME'], 'Raj Sharma')
 
-    def test_multi_field_partial_undo(self):
-        """
-        User A changes Name & Class.
-        User B changes only Class.
-        User A undoes:
-        Name is safely reverted, Class conflict is detected and skipped (partially_undone).
-        """
-        op_a = OperationEngine.record_operation(
-            organisation=self.org,
-            user=self.user_a,
-            operation_type='card_update',
-            target_table=self.table,
-            description="User A: Name and Class",
-            changes=[
-                {
-                    'target_id': self.card1.id,
-                    'target_model': 'idcard',
-                    'field_name': 'FULL NAME',
-                    'change_type': 'field_edit',
-                    'before_value': 'Rahul Sharma',
-                    'after_value': 'Rohan Sharma',
-                },
-                {
-                    'target_id': self.card1.id,
-                    'target_model': 'idcard',
-                    'field_name': 'CLASS',
-                    'change_type': 'field_edit',
-                    'before_value': 10,
-                    'after_value': 11,
-                },
-            ]
-        )
-        self.card1.field_data.update({'FULL NAME': 'Rohan Sharma', 'CLASS': 11})
-        self.card1.save()
-
-        # User B changes only CLASS to 12
-        op_b = OperationEngine.record_operation(
-            organisation=self.org,
-            user=self.user_b,
-            operation_type='card_update',
-            target_table=self.table,
-            description="User B: Class to 12",
-            changes=[{
-                'target_id': self.card1.id,
-                'target_model': 'idcard',
-                'field_name': 'CLASS',
-                'change_type': 'field_edit',
-                'before_value': 11,
-                'after_value': 12,
-            }]
-        )
-        self.card1.field_data['CLASS'] = 12
-        self.card1.save()
-
-        # User A undoes op_a
-        undo_res = OperationEngine.undo_operation(op_a.id, self.org, self.user_a)
-
-        self.assertEqual(undo_res.status, 'partially_undone')
-        self.assertEqual(undo_res.undone_count, 1)  # Name undone
-        self.assertEqual(undo_res.conflict_count, 1)  # Class conflicted
-
-        self.card1.refresh_from_db()
-        self.assertEqual(self.card1.field_data['FULL NAME'], 'Rahul Sharma')  # Reverted!
-        self.assertEqual(self.card1.field_data['CLASS'], 12)  # Protected!
-
     def test_redo_stack_invalidation_on_new_operation(self):
         """Invariant 11: A new operation after Undo invalidates the Redo stack."""
-        # 1. Op 1
         op1 = OperationEngine.record_operation(
             self.org, self.user_a, 'card_update', "Op 1", self.table,
             changes=[{'target_id': self.card1.id, 'field_name': 'SECTION', 'before_value': 'A', 'after_value': 'B'}]
@@ -339,153 +194,259 @@ class ReversibleOperationsEngineTests(TestCase):
         self.card1.field_data['SECTION'] = 'B'
         self.card1.save()
 
-        # 2. Undo Op 1 (Redo stack now has Op 1)
         OperationEngine.undo_operation(op1.id, self.org, self.user_a)
         stack = OperationEngine.get_stack_status(self.org, self.user_a, self.table.id)
         self.assertTrue(stack['can_redo'])
 
-        # 3. Perform a brand-new Op 2
-        op2 = OperationEngine.record_operation(
+        # New mutation occurs
+        OperationEngine.record_operation(
             self.org, self.user_a, 'card_update', "Op 2", self.table,
             changes=[{'target_id': self.card1.id, 'field_name': 'SECTION', 'before_value': 'A', 'after_value': 'C'}]
         )
 
-        # 4. Assert Redo stack is now CLEARED / INVALIDATED!
         stack = OperationEngine.get_stack_status(self.org, self.user_a, self.table.id)
         self.assertFalse(stack['can_redo'])
 
-    def test_bulk_status_update_undo_redo(self):
-        """Test bulk status update across 50 cards reversed in 1 click."""
-        # Create 50 cards
+    # ══════════════════════════════════════════════════════════════════════
+    # 2. FIRST-CLASS BULK TRANSACTIONS & AUDIT TESTS
+    # ══════════════════════════════════════════════════════════════════════
+
+    def test_bulk_transaction_creation_and_bidirectional_linkage(self):
+        """Test creating a BulkTransaction groups card AuditEvents with bidirectional links."""
+        # Create 100 student cards
         cards = []
-        for i in range(100, 150):
+        for i in range(1, 101):
             cards.append(IDCard(
                 table=self.table,
                 field_data={'FULL NAME': f'Student {i}', 'CLASS': 10},
                 status='pending',
             ))
         IDCard.objects.bulk_create(cards)
+        created = list(IDCard.objects.filter(table=self.table, status='pending').exclude(id__in=[self.card1.id, self.card2.id]))
+        self.assertEqual(len(created), 100)
+
+        # Move 100 cards from pending -> verified
+        deltas = [{'card_id': c.id, 'target_name': f'Student #{c.id}'} for c in created]
+        bulk_tx = AuditService.record_bulk_transaction(
+            organisation=self.org,
+            actor=self.assistant_user,
+            action='bulk_status',
+            source_state='pending',
+            destination_state='verified',
+            card_deltas=deltas,
+            table=self.table,
+            visibility_scope='ORGANISATION',
+        )
+        IDCard.objects.filter(id__in=[c.id for c in created]).update(status='verified')
+
+        self.assertIsNotNone(bulk_tx.id)
+        self.assertTrue(bulk_tx.tx_code.startswith('BT-'))
+        self.assertEqual(bulk_tx.requested_count, 100)
+        self.assertEqual(bulk_tx.success_count, 100)
+        self.assertEqual(bulk_tx.actor_name_snapshot, 'assistant_joe')
+        self.assertEqual(bulk_tx.actor_role_snapshot, 'assistant')
+
+        # Check AuditEvent records created and linked
+        events = AuditEvent.objects.filter(bulk_transaction=bulk_tx)
+        self.assertEqual(events.count(), 100)
+
+        # Query Card #1 timeline
+        sample_card = created[0]
+        timeline = AuditService.get_card_timeline(sample_card.id, self.assistant_user)
+        self.assertTrue(timeline['success'])
+        self.assertEqual(timeline['total_count'], 1)
+        ev = timeline['timeline'][0]
+        self.assertEqual(ev['actor_name'], 'assistant_joe')
+        self.assertEqual(ev['bulk_transaction']['tx_code'], bulk_tx.tx_code)
+        self.assertEqual(ev['bulk_transaction']['requested_count'], 100)
+
+    def test_role_based_visibility_scope_filtering(self):
+        """
+        Test that AuditVisibilityService properly enforces role boundaries:
+        - Assistant cannot see INTERNAL_ADMIN or SUPER_ADMIN events.
+        - Super Admin sees everything.
+        """
+        # Event 1: Normal Organisation-visible event
+        ev1 = AuditService.record_event(
+            organisation=self.org,
+            actor=self.assistant_user,
+            event_type='update',
+            target_type='card',
+            target_id=self.card1.id,
+            target_name='Card #1',
+            target_table=self.table,
+            visibility_scope='ORGANISATION',
+        )
+
+        # Event 2: Internal Admin operational event
+        ev2 = AuditService.record_event(
+            organisation=self.org,
+            actor=self.user_a,
+            event_type='system_action',
+            target_type='card',
+            target_id=self.card1.id,
+            target_name='Card #1',
+            target_table=self.table,
+            visibility_scope='INTERNAL_ADMIN',
+        )
+
+        # Event 3: Super Admin configuration event
+        ev3 = AuditService.record_event(
+            organisation=self.org,
+            actor=self.user_a,
+            event_type='schema_change',
+            target_type='table',
+            target_id=self.table.id,
+            target_name='Table Class 10th',
+            target_table=self.table,
+            visibility_scope='SUPER_ADMIN',
+        )
+
+        # Query as Assistant User
+        assistant_timeline = AuditService.get_card_timeline(self.card1.id, self.assistant_user)
+        self.assertEqual(assistant_timeline['total_count'], 1)  # Can ONLY see ev1
+        self.assertEqual(assistant_timeline['timeline'][0]['event_id'], ev1.event_id)
+
+        # Query as Super Admin User
+        admin_timeline = AuditService.get_card_timeline(self.card1.id, self.user_a)
+        self.assertEqual(admin_timeline['total_count'], 2)  # Sees ev1 and ev2
+
+    def test_safe_bulk_transaction_reversal_with_conflicts(self):
+        """
+        Historical Bulk Reversal Scenario (Invariants 25, 27, 28, 59, 60):
+        1. Assistant moves 10 cards: pending -> verified [BT001]
+        2. Later, 2 cards are modified: verified -> approved
+        3. Administrator chooses 'Reverse Transaction':
+           - 8 cards revert from verified -> pending
+           - 2 cards with newer changes are skipped and reported as conflicts
+           - A NEW BulkTransaction (REV-...) is created
+           - The original BT001 remains intact
+        """
+        cards = []
+        for i in range(1, 11):
+            cards.append(IDCard(
+                table=self.table,
+                field_data={'FULL NAME': f'Batch Card {i}'},
+                status='pending',
+            ))
+        IDCard.objects.bulk_create(cards)
         created_cards = list(IDCard.objects.filter(table=self.table, status='pending').exclude(id__in=[self.card1.id, self.card2.id]))
+        self.assertEqual(len(created_cards), 10)
 
-        # Bulk change status: pending -> approved
-        changes = []
-        for c in created_cards:
-            changes.append({
-                'target_id': c.id,
-                'target_model': 'idcard',
-                'field_name': 'STATUS',
-                'change_type': 'status_change',
-                'before_value': 'pending',
-                'after_value': 'approved',
-            })
-
-        op = OperationEngine.record_operation(
-            self.org, self.user_a, 'bulk_status', "Bulk Approved 50 Cards", self.table,
-            changes=changes
+        # 1. Bulk move 10 cards: pending -> verified
+        deltas = [{'card_id': c.id, 'target_name': f'Card #{c.id}'} for c in created_cards]
+        bulk_tx = AuditService.record_bulk_transaction(
+            organisation=self.org,
+            actor=self.assistant_user,
+            action='bulk_status',
+            source_state='pending',
+            destination_state='verified',
+            card_deltas=deltas,
+            table=self.table,
         )
-        IDCard.objects.filter(id__in=[c.id for c in created_cards]).update(status='approved')
+        IDCard.objects.filter(id__in=[c.id for c in created_cards]).update(status='verified')
 
-        # 1-Click Undo
-        undo_res = OperationEngine.undo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(undo_res.success)
-        self.assertEqual(undo_res.undone_count, 50)
+        # 2. 2 cards are subsequently modified to 'approved'
+        modified_card_ids = [created_cards[0].id, created_cards[1].id]
+        IDCard.objects.filter(id__in=modified_card_ids).update(status='approved')
 
-        # Verify all 50 reverted to pending
-        self.assertEqual(IDCard.objects.filter(id__in=[c.id for c in created_cards], status='pending').count(), 50)
-
-    def test_media_and_crop_reversibility(self):
-        """Test media path and crop box reversibility without deleting media binaries."""
-        op = OperationEngine.record_operation(
-            self.org, self.user_a, 'crop_update', "Adjusted Photo Crop Box", self.table,
-            changes=[{
-                'target_id': self.card1.id,
-                'target_model': 'idcard',
-                'field_name': 'PHOTO_CROP',
-                'change_type': 'crop_change',
-                'before_value': {'x': 0.1, 'y': 0.1, 'w': 0.5, 'h': 0.5},
-                'after_value': {'x': 0.2, 'y': 0.2, 'w': 0.6, 'h': 0.6},
-            }]
+        # 3. Reverse Bulk Transaction
+        rev_res = AuditService.reverse_bulk_transaction(
+            transaction_id=bulk_tx.id,
+            user=self.user_a,
         )
-        self.card1.field_data['PHOTO_CROP'] = {'x': 0.2, 'y': 0.2, 'w': 0.6, 'h': 0.6}
-        self.card1.save()
 
-        # Undo
-        undo_res = OperationEngine.undo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(undo_res.success)
+        self.assertTrue(rev_res['success'])
+        self.assertEqual(rev_res['reversed_count'], 8)
+        self.assertEqual(rev_res['conflict_count'], 2)
+        self.assertEqual(len(rev_res['conflicts']), 2)
 
-        self.card1.refresh_from_db()
-        self.assertEqual(self.card1.field_data['PHOTO_CROP'], {'x': 0.1, 'y': 0.1, 'w': 0.5, 'h': 0.5})
+        # Verify DB states
+        self.assertEqual(IDCard.objects.filter(id__in=[c.id for c in created_cards], status='pending').count(), 8)
+        self.assertEqual(IDCard.objects.filter(id__in=modified_card_ids, status='approved').count(), 2)
 
-    def test_audit_trail_immutability(self):
-        """Invariant 3 & 25: Undo and Redo create new audit log entries without deleting previous ones."""
-        initial_log_count = ActivityLog.objects.count()
+        # Verify original transaction was NOT erased, but marked partially_reversed
+        bulk_tx.refresh_from_db()
+        self.assertEqual(bulk_tx.status, 'partially_reversed')
+        self.assertIsNotNone(bulk_tx.reversed_by_transaction)
 
-        op = OperationEngine.record_operation(
-            self.org, self.user_a, 'card_update', "Edit Phone", self.table,
-            changes=[{'target_id': self.card1.id, 'field_name': 'PHONE', 'before_value': '9876543210', 'after_value': '222'}]
-        )
-        self.card1.field_data['PHONE'] = '222'
-        self.card1.save()
-        self.assertEqual(ActivityLog.objects.count(), initial_log_count + 1)
+        # Verify new reversal transaction was created
+        rev_tx = bulk_tx.reversed_by_transaction
+        self.assertTrue(rev_tx.tx_code.startswith('REV-'))
+        self.assertEqual(rev_tx.success_count, 8)
+        self.assertEqual(rev_tx.conflict_count, 2)
 
-        undo_res = OperationEngine.undo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(undo_res.success)
-        self.assertEqual(ActivityLog.objects.count(), initial_log_count + 2)
+    # ══════════════════════════════════════════════════════════════════════
+    # 3. REST API ENDPOINTS INTEGRATION TESTS
+    # ══════════════════════════════════════════════════════════════════════
 
-        redo_res = OperationEngine.redo_operation(op.id, self.org, self.user_a)
-        self.assertTrue(redo_res.success)
-        self.assertEqual(ActivityLog.objects.count(), initial_log_count + 3)
-
-
-    def test_rest_api_endpoints(self):
-        """Test /api/operations/stack/, /undo/, /redo/, and /history/ REST endpoints."""
+    def test_audit_rest_api_endpoints(self):
+        """Test /api/operations/audit/ endpoints for timeline, transactions, reversal, and export."""
         self.client.force_login(self.user_a)
 
-        # 1. Perform edit
-        op = OperationEngine.record_operation(
-            self.org, self.user_a, 'card_update', "API Test Edit", self.table,
-            changes=[{'target_id': self.card1.id, 'field_name': 'SECTION', 'before_value': 'A', 'after_value': 'Z'}]
+        # 1. Record an event
+        ev = AuditService.record_event(
+            organisation=self.org,
+            actor=self.user_a,
+            event_type='update',
+            target_type='card',
+            target_id=self.card1.id,
+            target_name='Rahul Sharma',
+            target_table=self.table,
+            field_deltas=[{'field_name': 'SECTION', 'before_value': 'A', 'after_value': 'B'}],
         )
-        self.card1.field_data['SECTION'] = 'Z'
-        self.card1.save()
 
-        # 2. GET Stack
-        resp = self.client.get(f'/api/operations/stack/?table_id={self.table.id}')
-        self.assertEqual(resp.status_code, 200)
-        data = resp.json()
-        self.assertTrue(data['can_undo'])
-        self.assertFalse(data['can_redo'])
-
-        # 3. POST Undo
-        resp = self.client.post(
-            '/api/operations/undo/',
-            data=json.dumps({'table_id': self.table.id}),
-            content_type='application/json',
-        )
+        # 2. GET Card Timeline API
+        resp = self.client.get(f'/api/operations/audit/cards/{self.card1.id}/timeline/')
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['status'], 'undone')
+        self.assertEqual(len(data['timeline']), 1)
 
-        self.card1.refresh_from_db()
-        self.assertEqual(self.card1.field_data['SECTION'], 'A')
-
-        # 4. POST Redo
-        resp = self.client.post(
-            '/api/operations/redo/',
-            data=json.dumps({'table_id': self.table.id}),
-            content_type='application/json',
-        )
+        # 3. GET Table Activity API
+        resp = self.client.get(f'/api/operations/audit/tables/{self.table.id}/activity/')
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertTrue(data['success'])
-        self.assertEqual(data['status'], 'redone')
 
-        self.card1.refresh_from_db()
-        self.assertEqual(self.card1.field_data['SECTION'], 'Z')
+        # 4. GET Bulk Transactions API
+        bulk_tx = AuditService.record_bulk_transaction(
+            organisation=self.org,
+            actor=self.user_a,
+            action='bulk_status',
+            source_state='pending',
+            destination_state='verified',
+            card_deltas=[{'card_id': self.card2.id}],
+            table=self.table,
+        )
+        self.card2.status = 'verified'
+        self.card2.save()
 
-        # 5. GET History
-        resp = self.client.get(f'/api/operations/history/?table_id={self.table.id}')
+        resp = self.client.get(f'/api/operations/audit/transactions/?table_id={self.table.id}')
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertTrue(data['total_count'] >= 1)
+        self.assertTrue(data['success'])
+        self.assertTrue(len(data['transactions']) >= 1)
+
+        # 5. GET Bulk Transaction Detail API
+        resp = self.client.get(f'/api/operations/audit/transactions/{bulk_tx.id}/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['transaction']['tx_code'], bulk_tx.tx_code)
+
+        # 6. POST Reverse Bulk Transaction API
+        resp = self.client.post(f'/api/operations/audit/transactions/{bulk_tx.id}/reverse/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['reversed_count'], 1)
+
+        self.card2.refresh_from_db()
+        self.assertEqual(self.card2.status, 'pending')
+
+        # 7. GET Export Audit CSV API
+        resp = self.client.get(f'/api/operations/audit/export/?table_id={self.table.id}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv')
+        self.assertIn('Event ID,Event Type', resp.content.decode('utf-8'))

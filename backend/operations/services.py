@@ -1,29 +1,30 @@
 """
-CardFlow — Reversible Operations & History Engine Services
+CardFlow — Reversible Operations, Bulk Transaction & Audit History Engine Services
 
 Key Invariants Enforced:
-  1. Field-level delta tracking ($O(\Delta)$) without expensive table snapshots.
-  2. Multi-user conflict detection: Never silently overwrite newer modifications.
-  3. Immutable audit logs: Undo/Redo creates explicit audit events without deleting history.
-  4. Redo invalidation: A new operation after an undo invalidates the forward redo chain.
-  5. Dynamic schema support: Dynamic field values, types, and null states preserved.
-  6. Non-destructive media & crop reversibility: Media binaries are preserved across undo/redo.
-  7. Atomic chunked batch persistence with optimistic concurrency.
+  1. Record First, Restrict Later: Every mutation is permanently captured; visibility is enforced at query time.
+  2. Granular Field Deltas ($O(\Delta)$) without expensive table snapshots.
+  3. First-Class Bulk Transactions: Mass updates (100 to 2,000+ cards) grouped under stable transaction IDs.
+  4. Bidirectional Linkage: BulkTransaction <-> individual card AuditEvents.
+  5. Multi-User Conflict Detection: Prevents overwriting newer modifications on undo / reversal.
+  6. Immutability: Historical bulk reversals create NEW transactions and NEW audit events; past history is never deleted.
+  7. Role-Based Visibility: Strict organization isolation and authorization-scoped query filtering.
 """
 import copy
 import logging
+import uuid
 from typing import Dict, Any, List, Tuple, Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from organisation.models import Organisation
 from tables.models import Table, IDCard
 from core.models import ActivityLog
-from .models import Operation, OperationChange
+from .models import Operation, OperationChange, BulkTransaction, AuditEvent
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -54,6 +55,690 @@ class OperationResult:
             'data': self.data,
         }
 
+
+# ══════════════════════════════════════════════════════════════════════════
+# 1. AUDIT VISIBILITY SERVICE (ROLE-BASED AUTHORIZATION FILTER)
+# ══════════════════════════════════════════════════════════════════════════
+
+class AuditVisibilityService:
+    """
+    Centralized role-based visibility engine determining which AuditEvent
+    and BulkTransaction records any user is permitted to retrieve.
+    Strictly prevents organization and permission leaks in SQL queries.
+    """
+
+    @classmethod
+    def get_allowed_scopes(cls, user: Optional[Any]) -> List[str]:
+        """Resolve permitted visibility scopes for a given user."""
+        if not user or not getattr(user, 'is_authenticated', False):
+            return ['ORGANISATION']
+
+        role = str(getattr(user, 'role', '')).lower()
+        if user.is_superuser or role in ('super_admin', 'prime_admin', 'admin'):
+            return ['ORGANISATION', 'INTERNAL_ADMIN', 'PRIME_ADMIN', 'SUPER_ADMIN', 'SYSTEM']
+        if role in ('operator', 'internal_admin'):
+            return ['ORGANISATION', 'INTERNAL_ADMIN']
+        return ['ORGANISATION']
+
+    @classmethod
+    def filter_events(
+        cls,
+        queryset,
+        user: Optional[Any],
+        organisation: Optional[Organisation] = None,
+        table_id: Optional[int] = None,
+    ):
+        """Apply tenant boundary and role-based visibility filter to AuditEvent queryset."""
+        scopes = cls.get_allowed_scopes(user)
+        qs = queryset.filter(visibility_scope__in=scopes)
+
+        if organisation:
+            qs = qs.filter(organisation=organisation)
+        elif user and getattr(user, 'is_authenticated', False) and not user.is_superuser:
+            role = str(getattr(user, 'role', '')).lower()
+            if role not in ('super_admin', 'prime_admin', 'operator'):
+                org = (
+                    getattr(user, 'organisation_profile', None)
+                    or getattr(user, 'organisation', None)
+                    or getattr(user, 'client', None)
+                )
+                if org:
+                    qs = qs.filter(organisation=org)
+                else:
+                    return qs.none()
+
+        if table_id:
+            qs = qs.filter(target_table_id=table_id)
+
+        # For Assistants, filter by granted tables if applicable
+        if user and getattr(user, 'is_authenticated', False) and str(getattr(user, 'role', '')).lower() == 'assistant':
+            try:
+                from tables.models import TableAccess
+                accessible_ids = list(TableAccess.objects.filter(assistant=user, is_active=True).values_list('table_id', flat=True))
+                if table_id:
+                    if table_id not in accessible_ids:
+                        return qs.none()
+                else:
+                    qs = qs.filter(models.Q(target_table_id__in=accessible_ids) | models.Q(target_table__isnull=True))
+            except Exception:
+                pass
+
+        return qs
+
+    @classmethod
+    def filter_transactions(
+        cls,
+        queryset,
+        user: Optional[Any],
+        organisation: Optional[Organisation] = None,
+        table_id: Optional[int] = None,
+    ):
+        """Apply tenant boundary and role-based visibility filter to BulkTransaction queryset."""
+        scopes = cls.get_allowed_scopes(user)
+        qs = queryset.filter(visibility_scope__in=scopes)
+
+        if organisation:
+            qs = qs.filter(organisation=organisation)
+        elif user and getattr(user, 'is_authenticated', False) and not user.is_superuser:
+            role = str(getattr(user, 'role', '')).lower()
+            if role not in ('super_admin', 'prime_admin', 'operator'):
+                org = (
+                    getattr(user, 'organisation_profile', None)
+                    or getattr(user, 'organisation', None)
+                    or getattr(user, 'client', None)
+                )
+                if org:
+                    qs = qs.filter(organisation=org)
+                else:
+                    return qs.none()
+
+        if table_id:
+            qs = qs.filter(table_id=table_id)
+
+        return qs
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 2. AUDIT & BULK TRANSACTION SERVICE
+# ══════════════════════════════════════════════════════════════════════════
+
+class AuditService:
+    """
+    Central service for recording structured events, creating bulk transactions,
+    generating card timelines, and executing safe historical bulk reversals.
+    """
+
+    @classmethod
+    def generate_event_id(cls) -> str:
+        """Generate a compact, unique event identifier."""
+        now_str = timezone.now().strftime('%Y%m%d%H%M%S')
+        rand_suffix = uuid.uuid4().hex[:6].upper()
+        return f"EVT-{now_str}-{rand_suffix}"
+
+    @classmethod
+    def generate_tx_code(cls, prefix: str = 'BT') -> str:
+        """Generate a human-readable bulk transaction code."""
+        now_str = timezone.now().strftime('%Y%m%d')
+        rand_suffix = uuid.uuid4().hex[:6].upper()
+        return f"{prefix}-{now_str}-{rand_suffix}"
+
+    # ── 1. RECORD SINGLE AUDIT EVENT ───────────────────────────────
+
+    @classmethod
+    def record_event(
+        cls,
+        organisation: Organisation,
+        actor: Optional[Any],
+        event_type: str,
+        target_type: str,
+        target_id: int,
+        target_name: str = '',
+        target_table: Optional[Table] = None,
+        field_deltas: Optional[List[Dict[str, Any]]] = None,
+        bulk_transaction: Optional[BulkTransaction] = None,
+        operation: Optional[Operation] = None,
+        visibility_scope: str = 'ORGANISATION',
+        actor_type: str = 'user',
+        ip_address: Optional[str] = None,
+        session_id: str = '',
+        source: str = 'web_panel',
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> AuditEvent:
+        """
+        Atomically record an immutable AuditEvent with actor snapshot and field deltas.
+        Always records first; visibility is enforced at query time.
+        """
+        if not organisation:
+            raise ValueError("Organisation is required for audit event.")
+
+        actor_user = actor if getattr(actor, 'is_authenticated', False) else None
+        actor_name = actor_user.get_full_name() or actor_user.username if actor_user else 'System'
+        actor_role = str(getattr(actor_user, 'role', 'system')) if actor_user else 'system'
+
+        event = AuditEvent.objects.create(
+            event_id=cls.generate_event_id(),
+            organisation=organisation,
+            actor=actor_user,
+            actor_name_snapshot=actor_name[:150],
+            actor_role_snapshot=actor_role[:50],
+            actor_type=actor_type,
+            event_type=event_type,
+            target_type=target_type,
+            target_id=target_id,
+            target_name_snapshot=target_name[:255],
+            target_table=target_table,
+            bulk_transaction=bulk_transaction,
+            operation=operation,
+            field_deltas=field_deltas or [],
+            visibility_scope=visibility_scope,
+            ip_address=ip_address,
+            session_id=session_id or '',
+            source=source,
+            metadata=metadata or {},
+        )
+        return event
+
+    # ── 2. RECORD BULK TRANSACTION ─────────────────────────────────
+
+    @classmethod
+    def record_bulk_transaction(
+        cls,
+        organisation: Organisation,
+        actor: Optional[Any],
+        action: str,
+        source_state: str,
+        destination_state: str,
+        card_deltas: List[Dict[str, Any]],
+        table: Optional[Table] = None,
+        visibility_scope: str = 'ORGANISATION',
+        actor_type: str = 'user',
+        metadata: Optional[Dict[str, Any]] = None,
+        tx_prefix: str = 'BT',
+    ) -> BulkTransaction:
+        """
+        Create a first-class BulkTransaction and bulk-insert individual card AuditEvents.
+        Preserves high-level transaction summaries while maintaining per-card traceability.
+        """
+        if not organisation:
+            raise ValueError("Organisation is required for bulk transaction.")
+
+        actor_user = actor if getattr(actor, 'is_authenticated', False) else None
+        actor_name = actor_user.get_full_name() or actor_user.username if actor_user else 'System'
+        actor_role = str(getattr(actor_user, 'role', 'system')) if actor_user else 'system'
+
+        requested_count = len(card_deltas)
+        tx_code = cls.generate_tx_code(prefix=tx_prefix)
+
+        with transaction.atomic():
+            bulk_tx = BulkTransaction.objects.create(
+                tx_code=tx_code,
+                organisation=organisation,
+                table=table,
+                actor=actor_user,
+                actor_name_snapshot=actor_name[:150],
+                actor_role_snapshot=actor_role[:50],
+                actor_type=actor_type,
+                action=action,
+                source_state=source_state,
+                destination_state=destination_state,
+                requested_count=requested_count,
+                success_count=requested_count,
+                visibility_scope=visibility_scope,
+                status='completed',
+                metadata=metadata or {},
+            )
+
+            # Bulk insert AuditEvents linked to this transaction
+            events_to_create = []
+            now_dt = timezone.now()
+            for delta in card_deltas:
+                card_id = delta.get('card_id') or delta.get('target_id', 0)
+                card_name = delta.get('target_name', f"Card #{card_id}")
+                fields = delta.get('field_deltas', [])
+
+                events_to_create.append(AuditEvent(
+                    event_id=cls.generate_event_id(),
+                    organisation=organisation,
+                    actor=actor_user,
+                    actor_name_snapshot=actor_name[:150],
+                    actor_role_snapshot=actor_role[:50],
+                    actor_type=actor_type,
+                    event_type='bulk_status' if action == 'bulk_status' else 'update',
+                    target_type='card',
+                    target_id=card_id,
+                    target_name_snapshot=card_name[:255],
+                    target_table=table,
+                    bulk_transaction=bulk_tx,
+                    field_deltas=fields if fields else [{
+                        'field_name': 'STATUS',
+                        'before_value': source_state,
+                        'after_value': destination_state,
+                        'change_type': 'status_change',
+                    }],
+                    visibility_scope=visibility_scope,
+                    created_at=now_dt,
+                ))
+
+            if events_to_create:
+                AuditEvent.objects.bulk_create(events_to_create, batch_size=500)
+
+            # Create an Operation record for Undo/Redo interoperability
+            try:
+                op_changes = []
+                for delta in card_deltas:
+                    c_id = delta.get('card_id') or delta.get('target_id', 0)
+                    op_changes.append({
+                        'target_id': c_id,
+                        'target_model': 'idcard',
+                        'field_name': 'STATUS',
+                        'change_type': 'status_change',
+                        'before_value': source_state,
+                        'after_value': destination_state,
+                    })
+
+                OperationEngine.record_operation(
+                    organisation=organisation,
+                    user=actor_user,
+                    operation_type='bulk_status',
+                    target_table=table,
+                    description=f"Bulk Moved {requested_count} Cards: {source_state} -> {destination_state} [{tx_code}]",
+                    changes=op_changes,
+                    metadata={'bulk_transaction_id': bulk_tx.id, 'tx_code': tx_code},
+                )
+            except Exception as op_err:
+                logger.debug("Operation sync skipped for bulk transaction: %s", op_err)
+
+        return bulk_tx
+
+    # ── 3. CARD TIMELINE QUERY ─────────────────────────────────────
+
+    @classmethod
+    def get_card_timeline(
+        cls,
+        card_id: int,
+        user: Optional[Any],
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """
+        Generate a per-card chronological history timeline with actor snapshots,
+        field deltas, and bulk transaction linkages.
+        """
+        try:
+            card = IDCard.objects.select_related('table', 'table__organisation').get(id=card_id)
+        except IDCard.DoesNotExist:
+            return {'success': False, 'message': 'Card not found.', 'timeline': [], 'total_count': 0}
+
+        org = card.table.organisation if card.table else None
+        base_qs = AuditEvent.objects.filter(target_type='card', target_id=card_id).select_related('bulk_transaction', 'actor')
+        visible_qs = AuditVisibilityService.filter_events(base_qs, user, organisation=org, table_id=card.table_id)
+
+        total_count = visible_qs.count()
+        events = list(visible_qs.order_by('-created_at', '-id')[offset:offset + limit])
+
+        timeline_items = []
+        for ev in events:
+            tx_info = None
+            if ev.bulk_transaction:
+                tx = ev.bulk_transaction
+                tx_info = {
+                    'id': tx.id,
+                    'tx_code': tx.tx_code,
+                    'action': tx.action,
+                    'source_state': tx.source_state,
+                    'destination_state': tx.destination_state,
+                    'requested_count': tx.requested_count,
+                }
+
+            timeline_items.append({
+                'id': ev.id,
+                'event_id': ev.event_id,
+                'event_type': ev.event_type,
+                'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
+                'actor_role': ev.actor_role_snapshot,
+                'actor_type': ev.actor_type,
+                'target_name': ev.target_name_snapshot,
+                'field_deltas': ev.field_deltas,
+                'bulk_transaction': tx_info,
+                'created_at': ev.created_at.isoformat(),
+                'source': ev.source,
+            })
+
+        return {
+            'success': True,
+            'card_id': card.id,
+            'table_id': card.table_id,
+            'table_name': card.table.name if card.table else '',
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'timeline': timeline_items,
+        }
+
+    # ── 4. TABLE ACTIVITY & BULK TRANSACTIONS ──────────────────────
+
+    @classmethod
+    def get_table_activity(
+        cls,
+        table_id: int,
+        user: Optional[Any],
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Fetch chronological activity feed for an entire table."""
+        try:
+            table = Table.objects.select_related('organisation').get(id=table_id)
+        except Table.DoesNotExist:
+            return {'success': False, 'message': 'Table not found.', 'activity': [], 'total_count': 0}
+
+        base_qs = AuditEvent.objects.filter(target_table_id=table_id).select_related('bulk_transaction', 'actor')
+        visible_qs = AuditVisibilityService.filter_events(base_qs, user, organisation=table.organisation, table_id=table_id)
+
+        total_count = visible_qs.count()
+        events = list(visible_qs.order_by('-created_at', '-id')[offset:offset + limit])
+
+        items = []
+        for ev in events:
+            items.append({
+                'id': ev.id,
+                'event_id': ev.event_id,
+                'event_type': ev.event_type,
+                'target_type': ev.target_type,
+                'target_id': ev.target_id,
+                'target_name': ev.target_name_snapshot,
+                'actor_name': ev.actor_name_snapshot or (ev.actor.username if ev.actor else 'System'),
+                'actor_role': ev.actor_role_snapshot,
+                'field_deltas': ev.field_deltas,
+                'bulk_tx_code': ev.bulk_transaction.tx_code if ev.bulk_transaction else None,
+                'created_at': ev.created_at.isoformat(),
+            })
+
+        return {
+            'success': True,
+            'table_id': table.id,
+            'table_name': table.name,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'activity': items,
+        }
+
+    @classmethod
+    def get_bulk_transactions(
+        cls,
+        table_id: Optional[int] = None,
+        organisation: Optional[Organisation] = None,
+        user: Optional[Any] = None,
+        action: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Fetch paginated high-level bulk transaction history."""
+        base_qs = BulkTransaction.objects.all().select_related('table', 'organisation', 'actor')
+        if action:
+            base_qs = base_qs.filter(action=action)
+        if status:
+            base_qs = base_qs.filter(status=status)
+
+        visible_qs = AuditVisibilityService.filter_transactions(base_qs, user, organisation=organisation, table_id=table_id)
+        total_count = visible_qs.count()
+        txs = list(visible_qs.order_by('-created_at', '-id')[offset:offset + limit])
+
+        items = []
+        for tx in txs:
+            items.append({
+                'id': tx.id,
+                'tx_code': tx.tx_code,
+                'action': tx.action,
+                'source_state': tx.source_state,
+                'destination_state': tx.destination_state,
+                'requested_count': tx.requested_count,
+                'success_count': tx.success_count,
+                'conflict_count': tx.conflict_count,
+                'actor_name': tx.actor_name_snapshot or (tx.actor.username if tx.actor else 'System'),
+                'actor_role': tx.actor_role_snapshot,
+                'table_name': tx.table.name if tx.table else '',
+                'table_id': tx.table_id,
+                'status': tx.status,
+                'can_reverse': tx.status in ('completed', 'partially_completed'),
+                'created_at': tx.created_at.isoformat(),
+            })
+
+        return {
+            'success': True,
+            'total_count': total_count,
+            'limit': limit,
+            'offset': offset,
+            'transactions': items,
+        }
+
+    @classmethod
+    def get_transaction_detail(
+        cls,
+        transaction_id: int,
+        user: Optional[Any],
+        search: str = '',
+        limit: int = 100,
+        offset: int = 0,
+    ) -> Dict[str, Any]:
+        """Fetch detailed transaction metadata and paginated list of affected cards."""
+        try:
+            tx = BulkTransaction.objects.select_related('table', 'organisation', 'actor', 'reversed_by_transaction').get(id=transaction_id)
+        except BulkTransaction.DoesNotExist:
+            return {'success': False, 'message': 'Transaction not found.'}
+
+        # Check visibility
+        visible_txs = AuditVisibilityService.filter_transactions(
+            BulkTransaction.objects.filter(id=transaction_id), user, organisation=tx.organisation, table_id=tx.table_id
+        )
+        if not visible_txs.exists():
+            return {'success': False, 'message': 'Permission denied: Cannot view transaction.'}
+
+        # Fetch affected card events
+        events_qs = AuditEvent.objects.filter(bulk_transaction=tx, target_type='card').select_related('target_table')
+        if search:
+            events_qs = events_qs.filter(
+                models.Q(target_name_snapshot__icontains=search) | models.Q(target_id__icontains=search)
+            )
+
+        total_affected = events_qs.count()
+        events = list(events_qs.order_by('id')[offset:offset + limit])
+
+        affected_cards = []
+        for ev in events:
+            affected_cards.append({
+                'event_id': ev.event_id,
+                'card_id': ev.target_id,
+                'target_name': ev.target_name_snapshot,
+                'field_deltas': ev.field_deltas,
+                'created_at': ev.created_at.isoformat(),
+            })
+
+        return {
+            'success': True,
+            'transaction': {
+                'id': tx.id,
+                'tx_code': tx.tx_code,
+                'action': tx.action,
+                'source_state': tx.source_state,
+                'destination_state': tx.destination_state,
+                'requested_count': tx.requested_count,
+                'success_count': tx.success_count,
+                'conflict_count': tx.conflict_count,
+                'actor_name': tx.actor_name_snapshot or (tx.actor.username if tx.actor else 'System'),
+                'actor_role': tx.actor_role_snapshot,
+                'table_name': tx.table.name if tx.table else '',
+                'table_id': tx.table_id,
+                'status': tx.status,
+                'can_reverse': tx.status in ('completed', 'partially_completed'),
+                'reversed_by': tx.reversed_by_transaction.tx_code if tx.reversed_by_transaction else None,
+                'created_at': tx.created_at.isoformat(),
+            },
+            'total_affected': total_affected,
+            'limit': limit,
+            'offset': offset,
+            'affected_cards': affected_cards,
+        }
+
+    # ── 5. SAFE BULK TRANSACTION REVERSAL ──────────────────────────
+
+    @classmethod
+    def reverse_bulk_transaction(
+        cls,
+        transaction_id: int,
+        user: Optional[Any],
+    ) -> Dict[str, Any]:
+        """
+        Safely reverse a historical bulk transaction with multi-user conflict detection.
+        Reverts non-conflicted cards, skips cards modified subsequently, and creates a
+        NEW BulkTransaction and NEW AuditEvents — preserving the permanent truth of history.
+        """
+        try:
+            tx = BulkTransaction.objects.select_related('table', 'organisation', 'actor').get(id=transaction_id)
+        except BulkTransaction.DoesNotExist:
+            return {'success': False, 'message': 'Transaction not found.'}
+
+        # Check authorization
+        visible_txs = AuditVisibilityService.filter_transactions(
+            BulkTransaction.objects.filter(id=transaction_id), user, organisation=tx.organisation, table_id=tx.table_id
+        )
+        if not visible_txs.exists():
+            return {'success': False, 'message': 'Permission denied: Cannot reverse transaction.'}
+
+        if tx.status not in ('completed', 'partially_completed'):
+            return {'success': False, 'message': f"Transaction {tx.tx_code} is in '{tx.status}' state and cannot be reversed."}
+
+        # Collect affected card IDs
+        affected_card_ids = list(
+            AuditEvent.objects.filter(bulk_transaction=tx, target_type='card')
+            .values_list('target_id', flat=True)
+        )
+        if not affected_card_ids:
+            return {'success': False, 'message': 'No affected card records found for this transaction.'}
+
+        reverted_cards = []
+        conflicts = []
+        reversed_count = 0
+        conflict_count = 0
+
+        with transaction.atomic():
+            # Lock affected cards for optimistic verification
+            cards_by_id = {
+                c.id: c for c in IDCard.objects.filter(id__in=affected_card_ids).select_for_update()
+            }
+
+            for card_id in affected_card_ids:
+                card = cards_by_id.get(card_id)
+                if not card:
+                    conflict_count += 1
+                    conflicts.append({'card_id': card_id, 'reason': 'Card no longer exists.'})
+                    continue
+
+                # Conflict Check: Is the card still in destination_state?
+                if card.status == tx.destination_state:
+                    # Safe to revert!
+                    card.status = tx.source_state or 'pending'
+                    if card.status == 'pending':
+                        card.deleted_at = None
+                    reverted_cards.append(card)
+                    reversed_count += 1
+                else:
+                    # Conflict! Card was modified by a newer action
+                    conflict_count += 1
+                    conflicts.append({
+                        'card_id': card.id,
+                        'current_status': card.status,
+                        'expected_status': tx.destination_state,
+                        'reason': f"Current status is '{card.status}' (expected '{tx.destination_state}'). Reversal skipped to protect newer edits.",
+                    })
+
+            # Bulk persist reverted cards in batch
+            if reverted_cards:
+                IDCard.objects.bulk_update(reverted_cards, ['status', 'deleted_at'], batch_size=250)
+
+            # Create NEW BulkTransaction for the reversal event (Invariant 16 & 60)
+            new_tx_code = cls.generate_tx_code(prefix='REV')
+            actor_user = user if getattr(user, 'is_authenticated', False) else None
+            actor_name = actor_user.get_full_name() or actor_user.username if actor_user else 'System'
+            actor_role = str(getattr(actor_user, 'role', 'system')) if actor_user else 'system'
+
+            reversal_tx = BulkTransaction.objects.create(
+                tx_code=new_tx_code,
+                organisation=tx.organisation,
+                table=tx.table,
+                actor=actor_user,
+                actor_name_snapshot=actor_name[:150],
+                actor_role_snapshot=actor_role[:50],
+                actor_type='user' if actor_user else 'system',
+                action='reverse_transaction',
+                source_state=tx.destination_state,
+                destination_state=tx.source_state or 'pending',
+                requested_count=len(affected_card_ids),
+                success_count=reversed_count,
+                conflict_count=conflict_count,
+                status='completed' if conflict_count == 0 else 'partially_completed',
+                metadata={
+                    'reversed_transaction_id': tx.id,
+                    'reversed_tx_code': tx.tx_code,
+                    'conflicts': conflicts[:50],
+                },
+            )
+
+            # Bulk create NEW AuditEvents for all reversed cards
+            reversal_events = []
+            now_dt = timezone.now()
+            for card in reverted_cards:
+                reversal_events.append(AuditEvent(
+                    event_id=cls.generate_event_id(),
+                    organisation=tx.organisation,
+                    actor=actor_user,
+                    actor_name_snapshot=actor_name[:150],
+                    actor_role_snapshot=actor_role[:50],
+                    actor_type='user' if actor_user else 'system',
+                    event_type='status_change',
+                    target_type='card',
+                    target_id=card.id,
+                    target_name_snapshot=f"Card #{card.id}",
+                    target_table=tx.table,
+                    bulk_transaction=reversal_tx,
+                    field_deltas=[{
+                        'field_name': 'STATUS',
+                        'before_value': tx.destination_state,
+                        'after_value': tx.source_state or 'pending',
+                        'change_type': 'status_change',
+                        'note': f"Reversed by {new_tx_code} (Reversal of {tx.tx_code})",
+                    }],
+                    visibility_scope=tx.visibility_scope,
+                    created_at=now_dt,
+                ))
+
+            if reversal_events:
+                AuditEvent.objects.bulk_create(reversal_events, batch_size=500)
+
+            # Update original transaction status
+            tx.status = 'reversed' if conflict_count == 0 else 'partially_reversed'
+            tx.reversed_by_transaction = reversal_tx
+            tx.save(update_fields=['status', 'reversed_by_transaction', 'updated_at'])
+
+        msg = f"Successfully reversed {reversed_count} cards back to '{tx.source_state or 'pending'}'."
+        if conflict_count > 0:
+            msg += f" {conflict_count} cards were skipped due to subsequent modifications."
+
+        return {
+            'success': (reversed_count > 0 or conflict_count == 0),
+            'message': msg,
+            'reversed_count': reversed_count,
+            'conflict_count': conflict_count,
+            'conflicts': conflicts,
+            'reversal_tx_code': reversal_tx.tx_code,
+            'new_transaction_id': reversal_tx.id,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# 3. REVERSIBLE OPERATIONS ENGINE (UNDO / REDO)
+# ══════════════════════════════════════════════════════════════════════════
 
 class OperationEngine:
     """
@@ -153,19 +838,16 @@ class OperationEngine:
         Reverse an operation with multi-user conflict detection.
         If operation_id is None, undoes the latest active operation in the user's stack.
         """
-        # Resolve target operation
         if operation_id:
             try:
                 op = Operation.objects.select_related('organisation', 'target_table').get(id=operation_id)
             except Operation.DoesNotExist:
                 return OperationResult(success=False, message="Operation not found.")
         else:
-            # Pop latest active operation from user stack
             op = cls._get_latest_undoable(organisation, user, table_id, session_id)
             if not op:
                 return OperationResult(success=False, message="Nothing to undo.")
 
-        # Permissions & Tenant isolation check
         if organisation and op.organisation_id != organisation.id:
             return OperationResult(success=False, message="Permission denied: Organization mismatch.")
 
@@ -173,7 +855,6 @@ class OperationEngine:
             if op.user_id and op.user_id != user.id:
                 return OperationResult(success=False, message="Permission denied: Cannot undo another user's action.")
 
-        # State check
         if op.status not in ('active', 'redone'):
             return OperationResult(
                 success=False,
@@ -190,12 +871,10 @@ class OperationEngine:
         conflict_count = 0
         conflicts = []
 
-        # Group changes by target_model and target_id
         cards_to_update: Dict[int, IDCard] = {}
         changes_to_update: List[OperationChange] = []
 
         with transaction.atomic():
-            # Lock affected cards for optimistic concurrency check
             card_ids = [ch.target_id for ch in changes if ch.target_model == 'idcard']
             cards_by_id = {c.id: c for c in IDCard.objects.filter(id__in=card_ids).select_for_update()}
 
@@ -214,9 +893,7 @@ class OperationEngine:
 
                     if ch.change_type == 'field_edit':
                         current_val = fd.get(ch.field_name)
-                        # Conflict Check: does current_value match after_value?
                         if cls._values_match(current_val, ch.after_value):
-                            # Safe to revert!
                             if ch.before_value is None:
                                 fd.pop(ch.field_name, None)
                             else:
@@ -227,7 +904,6 @@ class OperationEngine:
                             ch.status = 'undone'
                             undone_count += 1
                         else:
-                            # Conflict! Current value was modified after this operation
                             ch.status = 'conflicted'
                             ch.conflict_reason = (
                                 f"Field '{ch.field_name}' changed to '{current_val}' "
@@ -250,7 +926,6 @@ class OperationEngine:
                             conflicts.append({'change_id': ch.id, 'reason': ch.conflict_reason})
 
                     elif ch.change_type == 'record_create':
-                        # Undo creation -> soft delete record
                         card.status = 'deleted'
                         card.deleted_at = timezone.now()
                         cards_to_update[card.id] = card
@@ -258,7 +933,6 @@ class OperationEngine:
                         undone_count += 1
 
                     elif ch.change_type == 'record_delete':
-                        # Undo deletion -> restore record
                         card.status = str(ch.before_value or 'pending')
                         card.deleted_at = None
                         cards_to_update[card.id] = card
@@ -284,16 +958,13 @@ class OperationEngine:
 
                     changes_to_update.append(ch)
 
-            # Persist card changes in chunked batches
             if cards_to_update:
                 cards_list = list(cards_to_update.values())
                 IDCard.objects.bulk_update(cards_list, ['field_data', 'status', 'deleted_at'], batch_size=250)
 
-            # Persist change status updates
             if changes_to_update:
                 OperationChange.objects.bulk_update(changes_to_update, ['status', 'conflict_reason'], batch_size=500)
 
-            # Determine final operation state
             if conflict_count == 0:
                 final_status = 'undone'
             elif undone_count > 0:
@@ -304,8 +975,8 @@ class OperationEngine:
             op.status = final_status
             op.save(update_fields=['status', 'updated_at'])
 
-            # Invariant 3 & 25: Record Undo Operation event (preserves append-only audit trail)
-            undo_event = Operation.objects.create(
+            # Invariant 3 & 25: Record Undo Operation event
+            Operation.objects.create(
                 organisation=op.organisation,
                 user=user if getattr(user, 'is_authenticated', False) else op.user,
                 session_id=session_id or op.session_id,
@@ -317,7 +988,6 @@ class OperationEngine:
                 undo_of=op,
             )
 
-            # Log to ActivityLog
             try:
                 ActivityLog.objects.create(
                     user=user if getattr(user, 'is_authenticated', False) else None,
@@ -328,7 +998,6 @@ class OperationEngine:
                 )
             except Exception:
                 pass
-
 
         msg = f"Successfully undone {undone_count} changes."
         if conflict_count > 0:
@@ -410,7 +1079,6 @@ class OperationEngine:
 
                     if ch.change_type == 'field_edit':
                         current_val = fd.get(ch.field_name)
-                        # Conflict Check: current_value should match before_value
                         if cls._values_match(current_val, ch.before_value):
                             if ch.after_value is None:
                                 fd.pop(ch.field_name, None)
@@ -530,9 +1198,7 @@ class OperationEngine:
         table_id: Optional[int] = None,
         session_id: str = '',
     ) -> Dict[str, Any]:
-        """
-        Fast query returning live Undo/Redo capability and descriptive tooltips.
-        """
+        """Fast query returning live Undo/Redo capability and descriptive tooltips."""
         latest_undo = cls._get_latest_undoable(organisation, user, table_id, session_id)
         latest_redo = cls._get_latest_redoable(organisation, user, table_id, session_id)
 
@@ -559,9 +1225,7 @@ class OperationEngine:
         limit: int = 50,
         offset: int = 0,
     ) -> Dict[str, Any]:
-        """
-        Return paginated history of operations for audit/history panel.
-        """
+        """Return paginated history of operations for audit/history panel."""
         qs = Operation.objects.all().select_related('user', 'target_table').prefetch_related('changes')
 
         if organisation:
@@ -662,30 +1326,23 @@ class OperationEngine:
 
     @classmethod
     def _values_match(cls, val1: Any, val2: Any) -> bool:
-        """
-        Type-safe equality check distinguishing None from empty string,
-        normalizing string representations and numeric values.
-        """
+        """Type-safe equality check distinguishing None from empty string."""
         if val1 is None and val2 is None:
             return True
         if val1 is None or val2 is None:
-            # If one is None and other is empty string, check strict vs loose
             if (val1 == '' and val2 is None) or (val1 is None and val2 == ''):
                 return True
             return False
 
-        # If both are strings
         if isinstance(val1, str) and isinstance(val2, str):
             return val1.strip() == val2.strip()
 
-        # If numeric
         try:
             if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
                 return val1 == val2
         except Exception:
             pass
 
-        # If dict/list
         if isinstance(val1, (dict, list)) and isinstance(val2, (dict, list)):
             return val1 == val2
 

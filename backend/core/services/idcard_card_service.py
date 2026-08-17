@@ -1361,6 +1361,7 @@ class IDCardCardService(BaseService):
                     return ServiceResult(success=False, message='Invalid field name')
 
                 field_data = card.field_data or {}
+                orig_field_val = field_data.get(canonical_field)
 
                 if cls.is_image_field_name_for_table(canonical_field, table.fields):
                     existing_value = field_data.get(canonical_field, '')
@@ -1561,6 +1562,47 @@ class IDCardCardService(BaseService):
                 card.save()
                 cls._bump_table_cache_versions(table)
 
+                # Record structured AuditEvent and Reversible Operation delta
+                try:
+                    from operations.services import AuditService, OperationEngine
+                    final_val = field_data.get(canonical_field, '')
+                    org = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
+                    if org and orig_field_val != final_val:
+                        AuditService.record_event(
+                            organisation=org,
+                            actor=None,
+                            event_type='update',
+                            target_type='card',
+                            target_id=card.id,
+                            target_name=f"Card #{card.id}",
+                            target_table=table,
+                            field_deltas=[{
+                                'field_name': canonical_field,
+                                'before_value': orig_field_val,
+                                'after_value': final_val,
+                                'change_type': 'field_edit',
+                            }],
+                            visibility_scope='ORGANISATION',
+                            source='inline_cell_edit',
+                        )
+                        OperationEngine.record_operation(
+                            organisation=org,
+                            user=None,
+                            operation_type='card_update',
+                            target_table=table,
+                            description=f"Edited {canonical_field} for Card #{card.id}: {orig_field_val} -> {final_val}",
+                            changes=[{
+                                'target_id': card.id,
+                                'target_model': 'idcard',
+                                'field_name': canonical_field,
+                                'change_type': 'field_edit',
+                                'before_value': orig_field_val,
+                                'after_value': final_val,
+                            }],
+                        )
+                except Exception as audit_err:
+                    logger.debug("update_single_field audit log error: %s", audit_err)
+
                 return ServiceResult(
                     success=True,
                     message='Field updated successfully!',
@@ -1572,6 +1614,7 @@ class IDCardCardService(BaseService):
                         'photo_field_value': field_data.get(canonical_field, '') if is_path_field else None,
                     }
                 )
+
 
         except IDCard.DoesNotExist:
             return ServiceResult(success=False, message='Card not found')

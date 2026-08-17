@@ -575,9 +575,10 @@ class WorkflowService:
 
     @staticmethod
     def _log_transition(card, _old_status, new_status, _user, request):
-        """Log a single-card transition."""
+        """Log a single-card transition to ActivityLog and AuditEvent."""
         try:
             from core.services.activity_service import ActivityService
+            from operations.services import AuditService
             client_name = ''
             try:
                 client_name = card.table.organisation.name
@@ -596,14 +597,35 @@ class WorkflowService:
                 target_id=card.id,
                 target_name=f'Card #{card.id}',
             )
+
+            # Record immutable structured AuditEvent (Invariants 1 & 2)
+            if card.table and card.table.organisation:
+                AuditService.record_event(
+                    organisation=card.table.organisation,
+                    actor=_user,
+                    event_type='status_change',
+                    target_type='card',
+                    target_id=card.id,
+                    target_name=f"Card #{card.id}",
+                    target_table=card.table,
+                    field_deltas=[{
+                        'field_name': 'STATUS',
+                        'before_value': _old_status,
+                        'after_value': new_status,
+                        'change_type': 'status_change',
+                    }],
+                    visibility_scope='ORGANISATION',
+                    source='web_panel',
+                )
         except Exception:
             logger.exception('WorkflowService: failed to log transition')
 
     @staticmethod
     def _log_bulk_transition(table, card_status_pairs, new_status, user, request):
-        """Log a bulk transition."""
+        """Log a bulk transition creating a first-class BulkTransaction and AuditEvents."""
         try:
             from core.services.activity_service import ActivityService
+            from operations.services import AuditService
             from collections import defaultdict
             client_name = ''
             try:
@@ -644,8 +666,24 @@ class WorkflowService:
                         request=request,
                         target_model='IDCard',
                     )
+
+                # Record First-Class BulkTransaction (Invariants 21, 22, 23)
+                if table and table.organisation:
+                    deltas = [{'card_id': cid, 'target_name': f'Card #{cid}'} for cid in card_ids]
+                    AuditService.record_bulk_transaction(
+                        organisation=table.organisation,
+                        actor=user,
+                        action='bulk_status',
+                        source_state=old_status,
+                        destination_state=new_status,
+                        card_deltas=deltas,
+                        table=table,
+                        visibility_scope='ORGANISATION',
+                        metadata={'source': 'bulk_action_bar'},
+                    )
         except Exception:
             logger.exception('WorkflowService: failed to log bulk transition')
+
 
     # ── Debug / introspection ───────────────────────────────────────
 

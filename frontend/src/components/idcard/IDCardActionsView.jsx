@@ -50,13 +50,17 @@ import {
   Undo2,
   Redo2,
 } from 'lucide-react';
+
 import WatermarkLogo from '../common/WatermarkLogo';
 import CustomSelect from '../common/CustomSelect';
 import CustomCheckbox from '../common/CustomCheckbox';
-import { cardApi, schemaApi, operationsApi } from '../../services/api';
+import { cardApi, schemaApi, operationsApi, auditApi } from '../../services/api';
 import apiClient from '../../services/api';
 import ImageUploadSlot from './ImageUploadSlot';
 import OperationHistoryModal from './OperationHistoryModal';
+import CardTimelineDrawer from './CardTimelineDrawer';
+import BulkTransactionsModal from './BulkTransactionsModal';
+
 
 /* ─── Status configuration ─────────────────────────────────────────────── */
 
@@ -2895,6 +2899,8 @@ export default function IDCardActionsView({
   });
   const [undoLoading, setUndoLoading] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showBulkTxModal, setShowBulkTxModal] = useState(false);
+  const [focusTxId, setFocusTxId] = useState(null);
 
   const searchTimerRef = useRef(null);
 
@@ -3638,7 +3644,20 @@ export default function IDCardActionsView({
             <span>History</span>
           </button>
 
+          <button
+            onClick={() => {
+              setFocusTxId(null);
+              setShowBulkTxModal(true);
+            }}
+            style={buttonStyle('#4f46e5')}
+            title="View Mass Bulk Transactions & Batch History"
+          >
+            <Layers size={13} />
+            <span>Transactions</span>
+          </button>
+
           <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 4px', flexShrink: 0 }} />
+
 
           {/* Action Divider Component */}
           {/* Pending List buttons */}
@@ -5171,9 +5190,41 @@ export default function IDCardActionsView({
         />
       )}
 
-      {/* Card Log & History Drawer */}
-      {logCard && <CardLogDrawer card={logCard} table={table} onClose={() => setLogCard(null)} />}
+      {/* Bulk Transactions & Mass Batch History Modal */}
+      {showBulkTxModal && (
+        <BulkTransactionsModal
+          isOpen={showBulkTxModal}
+          onClose={() => {
+            setShowBulkTxModal(false);
+            setFocusTxId(null);
+          }}
+          tableId={tableId}
+          tableName={table?.name || 'Table'}
+          initialTransactionId={focusTxId}
+          onTransactionReverted={() => {
+            fetchUndoStatus();
+            loadCards();
+            loadStatusCounts();
+          }}
+          addToast={addToast}
+        />
+      )}
+
+      {/* Card Activity & Timeline Drawer */}
+      {logCard && (
+        <CardTimelineDrawer
+          card={logCard}
+          table={table}
+          onClose={() => setLogCard(null)}
+          onOpenTransaction={(txId) => {
+            setLogCard(null);
+            setFocusTxId(txId);
+            setShowBulkTxModal(true);
+          }}
+        />
+      )}
     </div>
   );
 }
+
 

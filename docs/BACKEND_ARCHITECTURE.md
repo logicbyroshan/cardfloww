@@ -262,5 +262,34 @@ CardFlow includes a multi-user, conflict-aware **Reversible Operations Engine** 
 * `GET /api/operations/history/` — Paginated operation audit history with field delta breakdown.
 
 ---
-*Documentation updated for CardFlow Engine Architecture (`v5.6.0`).*
+
+## 12. Audit Log, Activity History & Bulk Transaction Engine
+
+CardFlow features a complete, immutable **Audit Log, Activity History, and Bulk Transaction Subsystem**:
+
+### 12.1. "Record First, Restrict Later" Architecture
+* **Always Recorded**: Every data mutation (single-cell edits, drawer saves, status moves, deletes, restores, media replacements, and crop updates) is permanently written to the append-only `AuditEvent` store.
+* **Query-Time Role Scoping (`AuditVisibilityService`)**:
+  - `ORGANISATION`: Scoped strictly to the actor's tenant (`organisation_id`), visible to Organization Managers, Assistants, and Client Staff.
+  - `INTERNAL_ADMIN`: Scoped to CardFlow internal operators and administrators.
+  - `PRIME_ADMIN`: Scoped to Prime Admins and Super Admins.
+  - `SUPER_ADMIN` / `SYSTEM`: Scoped exclusively to Super Admins.
+  - **Zero Tenant Leakage**: The database query strictly enforces tenant boundaries at the SQL level.
+
+### 12.2. First-Class Bulk Transactions (`BulkTransaction`)
+* **Mass Batch Grouping**: Operations affecting 100 to 2,000+ cards create a discrete `BulkTransaction` entity (e.g. `BT-20260817-001`).
+* **Bidirectional Linkage**: High-level feeds show clean summaries (e.g. *"Assistant A moved 2,000 cards Pending → Verified"*), while individual cards link directly to their parent bulk transaction.
+* **Safe Historical Reversals**: Reversing a historical transaction checks the current state of each affected card. Non-conflicted cards are reverted, cards modified subsequently are safely skipped as conflicts, and a **NEW** transaction is created without erasing past history.
+
+### 12.3. Endpoints
+* `GET /api/operations/audit/cards/<card_id>/timeline/` — Per-card chronological history with before/after field changes.
+* `GET /api/operations/audit/tables/<table_id>/activity/` — Table activity feed.
+* `GET /api/operations/audit/transactions/` — Paginated bulk transaction history.
+* `GET /api/operations/audit/transactions/<id>/` — Bulk transaction details and affected cards.
+* `POST /api/operations/audit/transactions/<id>/reverse/` — Conflict-aware safe transaction reversal.
+* `GET /api/operations/audit/export/` — Export audit trail to CSV with auditable export logging.
+
+---
+*Documentation updated for CardFlow Engine Architecture (`v5.7.0`).*
+
 
