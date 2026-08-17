@@ -182,9 +182,27 @@ CardFlow enforces a clean separation of responsibilities across two discrete ope
 
 ---
 
-## 7. Media Storage & Protected Access Control
+## 7. Media Storage & CardFlow Media Engine
 
-All sensitive images and documents (`/media/adarshimg/`, `/media/exports/`, `/media/clients_imgs/`, `/media/staff_imgs/`, `/media/temp/`) are denied direct public access and served via `_protected_media_serve` and Nginx `X-Accel-Redirect`.
+CardFlow incorporates a high-throughput, version-aware media engine designed for large batch processing (100,000+ files) with zero N+1 queries and memory-safe streaming extraction.
+
+### 7.1. Compact Deterministic Naming Scheme (`MediaNameService`)
+- **Format**: `O<OrgCode>_<ImageCode>V<Version>.<ext>` (e.g. `O73F_A8XZV1.jpg`, `O73F_A8XZV2.jpg`).
+- **OrgCode**: 3–5 uppercase alphanumeric characters derived from `Organisation.image_folder_code` or Base36 PK.
+- **ImageCode**: Deterministic 4-character Base36 encoding of `(card_id << 4 | field_type_idx)` ensuring absolute logical identity across edits.
+- **Version**: Incrementing integer (`V1` on initial assignment, `V2`, `V3` upon re-upload/editing).
+- **Backward Compatibility**: Fully parses legacy patterns (`c0_14325101234501.jpg`, `a1_...`).
+
+### 7.2. Dual-Path Classification & Reupload Engine (`ReuploadMatcher`)
+When a ZIP archive containing mixed files (foreign orgs, existing managed re-uploads, unmanaged raw camera photos) is uploaded:
+1. **Classification Pipeline**:
+   - **Path A (Managed Files)**: Fast regex stem parse. If `OrgCode != current_org_code`, rejected in $O(1)$ time with zero DB queries and zero disk I/O. If `OrgCode == current_org_code`, resolved against in-memory `managed_map` and version-incremented ($V1 \to V2$).
+   - **Path B (Unmanaged Files)**: Raw camera files (`0001.jpg`, `IMG_1234.jpg`, `student_name.jpg`) are matched against pre-indexed table import maps (Pending paths, Roll No, Adm No, Student Name, Card ID) in $O(1)$ time, guaranteeing **0 missed new images**.
+2. **Streaming Extraction**:
+   - Scans `zipfile.ZipFile.infolist()` in memory.
+   - Extracts **only** matched entries directly to storage. Unmatched/rejected entries are never decompressed.
+3. **Zero N+1 DB Updates**:
+   - Commits all modified card records via `IDCard.objects.bulk_update(['field_data'])` in atomic batches.
 
 ---
 
