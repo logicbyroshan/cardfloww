@@ -786,27 +786,27 @@ def _make_sort_key(class_field, section_field, name_field):
     return sort_key
 
 
-def sort_cards_for_export(cards_qs, table_fields):
+def sort_cards_for_export(cards_qs, table_fields=None):
     """
-    Sort cards by Class → Section → Name ascending for exports.
-    
-    For class values: numeric ordering first (1, 2, 10),
-    then alphabetical for non-numeric (LKG, Nursery, UKG).
+    Sort cards by Class → Section → Roll No → Name ascending using high-speed fast_sort engine.
     
     Args:
         cards_qs: QuerySet or iterable of IDCard instances
-        table_fields: list of field config dicts from Table.fields
+        table_fields: Optional list of field config dicts from Table.fields
         
     Returns:
-        SortedCardList if sorting is possible, original queryset otherwise.
+        SortedCardList wrapping the pre-sorted card list.
     """
-    class_field, section_field, name_field = _detect_sort_fields(table_fields)
-
-    # If no sortable fields found, return as-is
-    if not class_field and not section_field and not name_field:
-        return cards_qs
-
-    cards_list = list(cards_qs)
-    key_fn = _make_sort_key(class_field, section_field, name_field)
-    cards_list.sort(key=key_fn)
-    return SortedCardList(cards_list)
+    try:
+        from .fast_sort import sort_cards_hierarchical
+        sorted_list = sort_cards_hierarchical(cards_qs)
+        return SortedCardList(sorted_list)
+    except Exception as sort_err:
+        logger.warning("fast_sort fallback: %s", sort_err)
+        class_field, section_field, name_field = _detect_sort_fields(table_fields)
+        if not class_field and not section_field and not name_field:
+            return cards_qs
+        cards_list = list(cards_qs)
+        key_fn = _make_sort_key(class_field, section_field, name_field)
+        cards_list.sort(key=key_fn)
+        return SortedCardList(cards_list)

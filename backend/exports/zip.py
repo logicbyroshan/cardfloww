@@ -41,6 +41,7 @@ from .utils import (
     clean_filename,
     is_valid_image_path,
     is_image_field,
+    sort_cards_for_export,
 )
 
 
@@ -148,6 +149,7 @@ class ZipExporter:
             )
         
         try:
+            cards = sort_cards_for_export(cards, table.fields)
             # Get image fields from table
             image_fields = get_image_fields(table.fields or [])
             
@@ -226,7 +228,8 @@ class ZipExporter:
             zip_tmp.close()
             
             try:
-                with zipfile.ZipFile(zip_tmp_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                # Use ZIP_STORED for zero-CPU instant streaming of pre-compressed JPEG/PNG photos
+                with zipfile.ZipFile(zip_tmp_path, 'w', zipfile.ZIP_STORED) as zf:
                     for field_info in image_fields:
                         field_name = field_info['name']
                         field_type = field_info.get('type', '')
