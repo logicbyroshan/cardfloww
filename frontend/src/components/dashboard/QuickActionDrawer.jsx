@@ -315,59 +315,15 @@ function OriginalClientDrawerForm({ onClose, addToast, initialData }) {
       if (res?.client || res?.id) {
         itemToSave = { ...itemToSave, ...(res.client || res), name: res.name || res.client?.name || formData.name };
       }
-      if (!isEditing) {
-        const primaryManager = {
-          id: `mgr_${itemToSave.id}`,
-          name: itemToSave.name,
-          username: itemToSave.email || itemToSave.name.toLowerCase().replace(/\s+/g, ''),
-          email: itemToSave.email,
-          phone: itemToSave.phone,
-          client_type: 'primary',
-          is_default: true,
-          organisation: { id: itemToSave.id, name: itemToSave.name },
-          school_name: itemToSave.name,
-          status: itemToSave.status || 'active',
-          is_active: itemToSave.is_active !== false,
-          created_at: new Date().toISOString(),
-        };
-        try {
-          const storedMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-          localStorage.setItem('cf_custom_managers', JSON.stringify([primaryManager, ...storedMgrs]));
-        } catch (_) {}
-      }
       addToast?.(`Organisation "${formData.name}" ${isEditing ? 'updated' : 'created'} successfully!`, 'success');
       onClose();
       window.__addClientItem?.(itemToSave);
       window.__reloadClientDirectory?.();
       window.__reloadDashboard?.();
       window.__reloadClientAccounts?.();
-    } catch {
-      if (!isEditing) {
-        const primaryManager = {
-          id: `mgr_${itemToSave.id}`,
-          name: itemToSave.name,
-          username: itemToSave.email || itemToSave.name.toLowerCase().replace(/\s+/g, ''),
-          email: itemToSave.email,
-          phone: itemToSave.phone,
-          client_type: 'primary',
-          is_default: true,
-          organisation: { id: itemToSave.id, name: itemToSave.name },
-          school_name: itemToSave.name,
-          status: itemToSave.status || 'active',
-          is_active: itemToSave.is_active !== false,
-          created_at: new Date().toISOString(),
-        };
-        try {
-          const storedMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-          localStorage.setItem('cf_custom_managers', JSON.stringify([primaryManager, ...storedMgrs]));
-        } catch (_) {}
-      }
-      addToast?.(`Organisation "${formData.name}" ${isEditing ? 'updated' : 'created'}!`, 'success');
-      onClose();
-      window.__addClientItem?.(itemToSave);
-      window.__reloadClientDirectory?.();
-      window.__reloadDashboard?.();
-      window.__reloadClientAccounts?.();
+    } catch (err) {
+      console.error('Organisation save error:', err);
+      addToast?.(`Failed to save organisation: ${err?.message || ''}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -2453,29 +2409,15 @@ function OriginalAssistantDrawerForm({ onClose, addToast, initialData }) {
 
   useEffect(() => {
     (async () => {
-      const localClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-      const localMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
       try {
-        const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
+        const data = await clientApi.getAllForAssignment?.();
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
-        const merged = [...api];
-        localClients.forEach((lc) => {
-          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
-        });
-        localMgrs.forEach((m) => {
-          if (!merged.find((ac) => String(ac.id) === String(m.id)))
-            merged.push({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') });
-        });
-        setAllClients(merged);
-        if (merged.length > 0 && (!selectedClient || selectedClient === '1')) setSelectedClient(String(merged[0].id));
-      } catch {
-        const combined = [
-          ...localClients,
-          ...localMgrs.map((m) => ({ id: m.id, name: m.name + (m.school_name ? ' (' + m.school_name + ')' : '') })),
-        ];
-        setAllClients(combined);
-        if (combined.length > 0 && (!selectedClient || selectedClient === '1'))
-          setSelectedClient(String(combined[0].id));
+        setAllClients(api);
+        if (api.length > 0 && (!selectedClient || selectedClient === '1')) {
+          setSelectedClient(String(api[0].id));
+        }
+      } catch (err) {
+        console.warn('Failed to load organisations for assistant:', err);
       }
     })();
   }, []);
@@ -3048,31 +2990,25 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    try {
-      const customGroups = JSON.parse(localStorage.getItem('cf_custom_table_groups') || '[]');
-      const defaultGroups = [
-        { id: '1', name: 'CLASS 1 - SEC A' },
-        { id: '2', name: 'CLASS 1 - SEC B' },
-        { id: '3', name: 'CLASS 2 - SEC A' },
-        { id: '4', name: 'CLASS 3 - SEC A' },
-        { id: '5', name: 'STAFF & TEACHERS' },
-      ];
-      const merged = [...defaultGroups];
-      customGroups.forEach((cg) => {
-        if (!merged.some((g) => String(g.id) === String(cg.id))) {
-          merged.push({ id: String(cg.id), name: cg.name || cg.group_name || `Group #${cg.id}` });
+    (async () => {
+      try {
+        const data = await schemaApi.getSchemas?.();
+        const tables = data?.tables || data?.results || (Array.isArray(data) ? data : []);
+        if (tables.length > 0) {
+          setAllGroups(tables.map((t) => ({ id: String(t.id), name: t.name })));
+        } else {
+          setAllGroups([
+            { id: '1', name: 'Class 5th Students Table' },
+            { id: '2', name: 'Class 10-A' },
+          ]);
         }
-      });
-      setAllGroups(merged);
-    } catch {
-      setAllGroups([
-        { id: '1', name: 'CLASS 1 - SEC A' },
-        { id: '2', name: 'CLASS 1 - SEC B' },
-        { id: '3', name: 'CLASS 2 - SEC A' },
-        { id: '4', name: 'CLASS 3 - SEC A' },
-        { id: '5', name: 'STAFF & TEACHERS' },
-      ]);
-    }
+      } catch {
+        setAllGroups([
+          { id: '1', name: 'Class 5th Students Table' },
+          { id: '2', name: 'Class 10-A' },
+        ]);
+      }
+    })();
   }, []);
 
   const filteredGroups = allGroups.filter((g) => (g.name || '').toLowerCase().includes(search.toLowerCase()));
@@ -3086,18 +3022,7 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
     setSaving(true);
     try {
       if (initialData?.id) {
-        try {
-          await assistantApi.update(initialData.id, { assigned_groups: selectedGroups });
-        } catch (_) {}
-
-        const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-        const updated = staffList.map((s) => {
-          if (String(s.id) === String(initialData.id)) {
-            return { ...s, assigned_groups: selectedGroups, allowed_table_ids: selectedGroups };
-          }
-          return s;
-        });
-        localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
+        await assistantApi.update(initialData.id, { assigned_groups: selectedGroups, allowed_table_ids: selectedGroups });
       }
       addToast?.(
         `Assigned ${selectedGroups.length} group(s) to ${initialData?.name || 'assistant'} successfully!`,
@@ -3105,8 +3030,9 @@ function AssignAssistantGroupsForm({ onClose, addToast, initialData }) {
       );
       onClose();
       window.__reloadStaffList?.();
-    } catch {
-      addToast?.('Failed to save group assignments', 'error');
+    } catch (err) {
+      console.error('Assign groups error:', err);
+      addToast?.(err?.response?.data?.message || 'Failed to save group assignments', 'error');
     } finally {
       setSaving(false);
     }
@@ -3321,17 +3247,12 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
 
   useEffect(() => {
     (async () => {
-      const local = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
       try {
-        const data = await clientApi.getAllClients({ page: 1, page_size: 200 });
+        const data = await clientApi.getAllForAssignment?.();
         const api = data?.clients || data?.results || (Array.isArray(data) ? data : []);
-        const merged = [...api];
-        local.forEach((lc) => {
-          if (!merged.find((ac) => String(ac.id) === String(lc.id))) merged.push(lc);
-        });
-        setAllClients(merged);
-      } catch {
-        setAllClients(local);
+        setAllClients(api);
+      } catch (err) {
+        console.warn('Failed to load organisations for photographer:', err);
       }
     })();
   }, []);

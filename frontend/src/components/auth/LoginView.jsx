@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
-import { User, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { User, Lock, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle } from 'lucide-react';
 import { authApi } from '../../services/api';
+
+const DEMO_ACCOUNTS = [
+  { role: 'Super Admin', username: 'admin', label: 'Prime Admin' },
+  { role: 'Organisation', username: 'org_admin', label: 'Prime Manager' },
+  { role: 'Operator', username: 'operator', label: 'Staff Operator' },
+  { role: 'Assistant', username: 'assistant', label: 'Data Assistant' },
+  { role: 'Photographer', username: 'photographer', label: 'Studio' },
+];
 
 export default function LoginView({ onLoginSuccess, onSwitchTab }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDemoPills, setShowDemoPills] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,17 +31,20 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
       }
     } catch (err) {
       if (err?.response?.status === 403 || err?.response?.status === 401) {
-        setError('Invalid credentials. Please try again.');
+        setError('Invalid username or password. Please try again.');
       } else {
-        // Fallback for dev / offline mode: auto-detect role from username
+        // Fallback for dev / offline preview mode: auto-detect role from username
         const lowerU = (username || '').toLowerCase();
-        const role = lowerU.includes('org') || lowerU.includes('prime')
-          ? 'prime_manager'
-          : lowerU.includes('manager') || lowerU.includes('operator')
-            ? 'operator'
-            : lowerU.includes('assistant')
-              ? 'assistant'
-              : 'super_admin';
+        const role =
+          lowerU.includes('org') || lowerU.includes('prime')
+            ? 'prime_manager'
+            : lowerU.includes('photographer') || lowerU.includes('photo')
+              ? 'photographer'
+              : lowerU.includes('operator')
+                ? 'operator'
+                : lowerU.includes('assistant')
+                  ? 'assistant'
+                  : 'super_admin';
         onLoginSuccess?.({ username: username || 'admin', role });
       }
     } finally {
@@ -39,88 +52,131 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
     }
   };
 
+  const handleQuickFill = (acc) => {
+    setUsername(acc.username);
+    setPassword('password123');
+    setError('');
+  };
+
   return (
     <>
-      <h2 className="auth-title">Login</h2>
-      <p className="auth-subtitle" style={{ marginBottom: '24px' }}>
-        Sign in to access your ID card management portal
-      </p>
+      <div className="auth-form-header">
+        <h2 className="auth-title">Sign In</h2>
+        <p className="auth-subtitle">Access your multi-tenant ID card workspace & printing queues</p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="auth-actual-form">
         {error && (
           <div className="auth-error-box">
             <span>{error}</span>
           </div>
         )}
 
+        {/* Username / Email Field */}
         <div className="auth-field">
           <label className="auth-label">Email or Username</label>
           <div className="auth-input-wrapper">
-            <User size={16} className="auth-input-icon" />
+            <User size={17} className="auth-input-icon" />
             <input
               type="text"
               required
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter email or username"
+              placeholder="e.g. admin or user@institution.edu"
               className="auth-input"
+              autoComplete="username"
             />
           </div>
         </div>
 
+        {/* Password Field */}
         <div className="auth-field">
           <label className="auth-label">Password</label>
           <div className="auth-input-wrapper">
-            <Lock size={16} className="auth-input-icon" />
+            <Lock size={17} className="auth-input-icon" />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="••••••••••••"
               className="auth-input"
+              autoComplete="current-password"
+              style={{ paddingRight: '42px' }}
             />
+            <button
+              type="button"
+              className="auth-password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 
+        {/* Remember me & Forgot Password */}
         <div className="auth-flex-row">
-          <label
-            style={{
-              fontSize: '12px',
-              color: 'rgba(255, 255, 255, 0.88)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            <input type="checkbox" defaultChecked style={{ accentColor: '#818cf8' }} />
-            Remember me
+          <label className="auth-remember-label">
+            <input type="checkbox" defaultChecked className="auth-checkbox" />
+            <span>Keep me signed in</span>
           </label>
           <button type="button" className="auth-link" onClick={() => onSwitchTab?.('forgot')}>
             Forgot Password?
           </button>
         </div>
 
+        {/* Primary Submit Button */}
         <button type="submit" disabled={loading} className="auth-btn-primary">
           {loading ? (
             <>
-              <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-              Signing in…
+              <Loader2 size={17} className="auth-btn-spinner" />
+              <span>Authenticating…</span>
             </>
           ) : (
             <>
-              Sign In <ArrowRight size={15} />
+              <span>Sign In to Workspace</span>
+              <ArrowRight size={16} />
             </>
           )}
         </button>
+
+        {/* Quick Demo Credentials Accordion */}
+        <div className="auth-demo-switcher">
+          <button
+            type="button"
+            className="auth-demo-toggle-btn"
+            onClick={() => setShowDemoPills(!showDemoPills)}
+          >
+            <ShieldCheck size={13} color="#818cf8" />
+            <span>{showDemoPills ? 'Hide Quick Demo Roles' : 'Quick Demo Role Presets'}</span>
+          </button>
+
+          {showDemoPills && (
+            <div className="auth-demo-pills-grid">
+              {DEMO_ACCOUNTS.map((acc, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="auth-demo-pill"
+                  onClick={() => handleQuickFill(acc)}
+                >
+                  <span className="demo-pill-role">{acc.role}</span>
+                  <span className="demo-pill-user">@{acc.username}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </form>
 
-      <div className="auth-footer" style={{ marginTop: '26px' }}>
-        Protected Enterprise Platform — Need help?{' '}
-        <button type="button" onClick={() => alert('Contact System Administrator at admin@adarshbhopal.in')}>
-          Contact Admin
+      {/* Support & Contact Footer */}
+      <div className="auth-footer">
+        Protected Enterprise Platform • Need assistance?{' '}
+        <button type="button" onClick={() => alert('Please contact administrator at support@cardflow.in')}>
+          Contact Support
         </button>
       </div>
     </>

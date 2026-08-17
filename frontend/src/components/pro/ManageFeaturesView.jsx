@@ -40,7 +40,7 @@ import {
   Lock,
 } from 'lucide-react';
 
-import { clientApi, assistantApi, panelApi, impersonateApi, tempPasswordApi } from '../../services/api';
+import { clientApi, assistantApi, panelApi, impersonateApi, tempPasswordApi, operatorApi, photographerApi } from '../../services/api';
 import CustomSelect from '../common/CustomSelect';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -91,9 +91,11 @@ export default function ManageFeaturesView({ addToast }) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [clientsRes, staffRes, opsRes] = await Promise.allSettled([
+      const [clientsRes, staffRes, opsRes, photoRes, feedRes] = await Promise.allSettled([
         clientApi.getActive({ page_size: 100 }),
         assistantApi.list({ page_size: 100 }),
+        operatorApi.list({ page_size: 100 }),
+        photographerApi.list({ page_size: 100 }),
         panelApi.getOperationsFeed(),
       ]);
 
@@ -108,7 +110,7 @@ export default function ManageFeaturesView({ addToast }) {
             id: `client-${c.id}`,
             name: c.name || c.school_name || 'Client Account',
             email: c.email || c.user?.email || 'N/A',
-            role: c.client_type === 'manager' ? 'Manage Manager' : 'Manage Organisation',
+            role: 'Manage Organisation',
             rawRole: 'prime_manager',
             status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
           });
@@ -130,53 +132,40 @@ export default function ManageFeaturesView({ addToast }) {
         });
       }
 
-      const localClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-      const localMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const localStaff = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-
-      localClients.forEach((c) => {
-        if (!list.some((u) => String(u.id) === `client-${c.id}` || (u.email && c.email && u.email === c.email))) {
+      if (opsRes.status === 'fulfilled' && opsRes.value) {
+        const opItems =
+          opsRes.value.operators || opsRes.value.results || (Array.isArray(opsRes.value) ? opsRes.value : []);
+        opItems.forEach((o) => {
           list.push({
-            id: `client-${c.id}`,
-            name: c.name || 'Organisation Account',
-            email: c.email || 'N/A',
-            role: 'Manage Organisation',
-            rawRole: 'prime_manager',
-            status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
+            id: `op-${o.id}`,
+            name: o.name || o.username || 'Operator',
+            email: o.email || 'N/A',
+            role: 'Manage Operator',
+            rawRole: 'operator',
+            status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Active',
           });
-        }
-      });
+        });
+      }
 
-      localMgrs.forEach((m) => {
-        if (!list.some((u) => String(u.id) === `mgr-${m.id}` || (u.email && m.email && u.email === m.email))) {
+      if (photoRes.status === 'fulfilled' && photoRes.value) {
+        const photoItems =
+          photoRes.value.photographers || photoRes.value.results || (Array.isArray(photoRes.value) ? photoRes.value : []);
+        photoItems.forEach((p) => {
           list.push({
-            id: `mgr-${m.id}`,
-            name: m.name || 'Manager Account',
-            email: m.email || 'N/A',
-            role: m.client_type === 'primary' ? 'Client (Primary Owner)' : 'Manager Account',
-            rawRole: 'prime_manager',
-            status: m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'Active',
+            id: `photo-${p.id}`,
+            name: p.name || p.username || 'Photographer',
+            email: p.email || 'N/A',
+            role: 'Manage Photographer',
+            rawRole: 'photographer',
+            status: p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : 'Active',
           });
-        }
-      });
-
-      localStaff.forEach((s) => {
-        if (!list.some((u) => String(u.id) === `staff-${s.id}` || (u.email && s.email && u.email === s.email))) {
-          list.push({
-            id: `staff-${s.id}`,
-            name: s.name || 'Staff Account',
-            email: s.email || 'N/A',
-            role: s.designation === 'Assistant' ? 'Manage Assistant' : 'Manage Operator',
-            rawRole: s.designation === 'Assistant' ? 'assistant' : 'operator',
-            status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1) : 'Active',
-          });
-        }
-      });
+        });
+      }
 
       setUsersList(list);
 
-      if (opsRes.status === 'fulfilled' && opsRes.value) {
-        const jobs = opsRes.value.tasks || opsRes.value.operations || (Array.isArray(opsRes.value) ? opsRes.value : []);
+      if (feedRes.status === 'fulfilled' && feedRes.value) {
+        const jobs = feedRes.value.tasks || feedRes.value.operations || (Array.isArray(feedRes.value) ? feedRes.value : []);
         if (jobs.length > 0) {
           setBatchJobs(
             jobs.map((j, idx) => ({
@@ -265,75 +254,13 @@ export default function ManageFeaturesView({ addToast }) {
         status: pwdStatusFilter,
       });
       const items = res?.users || res?.results || (Array.isArray(res) ? res : []);
-      if (items.length > 0) {
-        setPwdList(items);
-        setPwdLoading(false);
-        return;
-      }
-    } catch (_) {}
-
-    // Fallback: aggregate from existing lists and localStorage
-    const localClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-    const localMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-    const localStaff = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-
-    let fallback = [];
-    localClients.forEach((c) => {
-      fallback.push({
-        id: `client-${c.id}`,
-        name: c.name || 'Organisation Account',
-        username: c.username || c.email?.split('@')[0] || `org_${c.id}`,
-        email: c.email || '—',
-        phone: c.phone || '—',
-        role: 'prime_manager',
-        role_display: 'Manage Organisation',
-        temp_password:
-          c.phone && c.phone.length >= 6
-            ? c.phone
-            : `${c.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'CF'}@${Math.floor(1000 + Math.random() * 9000)}`,
-        must_change_password: true,
-        temp_password_created_at: c.created_at || new Date().toISOString(),
-      });
-    });
-
-    localMgrs.forEach((m) => {
-      fallback.push({
-        id: `mgr-${m.id}`,
-        name: m.name || 'Manager Account',
-        username: m.username || m.email?.split('@')[0] || `mgr_${m.id}`,
-        email: m.email || '—',
-        phone: m.phone || '—',
-        role: 'prime_manager',
-        role_display: m.client_type === 'primary' ? 'Client (Primary Owner)' : 'Manager Account',
-        temp_password:
-          m.phone && m.phone.length >= 6
-            ? m.phone
-            : `${m.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'MGR'}@${Math.floor(1000 + Math.random() * 9000)}`,
-        must_change_password: true,
-        temp_password_created_at: m.created_at || new Date().toISOString(),
-      });
-    });
-
-    localStaff.forEach((s) => {
-      fallback.push({
-        id: `staff-${s.id}`,
-        name: s.name || 'Staff Account',
-        username: s.username || s.email?.split('@')[0] || `staff_${s.id}`,
-        email: s.email || '—',
-        phone: s.phone || '—',
-        role: s.designation === 'Assistant' ? 'assistant' : 'operator',
-        role_display: s.designation === 'Assistant' ? 'Manage Assistant' : 'Manage Operator',
-        temp_password:
-          s.phone && s.phone.length >= 6
-            ? s.phone
-            : `${s.name?.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') || 'STF'}@${Math.floor(1000 + Math.random() * 9000)}`,
-        must_change_password: true,
-        temp_password_created_at: s.created_at || new Date().toISOString(),
-      });
-    });
-
-    setPwdList(fallback);
-    setPwdLoading(false);
+      setPwdList(items);
+    } catch (err) {
+      console.warn('Failed to load temporary passwords:', err);
+      setPwdList([]);
+    } finally {
+      setPwdLoading(false);
+    }
   }, [pwdSearch, pwdRoleFilter, pwdStatusFilter]);
 
   useEffect(() => {

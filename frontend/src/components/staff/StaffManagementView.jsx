@@ -48,97 +48,55 @@ export default function StaffManagementView({
   const isAssistant = staffType === 'assistant';
   const isPhotographer = staffType === 'photographer';
 
-  const getStoredStaff = useCallback(() => {
-    try {
-      const stored = localStorage.getItem('cf_custom_staff');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
-    const localItems = getStoredStaff();
-    const filteredLocal = localItems.filter((x) => {
-      const des = (x.designation || '').toLowerCase();
-      if (isAssistant) return des.includes('assistant');
-      if (isPhotographer) return des.includes('photo');
-      return !des.includes('assistant') && !des.includes('photo');
-    });
 
     try {
       let apiItems = [];
+      let totalCount = 0;
+      const queryParams = {
+        page,
+        search,
+        status: statusTab !== 'All' ? statusTab.toLowerCase() : '',
+        page_size: pageSize,
+      };
+
       if (isAssistant) {
-        const res = await assistantApi.list();
+        const res = await assistantApi.list(queryParams);
         const raw = res?.data?.staff || res?.staff || res?.results || (Array.isArray(res) ? res : []);
         apiItems = Array.isArray(raw) ? raw : [];
+        totalCount = res?.total || res?.count || apiItems.length;
       } else if (isPhotographer) {
-        const res = await operatorApi.list();
-        const raw = res?.operators || res?.results || res?.staff || (Array.isArray(res) ? res : []);
-        const list = Array.isArray(raw) ? raw : [];
-        apiItems = list.filter(
-          (o) =>
-            o &&
-            (String(o.designation || '')
-              .toLowerCase()
-              .includes('photo') ||
-              o.role === 'photographer')
-        );
+        const res = await photographerApi.list(queryParams);
+        const raw = res?.photographers || res?.data?.photographers || res?.staff || res?.results || (Array.isArray(res) ? res : []);
+        apiItems = Array.isArray(raw) ? raw : [];
+        totalCount = res?.total || res?.count || apiItems.length;
       } else {
-        const res = await operatorApi.list({
-          page,
-          search,
-          status: statusTab !== 'All' ? statusTab.toLowerCase() : '',
-          page_size: pageSize,
-        });
+        const res = await operatorApi.list(queryParams);
         const raw = res?.operators || res?.results || res?.staff || (Array.isArray(res) ? res : []);
         apiItems = Array.isArray(raw) ? raw : [];
+        totalCount = res?.total || res?.count || apiItems.length;
       }
-      const combined = [...filteredLocal];
-      apiItems.forEach((item) => {
-        if (
-          !combined.some(
-            (c) =>
-              String(c.id) === String(item.id) ||
-              (c.email && item.email && c.email.toLowerCase() === item.email.toLowerCase())
-          )
-        ) {
-          combined.push(item);
-        }
-      });
-      setStaffList(combined);
-      setTotal(combined.length);
+      setStaffList(apiItems);
+      setTotal(totalCount);
     } catch (err) {
-      console.warn('Load staff list API warning, using stored staff:', err);
-      setStaffList(filteredLocal);
-      setTotal(filteredLocal.length);
+      console.error('Load staff list API error:', err);
+      setError(true);
+      setStaffList([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusTab, pageSize, isAssistant, isPhotographer, getStoredStaff]);
+  }, [page, search, statusTab, pageSize, isAssistant, isPhotographer]);
 
   useEffect(() => {
     load();
     window.__reloadStaffList = load;
-    window.__addStaffItem = (item) => {
-      if (item) {
-        try {
-          const existing = getStoredStaff();
-          const updated = [item, ...existing.filter((x) => String(x.id) !== String(item.id) && x.email !== item.email)];
-          localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
-        } catch (e) {
-          console.warn('Save staff local error:', e);
-        }
-        load();
-      }
-    };
     return () => {
       if (window.__reloadStaffList === load) delete window.__reloadStaffList;
-      delete window.__addStaffItem;
     };
-  }, [load, getStoredStaff]);
+  }, [load]);
 
   /* Dispatch footer data count & selection */
   useEffect(() => {
@@ -165,27 +123,15 @@ export default function StaffManagementView({
   const handleToggleStatus = async () => {
     if (!selected) return;
     const selStaff = staffList.find((s) => s.id === selected);
-    try {
-      const existing = getStoredStaff();
-      const updated = existing.map((x) => {
-        if (String(x.id) === String(selected)) {
-          const newActive = !(x.is_active || x.status === 'active');
-          return { ...x, is_active: newActive, status: newActive ? 'active' : 'inactive' };
-        }
-        return x;
-      });
-      localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Update local status error:', e);
-    }
 
     try {
       if (isAssistant) await assistantApi.toggleStatus(selected);
       else if (isPhotographer) await photographerApi.toggleStatus(selected);
       else await operatorApi.toggleStatus(selected);
       addToast?.(`Status for "${selStaff?.name || 'user'}" updated successfully`, 'success');
-    } catch {
-      addToast?.(`Status for "${selStaff?.name || 'user'}" updated`, 'success');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to update status';
+      addToast?.(msg, 'error');
     } finally {
       load();
       window.__reloadDashboard?.();
@@ -201,20 +147,13 @@ export default function StaffManagementView({
         itemDescription: `user "${selStaff?.name || ''}"`,
         onConfirm: async () => {
           try {
-            const existing = getStoredStaff();
-            const updated = existing.filter((x) => String(x.id) !== String(selected));
-            localStorage.setItem('cf_custom_staff', JSON.stringify(updated));
-          } catch (e) {
-            console.warn('Delete local staff error:', e);
-          }
-
-          try {
             if (isAssistant) await assistantApi.delete(selected);
             else if (isPhotographer) await photographerApi.delete(selected);
             else await operatorApi.delete(selected);
             addToast?.('Deleted successfully', 'success');
-          } catch {
-            addToast?.('Deleted successfully', 'success');
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || 'Failed to delete';
+            addToast?.(msg, 'error');
           } finally {
             setSelected(null);
             load();
@@ -257,7 +196,7 @@ export default function StaffManagementView({
   const selStaff = staffList.find((s) => s.id === selected);
 
   const formatDate = (d) => {
-    if (!d) return '—';
+    if (!d) return '-';
     try {
       return new Date(d).toLocaleString('en-IN', {
         day: '2-digit',
@@ -537,8 +476,8 @@ export default function StaffManagementView({
                   s.username ||
                   s.user?.username ||
                   `${isAssistant ? 'Manager' : 'Operator'} #${s.id || idx + 1}`;
-                const email = s.email || s.user?.email || '—';
-                const phone = s.phone || s.user?.phone || '—';
+                const email = s.email || s.user?.email || '-';
+                const phone = s.phone || s.user?.phone || '-';
                 const statusStr = String(
                   s.status ||
                     (s.user?.is_active !== undefined
@@ -576,7 +515,7 @@ export default function StaffManagementView({
                     {isAssistant && (
                       <td>
                         <span style={{ fontSize: '11px', color: '#475569', fontWeight: 500 }}>
-                          {s.client_name || s.client?.name || '—'}
+                          {s.client_name || s.client?.name || '-'}
                         </span>
                       </td>
                     )}

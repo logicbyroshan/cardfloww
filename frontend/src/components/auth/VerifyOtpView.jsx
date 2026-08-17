@@ -44,38 +44,43 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
 
   return (
     <>
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+      <div className="auth-form-header" style={{ textAlign: 'center' }}>
         <div
           style={{
-            width: '42px',
-            height: '42px',
+            width: '44px',
+            height: '44px',
             borderRadius: '12px',
-            background: 'rgba(255, 255, 255, 0.15)',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '10px',
+            marginBottom: '12px',
           }}
         >
-          <KeyRound size={22} color="#ffffff" />
+          <KeyRound size={22} color="#818cf8" />
         </div>
+        <h2 className="auth-title">Two-Factor Verification</h2>
+        <p className="auth-subtitle">
+          Enter the 6-digit security code sent to your registered account email.
+        </p>
       </div>
 
-      <h2 className="auth-title" style={{ textAlign: 'center' }}>
-        Two-Factor Verification
-      </h2>
-      <p className="auth-subtitle" style={{ textAlign: 'center', marginBottom: '20px' }}>
-        Enter the 6-digit verification code sent to your registered email/phone
-      </p>
-
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="auth-actual-form">
         {error && (
           <div className="auth-error-box">
             <span>{error}</span>
           </div>
         )}
 
-        <div className="auth-otp-row">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            margin: '6px 0',
+          }}
+        >
           {otp.map((digit, idx) => (
             <input
               key={idx}
@@ -86,7 +91,15 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
               value={digit}
               onChange={(e) => handleChange(idx, e.target.value)}
               onKeyDown={(e) => handleKeyDown(idx, e)}
-              className="auth-otp-input"
+              className="auth-input"
+              style={{
+                width: '44px',
+                height: '48px',
+                textAlign: 'center',
+                fontSize: '18px',
+                fontWeight: 700,
+                padding: 0,
+              }}
               autoFocus={idx === 0}
             />
           ))}
@@ -95,27 +108,24 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
         <button type="submit" disabled={loading} className="auth-btn-primary">
           {loading ? (
             <>
-              <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-              Verifying Code…
+              <Loader2 size={17} className="auth-btn-spinner" />
+              <span>Verifying Code…</span>
             </>
           ) : (
-            'Verify & Continue'
+            <span>Verify & Continue</span>
           )}
         </button>
       </form>
 
-      <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
         <button
           type="button"
           className="auth-link"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           onClick={() => onSwitchTab?.('login')}
         >
-          <ArrowLeft size={14} /> Back to Sign In
-        </button>
-
-        <button type="button" className="auth-link" onClick={() => setError('Resent OTP to registered contact.')}>
-          Resend OTP
+          <ArrowLeft size={14} />
+          <span>Back to Sign In</span>
         </button>
       </div>
     </>

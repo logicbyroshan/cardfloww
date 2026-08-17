@@ -1,147 +1,330 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  Shield,
+  Sparkles,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
+} from 'lucide-react';
 import './Auth.css';
 
-/**
- * 3D Product Background Floating Assets:
- * Floating 3D Lanyard & ID Badge, Visiting Cards stack, Executive Diary/Notebook, and RFID Smart Badges
- * floating on CardFlow's indigo/violet radial glow background.
- */
-function Auth3DProducts() {
+const PRODUCTS = [
+  {
+    id: 'school_id',
+    name: 'Student ID Cards',
+    category: 'STUDENT IDENTITY',
+    title: 'Smart School & College ID Cards',
+    tagline: 'High-durability PVC with automated photo crop, student QR & barcode tracking.',
+    image: '/products/id_card_school.webp',
+    accentColor: '#38bdf8',
+    stats: '300 DPI Sublimation • CR80 PVC Standard',
+    bullets: [
+      'Automated Face Detection & Photo Cropping',
+      'Multi-Class & Section Batch Printing',
+      'Tamper-Proof Waterproof High-Gloss Lamination',
+      'Instant QR Code & Barcode Data Verification',
+    ],
+  },
+  {
+    id: 'lanyards',
+    name: 'Custom Lanyards',
+    category: 'BRANDED ACCESSORIES',
+    title: 'Premium Satin & Woven Lanyards',
+    tagline: 'Custom double-sided heat-transfer lanyards with premium zinc-alloy clips.',
+    image: '/products/lanyard_premium.webp',
+    accentColor: '#a855f7',
+    stats: '16mm / 20mm / 25mm • Silk Satin',
+    bullets: [
+      'Multi-Color Fade-Proof Sublimation Printing',
+      'Durable Zinc-Alloy Dog Hook & Safety Breakaway',
+      'Custom School & Institution Logo Printing',
+      'Matching Color-Coded Card Holders Included',
+    ],
+  },
+  {
+    id: 'corporate_badge',
+    name: 'Corporate Badges',
+    category: 'ENTERPRISE ACCESS',
+    title: 'Corporate Executive & Access Badges',
+    tagline: 'Smart RFID and NFC enabled access badges with delegated manager approvals.',
+    image: '/products/id_card_corporate.webp',
+    accentColor: '#34d399',
+    stats: '13.56 MHz RFID • NFC Integrated',
+    bullets: [
+      'Manager Multi-Level Status Approval Pipeline',
+      'Smart Door & Attendance Access Control Sync',
+      'Matte Executive & Metallic Gloss Finish Options',
+      'Real-Time Automated Reprint & Dispatch Queue',
+    ],
+  },
+  {
+    id: 'pvc_cards',
+    name: 'Bulk PVC Printing',
+    category: 'PRODUCTION ENGINE',
+    title: 'High-Velocity Card Printing Hub',
+    tagline: 'Process thousands of student records with 1-click Excel sync and automated PDF layout.',
+    image: '/products/id_card_pvc.webp',
+    accentColor: '#f59e0b',
+    stats: '1,000+ Cards / Min • Zero Defect',
+    bullets: [
+      '1-Click CSV & Excel Spreadsheet Auto-Mapping',
+      'Multi-Page Print-Ready PDF & High-Res ZIP Exports',
+      'Automated Missing Photo & Duplicate Record Alerts',
+      'Multi-Tenant End-to-End Encryption & Backups',
+    ],
+  },
+  {
+    id: 'lanyard_3d',
+    name: 'Clip-Lock Lanyards',
+    category: 'PREMIUM FITTINGS',
+    title: 'Heavy-Duty 3D Clip-Lock Lanyards',
+    tagline: 'Industrial-grade lanyards designed for hospitals, factories, and universities.',
+    image: '/products/lanyard_3d.webp',
+    accentColor: '#ec4899',
+    stats: 'Reinforced Nylon • Heavy-Duty Swivel',
+    bullets: [
+      'Ergonomic Comfort-Wear Soft-Touch Fabric',
+      'Quick-Release Safety Buckle for High Activity',
+      'Weather-Proof & Sweat-Resistant Material',
+      'Compatible with Standard CR80 Card Pouches',
+    ],
+  },
+];
+
+const AUTO_INTERVAL = 3600; // 3.6s per product slide
+
+/* ─────────────────────────────────────────────────────────────
+   Product Showcase / Advertisement Hero (Left Side)
+   Grand, expansive, auto-switching magazine-grade hero canvas
+───────────────────────────────────────────────────────────── */
+function ProductShowcase() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  // Reliable continuous auto-scrolling timer with live progress animation
+  useEffect(() => {
+    setProgress(0);
+    const stepMs = 30;
+    const totalSteps = AUTO_INTERVAL / stepMs;
+    let step = 0;
+
+    const timer = setInterval(() => {
+      step += 1;
+      const pct = Math.min(100, (step / totalSteps) * 100);
+      setProgress(pct);
+
+      if (step >= totalSteps) {
+        step = 0;
+        setActiveIndex((prev) => (prev + 1) % PRODUCTS.length);
+        setProgress(0);
+      }
+    }, stepMs);
+
+    return () => clearInterval(timer);
+  }, [activeIndex]);
+
+  const handleNext = () => {
+    setActiveIndex((prev) => (prev + 1) % PRODUCTS.length);
+    setProgress(0);
+  };
+
+  const handlePrev = () => {
+    setActiveIndex((prev) => (prev - 1 + PRODUCTS.length) % PRODUCTS.length);
+    setProgress(0);
+  };
+
+  const activeProduct = PRODUCTS[activeIndex];
+
   return (
-    <>
-      {/* 3D Lanyard & ID Card Badge (Top-Left / Left) */}
-      <div className="auth-bg-product top-left-lanyard">
-        <img
-          src="/3d_lanyard.png"
-          alt="3D ID Card & Lanyard"
-          style={{
-            width: '260px',
-            height: 'auto',
-            filter: 'drop-shadow(0 15px 30px rgba(0, 0, 0, 0.5)) mix-blend-mode(screen)',
-          }}
-        />
+    <div className="auth-showcase-stage">
+      {/* Dynamic Ambient Background Glow */}
+      <div
+        className="showcase-glow-aurora"
+        style={{
+          background: `radial-gradient(circle, ${activeProduct.accentColor}35 0%, rgba(99, 102, 241, 0.15) 45%, transparent 70%)`,
+        }}
+      />
+
+      {/* 1. Header Section (Centered) */}
+      <div className="showcase-header">
+        <div className="showcase-badge">
+          <Sparkles size={14} color={activeProduct.accentColor} />
+          <span>CardFlow Enterprise Products & Printing Suite</span>
+        </div>
+
+        <h1 className="showcase-headline">
+          Smart ID Cards, Badges & <span className="showcase-headline-gradient">Custom Lanyards</span>
+        </h1>
+
+        <p className="showcase-lead">
+          The all-in-one identity platform trusted by 250+ schools, colleges, and corporate organizations for automated
+          student verification, custom satin lanyards, and zero-defect bulk printing.
+        </p>
       </div>
 
-      {/* 3D Executive Corporate Diary / Notebook (Top-Right) */}
-      <div className="auth-bg-product top-right-diary">
-        <img
-          src="/3d_diary.png"
-          alt="3D Corporate Diary"
-          style={{
-            width: '280px',
-            height: 'auto',
-            filter: 'drop-shadow(0 18px 35px rgba(0, 0, 0, 0.55))',
-          }}
-        />
-      </div>
-
-      {/* 3D Stack of Visiting Cards / Business Cards (Bottom-Left) */}
-      <div className="auth-bg-product bottom-left-cards">
-        <img
-          src="/3d_cards.png"
-          alt="3D Visiting Cards"
-          style={{
-            width: '290px',
-            height: 'auto',
-            filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.6))',
-          }}
-        />
-      </div>
-
-      {/* Floating Vector 3D Smart Badge / Keycard (Bottom-Right) */}
-      <div className="auth-bg-product bottom-right-badge">
-        <svg viewBox="0 0 200 280" fill="none" style={{ width: '190px', height: 'auto' }}>
-          <defs>
-            <linearGradient id="badgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="50%" stopColor="#6366f1" />
-              <stop offset="100%" stopColor="#312e81" />
-            </linearGradient>
-            <filter id="badgeShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="4" dy="14" stdDeviation="10" floodColor="#08031a" floodOpacity="0.6" />
-            </filter>
-          </defs>
-          {/* Card Body */}
-          <rect
-            x="15"
-            y="20"
-            width="170"
-            height="240"
-            rx="16"
-            fill="url(#badgeBg)"
-            filter="url(#badgeShadow)"
-            stroke="rgba(255,255,255,0.3)"
-            strokeWidth="2"
+      {/* 2. MASSIVE HERO BIG PRODUCT VISUAL & SPECS DISPLAY */}
+      <div className="showcase-content-grid" key={activeProduct.id}>
+        {/* Large Prominent 3D Product Visual Stage */}
+        <div className="showcase-hero-image-wrap">
+          <div
+            className="showcase-image-aurora"
+            style={{ background: `radial-gradient(circle, ${activeProduct.accentColor}45 0%, transparent 70%)` }}
           />
-          {/* Lanyard Hole Clip */}
-          <rect x="85" y="32" width="30" height="8" rx="4" fill="#1e1b4b" opacity="0.8" />
-          {/* Photo Avatar Placeholder */}
-          <rect
-            x="60"
-            y="55"
-            width="80"
-            height="85"
-            rx="10"
-            fill="rgba(255,255,255,0.2)"
-            stroke="rgba(255,255,255,0.4)"
+          <img
+            key={activeProduct.image}
+            src={activeProduct.image}
+            alt={activeProduct.title}
+            className="showcase-hero-image"
           />
-          <circle cx="100" cy="85" r="22" fill="#ffffff" opacity="0.8" />
-          <path d="M 75 130 C 75 112 125 112 125 130 Z" fill="#ffffff" opacity="0.8" />
-          {/* Text Lines */}
-          <rect x="50" y="155" width="100" height="10" rx="5" fill="#ffffff" opacity="0.9" />
-          <rect x="65" y="173" width="70" height="7" rx="3.5" fill="#a78bfa" />
-          {/* Barcode Strip */}
-          <rect x="40" y="200" width="120" height="22" rx="4" fill="rgba(255,255,255,0.95)" />
-          <line x1="50" y1="206" x2="50" y2="216" stroke="#0f172a" strokeWidth="3" />
-          <line x1="57" y1="206" x2="57" y2="216" stroke="#0f172a" strokeWidth="1.5" />
-          <line x1="64" y1="206" x2="64" y2="216" stroke="#0f172a" strokeWidth="4" />
-          <line x1="73" y1="206" x2="73" y2="216" stroke="#0f172a" strokeWidth="2" />
-          <line x1="81" y1="206" x2="81" y2="216" stroke="#0f172a" strokeWidth="1" />
-          <line x1="88" y1="206" x2="88" y2="216" stroke="#0f172a" strokeWidth="3.5" />
-          <line x1="97" y1="206" x2="97" y2="216" stroke="#0f172a" strokeWidth="2" />
-          <line x1="105" y1="206" x2="105" y2="216" stroke="#0f172a" strokeWidth="4" />
-          <line x1="114" y1="206" x2="114" y2="216" stroke="#0f172a" strokeWidth="1.5" />
-          <line x1="122" y1="206" x2="122" y2="216" stroke="#0f172a" strokeWidth="3" />
-          <line x1="130" y1="206" x2="130" y2="216" stroke="#0f172a" strokeWidth="2" />
-          <line x1="140" y1="206" x2="140" y2="216" stroke="#0f172a" strokeWidth="4" />
-          <line x1="148" y1="206" x2="148" y2="216" stroke="#0f172a" strokeWidth="2" />
-        </svg>
+          <div className="showcase-image-reflection" />
+        </div>
+
+        {/* Product Details & Feature List */}
+        <div className="showcase-details-pane">
+          <div className="showcase-category-tag" style={{ color: activeProduct.accentColor }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: activeProduct.accentColor,
+                boxShadow: `0 0 12px ${activeProduct.accentColor}`,
+                marginRight: '8px',
+              }}
+            />
+            {activeProduct.category}
+          </div>
+
+          <h2 className="showcase-product-title">{activeProduct.title}</h2>
+          <p className="showcase-product-tagline">{activeProduct.tagline}</p>
+
+          <div className="showcase-spec-pill">
+            <Zap size={14} color={activeProduct.accentColor} />
+            <span>{activeProduct.stats}</span>
+          </div>
+
+          {/* Bullet Points */}
+          <div className="showcase-bullets-list">
+            {activeProduct.bullets.map((bullet, i) => (
+              <div key={i} className="showcase-bullet-row">
+                <CheckCircle2 size={16} color="#34d399" className="bullet-check-icon" />
+                <span>{bullet}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </>
+
+      {/* 3. CENTER BADGE + 3-DOTS AUTO-SCROLLING CAROUSEL CONTROLS */}
+      <div className="showcase-carousel-control-bar">
+        {/* Left Dot / Prev */}
+        <button
+          type="button"
+          className="carousel-side-dot-btn"
+          onClick={handlePrev}
+          aria-label="Previous Product"
+        >
+          <span className="carousel-dot-circle" />
+        </button>
+
+        {/* Center Active Product Badge with Live Progress Fill */}
+        <div
+          className="carousel-center-badge"
+          style={{ borderColor: `${activeProduct.accentColor}77` }}
+        >
+          <div
+            className="carousel-active-fill"
+            style={{
+              width: `${progress}%`,
+              backgroundColor: activeProduct.accentColor,
+              boxShadow: `0 0 12px ${activeProduct.accentColor}`,
+            }}
+          />
+          <span className="carousel-center-label">
+            <Sparkles size={13} color={activeProduct.accentColor} />
+            <span>{activeProduct.name}</span>
+          </span>
+        </div>
+
+        {/* Right Dot / Next */}
+        <button
+          type="button"
+          className="carousel-side-dot-btn"
+          onClick={handleNext}
+          aria-label="Next Product"
+        >
+          <span className="carousel-dot-circle" />
+        </button>
+      </div>
+
+      {/* 4. EDGE-TO-EDGE 100% FULL-WIDTH OPEN TRUST & TELEMETRY STRIP */}
+      <div className="showcase-stats-strip-fullwidth">
+        <div className="stat-unit-full">
+          <div className="stat-value">150,000+</div>
+          <div className="stat-label">ID Cards Printed</div>
+        </div>
+        <div className="stat-bar" />
+        <div className="stat-unit-full">
+          <div className="stat-value">250+</div>
+          <div className="stat-label">Institutional Clients</div>
+        </div>
+        <div className="stat-bar" />
+        <div className="stat-unit-full">
+          <div className="stat-value">1-Click</div>
+          <div className="stat-label">Excel Bulk Sync</div>
+        </div>
+        <div className="stat-bar" />
+        <div className="stat-unit-full">
+          <div className="stat-value">99.9%</div>
+          <div className="stat-label">Print Uptime</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Main Auth Split-Layout (Open, Full-Height, Boxless Right Panel)
+───────────────────────────────────────────────────────────── */
 export default function AuthLayout({ children }) {
   return (
-    <div className="auth-wrapper">
-      {/* Radiant Glowing Background Core */}
-      <div className="auth-ambient-glow" />
+    <div className="auth-fullscreen-layout">
+      {/* ── LEFT SIDE: Hero Product Advertisement Showcase ── */}
+      <aside className="auth-left-column">
+        <ProductShowcase />
+      </aside>
 
-      {/* Floating 3D Product Background Graphics (ID Card, Lanyard, Visiting Cards, Diary) */}
-      <Auth3DProducts />
+      {/* ── RIGHT SIDE: Full-Height Seamless Auth Form (Boxless) ── */}
+      <main className="auth-right-column">
+        <div className="auth-column-inner">
+          {/* Brand Header with Clean Logo */}
+          <div className="auth-brand-masthead">
+            <img
+              src="/cardflow_logo_brand.png"
+              alt="CardFlow"
+              className="auth-masthead-logo"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+            <span className="auth-masthead-sub">Enterprise ID Card & Printing Workspace</span>
+          </div>
 
-      {/* Centered Single Frosted Glass Form Card */}
-      <div className="auth-card">
-        {/* Brand Logo Header (Using cardflow_logo_brand.png directly as in sidebar) */}
-        <div className="auth-header">
-          <img
-            src="/cardflow_logo_brand.png"
-            alt="CardFlow"
-            style={{
-              maxHeight: '48px',
-              maxWidth: '220px',
-              width: '100%',
-              objectFit: 'contain',
-              margin: '0 auto 8px',
-              display: 'block',
-              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.35))',
-            }}
-          />
+          {/* Clean Auth Form Body (Spacious & Centered) */}
+          <div className="auth-form-body">{children}</div>
+
+          {/* Footer Security Badge */}
+          <div className="auth-column-footer">
+            <div className="auth-security-notice">
+              <Shield size={13} color="#34d399" />
+              <span>256-Bit SSL Encrypted Connection</span>
+            </div>
+            <div className="auth-copyright-text">CardFlow Enterprise Suite • v2.5.0</div>
+          </div>
         </div>
-
-        {/* Child View Form */}
-        {children}
-      </div>
+      </main>
     </div>
   );
 }

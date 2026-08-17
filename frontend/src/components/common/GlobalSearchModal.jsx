@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Command } from 'cmdk';
 import { Building, Table2 } from 'lucide-react';
-import { clientApi } from '../../services/api';
+import { clientApi, schemaApi } from '../../services/api';
 
 // Styles — visually identical to the original modal
 const S = {
@@ -111,47 +111,49 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
     const timer = setTimeout(async () => {
       let combined = [];
       try {
-        const data = await clientApi.getActive({ search: query, page_size: 10 });
-        const list = Array.isArray(data?.clients)
-          ? data.clients
-          : Array.isArray(data?.results)
-            ? data.results
-            : Array.isArray(data)
-              ? data
-              : [];
-        list.forEach((c) =>
-          combined.push({
-            type: 'Organisation',
-            title: c.name || 'Organisation',
-            subtitle: `${c.email || ''} • ${c.phone || ''} (${c.status || 'active'})`,
-          })
-        );
-      } catch {}
-      try {
-        const local = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-        local
-          .filter((c) => c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
-          .forEach((c) => {
-            if (!combined.some((x) => x.title === c.name))
-              combined.push({
-                type: 'Organisation',
-                title: c.name,
-                subtitle: `${c.email || ''} • ${c.phone || ''} (active)`,
-              });
-          });
-      } catch {}
-      try {
-        const localTbls = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-        localTbls
-          .filter((t) => t.name?.toLowerCase().includes(q) || t.client_name?.toLowerCase().includes(q))
-          .forEach((t) =>
+        const [clientData, schemaData] = await Promise.allSettled([
+          clientApi.getActive({ search: query, page_size: 10 }),
+          schemaApi.getSchemas({ search: query }),
+        ]);
+
+        if (clientData.status === 'fulfilled' && clientData.value) {
+          const list = Array.isArray(clientData.value?.clients)
+            ? clientData.value.clients
+            : Array.isArray(clientData.value?.results)
+              ? clientData.value.results
+              : Array.isArray(clientData.value)
+                ? clientData.value
+                : [];
+          list.forEach((c) =>
             combined.push({
-              type: 'Table',
-              title: t.name,
-              subtitle: `${t.client_name || 'Organisation'} • ${t.fields?.length || 0} fields`,
+              type: 'Organisation',
+              title: c.name || 'Organisation',
+              subtitle: `${c.email || ''} • ${c.phone || ''} (${c.status || 'active'})`,
             })
           );
-      } catch {}
+        }
+
+        if (schemaData.status === 'fulfilled' && schemaData.value) {
+          const tList = Array.isArray(schemaData.value?.tables)
+            ? schemaData.value.tables
+            : Array.isArray(schemaData.value?.results)
+              ? schemaData.value.results
+              : Array.isArray(schemaData.value)
+                ? schemaData.value
+                : [];
+          tList
+            .filter((t) => t.name?.toLowerCase().includes(q) || t.client_name?.toLowerCase().includes(q))
+            .forEach((t) =>
+              combined.push({
+                type: 'Table',
+                title: t.name,
+                subtitle: `${t.client_name || t.organisation_name || 'Organisation'} • ${t.fields?.length || 0} fields`,
+              })
+            );
+        }
+      } catch (err) {
+        console.warn('Global search error:', err);
+      }
       setResults(combined.slice(0, 15));
       setLoading(false);
     }, 250);

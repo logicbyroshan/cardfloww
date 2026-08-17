@@ -45,6 +45,29 @@ def _photographer_assignment_snapshot(photographer_obj):
 
 
 
+@require_http_methods(["GET"])
+@api_require_photographer_manager
+def api_photographer_list(request):
+    """API endpoint to list photographers with search and status filtering"""
+    try:
+        search = request.GET.get('search', '').strip()
+        status = request.GET.get('status', '').strip()
+        page = request.GET.get('page', 1)
+        page_size = request.GET.get('page_size', 25)
+
+        result = PhotographerService.list_photographers(
+            user=request.user,
+            search=search,
+            status=status,
+            page=page,
+            page_size=page_size
+        )
+        return JsonResponse(result.to_response_dict(), status=200 if result.success else 400)
+    except Exception as e:
+        logger.exception("Photographer API list error: %s", e)
+        return JsonResponse({'success': False, 'message': 'An error occurred'}, status=400)
+
+
 @require_http_methods(["POST"])
 @api_require_photographer_manager
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='photographer_create')

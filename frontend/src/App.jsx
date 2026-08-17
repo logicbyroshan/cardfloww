@@ -204,7 +204,10 @@ function parsePathToRoute(pathname) {
     '/reprints': { tab: 'reprints', idcardActionsState: null },
     '/organisations': { tab: 'organisations', idcardActionsState: null },
     '/organisation': { tab: 'organisations', idcardActionsState: null },
-    '/clients': { tab: 'organisations', idcardActionsState: null },
+    '/managers': { tab: 'clients', idcardActionsState: null },
+    '/accounts': { tab: 'clients', idcardActionsState: null },
+    '/client-accounts': { tab: 'clients', idcardActionsState: null },
+    '/clients': { tab: 'clients', idcardActionsState: null },
     '/operators': { tab: 'operators', idcardActionsState: null },
     '/operator': { tab: 'operators', idcardActionsState: null },
     '/staff': { tab: 'operators', idcardActionsState: null },
@@ -281,7 +284,7 @@ export default function App() {
           tables: '/tables',
           reprints: '/reprints',
           organisations: '/organisations',
-          clients: '/organisations',
+          clients: '/managers',
           operators: '/operators',
           staff: '/operators',
           assistants: '/assistants',
@@ -473,6 +476,11 @@ export default function App() {
     );
   }
 
+  // ── Mobile Screen Boundary Gate (< 1000px) ──────────────────────────────
+  if (windowWidth < 1000 && !forceDesktop) {
+    return <MobileAppFallback onForceDesktop={() => setForceDesktop(true)} />;
+  }
+
   // ── Auth Flow ─────────────────────────────────────────────────────────────────
   if (bootState === BOOT.UNAUTH) {
     return (
@@ -488,11 +496,6 @@ export default function App() {
         }}
       />
     );
-  }
-
-  // ── Mobile Screen Boundary Gate (< 1000px) ──────────────────────────────
-  if (windowWidth < 1000 && !forceDesktop) {
-    return <MobileAppFallback onForceDesktop={() => setForceDesktop(true)} />;
   }
 
   const normRole = String(userRole || '').toLowerCase();
@@ -803,7 +806,11 @@ export default function App() {
           addToast={addToast}
         />
       </ErrorBoundary>
-      <CardDownloadsModal isOpen={showDownloadsModal} onClose={() => setShowDownloadsModal(false)} />
+      <CardDownloadsModal
+        isOpen={showDownloadsModal}
+        onClose={() => setShowDownloadsModal(false)}
+        addToast={addToast}
+      />
 
       <GlobalSearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
       <ConfirmDeleteModal

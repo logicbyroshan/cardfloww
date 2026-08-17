@@ -24,6 +24,8 @@ const TYPE_TABS = ['All', 'Prime Manager', 'Super Manager', 'Guest Manager'];
 export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNavigate, onOpenDeleteModal }) {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [allOrganisations, setAllOrganisations] = useState([]);
+  const [selectedOrgId, setSelectedOrgId] = useState('all');
   const [meta, setMeta] = useState({
     max_super_managers: 4,
     super_manager_count: 0,
@@ -36,10 +38,24 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
   const [typeTab, setTypeTab] = useState('All');
   const [selected, setSelected] = useState(null);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await clientApi.getAllForAssignment?.();
+        const list = data?.clients || data?.results || (Array.isArray(data) ? data : []);
+        setAllOrganisations(list);
+        if (list.length > 0 && selectedOrgId === 'all') {
+          setSelectedOrgId(String(list[0].id));
+        }
+      } catch (_) {}
+    })();
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await managerApi.list();
+      const params = selectedOrgId && selectedOrgId !== 'all' ? { organisation_id: selectedOrgId } : {};
+      const data = await managerApi.list(params);
       if (data && data.success) {
         setAccounts(data.managers || []);
         setMeta({
@@ -49,24 +65,15 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
           organisation_name: data.organisation_name ?? '',
         });
       } else {
-        // Fallback to active clients if manager endpoint returned alternative format
-        const clientsData = await clientApi.getActive({ page_size: 200 });
-        const list = clientsData?.clients || clientsData?.results || (Array.isArray(clientsData) ? clientsData : []);
-        setAccounts(list);
-      }
-    } catch (err) {
-      console.warn('Manager API fetch failed, falling back:', err);
-      try {
-        const clientsData = await clientApi.getActive({ page_size: 200 });
-        const list = clientsData?.clients || clientsData?.results || (Array.isArray(clientsData) ? clientsData : []);
-        setAccounts(list);
-      } catch {
         setAccounts([]);
       }
+    } catch (err) {
+      console.error('Manager API fetch failed:', err);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedOrgId]);
 
   useEffect(() => {
     load();
@@ -239,13 +246,33 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
             style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }}
           />
 
+          {/* Organisation Scope Selector */}
+          {allOrganisations.length > 0 && (
+            <>
+              <CustomSelect
+                value={selectedOrgId}
+                onChange={(val) => setSelectedOrgId(val)}
+                options={allOrganisations.map((org) => ({
+                  value: String(org.id),
+                  label: org.name || org.school_name || `Org #${org.id}`,
+                }))}
+                height="28px"
+                style={{ width: '220px' }}
+              />
+              <div
+                className="action-divider"
+                style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }}
+              />
+            </>
+          )}
+
           {/* Type Filter */}
           <CustomSelect
             value={typeTab}
             onChange={(val) => setTypeTab(val)}
             options={TYPE_TABS.map((t) => ({ value: t, label: t }))}
             height="28px"
-            style={{ width: '190px' }}
+            style={{ width: '170px' }}
           />
 
           <div

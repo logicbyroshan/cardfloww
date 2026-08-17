@@ -69,9 +69,9 @@ def api_manage_temp_passwords_list(request):
                 if not user.get_full_name():
                     full_name = org.name
         elif user.role == 'assistant':
-            assistant_profile = Assistant.objects.select_related('organisation', 'client').filter(user=user).first()
+            assistant_profile = Assistant.objects.select_related('organisation').filter(user=user).first()
             if assistant_profile:
-                client_obj = assistant_profile.organisation or assistant_profile.client
+                client_obj = assistant_profile.organisation
                 if client_obj:
                     org_name = client_obj.name
         elif user.role == 'operator':

@@ -31,7 +31,7 @@ import {
 import WatermarkLogo from '../common/WatermarkLogo';
 import { SkeletonTableRows } from '../common/Skeleton';
 import CustomSelect from '../common/CustomSelect';
-import { clientApi } from '../../services/api';
+import { clientApi, managerApi, staffApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
 
@@ -66,18 +66,8 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
     );
   }, [clients, selected]);
 
-  const getStoredClients = useCallback(() => {
-    try {
-      const stored = localStorage.getItem('cf_custom_clients');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
   const load = useCallback(async () => {
     setLoading(true);
-    const localItems = getStoredClients();
     try {
       const data = await clientApi.getActive({
         page,
@@ -92,74 +82,36 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
           : Array.isArray(data)
             ? data
             : [];
-      // The DB list is primary and contains authoritative table counts, assistant counts, and details
-      const combined = [...list];
-      localItems.forEach((item) => {
-        if (
-          !combined.some(
-            (c) =>
-              String(c.id) === String(item.id) ||
-              (c.email && item.email && c.email.toLowerCase() === item.email.toLowerCase())
-          )
-        ) {
-          combined.push(item);
-        }
-      });
-      setClients(combined);
-      setTotal(data?.total || combined.length);
+      setClients(list);
+      setTotal(data?.total || data?.count || list.length);
     } catch (err) {
-      console.warn('Load client directory warning, using stored clients:', err);
-      setClients(localItems);
-      setTotal(localItems.length);
+      console.error('Load client directory error:', err);
+      setClients([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusTab, pageSize, getStoredClients]);
+  }, [page, search, statusTab, pageSize]);
 
   useEffect(() => {
     load();
     window.__reloadClientDirectory = load;
-    window.__addClientItem = (item) => {
-      if (item) {
-        try {
-          const existing = getStoredClients();
-          const updated = [item, ...existing.filter((x) => String(x.id) !== String(item.id) && x.email !== item.email)];
-          localStorage.setItem('cf_custom_clients', JSON.stringify(updated));
-        } catch (e) {
-          console.warn('Save client local error:', e);
-        }
-        load();
-      }
-    };
     return () => {
       if (window.__reloadClientDirectory === load) delete window.__reloadClientDirectory;
-      delete window.__addClientItem;
     };
-  }, [load, getStoredClients]);
+  }, [load]);
 
   const selClient = clients.find((c) => c.id === selected);
 
   const handleToggleStatus = async () => {
     if (!selected) return;
-    try {
-      const existing = getStoredClients();
-      const updated = existing.map((x) => {
-        if (String(x.id) === String(selected)) {
-          const newActive = !(x.is_active || x.status === 'active');
-          return { ...x, is_active: newActive, status: newActive ? 'active' : 'inactive' };
-        }
-        return x;
-      });
-      localStorage.setItem('cf_custom_clients', JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Update local client status error:', e);
-    }
 
     try {
       await clientApi.toggleStatus(selected);
       addToast?.(`Status toggled for ${selClient?.name || 'organisation'}`, 'success');
-    } catch {
-      addToast?.(`Status toggled for ${selClient?.name || 'organisation'}`, 'success');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to toggle status';
+      addToast?.(msg, 'error');
     } finally {
       load();
       window.__reloadDashboard?.();
@@ -174,18 +126,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
         itemDescription: `organisation "${selClient?.name || ''}"`,
         onConfirm: async () => {
           try {
-            const existing = getStoredClients();
-            const updated = existing.filter((x) => String(x.id) !== String(selected));
-            localStorage.setItem('cf_custom_clients', JSON.stringify(updated));
-          } catch (e) {
-            console.warn('Delete local client error:', e);
-          }
-
-          try {
             await clientApi.deleteClient(selected);
             addToast?.(`Organisation "${selClient?.name || ''}" deleted`, 'success');
-          } catch {
-            addToast?.(`Organisation "${selClient?.name || ''}" deleted`, 'success');
+          } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || 'Failed to delete organisation';
+            addToast?.(msg, 'error');
           } finally {
             setSelected(null);
             load();
@@ -200,10 +145,13 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
   const [showAssistantsDrawer, setShowAssistantsDrawer] = useState(false);
   const [editingManager, setEditingManager] = useState(null); // null | 'new' | managerObj
   const [editingAssistant, setEditingAssistant] = useState(null); // null | 'new' | assistantObj
+  const [orgManagers, setOrgManagers] = useState([]);
+  const [orgAssistants, setOrgAssistants] = useState([]);
+  const [drawerLoading, setDrawerLoading] = useState(false);
 
   const getManagerCount = useCallback((org) => {
     if (!org) return 1;
-    return org.managers_count ?? org.manager_count ?? (org.user_id ? 1 : 1);
+    return org.managers_count ?? org.manager_count ?? 1;
   }, []);
 
   const getAssistantCount = useCallback((org) => {
@@ -211,150 +159,80 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
     return org.assistants_count ?? org.assistant_count ?? 0;
   }, []);
 
-  const getOrgManagers = useCallback(() => {
-    if (!selClient) return [];
+  const loadOrgManagers = useCallback(async (org) => {
+    if (!org?.id) return;
+    setDrawerLoading(true);
     try {
-      const customMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
-      const derivedUsername =
-        selClient.username ||
-        selClient.user?.username ||
-        (selClient.email ? selClient.email.split('@')[0] : '') ||
-        (selClient.name ? selClient.name.toLowerCase().replace(/[^a-z0-9]/g, '') : '');
-      const autoPrimary = {
-        id: `mgr_${selClient.id}`,
-        name: selClient.name,
-        username: derivedUsername,
-        email: selClient.email,
-        phone: selClient.phone,
-        client_type: 'primary',
-        is_default: true,
-        organisation: { id: selClient.id, name: selClient.name },
-        school_name: selClient.name,
-        status: selClient.status || 'active',
-        is_active: selClient.is_active !== false,
-        created_at: selClient.created_at || new Date().toISOString(),
-        assigned_tables: ['All Tables (Default Owner)'],
-      };
-      const orgSpecific = customMgrs.filter(
-        (m) =>
-          String(m.organisation_id) === String(selClient.id) ||
-          m.school_name === selClient.name ||
-          String(m.organisation?.id) === String(selClient.id)
-      );
-      const result = [autoPrimary];
-      orgSpecific.forEach((m) => {
-        if (!result.some((r) => String(r.id) === String(m.id) || r.email === m.email)) {
-          result.push({ ...m, assigned_tables: m.assigned_tables || ['All Tables'] });
-        }
-      });
-      return result;
+      const data = await managerApi.list({ organisation_id: org.id });
+      setOrgManagers(data?.managers || []);
     } catch {
-      return [];
+      setOrgManagers([]);
+    } finally {
+      setDrawerLoading(false);
     }
-  }, [selClient]);
+  }, []);
 
-  const getOrgAssistants = useCallback(() => {
-    if (!selClient) return [];
+  const loadOrgAssistants = useCallback(async (org) => {
+    if (!org?.id) return;
+    setDrawerLoading(true);
     try {
-      const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
-      const autoPrimaryAst = {
-        id: `ast_${selClient.id}`,
-        name: `${selClient.name} (Primary Assistant)`,
-        username: selClient.username
-          ? `ast_${selClient.username}`
-          : selClient.email
-            ? `ast_${selClient.email.split('@')[0]}`
-            : `ast_${selClient.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-        email: selClient.email,
-        phone: selClient.phone,
-        designation: 'Assistant',
-        role: 'assistant',
-        client: selClient.id,
-        organisation_id: selClient.id,
-        client_name: selClient.name,
-        school_name: selClient.name,
-        status: selClient.status || 'active',
-        is_active: selClient.is_active !== false,
-        is_default: true,
-        created_at: selClient.created_at || new Date().toISOString(),
-      };
-      const orgSpecific = staffList.filter(
-        (s) =>
-          (s.designation === 'Assistant' || s.role === 'assistant') &&
-          (String(s.client) === String(selClient.id) ||
-            String(s.organisation_id) === String(selClient.id) ||
-            s.client_name === selClient.name ||
-            s.school_name === selClient.name)
-      );
-      const result = [autoPrimaryAst];
-      orgSpecific.forEach((a) => {
-        if (!result.some((r) => String(r.id) === String(a.id) || r.email === a.email)) {
-          result.push(a);
-        }
-      });
-      return result;
+      const data = await staffApi.list({ client_id: org.id, role: 'assistant' });
+      setOrgAssistants(data?.staff || data?.results || (Array.isArray(data) ? data : []));
     } catch {
-      return [];
+      setOrgAssistants([]);
+    } finally {
+      setDrawerLoading(false);
     }
-  }, [selClient]);
+  }, []);
 
-  const orgManagers = getOrgManagers();
-  const orgAssistants = getOrgAssistants();
+  const handleOpenManagersDrawer = (client) => {
+    setSelected(client.id);
+    loadOrgManagers(client);
+    setShowManagersDrawer(true);
+  };
 
-  const handleSaveManagerInline = (mgrData) => {
+  const handleOpenAssistantsDrawer = (client) => {
+    setSelected(client.id);
+    loadOrgAssistants(client);
+    setShowAssistantsDrawer(true);
+  };
+
+  const handleSaveManagerInline = async (mgrData) => {
     try {
-      const customMgrs = JSON.parse(localStorage.getItem('cf_custom_managers') || '[]');
       if (mgrData.id && !String(mgrData.id).startsWith('mgr_')) {
-        const idx = customMgrs.findIndex((m) => m.id === mgrData.id);
-        if (idx >= 0) customMgrs[idx] = { ...customMgrs[idx], ...mgrData };
-        else customMgrs.push(mgrData);
+        await managerApi.update(mgrData.id, mgrData);
       } else {
-        const newMgr = {
-          id: Date.now(),
+        await managerApi.create({
           ...mgrData,
-          organisation_id: selClient.id,
-          organisation: { id: selClient.id, name: selClient.name },
-          school_name: selClient.name,
-          client_type: 'secondary',
-          is_default: false,
-          created_at: new Date().toISOString(),
-        };
-        customMgrs.push(newMgr);
+          organisation_id: selClient?.id,
+        });
       }
-      localStorage.setItem('cf_custom_managers', JSON.stringify(customMgrs));
       addToast?.(`Manager ${mgrData.name || ''} saved successfully!`, 'success');
       setEditingManager(null);
-    } catch {
-      addToast?.('Failed to save manager', 'error');
+      if (selClient) loadOrgManagers(selClient);
+    } catch (err) {
+      console.error('Save manager error:', err);
+      addToast?.(err?.response?.data?.message || 'Failed to save manager', 'error');
     }
   };
 
-  const handleSaveAssistantInline = (astData) => {
+  const handleSaveAssistantInline = async (astData) => {
     try {
-      const staffList = JSON.parse(localStorage.getItem('cf_custom_staff') || '[]');
       if (astData.id) {
-        const idx = staffList.findIndex((s) => s.id === astData.id);
-        if (idx >= 0) staffList[idx] = { ...staffList[idx], ...astData };
-        else staffList.push(astData);
+        await staffApi.update(astData.id, astData);
       } else {
-        const newAst = {
-          id: Date.now(),
+        await staffApi.create({
           ...astData,
-          designation: 'Assistant',
+          client: selClient?.id,
           role: 'assistant',
-          client: selClient.id,
-          organisation_id: selClient.id,
-          client_name: selClient.name,
-          school_name: selClient.name,
-          created_at: new Date().toISOString(),
-        };
-        staffList.push(newAst);
+        });
       }
-      localStorage.setItem('cf_custom_staff', JSON.stringify(staffList));
       addToast?.(`Assistant ${astData.name || ''} saved successfully!`, 'success');
       setEditingAssistant(null);
-    } catch {
-      addToast?.('Failed to save assistant', 'error');
+      if (selClient) loadOrgAssistants(selClient);
+    } catch (err) {
+      console.error('Save assistant error:', err);
+      addToast?.(err?.response?.data?.message || 'Failed to save assistant', 'error');
     }
   };
 

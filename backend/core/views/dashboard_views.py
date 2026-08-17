@@ -383,17 +383,21 @@ def api_dashboard_card_stats(request):
             card_qs = card_qs.filter(table__organisation_id__in=accessible_ids)
 
         agg = card_qs.aggregate(
-            total=Count('id', filter=Q(status__in=['pending', 'verified', 'approved', 'download'])),
+            total=Count('id'),
             pending=Count('id', filter=Q(status='pending')),
             verified=Count('id', filter=Q(status='verified')),
             approved=Count('id', filter=Q(status='approved')),
             downloaded=Count('id', filter=Q(status='download')),
             pool=Count('id', filter=Q(status='pool')),
+            reprint=Count('id', filter=Q(status='reprint')),
         )
 
         # User/org counts — scoped by access level
         try:
             from ..models import User as CoreUser
+            from operators.models import Operator
+            from assistants.models import Assistant
+            from core.models import Photographer
             if is_scoped:
                 total_orgs = len(accessible_ids)
                 total_operators = 0
@@ -401,9 +405,9 @@ def api_dashboard_card_stats(request):
                 total_photographers = 0
             else:
                 total_orgs = Organisation.objects.count()
-                total_operators = CoreUser.objects.filter(role__in=('operator', 'manager'), is_active=True).count()
-                total_assistants = CoreUser.objects.filter(role='assistant', is_active=True).count() if hasattr(CoreUser, 'role') else 0
-                total_photographers = CoreUser.objects.filter(role='photographer', is_active=True).count()
+                total_operators = Operator.objects.filter(user__is_active=True).count() or CoreUser.objects.filter(role__in=('operator', 'manager'), is_active=True).count()
+                total_assistants = Assistant.objects.filter(user__is_active=True).count() or CoreUser.objects.filter(role__in=('assistant', 'client_staff'), is_active=True).count()
+                total_photographers = Photographer.objects.filter(user__is_active=True).count() or CoreUser.objects.filter(role='photographer', is_active=True).count()
         except Exception:
             total_orgs = 0
             total_operators = 0
@@ -417,32 +421,47 @@ def api_dashboard_card_stats(request):
             approved_today=Count('id', filter=Q(status='approved')),
             printed_today=Count('id', filter=Q(status='download')),
             pool_today=Count('id', filter=Q(status='pool')),
+            reprint_today=Count('id', filter=Q(status='reprint')),
             total_today=Count('id'),
         )
 
+        p_cnt = agg.get('pending', 0) or 0
+        v_cnt = agg.get('verified', 0) or 0
+        a_cnt = agg.get('approved', 0) or 0
+        d_cnt = agg.get('downloaded', 0) or 0
+        pool_cnt = agg.get('pool', 0) or 0
+        r_cnt = agg.get('reprint', 0) or 0
+        tot_cnt = agg.get('total', 0) or (p_cnt + v_cnt + a_cnt + d_cnt + pool_cnt + r_cnt)
+
         stats = {
-            'total': agg.get('total', 0),
-            'pending': agg.get('pending', 0),
-            'verified': agg.get('verified', 0),
-            'approved': agg.get('approved', 0),
-            'downloaded': agg.get('downloaded', 0),
-            'pool': agg.get('pool', 0),
-            # Card stat aliases used by StatsGrid
-            'total_id_cards': agg.get('total', 0),
-            'pending_cards': agg.get('pending', 0),
-            'verified_cards': agg.get('verified', 0),
-            'approved_cards': agg.get('approved', 0),
-            'download_cards': agg.get('downloaded', 0),
-            'pool_cards': agg.get('pool', 0),
+            'total': tot_cnt,
+            'total_cards': tot_cnt,
+            'total_id_cards': tot_cnt,
+            'pending': p_cnt,
+            'pending_cards': p_cnt,
+            'verified': v_cnt,
+            'verified_cards': v_cnt,
+            'approved': a_cnt,
+            'approved_cards': a_cnt,
+            'download': d_cnt,
+            'downloaded': d_cnt,
+            'download_cards': d_cnt,
+            'printed': d_cnt,
+            'pool': pool_cnt,
+            'pool_cards': pool_cnt,
+            'deleted': pool_cnt,
+            'reprint': r_cnt,
+            'reprint_cards': r_cnt,
             # Daily Growth metrics
             'growth': {
-                'pending': today_agg.get('pending_today', 0),
-                'verified': today_agg.get('verified_today', 0),
-                'approved': today_agg.get('approved_today', 0),
-                'printed': today_agg.get('printed_today', 0),
+                'pending': today_agg.get('pending_today', 0) or 0,
+                'verified': today_agg.get('verified_today', 0) or 0,
+                'approved': today_agg.get('approved_today', 0) or 0,
+                'printed': today_agg.get('printed_today', 0) or 0,
                 'requested': 0,
-                'deleted': today_agg.get('pool_today', 0),
-                'total': today_agg.get('total_today', 0),
+                'deleted': today_agg.get('pool_today', 0) or 0,
+                'reprint': today_agg.get('reprint_today', 0) or 0,
+                'total': today_agg.get('total_today', 0) or 0,
             },
             # Users Overview counts
             'total_organizations': total_orgs,
@@ -529,27 +548,42 @@ def api_recent_client_updates(request):
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS verified, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS approved, '
                 '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS downloaded, '
-                '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS pool '
+                '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS pool, '
+                '  COALESCE(SUM(CASE WHEN c.status = %s THEN 1 ELSE 0 END), 0) AS reprint '
                 'FROM core_idcardtable t '
                 'LEFT JOIN core_idcard c ON c.table_id = t.id '
                 f'WHERE COALESCE(t.organisation_id, t.client_id) IN ({placeholders}) '
                 'GROUP BY t.id, t.name, COALESCE(t.organisation_id, t.client_id) '
                 'ORDER BY t.id ASC'
             )
-            sql_params = ['pending', 'verified', 'approved', 'download', 'pool', *client_ids]
+            sql_params = ['pending', 'verified', 'approved', 'download', 'pool', 'reprint', *client_ids]
 
             with connection.cursor() as cursor:
                 cursor.execute(sql, sql_params)
-                for table_id, table_name, client_id, pending, verified, approved, downloaded, pool in cursor.fetchall():
+                for table_id, table_name, client_id, pending, verified, approved, downloaded, pool, reprint in cursor.fetchall():
                     cid = int(client_id)
+                    p = int(pending or 0)
+                    v = int(verified or 0)
+                    a = int(approved or 0)
+                    d = int(downloaded or 0)
+                    pl = int(pool or 0)
+                    rp = int(reprint or 0)
+                    tot = p + v + a + d + pl + rp
+
                     table_payload = {
                         'id': int(table_id),
                         'name': table_name,
-                        'pending': int(pending or 0),
-                        'verified': int(verified or 0),
-                        'approved': int(approved or 0),
-                        'downloaded': int(downloaded or 0),
-                        'pool': int(pool or 0),
+                        'pending': p,
+                        'verified': v,
+                        'approved': a,
+                        'download': d,
+                        'downloaded': d,
+                        'printed': d,
+                        'pool': pl,
+                        'deleted': pl,
+                        'reprint': rp,
+                        'total': tot,
+                        'total_cards': tot,
                     }
 
                     if cid not in tables_map:
@@ -561,14 +595,26 @@ def api_recent_client_updates(request):
                             'pending': 0,
                             'verified': 0,
                             'approved': 0,
+                            'download': 0,
                             'downloaded': 0,
+                            'printed': 0,
                             'pool': 0,
+                            'deleted': 0,
+                            'reprint': 0,
+                            'total': 0,
+                            'total_cards': 0,
                         }
-                    client_counts_map[cid]['pending'] += table_payload['pending']
-                    client_counts_map[cid]['verified'] += table_payload['verified']
-                    client_counts_map[cid]['approved'] += table_payload['approved']
-                    client_counts_map[cid]['downloaded'] += table_payload['downloaded']
-                    client_counts_map[cid]['pool'] += table_payload['pool']
+                    client_counts_map[cid]['pending'] += p
+                    client_counts_map[cid]['verified'] += v
+                    client_counts_map[cid]['approved'] += a
+                    client_counts_map[cid]['download'] += d
+                    client_counts_map[cid]['downloaded'] += d
+                    client_counts_map[cid]['printed'] += d
+                    client_counts_map[cid]['pool'] += pl
+                    client_counts_map[cid]['deleted'] += pl
+                    client_counts_map[cid]['reprint'] += rp
+                    client_counts_map[cid]['total'] += tot
+                    client_counts_map[cid]['total_cards'] += tot
 
                     current_first = first_table_map.get(cid)
                     if current_first is None or int(table_id) < current_first:
@@ -583,6 +629,7 @@ def api_recent_client_updates(request):
                 'id': client_id,
                 'client_id': client_id,
                 'name': client_name,
+                'school_name': client_name,
                 'status': client.get('status') or 'active',
                 'initial': client_name[0].upper() if client_name else 'C',
                 'first_table_id': first_table_map.get(client_id),
@@ -590,8 +637,14 @@ def api_recent_client_updates(request):
                 'pending': cc.get('pending', 0),
                 'verified': cc.get('verified', 0),
                 'approved': cc.get('approved', 0),
+                'download': cc.get('download', 0),
                 'downloaded': cc.get('downloaded', 0),
+                'printed': cc.get('printed', 0),
                 'pool': cc.get('pool', 0),
+                'deleted': cc.get('deleted', 0),
+                'reprint': cc.get('reprint', 0),
+                'total': cc.get('total', 0),
+                'total_cards': cc.get('total_cards', 0),
             })
         cache.set(cache_key, results, 30)
 

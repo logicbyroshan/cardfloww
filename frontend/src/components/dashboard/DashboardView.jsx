@@ -248,58 +248,19 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
 }
 
 function getTableCounts(t) {
-  if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, request: 0, reprint: 0, confirmed: 0 };
-  let pending = t.pending_count ?? t.pending ?? 0;
-  let verified = t.verified_count ?? t.verified ?? 0;
-  let approved = t.approved_count ?? t.approved ?? 0;
-  let download = t.download_count ?? t.downloaded ?? t.download ?? t.printed ?? 0;
-  let pool = t.pool_count ?? t.deleted ?? t.pool ?? 0;
+  if (!t) return { pending: 0, verified: 0, approved: 0, download: 0, pool: 0, request: 0, reprint: 0, confirmed: 0, total: 0 };
+  const pending = t.pending_count ?? t.pending ?? 0;
+  const verified = t.verified_count ?? t.verified ?? 0;
+  const approved = t.approved_count ?? t.approved ?? 0;
+  const download = t.download_count ?? t.downloaded ?? t.download ?? t.printed ?? 0;
+  const pool = t.pool_count ?? t.deleted ?? t.pool ?? 0;
 
-  let reprint = t.reprint_count ?? t.reprint ?? 0;
-  let request = t.reprint_request_count ?? t.reprint_request ?? t.request ?? t.requested ?? 0;
-  let confirmed = t.reprint_confirmed_count ?? t.reprint_confirmed ?? t.confirmed ?? 0;
+  const reprint = t.reprint_count ?? t.reprint ?? 0;
+  const request = t.reprint_request_count ?? t.reprint_request ?? t.request ?? t.requested ?? 0;
+  const confirmed = t.reprint_confirmed_count ?? t.reprint_confirmed ?? t.confirmed ?? 0;
+  const total = pending + verified + approved + download + pool + reprint;
 
-  try {
-    const listByTableId = JSON.parse(localStorage.getItem(`cf_custom_cards_${t.id}`) || '[]');
-    const listByTableName = JSON.parse(localStorage.getItem(`cf_custom_cards_${t.name}`) || '[]');
-    const allCustomCards = JSON.parse(localStorage.getItem('cf_custom_cards') || '[]');
-    const filteredGlobalCards = allCustomCards.filter(
-      (c) => String(c.table_id || c.table) === String(t.id) || String(c.table_name) === String(t.name)
-    );
-
-    const combinedLocal = [...listByTableId, ...listByTableName, ...filteredGlobalCards];
-
-    if (combinedLocal.length > 0) {
-      let lp = 0, lv = 0, la = 0, ld = 0, lpool = 0, lrp = 0, lreq = 0, lconf = 0;
-      const seenIds = new Set();
-      combinedLocal.forEach((c) => {
-        if (!c) return;
-        const cid = c.id || c.card_id || JSON.stringify(c.field_data || c);
-        if (seenIds.has(cid)) return;
-        seenIds.add(cid);
-
-        const st = (c.status || 'pending').toLowerCase();
-        if (st === 'pending') lp++;
-        else if (st === 'verified') lv++;
-        else if (st === 'approved') la++;
-        else if (st === 'download' || st === 'downloaded' || st === 'printed') ld++;
-        else if (st === 'pool' || st === 'deleted') lpool++;
-        else if (st === 'reprint' || st === 'reprinting') lrp++;
-        else if (st === 'request' || st === 'requested') lreq++;
-        else if (st === 'confirmed') lconf++;
-      });
-      pending = Math.max(pending, lp);
-      verified = Math.max(verified, lv);
-      approved = Math.max(approved, la);
-      download = Math.max(download, ld);
-      pool = Math.max(pool, lpool);
-      reprint = Math.max(reprint, lrp);
-      request = Math.max(request, lreq);
-      confirmed = Math.max(confirmed, lconf);
-    }
-  } catch (_) {}
-
-  return { pending, verified, approved, download, pool, request, reprint, confirmed };
+  return { pending, verified, approved, download, pool, request, reprint, confirmed, total };
 }
 
 function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate, search, setSearch }) {
@@ -1878,59 +1839,9 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
   const [activeSection, setActiveSection] = useState('clients'); // 'clients' | 'reprints' | 'updates'
   const [search, setSearch] = useState('');
 
-  // Compute counts from localStorage as an instant, always-available fallback
-  const getLocalStats = useCallback(() => {
-    const parse = (key) => {
-      try {
-        return JSON.parse(localStorage.getItem(key) || '[]');
-      } catch {
-        return [];
-      }
-    };
-    // All staff types (operators/photographers/assistants) share cf_custom_staff
-    const allStaff = parse('cf_custom_staff');
-    const clients = parse('cf_custom_clients');
-    const operators = allStaff.filter((s) => {
-      const des = (s.designation || s.role || '').toLowerCase();
-      return !des.includes('assistant') && !des.includes('photo');
-    });
-    const photographers = allStaff.filter((s) => {
-      const des = (s.designation || s.role || '').toLowerCase();
-      return des.includes('photo');
-    });
-    const assistants = allStaff.filter((s) => {
-      const des = (s.designation || s.role || '').toLowerCase();
-      return des.includes('assistant');
-    });
-    return {
-      total_organizations: clients.length,
-      total_clients: clients.length,
-      total_operators: operators.length,
-      client_staff_count: assistants.length,
-      total_assistants: assistants.length,
-      total_photographers: photographers.length,
-      guest_users: operators.length,
-      // card stats stay 0 until API responds
-      total_id_cards: 0,
-      pending_cards: 0,
-      verified_cards: 0,
-      approved_cards: 0,
-      download_cards: 0,
-      pool_cards: 0,
-      total: 0,
-      pending: 0,
-      verified: 0,
-      approved: 0,
-      downloaded: 0,
-      pool: 0,
-    };
-  }, []);
-
   const load = useCallback(
     async (isInitial = false) => {
-      if (isInitial && !stats) {
-        // Show local counts immediately so the board is never blank
-        setStats(getLocalStats());
+      if (isInitial) {
         setLoading(true);
       }
       try {
@@ -1939,56 +1850,22 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
           const schemaRes = await schemaApi.getSchemas();
           loadedTables = schemaRes.tables || schemaRes.results || (Array.isArray(schemaRes) ? schemaRes : []);
         } catch (_) {}
-
-        try {
-          const localTables = JSON.parse(localStorage.getItem('cf_custom_tables') || '[]');
-          localTables.forEach((lt) => {
-            if (!loadedTables.some((t) => String(t.id) === String(lt.id) || t.name === lt.name)) {
-              loadedTables.push(lt);
-            }
-          });
-        } catch (_) {}
         setAllTables(loadedTables);
 
-        const statsData = await dashboardApi.getStats();
-        const apiStats = statsData.stats || statsData;
-        // Merge: prefer API values (> 0) but fall back to local counts for user totals
-        const local = getLocalStats();
-        setStats({
-          ...local,
-          ...apiStats,
-          total_organizations:
-            (apiStats.total_organizations || 0) > 0 ? apiStats.total_organizations : local.total_organizations,
-          total_operators: (apiStats.total_operators || 0) > 0 ? apiStats.total_operators : local.total_operators,
-          total_assistants: (apiStats.total_assistants || 0) > 0 ? apiStats.total_assistants : local.total_assistants,
-          total_photographers:
-            (apiStats.total_photographers || 0) > 0 ? apiStats.total_photographers : local.total_photographers,
-        });
+        try {
+          const statsData = await dashboardApi.getStats();
+          const apiStats = statsData.stats || statsData;
+          if (apiStats) {
+            setStats(apiStats);
+          }
+        } catch (_) {}
 
         let loadedClients = [];
         try {
           const clientData = await dashboardApi.getRecentClientUpdates();
-          if (clientData)
+          if (clientData) {
             loadedClients = clientData.clients || clientData.results || (Array.isArray(clientData) ? clientData : []);
-        } catch (_) {}
-
-        // Merge local organisations so created organisations immediately appear on Dashboard
-        try {
-          const localClients = JSON.parse(localStorage.getItem('cf_custom_clients') || '[]');
-          localClients.forEach((lc) => {
-            if (!loadedClients.some((c) => String(c.id) === String(lc.id) || c.name === lc.name)) {
-              loadedClients.push({
-                id: lc.id,
-                name: lc.name,
-                school_name: lc.name,
-                pending: lc.pending || 0,
-                verified: lc.verified || 0,
-                approved: lc.approved || 0,
-                downloaded: lc.downloaded || lc.download || 0,
-                pool: lc.pool || 0,
-              });
-            }
-          });
+          }
         } catch (_) {}
         setClients(loadedClients);
 
@@ -2001,14 +1878,13 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
           const actData = await dashboardApi.getRecentActivity(50);
           if (actData) setActivities(actData.activities || actData.results || actData || []);
         } catch (_) {}
-      } catch (_) {
-        // API failed (401 etc) — keep showing local counts
-        setStats((prev) => prev || getLocalStats());
+      } catch (err) {
+        console.error('Dashboard load error:', err);
       } finally {
         setLoading(false);
       }
     },
-    [getLocalStats]
+    []
   );
 
   useEffect(() => {

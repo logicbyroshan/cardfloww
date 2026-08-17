@@ -92,6 +92,53 @@ class PhotographerService(BaseService):
         return data
 
     @classmethod
+    def list_photographers(cls, user=None, search: str = '', status: str = '', page: int = 1, page_size: int = 25) -> ServiceResult:
+        """List all photographers with search, status filtering, and assignments."""
+        try:
+            from django.db.models import Q
+            qs = Photographer.objects.select_related('user').prefetch_related('photographer_assignments__client').order_by('-id')
+
+            if search:
+                s = str(search).strip()
+                qs = qs.filter(
+                    Q(user__first_name__icontains=s) |
+                    Q(user__last_name__icontains=s) |
+                    Q(user__username__icontains=s) |
+                    Q(user__email__icontains=s) |
+                    Q(user__phone__icontains=s)
+                )
+
+            if status and status.lower() not in ('all', ''):
+                is_active = status.lower() in ('active', 'true', '1')
+                qs = qs.filter(user__is_active=is_active)
+
+            total = qs.count()
+
+            try:
+                page_num = max(1, int(page or 1))
+                p_size = max(1, min(1000, int(page_size or 25)))
+                start = (page_num - 1) * p_size
+                end = start + p_size
+                page_qs = qs[start:end]
+            except (ValueError, TypeError):
+                page_qs = qs
+
+            data = [cls.serialize(p) for p in page_qs]
+            return ServiceResult(
+                success=True,
+                data={
+                    'photographers': data,
+                    'staff': data,
+                    'results': data,
+                    'total': total,
+                    'count': total,
+                }
+            )
+        except Exception as e:
+            logger.exception("PhotographerService.list_photographers error: %s", e)
+            return ServiceResult(success=False, message=str(e))
+
+    @classmethod
     def get(cls, staff_id: int) -> ServiceResult:
         """Fetch photographer details"""
         try:

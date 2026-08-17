@@ -28,10 +28,12 @@ export default function ForgotPasswordView({ onSwitchTab }) {
 
   return (
     <>
-      <h2 className="auth-title">Forgot Password?</h2>
-      <p className="auth-subtitle" style={{ marginBottom: '22px' }}>
-        No worries! Enter your account email address and we'll send you a password reset link & OTP code.
-      </p>
+      <div className="auth-form-header">
+        <h2 className="auth-title">Forgot Password?</h2>
+        <p className="auth-subtitle">
+          Enter your account email address and we'll send you a password reset link & verification code.
+        </p>
+      </div>
 
       {successMsg ? (
         <div className="auth-success-box" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
@@ -39,18 +41,18 @@ export default function ForgotPasswordView({ onSwitchTab }) {
             <CheckCircle2 size={18} color="#4ade80" />
             <strong style={{ color: '#ffffff' }}>Check your inbox</strong>
           </div>
-          <span style={{ fontSize: '12px' }}>{successMsg}</span>
+          <span style={{ fontSize: '12.5px', lineHeight: '1.4' }}>{successMsg}</span>
           <button
             type="button"
             className="auth-btn-primary"
-            style={{ marginTop: '10px', height: '38px', fontSize: '13px' }}
+            style={{ marginTop: '8px', height: '42px', fontSize: '13px' }}
             onClick={() => onSwitchTab?.('otp')}
           >
-            Enter OTP Code
+            Enter Verification Code
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="auth-actual-form">
           {error && (
             <div className="auth-error-box">
               <span>{error}</span>
@@ -60,15 +62,16 @@ export default function ForgotPasswordView({ onSwitchTab }) {
           <div className="auth-field">
             <label className="auth-label">Account Email Address</label>
             <div className="auth-input-wrapper">
-              <Mail size={16} className="auth-input-icon" />
+              <Mail size={17} className="auth-input-icon" />
               <input
                 type="email"
                 required
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
+                placeholder="name@institution.edu"
                 className="auth-input"
+                autoComplete="email"
               />
             </div>
           </div>
@@ -76,24 +79,25 @@ export default function ForgotPasswordView({ onSwitchTab }) {
           <button type="submit" disabled={loading} className="auth-btn-primary">
             {loading ? (
               <>
-                <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-                Sending Reset Link…
+                <Loader2 size={17} className="auth-btn-spinner" />
+                <span>Sending Reset Link…</span>
               </>
             ) : (
-              'Send Reset Link'
+              <span>Send Reset Link</span>
             )}
           </button>
         </form>
       )}
 
-      <div style={{ marginTop: '24px', textAlign: 'center' }}>
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
         <button
           type="button"
           className="auth-link"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           onClick={() => onSwitchTab?.('login')}
         >
-          <ArrowLeft size={14} /> Back to Sign In
+          <ArrowLeft size={14} />
+          <span>Back to Sign In</span>
         </button>
       </div>
     </>
