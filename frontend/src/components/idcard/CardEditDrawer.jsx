@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { X, Save, Loader2, AlertCircle } from 'lucide-react';
 import ImageUploadSlot from './ImageUploadSlot';
 import { cardApi } from '../../services/api';
+import { isDropdownField, getOptionsForField } from '../../utils/formatPresets';
+
 
 export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
   const [formData, setFormData] = useState(
@@ -133,42 +135,111 @@ export default function CardEditDrawer({ card, onClose, onSave, addToast }) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
               {Object.entries(formData).map(([key, val]) => {
                 if (['PHOTO', 'SIGNATURE', 'BARCODE', 'QR_CODE'].includes(key)) return null;
+                const fieldObj = { name: key };
+                const isDropdown = isDropdownField(fieldObj);
+                const options = isDropdown ? getOptionsForField(fieldObj) : [];
+                const isDuplicate = card?.duplicate_fields?.includes(key);
+
                 return (
                   <div key={key}>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: '#475569',
-                        marginBottom: '0.35rem',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {key.replace(/_/g, ' ')}
-                    </label>
-                    <input
-                      type="text"
-                      value={val || ''}
-                      onChange={(e) => handleChange(key, e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.65rem 1rem',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '4px',
-                        color: '#0f172a',
-                        fontSize: '0.9rem',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <label
+                        style={{
+                          display: 'block',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          color: '#475569',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {key.replace(/_/g, ' ')}
+                      </label>
+                      {isDuplicate && (
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            color: '#b45309',
+                            background: '#fef3c7',
+                            padding: '1px 6px',
+                            borderRadius: '3px',
+                            border: '1px solid #fde68a',
+                          }}
+                        >
+                          REPEATING VALUE
+                        </span>
+                      )}
+                    </div>
+
+                    {isDropdown ? (
+                      <select
+                        value={val || ''}
+                        onChange={(e) => handleChange(key, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 1rem',
+                          background: '#ffffff',
+                          border: isDuplicate ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                          borderRadius: '4px',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">-- Select {key.replace(/_/g, ' ')} --</option>
+                        {val && !options.includes(val) && (
+                          <option value={val}>{val} (Current)</option>
+                        )}
+                        {options.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={val || ''}
+                        onChange={(e) => handleChange(key, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 1rem',
+                          background: '#ffffff',
+                          border: isDuplicate ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                          borderRadius: '4px',
+                          color: '#0f172a',
+                          fontSize: '0.9rem',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    )}
+
+                    {isDuplicate && (
+                      <div
+                        style={{
+                          marginTop: '4px',
+                          fontSize: '11px',
+                          color: '#b45309',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <AlertCircle size={12} />
+                        <span>This value is shared with another card in this table.</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
+
 
             {saveError && (
               <div

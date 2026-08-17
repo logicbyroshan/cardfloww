@@ -611,10 +611,21 @@ def api_idcard_cards_json(request, table_id):
             qs = qs.exclude(_img__startswith='PENDING:')
         elif image_condition == 'pending':
             qs = qs.filter(_img__startswith='PENDING:')
-        elif image_condition == 'incomplete':
             qs = qs.filter(Q(_img__isnull=True) | Q(_img='') | Q(_img='NOT_FOUND'))
 
+    # Unique column duplicate detection
+    from core.services.idcard_table_service import IDCardTableService
+    dup_info = IDCardTableService.find_duplicate_cards(table.id)
+    dup_card_map = dup_info.get('card_duplicates', {})
+    total_duplicates = dup_info.get('total_duplicate_cards', 0)
+
+    # Filter to duplicates if requested
+    duplicates_filter = request.GET.get('duplicates', '').strip().lower() in ('true', '1', 'yes')
+    if duplicates_filter:
+        qs = qs.filter(id__in=list(dup_card_map.keys()))
+
     # Sort order must be applied after all filters so combined class/section
+
     # searches stay stable when the user switches between A-Z / Z-A.
     if sort_order in ('name-asc', 'name-desc'):
         name_field = IDCardService._get_name_field(table)
@@ -824,6 +835,9 @@ def api_idcard_cards_json(request, table_id):
             _card_downloaded_at = None
             _card_deleted_at = None
 
+        _card_dup_fields = dup_card_map.get(card.id, {}).get('duplicate_fields', [])
+        _card_dup_values = dup_card_map.get(card.id, {}).get('duplicate_values', {})
+
         results.append({
             'id': card.id,
             'sr_no': sr_base + idx + 1,
@@ -833,6 +847,9 @@ def api_idcard_cards_json(request, table_id):
             # the reupload processor) — they're not useful to the frontend.
             'field_data': {k: v for k, v in fd.items() if not k.startswith('__')},
             'ordered_fields': ordered,
+            'is_duplicate': bool(_card_dup_fields),
+            'duplicate_fields': _card_dup_fields,
+            'duplicate_values': _card_dup_values,
             'updated_at': _card_updated_at,
             'updated_at_iso': _card_updated_at_iso,
             'downloaded_at': _card_downloaded_at,
@@ -844,6 +861,8 @@ def api_idcard_cards_json(request, table_id):
         'success': True,
         'total': total,
         'total_count': total,
+        'total_duplicates': total_duplicates,
+        'unique_fields': dup_info.get('unique_fields', []),
         'offset': offset,
         'limit': limit,
         'has_more': has_more,
@@ -851,6 +870,7 @@ def api_idcard_cards_json(request, table_id):
         'cards': results,
         'results': results,
     })
+
 
 
 @require_http_methods(["GET"])

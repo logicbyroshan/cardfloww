@@ -117,6 +117,9 @@ function inferTableType(tableName = '', orgName = '', fields = []) {
   return 'custom';
 }
 
+import FormatPresetConfigModal from '../common/FormatPresetConfigModal';
+import { FORMAT_PRESETS, getPresetsForFieldType, isDropdownField } from '../../utils/formatPresets';
+
 /* ── Field type options that match backend ── */
 const FIELD_TYPES = [
   { value: 'text', label: 'Text' },
@@ -130,6 +133,8 @@ const FIELD_TYPES = [
   { value: 'qr_code', label: 'QR Code' },
   { value: 'class', label: 'Class' },
   { value: 'section', label: 'Section' },
+  { value: 'course', label: 'Course / Degree' },
+  { value: 'branch', label: 'Branch / Stream' },
   { value: 'select', label: 'Select / Dropdown' },
   { value: 'textarea', label: 'Textarea' },
 ];
@@ -145,6 +150,8 @@ function inferFieldType(name = '') {
   if (/\bqr[\s_-]?code?\b/.test(n)) return 'qr_code';
   if (/\b(class|std|standard|grade)\b/.test(n)) return 'class';
   if (/\b(section|sec|div|division)\b/.test(n)) return 'section';
+  if (/\b(course|degree|prog|program)\b/.test(n)) return 'course';
+  if (/\b(branch|stream|dept|department)\b/.test(n)) return 'branch';
   if (/\b(email|e-mail|mail)\b/.test(n)) return 'email';
   if (/\b(no|number|no\.)\b/.test(n)) return 'number';
   if (/\b(date|dob|born)\b/.test(n)) return 'date';
@@ -156,6 +163,7 @@ const DEFAULT_SCHEMA_FIELDS = [
   { id: 'f-2', name: 'NAME', type: 'text', mandatory: true, show_path: false },
   { id: 'f-3', name: 'SERIAL NO', type: 'number', mandatory: true, show_path: false },
 ];
+
 
 export default function TableSettingsView({ addToast, onNavigate }) {
   const [tables, setTables] = useState([]);
@@ -925,9 +933,22 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
   const [tableType, setTableType] = useState(editingTable?.table_type || 'custom');
   const [typeAuto, setTypeAuto] = useState(false); // was this auto-detected?
   const [fields, setFields] = useState(
-    (editingTable?.fields || []).map((f, i) => ({ ...f, id: f.id || `f_${i}`, type: (f.type || 'text').toLowerCase() }))
+    (editingTable?.fields || []).map((f, i) => ({
+      ...f,
+      id: f.id || `f_${i}`,
+      type: (f.type || 'text').toLowerCase(),
+      mandatory: Boolean(f.mandatory),
+      is_unique: Boolean(f.is_unique || f.unique),
+      options: Array.isArray(f.options)
+        ? f.options
+        : typeof f.options === 'string' && f.options
+          ? f.options.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+      format_preset: f.format_preset || '',
+    }))
   );
   const [saving, setSaving] = useState(false);
+  const [formatModalField, setFormatModalField] = useState(null);
 
   /* New-field form state */
   const [newName, setNewName] = useState('');
@@ -971,6 +992,9 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
       name: newName.trim().toUpperCase(),
       type: newType,
       mandatory: false,
+      is_unique: false,
+      options: [],
+      format_preset: '',
       show_path: ['photo', 'rel_photo', 'signature'].includes(newType),
     };
     setFields((prev) => [...prev, field]);
@@ -1050,6 +1074,9 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
         type: f.type || 'text',
         order: i,
         mandatory: Boolean(f.mandatory),
+        is_unique: Boolean(f.is_unique),
+        options: Array.isArray(f.options) ? f.options : [],
+        format_preset: f.format_preset || '',
         show_path: Boolean(f.show_path),
       })),
     };
@@ -1077,6 +1104,7 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
   };
 
   const typeMeta = getTableTypeMeta(tableType);
+
   const TypeIcon = typeMeta.icon;
 
   return createPortal(
@@ -1440,13 +1468,103 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
                       </div>
 
                       {/* Field Type */}
-                      <div style={{ width: '130px' }} onMouseDown={(e) => e.stopPropagation()}>
+                      <div style={{ width: '125px' }} onMouseDown={(e) => e.stopPropagation()}>
                         <CustomSelect
                           value={f.type || 'text'}
                           onChange={(val) => setFieldProp(f.id, 'type', val)}
                           options={FIELD_TYPES.map((t) => ({ value: t.value, label: t.label }))}
                           height="28px"
                         />
+                      </div>
+
+                      {/* Format Presets / Options configuration button */}
+                      {isDropdownField(f) && (
+                        <button
+                          type="button"
+                          onClick={() => setFormatModalField(f)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #c7d2fe',
+                            background: '#eef2ff',
+                            color: '#4338ca',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            height: '28px',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                          }}
+                          title="Configure format presets (Roman, 1st 2nd 3rd, Numeric...) or custom options"
+                        >
+                          <SlidersHorizontal size={11} />
+                          <span>
+                            {FORMAT_PRESETS[f.format_preset]?.label
+                              ? FORMAT_PRESETS[f.format_preset].label.split(' ')[0]
+                              : f.options?.length
+                                ? `${f.options.length} Opts`
+                                : 'Options'}
+                          </span>
+                        </button>
+                      )}
+
+                      {/* Unique column toggle — ON = Unique constraint (purple badge), OFF = Normal */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '2px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            color: f.is_unique ? '#8b5cf6' : '#9ca3af',
+                            fontWeight: 700,
+                            lineHeight: 1,
+                          }}
+                        >
+                          {f.is_unique ? 'UNIQ' : 'NORM'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFieldProp(f.id, 'is_unique', !f.is_unique)}
+                          title={
+                            f.is_unique
+                              ? 'Unique Column — Duplicate values will be flagged in table and cards without deleting'
+                              : 'Click to make this column unique (repeating values will be highlighted)'
+                          }
+                          style={{
+                            width: '34px',
+                            height: '18px',
+                            borderRadius: '9px',
+                            background: f.is_unique ? '#8b5cf6' : '#cbd5e1',
+                            border: 'none',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            transition: 'background 0.15s',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: '2px',
+                              left: f.is_unique ? '17px' : '2px',
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              background: '#fff',
+                              transition: 'left 0.15s',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                            }}
+                          />
+                        </button>
                       </div>
 
                       {/* Required toggle — ON = required (red left border), OFF = optional */}
@@ -1549,12 +1667,22 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
+              type="button"
               onClick={onClose}
-              style={{ ...cancelBtnStyle, background: '#334155', color: '#ffffff', border: '1px solid #475569' }}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '6px',
+                border: '1px solid #475569',
+                background: '#334155',
+                color: '#fff',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
             >
-              <X size={14} /> Cancel
+              Cancel
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={saving}
               style={{
@@ -1575,7 +1703,21 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
           </div>
         </div>
       </aside>
+
+
+      {/* Format Preset / Dropdown Options Configuration Modal */}
+      {formatModalField && (
+        <FormatPresetConfigModal
+          field={formatModalField}
+          onClose={() => setFormatModalField(null)}
+          onSave={({ format_preset, options }) => {
+            setFieldProp(formatModalField.id, 'format_preset', format_preset);
+            setFieldProp(formatModalField.id, 'options', options);
+          }}
+        />
+      )}
     </>,
+
     document.body
   );
 }

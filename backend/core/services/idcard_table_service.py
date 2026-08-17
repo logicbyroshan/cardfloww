@@ -6,13 +6,14 @@ Part of the IDCardService split. Handles:
 - Default Table creation
 """
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from django.shortcuts import get_object_or_404
 from django.utils.timezone import localtime
 
-from tables.models import Table
+from tables.models import Table, IDCard
 from .base import BaseService, ServiceResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,11 @@ class IDCardTableService(BaseService):
     MAX_FIELDS_PER_TABLE = 30
     VALID_FIELD_TYPES = [
         'text', 'number', 'date', 'email', 'image', 'textarea', 'class', 'section',
-        'photo', 'rel_photo', 'mother_photo', 'father_photo', 'barcode', 'qr_code', 'signature',
-        'select', 'class_section',
+        'course', 'branch', 'photo', 'rel_photo', 'mother_photo', 'father_photo',
+        'barcode', 'qr_code', 'signature', 'select', 'class_section',
     ]
     LEGACY_REL_PHOTO_ALIASES = {'mother_photo', 'father_photo'}
+
 
     VALID_TABLE_TYPES = {'school_student', 'college_student', 'staff', 'custom'}
 
@@ -204,13 +206,25 @@ class IDCardTableService(BaseService):
                 if field_type not in cls.VALID_FIELD_TYPES:
                     field_type = 'text'
 
+                raw_options = field.get('options', [])
+                if isinstance(raw_options, str):
+                    parsed_options = [opt.strip() for opt in raw_options.split(',') if opt.strip()]
+                elif isinstance(raw_options, list):
+                    parsed_options = [str(opt).strip() for opt in raw_options if str(opt).strip()]
+                else:
+                    parsed_options = []
+
                 validated_fields.append({
                     'name': field_name,
                     'type': field_type,
                     'order': idx,
                     'mandatory': field_mandatory,
-                    'show_path': field_show_path
+                    'is_unique': bool(field.get('is_unique', False) or field.get('unique', False)),
+                    'options': parsed_options,
+                    'format_preset': str(field.get('format_preset') or '').strip().lower(),
+                    'show_path': field_show_path,
                 })
+
 
             # Determine organisation & table type: use explicit value if valid, else auto-detect
             org = getattr(group, 'organisation', None) or (group if hasattr(group, 'org_type') else None)
@@ -312,13 +326,25 @@ class IDCardTableService(BaseService):
                 if field_type not in cls.VALID_FIELD_TYPES:
                     field_type = 'text'
 
+                raw_options = field.get('options', [])
+                if isinstance(raw_options, str):
+                    parsed_options = [opt.strip() for opt in raw_options.split(',') if opt.strip()]
+                elif isinstance(raw_options, list):
+                    parsed_options = [str(opt).strip() for opt in raw_options if str(opt).strip()]
+                else:
+                    parsed_options = []
+
                 validated_fields.append({
                     'name': field_name,
                     'type': field_type,
                     'order': idx,
                     'mandatory': field_mandatory,
-                    'show_path': field_show_path
+                    'is_unique': bool(field.get('is_unique', False) or field.get('unique', False)),
+                    'options': parsed_options,
+                    'format_preset': str(field.get('format_preset') or '').strip().lower(),
+                    'show_path': field_show_path,
                 })
+
 
             # Determine / update table type
             org = getattr(table, 'organisation', None) or getattr(getattr(table, 'group', None), 'client', None)
@@ -491,3 +517,54 @@ class IDCardTableService(BaseService):
                 is_active=True,
             )
         return group
+
+    @classmethod
+    def find_duplicate_cards(cls, table_id: int) -> Dict[str, Any]:
+        """
+        Scan all cards in a table to detect repeating/duplicate values for any columns
+        configured with `is_unique: True`.
+        Returns mapping of card_id -> { 'duplicate_fields': [...], 'duplicate_values': {...} }
+        and duplicate counts without deleting or altering records.
+        """
+        try:
+            table = Table.objects.get(id=table_id)
+        except Table.DoesNotExist:
+            return {'card_duplicates': {}, 'total_duplicate_cards': 0, 'unique_fields': []}
+
+        unique_fields = [
+            f['name'] for f in (table.fields or [])
+            if bool(f.get('is_unique') or f.get('unique'))
+        ]
+        if not unique_fields:
+            return {'card_duplicates': {}, 'total_duplicate_cards': 0, 'unique_fields': []}
+
+        cards = list(IDCard.objects.filter(table_id=table_id).exclude(status='pool').only('id', 'field_data'))
+
+        # Track value -> list of card IDs for each unique field
+        field_value_cards: Dict[str, Dict[str, List[int]]] = {fn: {} for fn in unique_fields}
+        for c in cards:
+            fd = c.field_data or {}
+            for fn in unique_fields:
+                val = fd.get(fn) or fd.get(fn.upper()) or fd.get(fn.lower())
+                if val is not None:
+                    str_val = str(val).strip().upper()
+                    if str_val:
+                        field_value_cards[fn].setdefault(str_val, []).append(c.id)
+
+        card_duplicates: Dict[int, Dict[str, Any]] = {}
+        for fn, val_map in field_value_cards.items():
+            for str_val, cids in val_map.items():
+                if len(cids) > 1:
+                    for cid in cids:
+                        if cid not in card_duplicates:
+                            card_duplicates[cid] = {'duplicate_fields': [], 'duplicate_values': {}}
+                        if fn not in card_duplicates[cid]['duplicate_fields']:
+                            card_duplicates[cid]['duplicate_fields'].append(fn)
+                        card_duplicates[cid]['duplicate_values'][fn] = str_val
+
+        return {
+            'card_duplicates': card_duplicates,
+            'total_duplicate_cards': len(card_duplicates),
+            'unique_fields': unique_fields,
+        }
+

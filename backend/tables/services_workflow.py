@@ -187,7 +187,7 @@ class WorkflowService:
                     continue
 
             perm = cls._get_required_perm(card.status, target)
-            if PermissionService.has(user, perm):
+            if PermissionService.has(user, perm, client=card.client):
                 result.append(target)
         return result
 
@@ -263,8 +263,9 @@ class WorkflowService:
             # ── 4. Permission check ─────────────────────────────────────
             if user and not skip_permission:
                 required_perm = cls._get_required_perm(current, target_status)
-                if not PermissionService.has(user, required_perm):
+                if not PermissionService.has(user, required_perm, client=card.client):
                     return ServiceResult(success=False, message='Permission denied')
+
 
             # Super admin can bypass required-field/image forward gates.
             enforce_required_validations = not (user and PermissionService.is_super_admin(user))

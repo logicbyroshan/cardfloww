@@ -4365,5 +4365,111 @@ class ExportTaskClassFilterTests(TestCase):
         self.assertEqual(class_counts.get('VI'), 1)
 
 
+class TableColumnUniqueAndPresetSchemaTests(TestCase):
+    """Test suite for unique column constraints, dropdown presets, and duplicate card detection."""
+
+    def setUp(self):
+        self.super_admin = _create_super_admin(email='admin_unique@test.com')
+        self.client_user, self.org = _create_client_user(email='client_unique@test.com')
+        from tables.models import Table, IDCard
+        from core.services.idcard_table_service import IDCardTableService
+
+        self.table_service = IDCardTableService
+        self.table = Table.objects.create(
+            organisation=self.org,
+            name="HIGH SCHOOL STUDENTS",
+            table_type="school_student",
+            fields=[
+                {'name': 'ROLL_NO', 'type': 'number', 'order': 0, 'mandatory': True, 'is_unique': True},
+                {'name': 'NAME', 'type': 'text', 'order': 1, 'mandatory': True, 'is_unique': False},
+                {'name': 'CLASS', 'type': 'class', 'order': 2, 'mandatory': False, 'is_unique': False, 'format_preset': 'class_roman', 'options': ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII']},
+                {'name': 'SECTION', 'type': 'section', 'order': 3, 'mandatory': False, 'is_unique': False, 'format_preset': 'section_alpha', 'options': ['A', 'B', 'C', 'D']},
+                {'name': 'COURSE', 'type': 'course', 'order': 4, 'mandatory': False, 'is_unique': False, 'format_preset': 'course_higher', 'options': ['B.Tech', 'BCA', 'MCA']},
+            ],
+            is_active=True,
+        )
+
+        # Create test cards: Card 1 and Card 2 have repeating ROLL_NO "101", Card 3 has ROLL_NO "102"
+        self.card1 = IDCard.objects.create(
+            table=self.table,
+            field_data={'ROLL_NO': '101', 'NAME': 'Alice Smith', 'CLASS': 'X', 'SECTION': 'A'},
+            status='pending',
+        )
+        self.card2 = IDCard.objects.create(
+            table=self.table,
+            field_data={'ROLL_NO': '101', 'NAME': 'Bob Johnson', 'CLASS': 'X', 'SECTION': 'B'},
+            status='pending',
+        )
+        self.card3 = IDCard.objects.create(
+            table=self.table,
+            field_data={'ROLL_NO': '102', 'NAME': 'Charlie Brown', 'CLASS': 'XI', 'SECTION': 'A'},
+            status='pending',
+        )
+
+    def test_find_duplicate_cards_detects_repeating_records(self):
+        """Verify find_duplicate_cards flags repeating values without altering or deleting records."""
+        dup_info = self.table_service.find_duplicate_cards(self.table.id)
+        card_dups = dup_info['card_duplicates']
+
+        self.assertEqual(dup_info['total_duplicate_cards'], 2)
+        self.assertIn(self.card1.id, card_dups)
+        self.assertIn(self.card2.id, card_dups)
+        self.assertNotIn(self.card3.id, card_dups)
+
+        self.assertEqual(card_dups[self.card1.id]['duplicate_fields'], ['ROLL_NO'])
+        self.assertEqual(card_dups[self.card1.id]['duplicate_values']['ROLL_NO'], '101')
+        self.assertEqual(card_dups[self.card2.id]['duplicate_fields'], ['ROLL_NO'])
+        self.assertEqual(card_dups[self.card2.id]['duplicate_values']['ROLL_NO'], '101')
+
+    def test_api_cards_json_returns_duplicate_flags(self):
+        """Verify api_idcard_cards_json attaches duplicate metadata and supports filtering."""
+        self.client.force_login(self.super_admin)
+        url = reverse('api_idcard_cards_json', args=[self.table.id])
+
+        # 1. Normal list
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        self.assertTrue(data['success'])
+        self.assertEqual(data['total_duplicates'], 2)
+        self.assertEqual(data['unique_fields'], ['ROLL_NO'])
+
+        cards_map = {c['id']: c for c in data['cards']}
+        self.assertTrue(cards_map[self.card1.id]['is_duplicate'])
+        self.assertEqual(cards_map[self.card1.id]['duplicate_fields'], ['ROLL_NO'])
+        self.assertTrue(cards_map[self.card2.id]['is_duplicate'])
+        self.assertFalse(cards_map[self.card3.id]['is_duplicate'])
+
+        # 2. Filter with duplicates=true
+        response_dup = self.client.get(f"{url}?duplicates=true")
+        self.assertEqual(response_dup.status_code, 200)
+        data_dup = response_dup.json()
+        self.assertEqual(len(data_dup['cards']), 2)
+        dup_ids = {c['id'] for c in data_dup['cards']}
+        self.assertEqual(dup_ids, {self.card1.id, self.card2.id})
+
+    def test_table_service_persists_unique_and_format_presets(self):
+        """Verify update_table preserves is_unique and options configuration."""
+        new_fields = [
+            {'name': 'ADMISSION_NO', 'type': 'number', 'mandatory': True, 'is_unique': True},
+            {'name': 'BRANCH', 'type': 'branch', 'mandatory': False, 'is_unique': False, 'format_preset': 'branch_eng', 'options': ['CSE', 'ECE', 'ME']},
+        ]
+        result = self.table_service.update_table(self.table.id, {
+            'name': 'COLLEGE STUDENTS',
+            'table_type': 'college_student',
+            'fields': new_fields,
+        })
+        self.assertTrue(result.success)
+
+        self.table.refresh_from_db()
+        self.assertEqual(self.table.name, 'COLLEGE STUDENTS')
+        self.assertEqual(len(self.table.fields), 2)
+        self.assertTrue(self.table.fields[0]['is_unique'])
+        self.assertEqual(self.table.fields[1]['format_preset'], 'branch_eng')
+        self.assertEqual(self.table.fields[1]['options'], ['CSE', 'ECE', 'ME'])
+
+
+
 
 

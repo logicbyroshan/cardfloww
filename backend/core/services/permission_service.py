@@ -633,14 +633,10 @@ class PermissionService:
                 field_name = 'perm_idcard_setting_list'
 
             if hasattr(client_profile, field_name):
-                val = getattr(client_profile, field_name, False)
-                if val:
-                    return True
+                return bool(getattr(client_profile, field_name, False))
 
             if hasattr(client_profile, perm_key):
-                val = getattr(client_profile, perm_key, False)
-                if val:
-                    return True
+                return bool(getattr(client_profile, perm_key, False))
 
             # Standard operational permissions default to True for active managers
             if perm_key in (
@@ -652,6 +648,7 @@ class PermissionService:
                 return True
 
             return False
+
 
         # --- 4. assistant (double-gated) ---
         if cls.is_assistant(user):

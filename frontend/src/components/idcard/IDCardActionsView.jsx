@@ -60,6 +60,8 @@ import ImageUploadSlot from './ImageUploadSlot';
 import OperationHistoryModal from './OperationHistoryModal';
 import CardTimelineDrawer from './CardTimelineDrawer';
 import BulkTransactionsModal from './BulkTransactionsModal';
+import { isDropdownField, getOptionsForField, FORMAT_PRESETS } from '../../utils/formatPresets';
+
 
 
 /* ─── Status configuration ─────────────────────────────────────────────── */
@@ -395,52 +397,153 @@ function CardSideDrawer({ card, mode, tableId, tableFields, onClose, onSave, add
                 </div>
               )}
 
-              {/* Text Fields (Stacked 1-column full width for zero cropping) */}
+              {/* Text / Dropdown Fields (Stacked 1-column full width for zero cropping) */}
               {fields
                 .filter((f) => !isImageField(f.type, f.name))
                 .map((f) => {
                   const value = formData[f.name] ?? '';
+                  const isDropdown = isDropdownField(f);
+                  const options = isDropdown ? getOptionsForField(f) : [];
+                  const isUnique = Boolean(f.is_unique || f.unique);
+                  const isDuplicate = card?.duplicate_fields?.includes(f.name) || (isUnique && card?.is_duplicate);
+
                   return (
                     <div key={f.name} style={{ width: '100%', boxSizing: 'border-box' }}>
-                      <label
+                      <div
                         style={{
-                          display: 'block',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: '#475569',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
                           marginBottom: '6px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.04em',
                         }}
                       >
-                        {f.name}
-                      </label>
-                      <input
-                        type="text"
-                        value={value}
-                        disabled={isView}
-                        onChange={(e) => handleChange(f.name, e.target.value.toUpperCase())}
-                        style={{
-                          width: '100%',
-                          height: '36px',
-                          padding: '0 12px',
-                          borderRadius: '4px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          textTransform: 'uppercase',
-                          background: isView ? '#f8fafc' : '#ffffff',
-                          boxSizing: 'border-box',
-                          outline: 'none',
-                          color: '#0f172a',
-                          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
-                        }}
-                      />
+                        <label
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#475569',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            margin: 0,
+                          }}
+                        >
+                          <span>{f.name}</span>
+                          {f.mandatory && <span style={{ color: '#ef4444' }}>*</span>}
+                          {isUnique && (
+                            <span
+                              style={{
+                                fontSize: '9px',
+                                fontWeight: 700,
+                                color: '#8b5cf6',
+                                background: '#f5f3ff',
+                                padding: '1px 5px',
+                                borderRadius: '3px',
+                                border: '1px solid #ddd6fe',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              UNIQUE
+                            </span>
+                          )}
+                        </label>
+
+                        {isDuplicate && (
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              color: '#b45309',
+                              background: '#fef3c7',
+                              padding: '1px 6px',
+                              borderRadius: '3px',
+                              border: '1px solid #fde68a',
+                            }}
+                          >
+                            REPEATING VALUE
+                          </span>
+                        )}
+                      </div>
+
+                      {isDropdown ? (
+                        <select
+                          value={value}
+                          disabled={isView}
+                          onChange={(e) => handleChange(f.name, e.target.value.toUpperCase())}
+                          style={{
+                            width: '100%',
+                            height: '36px',
+                            padding: '0 12px',
+                            borderRadius: '4px',
+                            border: isDuplicate ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            textTransform: 'uppercase',
+                            background: isView ? '#f8fafc' : '#ffffff',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            color: '#0f172a',
+                            cursor: isView ? 'default' : 'pointer',
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                          }}
+                        >
+                          <option value="">-- SELECT {f.name} --</option>
+                          {value && !options.includes(value) && (
+                            <option value={value}>{value} (Current Value)</option>
+                          )}
+                          {options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={f.type === 'date' ? 'date' : f.type === 'email' ? 'email' : 'text'}
+                          value={value}
+                          disabled={isView}
+                          onChange={(e) => handleChange(f.name, e.target.value.toUpperCase())}
+                          style={{
+                            width: '100%',
+                            height: '36px',
+                            padding: '0 12px',
+                            borderRadius: '4px',
+                            border: isDuplicate ? '1px solid #f59e0b' : '1px solid #cbd5e1',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            textTransform: 'uppercase',
+                            background: isView ? '#f8fafc' : '#ffffff',
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            color: '#0f172a',
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)',
+                          }}
+                        />
+                      )}
+
+                      {isDuplicate && (
+                        <div
+                          style={{
+                            marginTop: '4px',
+                            fontSize: '11px',
+                            color: '#b45309',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <AlertCircle size={12} />
+                          <span>This value is shared with another card in this table.</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
             </>
           )}
+
         </div>
 
         {/* Footer */}
@@ -2806,12 +2909,15 @@ export default function IDCardActionsView({
   const [sectionFilter, setSectionFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
+  const [duplicatesFilter, setDuplicatesFilter] = useState(false);
+  const [totalDuplicates, setTotalDuplicates] = useState(0);
   const [activeImageSort, setActiveImageSort] = useState(null); // { columns: ['PHOTO'], conditions: ['complete'] }
   const [showImageSortModal, setShowImageSortModal] = useState(false);
   const [sort, setSort] = useState('sr-asc');
   const [filterOptions, setFilterOptions] = useState({ classes: [], sections: [], courses: [], branches: [] });
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+
 
   /* ── Selection state ── */
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -2992,6 +3098,9 @@ export default function IDCardActionsView({
         search: debouncedSearch || undefined,
         class: classFilter || undefined,
         section: sectionFilter || undefined,
+        course: courseFilter || undefined,
+        branch: branchFilter || undefined,
+        duplicates: duplicatesFilter ? 'true' : undefined,
       };
       Object.keys(params).forEach((k) => params[k] === undefined && delete params[k]);
 
@@ -3001,6 +3110,9 @@ export default function IDCardActionsView({
 
       setCards(list);
       setTotal(cnt);
+      if (data?.total_duplicates !== undefined) {
+        setTotalDuplicates(data.total_duplicates);
+      }
     } catch (err) {
       console.warn('loadCards error:', err);
       setCards([]);
@@ -3008,7 +3120,20 @@ export default function IDCardActionsView({
     } finally {
       setCardsLoading(false);
     }
-  }, [tableId, status, page, pageSize, debouncedSearch, classFilter, sectionFilter, sort]);
+  }, [
+    tableId,
+    status,
+    page,
+    pageSize,
+    debouncedSearch,
+    classFilter,
+    sectionFilter,
+    courseFilter,
+    branchFilter,
+    duplicatesFilter,
+    sort,
+  ]);
+
 
   /* ── Handle Undo Operation ── */
   const handleUndo = useCallback(async () => {
@@ -4072,18 +4197,50 @@ export default function IDCardActionsView({
             />
           )}
 
+          {/* Duplicates Filter Button */}
+          {totalDuplicates > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setDuplicatesFilter((prev) => !prev);
+                setPage(1);
+              }}
+              style={{
+                height: '28px',
+                padding: '0 10px',
+                border: duplicatesFilter ? '1px solid #d97706' : '1px solid #cbd5e1',
+                borderRadius: '4px',
+                background: duplicatesFilter ? '#fef3c7' : '#ffffff',
+                color: duplicatesFilter ? '#b45309' : '#475569',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Filter table to only show cards with repeating duplicate values"
+            >
+              <AlertCircle size={13} style={{ color: '#d97706' }} />
+              <span>Duplicates ({totalDuplicates})</span>
+            </button>
+          )}
+
           {/* Clear Filters */}
-          {(classFilter || sectionFilter || courseFilter || branchFilter || activeImageSort || search) && (
+          {(classFilter || sectionFilter || courseFilter || branchFilter || duplicatesFilter || activeImageSort || search) && (
             <button
               onClick={() => {
                 setClassFilter('');
                 setSectionFilter('');
                 setCourseFilter('');
                 setBranchFilter('');
+                setDuplicatesFilter(false);
                 setActiveImageSort(null);
                 setSearch('');
                 setPage(1);
               }}
+
               style={{
                 height: '28px',
                 padding: '0 8px',
@@ -4431,8 +4588,23 @@ export default function IDCardActionsView({
                             borderBottom: '1px solid #cbd5e1',
                           }}
                         >
-                          {srNo}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                            <span>{srNo}</span>
+                            {card.is_duplicate && (
+                              <span
+                                title="Repeating card (shares duplicate values on unique columns)"
+                                style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  borderRadius: '50%',
+                                  background: '#f59e0b',
+                                  display: 'inline-block',
+                                }}
+                              />
+                            )}
+                          </div>
                         </td>
+
 
                         {/* Dynamic Fields */}
                         {tableFields.map((f) => {
@@ -4566,6 +4738,11 @@ export default function IDCardActionsView({
                             );
                           }
 
+                          const isDropdown = isDropdownField(f);
+                          const options = isDropdown ? getOptionsForField(f) : [];
+                          const isUniqueCol = Boolean(f.is_unique || f.unique);
+                          const isDuplicate = card.duplicate_fields?.includes(f.name) || (isUniqueCol && card.is_duplicate);
+
                           return (
                             <td
                               key={f.name}
@@ -4580,14 +4757,15 @@ export default function IDCardActionsView({
                                       minWidth: isEditing ? '180px' : spec.minWidth,
                                       maxWidth: isEditing ? 'none' : spec.maxWidth,
                                     }),
+                                background: isDuplicate && !isSelected ? '#fffbeb' : undefined,
                                 color: '#000000',
                                 fontSize: '12px',
-                                fontWeight: 500,
+                                fontWeight: isDuplicate ? 700 : 500,
                                 textTransform: 'uppercase',
                                 whiteSpace: 'normal',
                                 wordBreak: 'break-word',
-                                borderRight: '1px solid #cbd5e1',
-                                borderBottom: '1px solid #cbd5e1',
+                                borderRight: isDuplicate ? '1px solid #fde68a' : '1px solid #cbd5e1',
+                                borderBottom: isDuplicate ? '1px solid #fde68a' : '1px solid #cbd5e1',
                                 verticalAlign: 'middle',
                                 position: 'relative',
                               }}
@@ -4607,32 +4785,112 @@ export default function IDCardActionsView({
                                     background: '#ffffff',
                                   }}
                                 >
-                                  <input
-                                    autoFocus
-                                    value={cellValue}
-                                    onChange={(e) => setCellValue(e.target.value.toUpperCase())}
-                                    onBlur={commitCellEdit}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') commitCellEdit();
-                                      if (e.key === 'Escape') setEditingCell(null);
-                                    }}
+                                  {isDropdown ? (
+                                    <select
+                                      autoFocus
+                                      value={cellValue}
+                                      onChange={(e) => setCellValue(e.target.value.toUpperCase())}
+                                      onBlur={commitCellEdit}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitCellEdit();
+                                        if (e.key === 'Escape') setEditingCell(null);
+                                      }}
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        border: '2px solid #2563eb',
+                                        borderRadius: '2px',
+                                        padding: '2px 4px',
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        outline: 'none',
+                                        background: '#ffffff',
+                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                                        boxSizing: 'border-box',
+                                        color: '#000000',
+                                        fontFamily: 'inherit',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <option value="">-- SELECT --</option>
+                                      {cellValue && !options.includes(cellValue) && (
+                                        <option value={cellValue}>{cellValue} (Current)</option>
+                                      )}
+                                      {options.map((opt) => (
+                                        <option key={opt} value={opt}>
+                                          {opt}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      autoFocus
+                                      value={cellValue}
+                                      onChange={(e) => setCellValue(e.target.value.toUpperCase())}
+                                      onBlur={commitCellEdit}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') commitCellEdit();
+                                        if (e.key === 'Escape') setEditingCell(null);
+                                      }}
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        border: '2px solid #2563eb',
+                                        borderRadius: '2px',
+                                        padding: '4px 8px',
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        textTransform: 'uppercase',
+                                        outline: 'none',
+                                        background: '#ffffff',
+                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                                        boxSizing: 'border-box',
+                                        color: '#000000',
+                                        fontFamily: 'inherit',
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              ) : isDuplicate ? (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: spec.align === 'center' ? 'center' : 'flex-start',
+                                    gap: '4px',
+                                    width: '100%',
+                                  }}
+                                >
+                                  <span
+                                    title={`Repeating duplicate value "${val}" shared with other cards`}
                                     style={{
-                                      width: '100%',
-                                      height: '100%',
-                                      border: '2px solid #2563eb',
-                                      borderRadius: '2px',
-                                      padding: '4px 8px',
+                                      cursor: 'pointer',
+                                      color: '#92400e',
                                       fontSize: '12px',
-                                      fontWeight: 500,
+                                      fontWeight: 700,
                                       textTransform: 'uppercase',
-                                      outline: 'none',
-                                      background: '#ffffff',
-                                      boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
-                                      boxSizing: 'border-box',
-                                      color: '#000000',
-                                      fontFamily: 'inherit',
                                     }}
-                                  />
+                                  >
+                                    {String(val).toUpperCase()}
+                                  </span>
+                                  <span
+                                    title={`Repeating duplicate value in this table`}
+                                    style={{
+                                      fontSize: '8px',
+                                      fontWeight: 800,
+                                      color: '#b45309',
+                                      background: '#fef3c7',
+                                      padding: '1px 4px',
+                                      borderRadius: '3px',
+                                      border: '1px solid #fde68a',
+                                      letterSpacing: '0.02em',
+                                      lineHeight: 1,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    REPEAT
+                                  </span>
                                 </div>
                               ) : (
                                 <span
@@ -4655,6 +4913,7 @@ export default function IDCardActionsView({
                             </td>
                           );
                         })}
+
 
                         {/* Action */}
                         <td
