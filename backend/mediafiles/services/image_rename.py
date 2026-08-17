@@ -365,3 +365,302 @@ class ImageRenamer:
         result = ' '.join(result.split()).upper()
         
         return result
+
+
+# =============================================================================
+# MEDIA NAME SERVICE — Compact, Deterministic, Version-Aware Naming
+# =============================================================================
+
+# Base36 alphabet for compact encoding
+_B36 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+
+def _int_to_b36(n: int, width: int = 4) -> str:
+    """Convert non-negative integer to zero-padded Base36 string."""
+    if n < 0:
+        raise ValueError("n must be non-negative")
+    if n == 0:
+        return '0' * width
+    digits = []
+    while n:
+        digits.append(_B36[n % 36])
+        n //= 36
+    result = ''.join(reversed(digits))
+    return result.zfill(width)
+
+
+def _b36_to_int(s: str) -> int:
+    """Convert Base36 string back to integer."""
+    return int(s, 36)
+
+
+import re as _re
+
+# Regex for managed CardFlow filenames:
+#   O<OrgCode>_<ImageCode>V<Version>.<ext>
+# OrgCode: 2-10 alphanumeric chars
+# ImageCode: 2-10 alphanumeric chars
+# Version: integer >= 1
+_MANAGED_RE = _re.compile(
+    r'^O(?P<org>[A-Z0-9]{2,10})_(?P<code>[A-Z0-9]{2,10})V(?P<ver>\d+)$',
+    _re.IGNORECASE,
+)
+
+
+class MediaNameService:
+    """
+    Compact, Deterministic, Version-Aware Media Naming.
+
+    Format: O<OrgCode>_<ImageCode>V<Version>.<ext>
+
+    Examples:
+        O73F_A8XZV1.jpg   — Org "73F", ImageCode "A8XZ", Version 1
+        O73F_A8XZV2.jpg   — Same image, re-uploaded → Version 2
+        OABCDE_1K0PV1.png — Org "ABCDE", ImageCode "1K0P", Version 1
+
+    OrgCode:   Derived from Organisation.image_folder_code (first 3-5 chars, uppercased)
+    ImageCode: Deterministic Base36 hash from (card_id, field_name)
+    Version:   Monotonically increasing integer, starts at 1
+
+    Classification:
+        - Managed:   Filename matches O<OrgCode>_<ImageCode>V<Version> pattern.
+                     Org ownership verified in O(1) by comparing OrgCode prefix.
+        - Unmanaged: Everything else (camera files, raw names, legacy formats).
+                     Falls through to the import-map matching engine.
+    """
+
+    # ── Generation ────────────────────────────────────────────────
+
+    @staticmethod
+    def get_org_code(organisation) -> str:
+        """
+        Extract a short, unique org code from an Organisation instance.
+        Uses image_folder_code (always unique per org, set on creation).
+        Returns 3-5 uppercase alphanumeric characters.
+        """
+        code = getattr(organisation, 'image_folder_code', None)
+        if code:
+            # Take first 5 alphanumeric chars
+            cleaned = _re.sub(r'[^A-Z0-9]', '', str(code).upper())
+            if len(cleaned) >= 3:
+                return cleaned[:5]
+        # Fallback: use org PK in Base36 (always unique)
+        pk = getattr(organisation, 'pk', None) or getattr(organisation, 'id', 0)
+        return _int_to_b36(int(pk), 4)
+
+    @staticmethod
+    def derive_image_code(card_id: int, field_name: str = 'PHOTO') -> str:
+        """
+        Derive a deterministic, compact Base36 image code from (card_id, field_name).
+
+        The code is a 4-character Base36 string encoding:
+            upper 28 bits: card_id (supports up to ~268 million cards)
+            lower 4 bits:  field_type_index (up to 16 field types per card)
+
+        This guarantees uniqueness within an organisation for any
+        (card_id, field_type) pair.
+        """
+        # Map field names to compact indices
+        _FIELD_INDICES = {
+            'PHOTO': 0, 'FATHER_PHOTO': 1, 'MOTHER_PHOTO': 2, 'SIGNATURE': 3,
+            'SIGN': 3, 'REL_PHOTO': 4, 'BARCODE': 5, 'QR_CODE': 6,
+            'IMAGE': 7, 'REL_1_PHOTO': 8, 'REL_2_PHOTO': 9,
+        }
+        # Normalize field name
+        norm = _re.sub(r'[^A-Z0-9_]', '_', str(field_name).upper().strip())
+        # Check exact match first, then prefix match
+        field_idx = _FIELD_INDICES.get(norm, None)
+        if field_idx is None:
+            for key, idx in _FIELD_INDICES.items():
+                if key in norm or norm in key:
+                    field_idx = idx
+                    break
+        if field_idx is None:
+            # Hash to a consistent index in [10..15] for unknown fields
+            field_idx = 10 + (hash(norm) % 6)
+
+        # Combine: card_id in upper bits, field_idx in lower 4 bits
+        combined = ((int(card_id) & 0x0FFFFFFF) << 4) | (field_idx & 0x0F)
+        return _int_to_b36(combined, 4)
+
+    @classmethod
+    def generate_media_name(
+        cls,
+        org_code: str,
+        image_code: str,
+        version: int = 1,
+        ext: str = '.jpg',
+    ) -> str:
+        """
+        Generate a managed CardFlow filename.
+
+        Args:
+            org_code:   Short org identifier (e.g. "73F", "ABCDE")
+            image_code: Deterministic image code (e.g. "A8XZ")
+            version:    Version number (>= 1)
+            ext:        File extension with dot
+
+        Returns:
+            "O73F_A8XZV1.jpg"
+        """
+        safe_org = _re.sub(r'[^A-Z0-9]', '', str(org_code).upper())[:10] or '0000'
+        safe_code = _re.sub(r'[^A-Z0-9]', '', str(image_code).upper())[:10] or '0000'
+        safe_ver = max(1, int(version))
+        safe_ext = ImageRenamer.normalize_extension(ext)
+        return f"O{safe_org}_{safe_code}V{safe_ver}{safe_ext}"
+
+    @classmethod
+    def generate_media_name_for_card(
+        cls,
+        organisation,
+        card_id: int,
+        field_name: str = 'PHOTO',
+        version: int = 1,
+        ext: str = '.jpg',
+    ) -> str:
+        """
+        Convenience: generate managed name from Organisation + card_id + field_name.
+        """
+        org_code = cls.get_org_code(organisation)
+        image_code = cls.derive_image_code(card_id, field_name)
+        return cls.generate_media_name(org_code, image_code, version, ext)
+
+    # ── Parsing & Classification ──────────────────────────────────
+
+    @classmethod
+    def parse_media_name(cls, filename_or_path: str) -> Optional[dict]:
+        """
+        Parse a filename and classify it as Managed or Unmanaged.
+
+        Returns:
+            For managed files:
+                {
+                    "is_managed": True,
+                    "org_code": "73F",
+                    "image_code": "A8XZ",
+                    "version": 1,
+                    "ext": ".jpg",
+                    "is_legacy": False,
+                }
+            For legacy managed files (c0_14325101234501.jpg):
+                {
+                    "is_managed": False,
+                    "is_legacy": True,
+                    "legacy_parsed": {...},  # from ImageRenamer.parse_filename
+                    "ext": ".jpg",
+                }
+            For unmanaged files (0001.jpg, IMG_1234.jpg):
+                None
+        """
+        if not filename_or_path:
+            return None
+
+        filename = os.path.basename(str(filename_or_path).strip())
+        base_name, ext = os.path.splitext(filename)
+        if not base_name:
+            return None
+
+        ext = ImageRenamer.normalize_extension(ext)
+
+        # 1. Try new managed format: O<OrgCode>_<ImageCode>V<Version>
+        m = _MANAGED_RE.match(base_name)
+        if m:
+            return {
+                'is_managed': True,
+                'org_code': m.group('org').upper(),
+                'image_code': m.group('code').upper(),
+                'version': int(m.group('ver')),
+                'ext': ext,
+                'is_legacy': False,
+            }
+
+        # 2. Try legacy managed format via existing ImageRenamer
+        legacy = ImageRenamer.parse_filename(filename)
+        if legacy:
+            return {
+                'is_managed': False,
+                'is_legacy': True,
+                'legacy_parsed': legacy,
+                'ext': ext,
+            }
+
+        # 3. Unmanaged — no recognized pattern
+        return None
+
+    @classmethod
+    def is_managed(cls, filename_or_path: str) -> bool:
+        """Quick check: does this filename follow the O<OrgCode>_... pattern?"""
+        parsed = cls.parse_media_name(filename_or_path)
+        return bool(parsed and parsed.get('is_managed'))
+
+    @classmethod
+    def belongs_to_org(cls, filename_or_path: str, organisation) -> bool:
+        """
+        O(1) check: does this managed filename belong to the given org?
+        Returns False for unmanaged files (they need import-map matching instead).
+        """
+        parsed = cls.parse_media_name(filename_or_path)
+        if not parsed or not parsed.get('is_managed'):
+            return False
+        file_org_code = parsed['org_code']
+        expected_org_code = cls.get_org_code(organisation)
+        return file_org_code == expected_org_code
+
+    @classmethod
+    def next_version(cls, filename_or_path: str) -> int:
+        """
+        Get the next version number for a re-upload of a managed file.
+        Returns 2 if V1, 3 if V2, etc. Returns 1 for unmanaged/new files.
+        """
+        parsed = cls.parse_media_name(filename_or_path)
+        if parsed and parsed.get('is_managed'):
+            return parsed['version'] + 1
+        return 1
+
+    # ── Batch Classification ──────────────────────────────────────
+
+    @classmethod
+    def classify_batch(
+        cls,
+        filenames: list,
+        organisation,
+    ) -> dict:
+        """
+        Classify a batch of filenames into categories for high-speed processing.
+
+        Returns:
+            {
+                "own_managed":   [(filename, parsed_dict), ...],  # this org's managed files
+                "other_managed": [(filename, parsed_dict), ...],  # other org's managed files
+                "legacy":        [(filename, parsed_dict), ...],  # legacy format files
+                "unmanaged":     [filename, ...],                 # raw camera/unknown files
+            }
+        """
+        own_org_code = cls.get_org_code(organisation)
+
+        own_managed = []
+        other_managed = []
+        legacy = []
+        unmanaged = []
+
+        for fname in filenames:
+            parsed = cls.parse_media_name(fname)
+
+            if parsed is None:
+                unmanaged.append(fname)
+            elif parsed.get('is_managed'):
+                if parsed['org_code'] == own_org_code:
+                    own_managed.append((fname, parsed))
+                else:
+                    other_managed.append((fname, parsed))
+            elif parsed.get('is_legacy'):
+                legacy.append((fname, parsed))
+            else:
+                unmanaged.append(fname)
+
+        return {
+            'own_managed': own_managed,
+            'other_managed': other_managed,
+            'legacy': legacy,
+            'unmanaged': unmanaged,
+        }
