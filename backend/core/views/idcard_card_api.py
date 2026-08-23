@@ -1527,7 +1527,7 @@ def api_idcard_update(request, card_id):
 
         # Block editing if there is an active reprint request for the card (requested or confirmed status)
         if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
-            from reprintcard.models import ReprintRequest
+            from reprint.models import ReprintRequest
             if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
                 return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
 
@@ -1679,7 +1679,7 @@ def api_idcard_update_field(request, card_id):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     # Block editing if there is an active reprint request for the card (requested or confirmed status)
     if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
     # Client/client_staff cannot edit cards in approved/download/reprint.
@@ -2356,7 +2356,7 @@ def api_idcard_undo_image(request, card_id):
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
     if _is_client_edit_locked(request.user, _card.status):
@@ -2391,7 +2391,7 @@ def api_idcard_redo_image(request, card_id):
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
     if _is_client_edit_locked(request.user, _card.status):

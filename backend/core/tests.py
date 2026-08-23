@@ -2177,7 +2177,7 @@ class SecurityApiRegressionTests(TestCase):
         self.card_a.save(update_fields=['status'])
 
         # Create active reprint request
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
         ReprintRequest.objects.create(
             card=self.card_a,
             table=self.card_a.table,
@@ -2208,7 +2208,7 @@ class SecurityApiRegressionTests(TestCase):
         self.card_a.save(update_fields=['status'])
 
         # Create active reprint request
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
         ReprintRequest.objects.create(
             card=self.card_a,
             table=self.card_a.table,

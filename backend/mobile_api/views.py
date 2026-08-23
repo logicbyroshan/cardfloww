@@ -58,7 +58,7 @@ from organisation.services import (
 )
 from core.services.permission_service import PermissionService
 from tables.models import Table, IDCard
-from reprintcard.models import ReprintRequest
+from reprint.models import ReprintRequest
 from mediafiles.utils import get_card_photo_url, normalize_uploaded_image
 from accounts.rate_limit import rate_limit, _get_client_ip
 from accounts.services import AuthService
@@ -4151,7 +4151,7 @@ def api_dashboard_data(request):
             
             recent_reprints = []
             if is_admin:
-                from reprintcard.models import ReprintRequest
+                from reprint.models import ReprintRequest
                 reprints_qs = ReprintRequest.objects.filter(status__in=['requested', 'confirmed']).select_related('card', 'table', 'requested_by', 'table__organisation').order_by('-created_at')
                 if not PermissionService.is_super_admin(user):
                     reprints_qs = reprints_qs.filter(table__organisation_id__in=accessible_ids)

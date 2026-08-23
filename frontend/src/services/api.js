@@ -794,21 +794,67 @@ export const profileApi = {
 
 // ─── Group 12: Reprint Cards ────────────────────────────────────────────────
 export const reprintApi = {
-  /** GET /reprint/api/queue/ or similar */
-  getQueue: async (params = {}) => {
-    const res = await apiClient.get('/reprint/api/queue/', { params });
+  /** GET step counts: reprint list, request list, confirmed, downloaded */
+  getStepCounts: async (tableId) => {
+    const res = await apiClient.get(`/reprint/api/table/${tableId}/step-counts/`);
     return res.data;
   },
 
-  /** POST /reprint/api/<id>/approve/ */
-  approve: async (reprintId) => {
-    const res = await apiClient.post(`/reprint/api/${reprintId}/approve/`);
+  /** GET step 1: reprint list (downloaded source cards) */
+  getReprintList: async (tableId, params = {}) => {
+    const res = await apiClient.get(`/reprint/api/table/${tableId}/reprint-list/`, { params });
     return res.data;
   },
 
-  /** POST /reprint/api/<id>/reject/ */
-  reject: async (reprintId, reason = '') => {
-    const res = await apiClient.post(`/reprint/api/${reprintId}/reject/`, { reason });
+  /** POST step 1 -> step 2: create reprint request (with optional staged edits) */
+  requestReprint: async (tableId, payload) => {
+    const res = await apiClient.post(`/reprint/api/table/${tableId}/request/`, payload);
+    return res.data;
+  },
+
+  /** GET step 2: requested list (pending admin confirmation) */
+  getRequestList: async (tableId, params = {}) => {
+    const res = await apiClient.get(`/reprint/api/table/${tableId}/request-list/`, { params });
+    return res.data;
+  },
+
+  /** POST step 2 -> step 3: confirm reprint request (applies edits in-place to card) */
+  confirmReprint: async (tableId, rrIds) => {
+    const res = await apiClient.post(`/reprint/api/table/${tableId}/confirm/`, { rr_ids: rrIds });
+    return res.data;
+  },
+
+  /** POST step 2 -> reject/cancel reprint request (returns card to reprint list) */
+  rejectReprint: async (tableId, rrIds, reason = '', moveToDeleted = false) => {
+    const res = await apiClient.post(`/reprint/api/table/${tableId}/reject/`, {
+      rr_ids: rrIds,
+      reason,
+      move_to_deleted: moveToDeleted,
+    });
+    return res.data;
+  },
+
+  /** GET step 3: confirmed list */
+  getConfirmedList: async (tableId, params = {}) => {
+    const res = await apiClient.get(`/reprint/api/table/${tableId}/confirmed-list/`, { params });
+    return res.data;
+  },
+
+  /** POST step 3: retrieve confirmed reprint back to requested list */
+  retrieveReprint: async (tableId, rrIds) => {
+    const res = await apiClient.post(`/reprint/api/table/${tableId}/retrieve/`, { rr_ids: rrIds });
+    return res.data;
+  },
+
+  /** POST mark confirmed reprint as downloaded */
+  markDownloaded: async (tableId, rrIds) => {
+    const res = await apiClient.post(`/reprint/api/table/${tableId}/mark-downloaded/`, { rr_ids: rrIds });
+    return res.data;
+  },
+
+  /** GET card reprint history */
+  getCardHistory: async (cardId) => {
+    const res = await apiClient.get(`/reprint/api/card/${cardId}/history/`);
     return res.data;
   },
 };

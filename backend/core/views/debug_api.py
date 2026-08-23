@@ -84,7 +84,7 @@ def api_debug_workflow(request):
     """
     from ..services.permission_service import PermissionService
     from tables.services_workflow import WorkflowService
-    from reprintcard.services import ReprintWorkflowService
+    from reprint.services import ReprintWorkflowService
 
     if not PermissionService.is_super_admin(request.user):
         return JsonResponse({'success': False, 'message': 'Super admin access required'}, status=403)

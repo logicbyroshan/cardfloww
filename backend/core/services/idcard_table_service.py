@@ -110,7 +110,7 @@ class IDCardTableService(BaseService):
         rp_req_cnt = 0
         rp_conf_cnt = 0
         try:
-            from reprintcard.models import ReprintRequest
+            from reprint.models import ReprintRequest
             req_counts = ReprintRequest.objects.filter(table=table).aggregate(
                 req_c=Count('id', filter=Q(status='requested')),
                 conf_c=Count('id', filter=Q(status='confirmed')),

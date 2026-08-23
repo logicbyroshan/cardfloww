@@ -1133,7 +1133,7 @@ def populate_sandbox_database(client_id, db_alias):
     from assistants.models import Assistant
     from operators.models import Operator
     from tables.models import Table, IDCard
-    from reprintcard.models import ReprintRequest
+    from reprint.models import ReprintRequest
     from mediafiles.models import CardMedia
     
     # 1. Clear any seeded data in the destination database first to avoid unique constraints

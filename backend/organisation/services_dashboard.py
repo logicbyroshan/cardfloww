@@ -14,7 +14,7 @@ from core.services.session_revalidation import get_user_revalidation_marker
 from organisation.models import Organisation
 from assistants.models import Assistant
 from tables.models import Table, IDCard
-from reprintcard.models import ReprintRequest
+from reprint.models import ReprintRequest
 from core.services.base import BaseService, ServiceResult
 from core.services.permission_service import PermissionService
 

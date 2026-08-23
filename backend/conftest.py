@@ -70,7 +70,7 @@ SLOW_NODEID_PREFIXES = (
     "core/tests.py::",
     "client/tests.py::",
     "panel/tests.py::",
-    "reprintcard/tests.py::",
+    "reprint/tests.py::",
     "staff/tests.py::",
 )
 

@@ -163,7 +163,7 @@ INSTALLED_APPS = [
     'staff',
     'operators',
     'stats',
-    'reprintcard',
+    'reprint',
     'panel',
     'mobile_api',
     'desktop_app',

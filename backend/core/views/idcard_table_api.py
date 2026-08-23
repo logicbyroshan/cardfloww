@@ -350,7 +350,7 @@ def api_schema_list(request):
             rp_req_cnt = 0
             rp_conf_cnt = 0
             try:
-                from reprintcard.models import ReprintRequest
+                from reprint.models import ReprintRequest
                 req_counts = ReprintRequest.objects.filter(table=t).aggregate(
                     req_c=Count('id', filter=Q(status='requested')),
                     conf_c=Count('id', filter=Q(status='confirmed')),

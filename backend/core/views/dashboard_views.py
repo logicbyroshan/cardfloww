@@ -729,7 +729,7 @@ def api_reprint_overview(request):
     """Dashboard API: per-client counts for Card Reprinting stages."""
     try:
         # from cardprint.models import PrintRequest  # Removed cardprint module
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         limit = _parse_dashboard_limit(request.GET.get('limit', 500), default=500, max_limit=500)
         user = request.user

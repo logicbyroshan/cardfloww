@@ -191,9 +191,8 @@ urlpatterns += [
     path('staff/', include(('staff.urls', 'staff'), namespace='staff_root')),
     path('panel/staff/', include(('staff.urls', 'staff'), namespace='panel_staff_root')),
     path('tables/', include(('tables.urls', 'tables'), namespace='tables_root')),
-    path('panel/tables/', include(('tables.urls', 'tables'), namespace='panel_tables_root')),
-    path('reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='reprintcard_root')),
-    path('panel/reprint/', include(('reprintcard.urls', 'reprintcard'), namespace='panel_reprintcard_root')),
+    path('reprint/', include(('reprint.urls', 'reprint'), namespace='reprint_root')),
+    path('panel/reprint/', include(('reprint.urls', 'reprint'), namespace='panel_reprint_root')),
     path('stats/', include(('stats.urls', 'stats'), namespace='stats_root')),
     path('panel/stats/', include(('stats.urls', 'stats'), namespace='panel_stats_root')),
 

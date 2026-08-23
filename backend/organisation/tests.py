@@ -927,7 +927,7 @@ class ClientDashboardServiceTests(TestCase):
         from organisation.services import OrganisationDashboardService
         from organisation.models import Organisation
         from tables.models import Table, IDCard
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         owner = User.objects.create_user(
             username='dash-owner-reprint-history@test.com',
@@ -954,7 +954,7 @@ class ClientDashboardServiceTests(TestCase):
         from organisation.services import OrganisationDashboardService
         from organisation.models import Organisation
         from tables.models import Table, IDCard
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         owner = User.objects.create_user(
             username='dash-owner-reprint-malformed@test.com',
@@ -985,7 +985,7 @@ class ClientDashboardServiceTests(TestCase):
         from organisation.services import OrganisationDashboardService
         from organisation.models import Organisation
         from tables.models import Table, IDCard
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         owner = User.objects.create_user(
             username='dash-owner-reprint-photo@test.com',
@@ -1029,7 +1029,7 @@ class ClientDashboardServiceTests(TestCase):
         from organisation.services import OrganisationDashboardService
         from organisation.models import Organisation
         from tables.models import Table, IDCard
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         owner = User.objects.create_user(
             username='dash-owner-reprint-photo-keyfmt@test.com',
@@ -1069,7 +1069,7 @@ class ClientDashboardServiceTests(TestCase):
         from organisation.services import OrganisationDashboardService
         from organisation.models import Organisation
         from tables.models import Table, IDCard
-        from reprintcard.models import ReprintRequest
+        from reprint.models import ReprintRequest
 
         owner = User.objects.create_user(
             username='dash-owner-reprint-stats@test.com',

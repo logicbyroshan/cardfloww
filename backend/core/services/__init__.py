@@ -49,6 +49,6 @@ def __getattr__(name):
         from tables.services_workflow import WorkflowService
         return WorkflowService
     if name == 'ReprintWorkflowService':
-        from reprintcard.services import ReprintWorkflowService
+        from reprint.services import ReprintWorkflowService
         return ReprintWorkflowService
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

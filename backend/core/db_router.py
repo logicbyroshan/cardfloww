@@ -26,7 +26,7 @@ class GuestSandboxRouter:
         if guest_db and guest_db in settings.DATABASES:
             # Route business models to the guest sandbox database.
             # Avoid routing django internal models (sessions, contenttypes, admin)
-            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprintcard'):
+            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprint', 'reprintcard'):
                 return guest_db
         return None
 
@@ -34,7 +34,7 @@ class GuestSandboxRouter:
         guest_db = self.get_guest_db()
         if guest_db and guest_db in settings.DATABASES:
             # Route business models to the guest sandbox database.
-            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprintcard'):
+            if model._meta.app_label in ('core', 'tables', 'organisation', 'assistants', 'operators', 'mediafiles', 'reprint', 'reprintcard'):
                 return guest_db
         return None
 
