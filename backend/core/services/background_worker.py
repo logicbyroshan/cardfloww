@@ -84,6 +84,7 @@ class BackgroundWorker:
         self.executor = ThreadPoolExecutor(max_workers=self.max_workers, thread_name_prefix="bg_worker")
         self.super_executor = ThreadPoolExecutor(max_workers=self.super_max_workers, thread_name_prefix="bg_super_worker")
         self._initialized = True
+        self._start_email_retry_loop()
         logger.info(
             "BackgroundWorker initialized with max_workers=%d heavy_task_concurrency=%d super_max_workers=%d super_heavy_task_concurrency=%d",
             self.max_workers,
@@ -91,6 +92,26 @@ class BackgroundWorker:
             self.super_max_workers,
             self.super_heavy_task_concurrency,
         )
+
+    def _start_email_retry_loop(self):
+        """Start a background daemon thread that periodically processes pending / retrying emails."""
+        def _loop():
+            from django.db import close_old_connections
+            from core.services.email_delivery_service import EmailDeliveryService
+
+            time.sleep(10)
+            while True:
+                try:
+                    close_old_connections()
+                    EmailDeliveryService.process_retry_queue(batch_size=25)
+                except Exception as ex:
+                    logger.debug("Email retry worker loop cycle encountered error: %s", ex)
+                finally:
+                    close_old_connections()
+                time.sleep(30)
+
+        t = threading.Thread(target=_loop, daemon=True, name='email-queue-worker')
+        t.start()
 
 
 class _BackgroundWorkerProxy:

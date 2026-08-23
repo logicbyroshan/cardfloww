@@ -102,25 +102,18 @@ class NotificationService:
                     notif.target_users.set(users)
                     recipient_count = len(recipient_user_ids)
                 else:
-                    recipient_count = cls._count_target_users(target)
+                    target_qs = cls._get_target_users_queryset(target)
+                    recipient_user_ids = list(target_qs.values_list('id', flat=True))
+                    recipient_count = len(recipient_user_ids)
 
-            # Optional email alert (fire-and-forget in background thread)
+            # Optional email alert (fire-and-forget in background thread with retry support)
             if send_email:
                 cls._send_email_alerts(notif)
 
             # Send push notifications in a decoupled background thread
             try:
-                push_user_ids = []
-                if target == 'selected' and target_user_ids:
-                    push_user_ids = list(recipient_user_ids)
-                elif target == 'all':
-                    push_user_ids = list(User.objects.filter(is_active=True).values_list('id', flat=True))
-                else:
-                    role = 'operator' if target == 'operator' else ('assistant' if target == 'assistant' else target)
-                    push_user_ids = list(User.objects.filter(is_active=True, role=role).values_list('id', flat=True))
-                
-                if push_user_ids:
-                    cls._send_push_notifications_async(push_user_ids, title.strip(), message.strip())
+                if recipient_user_ids:
+                    cls._send_push_notifications_async(recipient_user_ids, title.strip(), message.strip())
             except Exception as e:
                 logger.error("Failed to trigger push notifications: %s", e)
 
@@ -153,19 +146,34 @@ class NotificationService:
     # ── querying ────────────────────────────────────────────
 
     @classmethod
+    def _build_user_role_filter(cls, user):
+        """Construct Q filter for a given user's role visibility."""
+        role = getattr(user, 'role', '') or ('super_admin' if user.is_superuser else '')
+        matching_targets = {'all'}
+        if user.is_superuser or role in ('super_admin', 'prime_admin'):
+            matching_targets.update({'super_admin', 'prime_admin'})
+        if role == 'prime_manager':
+            matching_targets.update({'prime_manager', 'client'})
+        elif role in ('super_manager', 'manager'):
+            matching_targets.update({'super_manager', 'manager'})
+        elif role == 'operator':
+            matching_targets.update({'operator', 'admin_staff'})
+        elif role == 'assistant':
+            matching_targets.update({'assistant', 'client_staff'})
+        elif role == 'photographer':
+            matching_targets.add('photographer')
+        elif role:
+            matching_targets.add(role)
+
+        role_filter = Q(target__in=matching_targets)
+        selected_filter = Q(target='selected', target_users=user)
+        return role_filter | selected_filter
+
+    @classmethod
     def get_notifications_for_user(cls, user, limit=20, offset=0,
                                    unread_only=False, include_expired=False):
         """
         Get notifications visible to a user, annotated with read status.
-
-        Args:
-            user: Request user.
-            limit: Max rows to return.
-            offset: Pagination offset.
-            unread_only: If True, return only unread items.
-            include_expired: If True, include expired notifications in results.
-
-        Returns list of dicts with 'is_read' flag and 'time_ago' string.
         """
         now = timezone.now()
         visible_cutoff = now - timedelta(hours=cls.MAX_VISIBLE_HOURS)
@@ -176,13 +184,7 @@ class NotificationService:
         qs = qs.select_related('created_by')
 
         # Filter by target scope
-        target_role = 'operator' if user.role == 'operator' else user.role
-        role_filter = Q(target='all') | Q(target=target_role)
-        if user.role in ('super_admin',):
-            # Super admin sees everything
-            role_filter = Q(target='all') | Q(target='super_admin')
-        selected_filter = Q(target='selected', target_users=user)
-        qs = qs.filter(role_filter | selected_filter).distinct()
+        qs = qs.filter(cls._build_user_role_filter(user)).distinct()
 
         # Annotate read status
         qs = qs.annotate(
@@ -209,11 +211,7 @@ class NotificationService:
 
     @classmethod
     def get_unread_count(cls, user):
-        """Fast count of unread notifications for badge display.
-        
-        Cached per user with version keys (global + user scopes).
-        Invalidated immediately on notification create/read operations.
-        """
+        """Fast count of unread notifications for badge display."""
         global_version = CacheVersionService.get('notif_global', 'all')
         user_version = CacheVersionService.get('client_messages_drawer_user', f'user:{int(user.pk)}')
         cache_key = f'notif_unread:{user.pk}:gv{global_version}:uv{user_version}'
@@ -228,10 +226,7 @@ class NotificationService:
             & (Q(expires_at__isnull=True) | Q(expires_at__gt=now))
         )
 
-        target_role = 'operator' if user.role == 'operator' else user.role
-        role_filter = Q(target='all') | Q(target=target_role)
-        selected_filter = Q(target='selected', target_users=user)
-        qs = qs.filter(role_filter | selected_filter).distinct()
+        qs = qs.filter(cls._build_user_role_filter(user)).distinct()
 
         count = qs.exclude(reads__user=user).count()
         _cache.set(cache_key, count, 120)
@@ -395,12 +390,34 @@ class NotificationService:
     # ── private helpers ─────────────────────────────────────
 
     @classmethod
+    def _get_target_users_queryset(cls, target, target_user_ids=None):
+        """Resolve queryset of active users matching target criteria."""
+        qs = User.objects.filter(is_active=True)
+        if target == 'all':
+            return qs
+        elif target == 'selected':
+            if target_user_ids:
+                return qs.filter(id__in=target_user_ids)
+            return qs.none()
+        elif target == 'super_admin':
+            return qs.filter(Q(role='super_admin') | Q(role='prime_admin') | Q(is_superuser=True))
+        elif target in ('prime_manager', 'client'):
+            return qs.filter(role='prime_manager')
+        elif target in ('super_manager', 'manager'):
+            return qs.filter(role__in=['super_manager', 'manager'])
+        elif target in ('operator', 'admin_staff'):
+            return qs.filter(role='operator')
+        elif target in ('assistant', 'client_staff'):
+            return qs.filter(role='assistant')
+        elif target == 'photographer':
+            return qs.filter(role='photographer')
+        else:
+            return qs.filter(role=target)
+
+    @classmethod
     def _count_target_users(cls, target):
         """Count how many active users match a target scope."""
-        if target == 'all':
-            return User.objects.filter(is_active=True).count()
-        role = 'operator' if target == 'operator' else ('assistant' if target == 'assistant' else target)
-        return User.objects.filter(is_active=True, role=role).count()
+        return cls._get_target_users_queryset(target).count()
 
     @classmethod
     def _serialize(cls, notif, user=None):
@@ -454,48 +471,37 @@ class NotificationService:
 
     @classmethod
     def _build_plain_email_body(cls, notif, context):
-        """Generate plain-text fallback body for notification emails."""
-        return (
-            f"Adarsh Admin Notification\n"
-            f"Category: {context['category_display']}\n"
-            f"Priority: {context['priority_display']}\n"
-            f"Target: {context['target_display']}\n"
-            f"Sent by: {context['sender_name']}\n"
-            f"Sent at: {context['created_at_display']}\n\n"
-            f"{notif.title}\n"
-            f"{'=' * len(notif.title)}\n"
-            f"{notif.message}\n\n"
-            "This is an automated notification from Adarsh Admin."
-        )
+        """Build plain-text email body for a notification."""
+        lines = [
+            f"Adarsh Admin Notification: {notif.title}",
+            "=" * 40,
+            f"Category: {context['category_display']}",
+            f"Priority: {context['priority_display']}",
+            f"Date:     {context['created_at_display']}",
+            f"From:     {context['sender_name']}",
+            "",
+            notif.message,
+            "",
+            "---",
+            "This is an automated notification from Adarsh Admin.",
+        ]
+        if context['is_urgent']:
+            lines.insert(0, "*** URGENT NOTIFICATION ***\n")
+        return "\n".join(lines)
 
     @classmethod
     def _build_html_email_body(cls, notif, context):
-        """Generate unified HTML body for notification emails."""
-        safe_message = escape(notif.message or '').replace('\n', '<br>')
+        """Build HTML email body for a notification using the unified design system."""
         body_html = (
-            '<p style="margin:0 0 12px;">A new system notification is available.</p>'
-            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
-            'style="border:1px solid #dbe4f2;border-radius:12px;background:#f8fbff;">'
-            '<tr><td style="padding:12px 14px;">'
-            f'<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Category</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#0f172a;">{escape(context["category_display"])}</div>'
-            '<div style="height:8px;"></div>'
-            f'<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Priority</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#0f172a;">{escape(context["priority_display"])}</div>'
-            '<div style="height:8px;"></div>'
-            f'<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Target</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#0f172a;">{escape(context["target_display"])}</div>'
-            '<div style="height:8px;"></div>'
-            f'<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Sent by</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#0f172a;">{escape(context["sender_name"])}</div>'
-            '<div style="height:8px;"></div>'
-            f'<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">Sent at</div>'
-            f'<div style="font-size:14px;font-weight:700;color:#0f172a;">{escape(context["created_at_display"])}</div>'
-            '</td></tr></table>'
-            '<div style="margin-top:12px;border:1px solid #cbd5e1;border-radius:10px;background:#ffffff;padding:12px 14px;">'
-            '<div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Message</div>'
-            f'<div style="font-size:13px;line-height:1.7;color:#334155;">{safe_message}</div>'
+            '<div style="font-size:14px;color:#334155;line-height:1.7;margin-bottom:16px;">'
+            f'{escape(notif.message).replace(chr(10), "<br>")}'
             '</div>'
+            '<table style="width:100%;border-collapse:collapse;font-size:12px;color:#64748b;margin-top:16px;border-top:1px solid #e2e8f0;padding-top:12px;">'
+            f'<tr><td style="padding:4px 0;font-weight:600;">Category:</td><td style="padding:4px 0;">{escape(context["category_display"])}</td></tr>'
+            f'<tr><td style="padding:4px 0;font-weight:600;">Priority:</td><td style="padding:4px 0;">{escape(context["priority_display"])}</td></tr>'
+            f'<tr><td style="padding:4px 0;font-weight:600;">Sent by:</td><td style="padding:4px 0;">{escape(context["sender_name"])}</td></tr>'
+            f'<tr><td style="padding:4px 0;font-weight:600;">Date:</td><td style="padding:4px 0;">{escape(context["created_at_display"])}</td></tr>'
+            '</table>'
         )
 
         if context['is_urgent']:
@@ -516,66 +522,46 @@ class NotificationService:
     @classmethod
     def _send_email_alerts(cls, notif):
         """
-        Send email alerts for a notification in background thread.
+        Send email alerts for a notification via send_html_email_async with automatic retries.
         Each recipient gets an individual email so addresses aren't exposed.
         """
         try:
             from core.utils.threaded_email import send_html_email_async
+            from core.models import EmailLog
             from django.conf import settings
 
-            # Skip if email is not configured
-            if not getattr(settings, 'EMAIL_HOST_USER', ''):
-                logger.debug("Skipping notification email — EMAIL_HOST_USER not set")
-                return
-
-            # Determine recipients
             if notif.target == 'selected':
-                recipients = list(
-                    notif.target_users.filter(
-                        is_active=True, email__isnull=False
-                    ).exclude(email='').values_list('email', flat=True)
-                )
-            elif notif.target == 'all':
-                recipients = list(
-                    User.objects.filter(
-                        is_active=True, email__isnull=False
-                    ).exclude(email='').values_list('email', flat=True)
-                )
+                users = notif.target_users.filter(is_active=True, email__isnull=False).exclude(email='')
             else:
-                role = 'operator' if notif.target == 'operator' else ('assistant' if notif.target == 'assistant' else notif.target)
-                recipients = list(
-                    User.objects.filter(
-                        is_active=True, role=role, email__isnull=False
-                    ).exclude(email='').values_list('email', flat=True)
-                )
+                users = cls._get_target_users_queryset(notif.target).filter(email__isnull=False).exclude(email='')
 
-            if not recipients:
+            user_list = list(users.values('id', 'email', 'first_name', 'last_name', 'username'))
+            if not user_list:
                 return
 
-            from_email = settings.DEFAULT_FROM_EMAIL
+            from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
             priority_label = f"[{notif.get_priority_display()}] " if notif.priority != 'normal' else ''
             subject = f"{priority_label}{notif.title}"
             context = cls._build_email_context(notif)
             html_content = cls._build_html_email_body(notif, context)
             plain_content = cls._build_plain_email_body(notif, context)
 
-            # Send individually so recipients don't see each other's addresses
-            for email_addr in recipients:
+            for u in user_list:
+                full_name = f"{u.get('first_name') or ''} {u.get('last_name') or ''}".strip() or u.get('username')
                 send_html_email_async(
                     subject=subject,
                     plain_content=plain_content,
                     html_content=html_content,
                     from_email=from_email,
-                    recipient_list=[email_addr],
-                    email_type='system',
+                    recipient_list=[u['email']],
+                    email_type=EmailLog.EMAIL_TYPE_NOTIFICATION,
+                    recipient_name=full_name,
                 )
 
-            logger.info("Email alerts queued for notification #%d to %d recipients",
-                        notif.id, len(recipients))
+            logger.info("Email alerts queued for notification #%d to %d recipients", notif.id, len(user_list))
 
         except Exception as exc:
-            logger.error("Failed to send email alerts for notification #%d: %s",
-                         notif.id, exc)
+            logger.error("Failed to send email alerts for notification #%d: %s", notif.id, exc)
 
     @classmethod
     def _send_push_notifications_async(cls, user_ids, title, message):
@@ -583,13 +569,15 @@ class NotificationService:
         try:
             import threading
             from mobile_api.models import MobileDeviceToken
-            
-            # Fetch all tokens for these user IDs
-            tokens = list(MobileDeviceToken.objects.filter(user_id__in=user_ids).values_list('push_token', flat=True))
+
+            tokens = list(
+                MobileDeviceToken.objects.filter(user_id__in=user_ids)
+                .values_list('push_token', flat=True)
+            )
             if not tokens:
                 return
-                
-            def _send_expo_push_tokens(tokens, title, message):
+
+            def _send_expo_push_tokens(token_list, notif_title, notif_body):
                 import requests
                 url = "https://exp.host/--/api/v2/push/send"
                 headers = {
@@ -597,21 +585,24 @@ class NotificationService:
                     "accept-encoding": "gzip, deflate",
                     "accept": "application/json",
                 }
-                # Expo recommends chunking to 100 messages at a time
+                # Chunk into batches of 100 per Expo recommendations
                 chunk_size = 100
-                for i in range(0, len(tokens), chunk_size):
-                    chunk = tokens[i:i + chunk_size]
-                    payload = []
-                    for token in chunk:
-                        payload.append({
-                            "to": token,
+                for i in range(0, len(token_list), chunk_size):
+                    chunk = token_list[i:i + chunk_size]
+                    payload = [
+                        {
+                            "to": tok,
                             "sound": "default",
-                            "title": title,
-                            "body": message,
-                        })
+                            "title": notif_title,
+                            "body": notif_body,
+                        }
+                        for tok in chunk if tok and str(tok).strip()
+                    ]
+                    if not payload:
+                        continue
                     try:
-                        response = requests.post(url, json=payload, headers=headers, timeout=10)
-                        logger.info("Expo push response: status=%s, payload_len=%d", response.status_code, len(chunk))
+                        response = requests.post(url, json=payload, headers=headers, timeout=12)
+                        logger.info("Expo push response: status=%s, delivered=%d", response.status_code, len(payload))
                     except Exception as e:
                         logger.error("Failed to send Expo push notification chunk: %s", e)
 

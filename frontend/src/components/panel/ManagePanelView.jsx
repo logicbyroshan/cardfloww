@@ -83,7 +83,8 @@ function NotificationsTab({ addToast }) {
     message: '',
     target_type: 'all',
     priority: 'normal',
-    category: 'system',
+    category: 'general',
+    send_email: false,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -96,16 +97,28 @@ function NotificationsTab({ addToast }) {
     setSubmitting(true);
     try {
       if (panelApi.createNotification) {
-        await panelApi.createNotification(newNotif);
+        await panelApi.createNotification({
+          title: newNotif.title.trim(),
+          message: newNotif.message.trim(),
+          target: newNotif.target_type,
+          priority: newNotif.priority,
+          category: newNotif.category,
+          send_email: newNotif.send_email,
+        });
       }
-      addToast?.('Notification published successfully!', 'success');
+      addToast?.('Notification broadcast & queued successfully!', 'success');
       setShowCreateModal(false);
-      setNewNotif({ title: '', message: '', target_type: 'all', priority: 'normal', category: 'system' });
+      setNewNotif({
+        title: '',
+        message: '',
+        target_type: 'all',
+        priority: 'normal',
+        category: 'general',
+        send_email: false,
+      });
       load();
     } catch {
-      addToast?.('Notification created locally', 'info');
-      setShowCreateModal(false);
-      load();
+      addToast?.('Failed to create notification', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -408,6 +421,289 @@ function NotificationsTab({ addToast }) {
         setPageSize={setPageSize}
         loading={loading}
       />
+
+      {/* ── Create Notification Modal ── */}
+      {showCreateModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCreateModal(false);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              width: '100%',
+              maxWidth: '540px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#f8fafc',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  color: '#0f172a',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Bell size={18} color="#2563eb" /> Create System Notification
+              </h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleCreateNotification}
+              style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Notification Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Scheduled System Maintenance"
+                  value={newNotif.title}
+                  onChange={(e) => setNewNotif({ ...newNotif, title: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Target Audience
+                  </label>
+                  <CustomSelect
+                    value={newNotif.target_type}
+                    onChange={(val) => setNewNotif({ ...newNotif, target_type: val })}
+                    options={[
+                      { value: 'all', label: 'All Users (Broadcast)' },
+                      { value: 'super_admin', label: 'Super Admins' },
+                      { value: 'prime_manager', label: 'Prime Managers (Organisations)' },
+                      { value: 'super_manager', label: 'Super Managers' },
+                      { value: 'operator', label: 'Operators (Admin Staff)' },
+                      { value: 'assistant', label: 'Assistants' },
+                      { value: 'photographer', label: 'Photographers' },
+                    ]}
+                    height="36px"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#334155',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    Priority
+                  </label>
+                  <CustomSelect
+                    value={newNotif.priority}
+                    onChange={(val) => setNewNotif({ ...newNotif, priority: val })}
+                    options={[
+                      { value: 'normal', label: 'Normal' },
+                      { value: 'high', label: 'High Priority' },
+                      { value: 'urgent', label: 'Urgent Alert' },
+                      { value: 'low', label: 'Low' },
+                    ]}
+                    height="36px"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Category
+                </label>
+                <CustomSelect
+                  value={newNotif.category}
+                  onChange={(val) => setNewNotif({ ...newNotif, category: val })}
+                  options={[
+                    { value: 'general', label: 'General Announcement' },
+                    { value: 'announcement', label: 'Important Notice' },
+                    { value: 'update', label: 'Platform Update' },
+                    { value: 'maintenance', label: 'Maintenance Warning' },
+                    { value: 'alert', label: 'Security / Critical Alert' },
+                  ]}
+                  height="36px"
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Message *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Enter clear notification details for targeted users..."
+                  value={newNotif.message}
+                  onChange={(e) => setNewNotif({ ...newNotif, message: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    boxSizing: 'border-box',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="notif_send_email"
+                  checked={newNotif.send_email}
+                  onChange={(e) => setNewNotif({ ...newNotif, send_email: e.target.checked })}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <label
+                  htmlFor="notif_send_email"
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  Dispatch Email Alert &amp; Exponential Retry Queue to Target Recipients
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '10px',
+                  marginTop: '10px',
+                  borderTop: '1px solid #f1f5f9',
+                  paddingTop: '14px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '12px', padding: '8px 16px' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="btn btn-primary"
+                  style={{
+                    fontSize: '12px',
+                    padding: '8px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Send size={13} /> {submitting ? 'Publishing...' : 'Publish Notification'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -432,6 +728,7 @@ function EmailLogsTab({ addToast }) {
     email_type: 'system',
   });
   const [submittingEmail, setSubmittingEmail] = useState(false);
+  const [retryingAll, setRetryingAll] = useState(false);
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
@@ -448,7 +745,7 @@ function EmailLogsTab({ addToast }) {
       if (panelApi.sendEmail) {
         await panelApi.sendEmail(emailForm);
       }
-      addToast?.('Email queued and sent successfully!', 'success');
+      addToast?.('Email queued for delivery with automatic retries!', 'success');
       setShowComposeModal(false);
       setEmailForm({ recipient_email: '', subject: '', body_text: '', email_type: 'system' });
       load();
@@ -461,6 +758,35 @@ function EmailLogsTab({ addToast }) {
     }
   };
 
+  const handleRetryEmail = async (logId) => {
+    try {
+      if (panelApi.retryEmail) {
+        const res = await panelApi.retryEmail(logId);
+        addToast?.(res?.message || `Email #${logId} queued for immediate retry`, 'success');
+      } else {
+        await panelApi.resendEmail?.(logId);
+        addToast?.('Retry queued', 'success');
+      }
+      load();
+    } catch {
+      addToast?.('Failed to queue retry', 'error');
+    }
+  };
+
+  const handleRetryAll = async () => {
+    setRetryingAll(true);
+    try {
+      if (panelApi.retryAllFailedEmails) {
+        const res = await panelApi.retryAllFailedEmails();
+        addToast?.(res?.message || 'Failed emails queued for retry', 'success');
+      }
+      load();
+    } catch {
+      addToast?.('Failed to retry all failed emails', 'error');
+    } finally {
+      setRetryingAll(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -489,9 +815,13 @@ function EmailLogsTab({ addToast }) {
       const q = search.toLowerCase().trim();
       result = result.filter(
         (l) =>
+          (l.recipient_name && l.recipient_name.toLowerCase().includes(q)) ||
           (l.recipient && l.recipient.toLowerCase().includes(q)) ||
+          (l.recipient_email && l.recipient_email.toLowerCase().includes(q)) ||
           (l.email && l.email.toLowerCase().includes(q)) ||
           (l.type && l.type.toLowerCase().includes(q)) ||
+          (l.email_type && l.email_type.toLowerCase().includes(q)) ||
+          (l.subject && l.subject.toLowerCase().includes(q)) ||
           (l.status && l.status.toLowerCase().includes(q))
       );
     }
@@ -500,6 +830,7 @@ function EmailLogsTab({ addToast }) {
 
   const onHoldCount = logs.filter((l) => l.status === 'on_hold').length;
   const pendingCount = logs.filter((l) => l.status === 'pending').length;
+  const retryCount = logs.filter((l) => l.status === 'retry').length;
   const sentCount = logs.filter((l) => l.status === 'sent').length;
   const failedCount = logs.filter((l) => l.status === 'failed').length;
 
@@ -546,6 +877,8 @@ function EmailLogsTab({ addToast }) {
               { value: '', label: 'All Statuses' },
               { value: 'on_hold', label: 'On Hold' },
               { value: 'pending', label: 'Pending' },
+              { value: 'sending', label: 'Sending' },
+              { value: 'retry', label: 'Retrying' },
               { value: 'sent', label: 'Sent' },
               { value: 'failed', label: 'Failed' },
             ]}
@@ -561,6 +894,7 @@ function EmailLogsTab({ addToast }) {
               { value: 'temp_password', label: 'Temp Password' },
               { value: 'password_change', label: 'Password Change Notice' },
               { value: 'otp_reset', label: 'Password Reset OTP' },
+              { value: 'notification', label: 'Notification Alert' },
               { value: 'system', label: 'System / Custom' },
             ]}
             height="28px"
@@ -576,6 +910,28 @@ function EmailLogsTab({ addToast }) {
             height="28px"
             style={{ width: '100px' }}
           />
+          {failedCount > 0 && (
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={handleRetryAll}
+              disabled={retryingAll}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                borderColor: '#f87171',
+                color: '#dc2626',
+                background: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCw size={11} className={retryingAll ? 'spin' : ''} />
+              {retryingAll ? 'Retrying...' : `Retry All Failed (${failedCount})`}
+            </button>
+          )}
           <button className="btn btn-sm btn-primary" onClick={() => setShowComposeModal(true)}>
             <Plus size={12} color="#ffffff" /> Add New Email
           </button>
@@ -585,7 +941,7 @@ function EmailLogsTab({ addToast }) {
           style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}
         >
           <span
-            className="email-status-badge on-hold"
+            className="email-status-badge on_hold"
             onClick={() => setStatusFilter(statusFilter === 'on_hold' ? '' : 'on_hold')}
             style={{
               cursor: 'pointer',
@@ -596,9 +952,9 @@ function EmailLogsTab({ addToast }) {
               borderRadius: '4px',
               fontSize: '11px',
               fontWeight: 600,
-              background: '#fef3c7',
-              color: '#d97706',
-              border: '1px solid #fde68a',
+              background: '#f1f5f9',
+              color: '#64748b',
+              border: '1px solid #cbd5e1',
             }}
           >
             <Clock size={11} /> <span>{onHoldCount}</span>
@@ -622,6 +978,27 @@ function EmailLogsTab({ addToast }) {
           >
             <Clock size={11} /> <span>{pendingCount}</span>
           </span>
+          {retryCount > 0 && (
+            <span
+              className="email-status-badge retry"
+              onClick={() => setStatusFilter(statusFilter === 'retry' ? '' : 'retry')}
+              style={{
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: 600,
+                background: '#fef3c7',
+                color: '#d97706',
+                border: '1px solid #fde68a',
+              }}
+            >
+              <RotateCw size={11} /> <span>{retryCount}</span>
+            </span>
+          )}
           <span
             className="email-status-badge sent"
             onClick={() => setStatusFilter(statusFilter === 'sent' ? '' : 'sent')}
@@ -681,7 +1058,7 @@ function EmailLogsTab({ addToast }) {
               <th style={{ width: '45px', textAlign: 'center' }}>S. No.</th>
               <th>Recipient</th>
               <th style={{ width: '150px' }}>Email Type</th>
-              <th style={{ width: '100px' }}>Status</th>
+              <th style={{ width: '110px' }}>Status</th>
               <th style={{ width: '140px' }}>Sent Time</th>
               <th style={{ width: '70px', textAlign: 'center' }}>Action</th>
             </tr>
@@ -721,27 +1098,39 @@ function EmailLogsTab({ addToast }) {
                       <span className="badge badge-neutral">{l.email_type_display || l.email_type || l.type || 'System'}</span>
                     </td>
                     <td>
-                      <span
-                        className={`badge ${l.status === 'sent' ? 'badge-success' : l.status === 'failed' ? 'badge-danger' : 'badge-warning'}`}
-                      >
-                        {l.status_display || l.status || 'pending'}
-                      </span>
+                      {l.status === 'retry' ? (
+                        <span
+                          className="badge badge-warning"
+                          title={l.error_message ? `Attempt ${l.retry_count || 1}/${l.max_retries || 3}: ${l.error_message}` : 'Retrying delivery'}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                        >
+                          <RotateCw size={10} /> Retrying ({l.retry_count || 1}/{l.max_retries || 3})
+                        </span>
+                      ) : (
+                        <span
+                          className={`badge ${
+                            l.status === 'sent'
+                              ? 'badge-success'
+                              : l.status === 'failed'
+                              ? 'badge-danger'
+                              : l.status === 'sending'
+                              ? 'badge-info'
+                              : 'badge-warning'
+                          }`}
+                          title={l.error_message || ''}
+                        >
+                          {l.status_display || l.status || 'pending'}
+                        </span>
+                      )}
                     </td>
                     <td style={{ fontSize: '12px', color: '#6b7280' }}>
                       {l.sent_at || (l.created_at ? l.created_at : '—')}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button
-                        onClick={async () => {
-                          try {
-                            await panelApi.resendEmail(l.id);
-                            addToast?.('Resend email queued', 'success');
-                          } catch {
-                            addToast?.('Resend email queued', 'info');
-                          }
-                        }}
+                        onClick={() => handleRetryEmail(l.id)}
                         className="btn-icon"
-                        title="Resend email"
+                        title={l.status === 'sent' ? 'Resend email' : 'Retry delivery'}
                         style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb' }}
                       >
                         <RotateCw size={13} />
@@ -897,7 +1286,9 @@ function EmailLogsTab({ addToast }) {
                       { value: 'system', label: 'System / General' },
                       { value: 'welcome', label: 'Welcome / Activation' },
                       { value: 'temp_password', label: 'Temporary Password' },
+                      { value: 'password_change', label: 'Password Change Notice' },
                       { value: 'otp_reset', label: 'Password Reset OTP' },
+                      { value: 'notification', label: 'Notification Alert' },
                     ]}
                     height="36px"
                   />

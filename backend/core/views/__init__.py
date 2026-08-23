@@ -43,6 +43,8 @@ from .base import (
     api_client_staff_assignment_timeline,
     api_email_logs,
     api_email_resend,
+    api_email_retry_single,
+    api_email_retry_all_failed,
     api_email_send_new,
     api_email_compose_defaults,
     tutorial_personal_guide_download,

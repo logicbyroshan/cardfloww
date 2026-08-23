@@ -563,6 +563,18 @@ export const panelApi = {
     return res.data;
   },
 
+  /** POST /api/email-retry/<logId>/ */
+  retryEmail: async (logId) => {
+    const res = await apiClient.post(`/api/email-retry/${logId}/`);
+    return res.data;
+  },
+
+  /** POST /api/email-retry-all/ */
+  retryAllFailedEmails: async () => {
+    const res = await apiClient.post('/api/email-retry-all/');
+    return res.data;
+  },
+
   /** GET /api/email-compose-defaults/ */
   getEmailDefaults: async () => {
     const res = await apiClient.get('/api/email-compose-defaults/');

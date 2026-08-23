@@ -20,6 +20,8 @@ urlpatterns = [
     # ── Manage Panel API ──────────────────────────────────────────────
     path('api/email-logs/', views.api_email_logs, name='api_email_logs_app'),
     path('api/email-resend/<int:log_id>/', views.api_email_resend, name='api_email_resend_app'),
+    path('api/email-retry/<int:log_id>/', views.api_email_retry_single, name='api_email_retry_single_app'),
+    path('api/email-retry-all/', views.api_email_retry_all_failed, name='api_email_retry_all_failed_app'),
     path('api/email-send/', views.api_email_send_new, name='api_email_send_new_app'),
     path('api/email-compose-defaults/', views.api_email_compose_defaults, name='api_email_compose_defaults_app'),
 

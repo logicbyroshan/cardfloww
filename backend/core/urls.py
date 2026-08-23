@@ -53,6 +53,8 @@ urlpatterns = [
     # ==================== EMAIL & PANEL API ====================
     path('api/email-logs/', views.api_email_logs, name='api_email_logs'),
     path('api/email-resend/<int:log_id>/', views.api_email_resend, name='api_email_resend'),
+    path('api/email-retry/<int:log_id>/', views.api_email_retry_single, name='api_email_retry_single'),
+    path('api/email-retry-all/', views.api_email_retry_all_failed, name='api_email_retry_all_failed'),
     path('api/email-send/', views.api_email_send_new, name='api_email_send_new'),
     path('api/email-compose-defaults/', views.api_email_compose_defaults, name='api_email_compose_defaults'),
 

@@ -5,6 +5,8 @@ from .manage_panel_views import (
     manage_panel,
     api_email_logs,
     api_email_resend,
+    api_email_retry_single,
+    api_email_retry_all_failed,
     api_email_send_new,
     api_email_compose_defaults,
 )

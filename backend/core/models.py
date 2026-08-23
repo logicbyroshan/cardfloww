@@ -554,9 +554,11 @@ class Notification(models.Model):
         ('all', 'All Users'),
         ('super_admin', 'Super Admins'),
         ('operator', 'Admin Staff / Operators'),
-        ('prime_manager', 'Prime Managers'),
+        ('prime_manager', 'Prime Managers (Organisations)'),
+        ('super_manager', 'Super Managers'),
         ('manager', 'Managers'),
         ('assistant', 'Assistants'),
+        ('photographer', 'Photographers'),
         ('selected', 'Selected Users'),
     ]
     CATEGORY_ICONS = {
@@ -1211,21 +1213,27 @@ class BackupTask(models.Model):
 
 class EmailLog(models.Model):
     """
-    Log record for every outbound email.
+    Log record and delivery tracking for every outbound email.
     status values:
       on_hold  – created but not sent (account not yet activated)
-      pending  – queued but not yet delivered
+      pending  – queued in delivery pipeline
+      sending  – currently being transmitted via SMTP
+      retry    – delivery attempt failed temporarily; scheduled for retry
       sent     – successfully delivered
-      failed   – delivery attempt failed
+      failed   – delivery attempt failed permanently or max retries exhausted
     """
     STATUS_ON_HOLD = 'on_hold'
     STATUS_PENDING = 'pending'
+    STATUS_SENDING = 'sending'
+    STATUS_RETRY = 'retry'
     STATUS_SENT = 'sent'
     STATUS_FAILED = 'failed'
 
     STATUS_CHOICES = [
         (STATUS_ON_HOLD, 'On Hold'),
         (STATUS_PENDING, 'Pending'),
+        (STATUS_SENDING, 'Sending'),
+        (STATUS_RETRY, 'Retrying'),
         (STATUS_SENT, 'Sent'),
         (STATUS_FAILED, 'Failed'),
     ]
@@ -1234,6 +1242,7 @@ class EmailLog(models.Model):
     EMAIL_TYPE_TEMP_PASSWORD = 'temp_password'
     EMAIL_TYPE_PASSWORD_CHANGE = 'password_change'
     EMAIL_TYPE_OTP_RESET = 'otp_reset'
+    EMAIL_TYPE_NOTIFICATION = 'notification'
     EMAIL_TYPE_SYSTEM = 'system'
 
     TYPE_CHOICES = [
@@ -1241,6 +1250,7 @@ class EmailLog(models.Model):
         (EMAIL_TYPE_TEMP_PASSWORD, 'Temp Password'),
         (EMAIL_TYPE_PASSWORD_CHANGE, 'Password Change Notice'),
         (EMAIL_TYPE_OTP_RESET, 'Password Reset OTP'),
+        (EMAIL_TYPE_NOTIFICATION, 'Notification Alert'),
         (EMAIL_TYPE_SYSTEM, 'System / Custom'),
     ]
 
@@ -1249,12 +1259,17 @@ class EmailLog(models.Model):
     subject = models.CharField(max_length=300)
     body_text = models.TextField(blank=True, default='')
     body_html = models.TextField(blank=True, default='')
-    email_type = models.CharField(max_length=30, choices=TYPE_CHOICES, db_index=True)
+    email_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default=EMAIL_TYPE_SYSTEM, db_index=True)
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES,
         default=STATUS_PENDING, db_index=True
     )
     error_message = models.TextField(blank=True)
+    retry_count = models.IntegerField(default=0, db_index=True)
+    max_retries = models.IntegerField(default=3)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    next_retry_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     sent_at = models.DateTimeField(null=True, blank=True)
 
@@ -1264,7 +1279,7 @@ class EmailLog(models.Model):
         verbose_name_plural = 'Email Logs'
 
     def __str__(self):
-        return f'[{self.status}] {self.email_type} → {self.recipient_email}'
+        return f'[{self.status}] {self.email_type} → {self.recipient_email} (retries: {self.retry_count}/{self.max_retries})'
 
 
 class ClientPresenceSession(models.Model):

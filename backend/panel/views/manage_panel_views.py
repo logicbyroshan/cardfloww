@@ -7,6 +7,7 @@ Moved from core/views/admin_page_views.py.
 
 import logging
 import json
+from datetime import timedelta
 
 from django.conf import settings as django_settings
 from django.contrib.auth.decorators import login_required
@@ -14,7 +15,7 @@ from django.core.mail import EmailMultiAlternatives, get_connection
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -90,7 +91,6 @@ def manage_panel(request):
     if is_super:
         content_parts.append('<div data-tab="notifications"></div><div data-tab="download-templates"></div>')
 
-    from django.http import HttpResponse
     html = f"""<!DOCTYPE html>
 <html>
 <head><title>Manage Panel</title></head>
@@ -160,6 +160,11 @@ def api_email_logs(request):
             'email_type_display': log.get_email_type_display(),
             'status': log.status,
             'status_display': log.get_status_display(),
+            'retry_count': log.retry_count,
+            'max_retries': log.max_retries,
+            'last_attempt_at': timezone.localtime(log.last_attempt_at).strftime('%d-%m-%Y %H:%M') if log.last_attempt_at else None,
+            'next_retry_at': timezone.localtime(log.next_retry_at).strftime('%d-%m-%Y %H:%M') if log.next_retry_at else None,
+            'is_retrying': log.status == EmailLog.STATUS_RETRY,
             'error_message': log.error_message,
             'created_at': timezone.localtime(log.created_at).strftime('%d-%m-%Y %H:%M'),
             'sent_at': timezone.localtime(log.sent_at).strftime('%d-%m-%Y %H:%M') if log.sent_at else None,
@@ -167,7 +172,7 @@ def api_email_logs(request):
         for log in page_obj
     ]
 
-    # P1: single aggregated query instead of 4 separate COUNT queries
+    # P1: single aggregated query instead of separate COUNT queries
     _sc_qs = EmailLog.objects.values('status').annotate(n=Count('id'))
     _sc_map = {row['status']: row['n'] for row in _sc_qs}
 
@@ -181,6 +186,8 @@ def api_email_logs(request):
         'status_counts': {
             'on_hold': _sc_map.get(EmailLog.STATUS_ON_HOLD, 0),
             'pending': _sc_map.get(EmailLog.STATUS_PENDING, 0),
+            'sending': _sc_map.get(EmailLog.STATUS_SENDING, 0),
+            'retry':   _sc_map.get(EmailLog.STATUS_RETRY, 0),
             'sent':    _sc_map.get(EmailLog.STATUS_SENT, 0),
             'failed':  _sc_map.get(EmailLog.STATUS_FAILED, 0),
         },
@@ -257,56 +264,31 @@ def api_email_resend(request, log_id):
             return JsonResponse({'success': False, 'message': 'Failed to send email.'}, status=500)
 
     is_otp_log = log.email_type == EmailLog.EMAIL_TYPE_OTP_RESET
-    if (not is_otp_log) and log.status not in [EmailLog.STATUS_ON_HOLD, EmailLog.STATUS_FAILED]:
-        return JsonResponse({'success': False, 'message': 'Only on_hold or failed emails can be resent for this type.'})
-
-    if is_otp_log:
-        result = OTPService.send_otp(log.recipient_email)
-        if result.get('success'):
-            log.status = EmailLog.STATUS_PENDING
-            log.error_message = ''
-            log.sent_at = None
-            log.save(update_fields=['status', 'error_message', 'sent_at'])
-            ActivityService.log(
-                'email_resend',
-                f'OTP resend requested for {log.recipient_email}',
-                request=request,
-                target_model='EmailLog',
-                target_id=log.id,
-                target_name=log.recipient_email,
-            )
-            return JsonResponse({
-                'success': True,
-                'message': 'OTP resend request queued successfully.',
-                'new_status': log.status,
-                'new_status_display': log.get_status_display(),
-            })
-
-        log.status = EmailLog.STATUS_FAILED
-        log.error_message = result.get('message', 'Failed to resend OTP email.')
-        log.save(update_fields=['status', 'error_message'])
+    if (not is_otp_log) and log.status not in [EmailLog.STATUS_ON_HOLD, EmailLog.STATUS_FAILED, EmailLog.STATUS_RETRY]:
         return JsonResponse({
             'success': False,
-            'message': result.get('message', 'Failed to resend OTP email.'),
-            'new_status': log.status,
-            'new_status_display': log.get_status_display(),
-        }, status=500)
+            'message': f'Cannot resend an email with status "{log.get_status_display()}".',
+        }, status=400)
 
-    try:
-        user = User.objects.get(email=log.recipient_email, is_active=True)
-    except User.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'No active user found with that email address.'})
+    if is_otp_log:
+        return JsonResponse({
+            'success': False,
+            'message': 'OTP verification codes expire after 10 minutes and cannot be resent. Please trigger a fresh request.',
+        }, status=400)
 
-    # S3 fix: generate a new temporary password but do NOT save it yet.
-    # Saving the password before confirming email delivery would lock the user
-    # out if SMTP fails — they'd have a new unknown password with no way to log in.
-    chars = string.ascii_letters + string.digits
-    new_password = ''.join(secrets.choice(chars) for _ in range(10))
+    user = User.objects.filter(email=log.recipient_email).first()
+    if not user:
+        return JsonResponse({
+            'success': False,
+            'message': f'No user found with email "{log.recipient_email}".',
+        }, status=404)
+
+    alphabet = string.ascii_letters + string.digits
+    new_password = ''.join(secrets.choice(alphabet) for _ in range(12))
 
     try:
         success, message = send_welcome_email(
-            name=log.recipient_name or user.get_full_name() or user.username,
-            email=log.recipient_email,
+            user=user,
             password=new_password,
             role=user.role,
             request=request,
@@ -317,11 +299,9 @@ def api_email_resend(request, log_id):
         log.status = EmailLog.STATUS_FAILED
         log.error_message = 'Failed to send welcome email.'
         log.save(update_fields=['status', 'error_message'])
-        # Password intentionally NOT changed — email never reached the user
         return JsonResponse({'success': False, 'message': 'Failed to send email. Password was not changed.'}, status=500)
 
     if success:
-        # Only now save the new password — email delivery confirmed
         try:
             with transaction.atomic():
                 user.set_password(new_password)
@@ -389,6 +369,7 @@ def api_email_send_new(request):
         body_html=body_html,
         email_type=email_type,
         status=EmailLog.STATUS_PENDING,
+        max_retries=3,
     )
 
     try:
@@ -407,22 +388,66 @@ def api_email_send_new(request):
         )
         return JsonResponse({'success': True, 'message': 'Email sent successfully.', 'log_id': log.id})
     except Exception as e:
-        logger.exception('api_email_send_new failed for recipient=%s', recipient_email)
-        log.status = EmailLog.STATUS_FAILED
-        log.error_message = str(e)[:2000]
-        log.save(update_fields=['status', 'error_message'])
-        try:
-            ActivityService.log(
-                'email_send',
-                '[FAILED] Email to ' + recipient_email + ' — ' + str(e)[:100],
-                request=request,
-                target_model='EmailLog',
-                target_id=log.id,
-                target_name=recipient_email,
-            )
-        except Exception:
-            pass
-        return JsonResponse({'success': False, 'message': 'Failed to send email.'}, status=500)
+        logger.exception('api_email_send_new immediate attempt failed for recipient=%s', recipient_email)
+        from core.services.email_delivery_service import EmailDeliveryService
+        is_transient = EmailDeliveryService._is_transient_error(e)
+        if is_transient:
+            log.status = EmailLog.STATUS_RETRY
+            log.retry_count = 1
+            log.next_retry_at = timezone.now() + timedelta(seconds=35)
+            log.error_message = f"Immediate send error (transient): {str(e)[:1000]}"
+            log.save(update_fields=['status', 'retry_count', 'next_retry_at', 'error_message'])
+            return JsonResponse({'success': True, 'message': 'Email queued for retry delivery.', 'log_id': log.id})
+        else:
+            log.status = EmailLog.STATUS_FAILED
+            log.error_message = str(e)[:2000]
+            log.save(update_fields=['status', 'error_message'])
+            try:
+                ActivityService.log(
+                    'email_send',
+                    '[FAILED] Email to ' + recipient_email + ' — ' + str(e)[:100],
+                    request=request,
+                    target_model='EmailLog',
+                    target_id=log.id,
+                    target_name=recipient_email,
+                )
+            except Exception:
+                pass
+            return JsonResponse({'success': False, 'message': 'Failed to send email.'}, status=500)
+
+
+@api_require_permission('perm_manage_panel_email')
+@require_http_methods(['POST'])
+def api_email_retry_single(request, log_id):
+    """Manually trigger immediate retry of a specific email log."""
+    from core.services.email_delivery_service import EmailDeliveryService
+
+    success = EmailDeliveryService.retry_failed_email(log_id)
+    if success:
+        ActivityService.log(
+            'email_retry',
+            f'Retrying email delivery for log #{log_id}',
+            request=request,
+            target_model='EmailLog',
+            target_id=log_id,
+        )
+        return JsonResponse({'success': True, 'message': f'Email #{log_id} queued for immediate retry.'})
+    return JsonResponse({'success': False, 'message': 'Email log not found.'}, status=404)
+
+
+@api_require_permission('perm_manage_panel_email')
+@require_http_methods(['POST'])
+def api_email_retry_all_failed(request):
+    """Reschedule all failed emails for immediate delivery."""
+    from core.services.email_delivery_service import EmailDeliveryService
+
+    count = EmailDeliveryService.retry_all_failed()
+    ActivityService.log(
+        'email_retry_all',
+        f'Rescheduled {count} failed email(s) for delivery',
+        request=request,
+    )
+    return JsonResponse({'success': True, 'message': f'{count} failed email(s) queued for retry.', 'count': count})
 
 
 @api_require_permission('perm_manage_panel_email')
@@ -436,4 +461,3 @@ def api_email_compose_defaults(request):
         'default_subject': 'Message from Adarsh Admin',
         'default_body_text': body_text,
     })
-
