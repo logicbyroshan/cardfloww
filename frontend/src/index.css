@@ -828,8 +828,120 @@ textarea {
 }
 
 .sidebar-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 4px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 8px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.35);
+  flex-shrink: 0;
+}
+
+/* ── Sidebar Impersonation Badge (Mini card placed above Tutorial) ── */
+.sidebar-impersonate-badge {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.32) 0%, rgba(153, 27, 27, 0.48) 100%);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  border-radius: 7px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22);
+  animation: fadeInBadge 0.2s ease-out;
+}
+
+@keyframes fadeInBadge {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sidebar-impersonate-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar-impersonate-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #fca5a5;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sidebar-impersonate-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+  animation: pulseBadgeDot 1.6s infinite;
+}
+
+@keyframes pulseBadgeDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+.sidebar-impersonate-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.sidebar-impersonate-exit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(239, 68, 68, 0.65);
+  border: 1px solid rgba(248, 113, 113, 0.55);
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.sidebar-impersonate-exit-btn:hover {
+  background: #ef4444;
+  border-color: #fca5a5;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+  transform: translateY(-1px);
+}
+
+/* ── Sidebar Actions & Tutorial Link ── */
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.sidebar-actions .nav-item {
+  width: 100%;
+  margin: 0;
+  border-radius: 6px;
 }
 
 .sidebar-info {
@@ -855,23 +967,27 @@ textarea {
   flex-shrink: 0;
 }
 
+/* ── Sidebar User Tile (Profile) ── */
 .sidebar-user {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 7px 8px;
-  margin: 0 6px 6px;
+  margin: 0;
+  width: 100%;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.04);
   text-decoration: none;
   color: inherit;
-  transition: background 0.15s;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .sidebar-user:hover {
   background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .user-avatar {

@@ -164,7 +164,15 @@ const ROLE_LABELS = {
 
 const APP_VERSION = 'v5.0.0';
 
-export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_admin', currentUser, onLogout }) {
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  userRole = 'super_admin',
+  currentUser,
+  onLogout,
+  impersonatedUser,
+  onExitImpersonation,
+}) {
   const normalizedRole = String(userRole || '').toLowerCase();
   let roleKey = 'super_admin';
   if (normalizedRole === 'prime_admin' || normalizedRole === 'pro_user') {
@@ -272,13 +280,47 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
         })}
       </nav>
 
-      {/* ── Footer — matches sidebar.html ── */}
+      {/* ── Footer ── */}
       <div className="sidebar-footer">
+        {/* Impersonation Indicator — compact box placed directly on top of Tutorial */}
+        {impersonatedUser && (
+          <div
+            className="sidebar-impersonate-badge"
+            title={`Active Impersonation: ${impersonatedUser.name} (${impersonatedUser.role || impersonatedUser.email})`}
+          >
+            <div className="sidebar-impersonate-content">
+              <div className="sidebar-impersonate-label">
+                <span className="sidebar-impersonate-dot" />
+                <UserCog size={11} />
+                <span>IMPERSONATING</span>
+              </div>
+              <div className="sidebar-impersonate-name">
+                {impersonatedUser.name || impersonatedUser.username || 'User'}
+              </div>
+            </div>
+            {onExitImpersonation && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onExitImpersonation();
+                }}
+                className="sidebar-impersonate-exit-btn"
+                title="Exit Impersonation Session"
+              >
+                <LogOut size={10} />
+                <span>Exit</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Tutorial link */}
         <div className="sidebar-actions">
           <button
             onClick={() => setActiveTab('tutorial')}
             className={`nav-item${activeTab === 'tutorial' ? ' active' : ''}`}
+            id="sidebar-tutorial-btn"
           >
             <BookOpen size={13} />
             <span>Tutorial</span>
@@ -288,12 +330,12 @@ export default function Sidebar({ activeTab, setActiveTab, userRole = 'super_adm
         {/* User tile — clicking goes to Profile / Settings */}
         <div
           className="sidebar-user"
-          style={{ width: 'calc(100% - 12px)', cursor: 'pointer' }}
           onClick={() => setActiveTab('settings')}
           title="Go to Profile / Settings"
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && setActiveTab('settings')}
+          id="sidebar-user-tile"
         >
           {/* Avatar */}
           <div

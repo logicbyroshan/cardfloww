@@ -509,60 +509,18 @@ export default function App() {
       <Preloader currentUser={currentUser} />
 
       {/* Dark sidebar */}
-
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         userRole={userRole}
         currentUser={currentUser}
         onLogout={handleLogout}
+        impersonatedUser={impersonatedUser}
+        onExitImpersonation={handleExitImpersonation}
       />
 
       {/* Right: topbar + page content */}
       <div className="main-content">
-        {/* Active Impersonation Alert Banner */}
-        {impersonatedUser && (
-          <div
-            style={{
-              background: 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)',
-              color: '#ffffff',
-              padding: '8px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '12px',
-              fontWeight: 600,
-              zIndex: 999,
-              boxShadow: '0 2px 10px rgba(220,38,38,0.3)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <UserCog size={16} />
-              <span>
-                Active Impersonation Session: <strong>{impersonatedUser.name}</strong> (
-                {impersonatedUser.role || impersonatedUser.email})
-              </span>
-            </div>
-            <button
-              onClick={handleExitImpersonation}
-              style={{
-                background: '#ffffff',
-                color: '#dc2626',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '3px 10px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <X size={13} /> Exit Impersonation
-            </button>
-          </div>
-        )}
 
         {/* Top bar header — Dashboard only */}
         {activeTab === 'dashboard' && (
