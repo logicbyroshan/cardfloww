@@ -1,8 +1,8 @@
 """
-Impersonation Service — Pro User only.
+Impersonation Service — Super Admin & Pro User.
 
-Allows the Pro User to "login as" any other user for production testing.
-Uses Django session to track the original user.
+Allows administrators to "login as" any operational user for testing and troubleshooting.
+Uses Django session to track the original administrator.
 """
 import logging
 from django.contrib.auth import get_user_model, login
@@ -14,10 +14,10 @@ User = get_user_model()
 
 class ImpersonateService:
     """
-    Session-based impersonation for the Pro User.
+    Session-based impersonation for Administrators / Pro Users.
 
     start() — switch current session to target user
-    stop()  — switch back to the original Pro User
+    stop()  — switch back to the original Administrator
     is_impersonating() — check if the current session is impersonated
     """
 
@@ -26,19 +26,22 @@ class ImpersonateService:
 
     @classmethod
     def can_impersonate(cls, user) -> bool:
-        """Allow admin users with Pro access to impersonate operational accounts."""
+        """Allow super admins and pro users to impersonate operational accounts."""
+        if not user or not user.is_authenticated:
+            return False
+        if getattr(user, 'is_superuser', False):
+            return True
+        if getattr(user, 'role', '') in ('super_admin', 'pro_user', 'prime_admin'):
+            return True
         from core.services.permission_service import PermissionService
-
-        return bool(
-            user and user.is_authenticated and (
-                PermissionService.can_use_pro_user_options(user)
-                or PermissionService.is_super_admin(user)
-            )
-        )
+        return PermissionService.can_use_pro_user_options(user) or PermissionService.is_super_admin(user)
 
     @classmethod
     def is_impersonating(cls, request) -> bool:
-        return bool(request.session.get(cls.SESSION_KEY))
+        return bool(
+            request.session.get(cls.SESSION_KEY)
+            or request.session.get('_impersonator_id')
+        )
 
     @classmethod
     def start(cls, request, target_user_id: int) -> dict:
@@ -46,44 +49,48 @@ class ImpersonateService:
         Start impersonating a target user.
 
         Args:
-            request: Current HttpRequest (must be from a pro_user)
+            request: Current HttpRequest (must be from an administrator)
             target_user_id: PK of the user to impersonate
 
         Returns:
-            dict with success, message, redirect_url
+            dict with success, message, redirect_url, user
         """
         current_user = request.user
 
-        # Only pro_user can impersonate
         if not cls.can_impersonate(current_user):
             return {'success': False, 'message': 'Permission denied.'}
 
-        # Cannot impersonate yourself
-        if current_user.pk == target_user_id:
-            return {'success': False, 'message': 'Cannot impersonate yourself.'}
-
-        # Decode ID if compatibility wrapped
+        # Decode ID if compatibility wrapped or string
         from core.services.compat_service import CompatibilityService
         _, real_id = CompatibilityService.decode_id(target_user_id)
 
-        # Cannot impersonate operators or photographers
+        try:
+            real_id = int(real_id)
+        except (ValueError, TypeError):
+            return {'success': False, 'message': 'Invalid user ID.'}
+
+        # Cannot impersonate yourself
+        if current_user.pk == real_id:
+            return {'success': False, 'message': 'Cannot impersonate yourself.'}
+
         UserModel = get_user_model()
         try:
             target_user = UserModel.objects.get(pk=real_id)
         except UserModel.DoesNotExist:
-            return {'success': False, 'message': 'User not found.'}
+            return {'success': False, 'message': 'Target user not found.'}
 
-        if target_user.role in ('operator', 'photographer'):
-            return {'success': False, 'message': 'Cannot impersonate operators or photographers.'}
+        # Cannot impersonate another super admin or pro user
+        if target_user.is_superuser or target_user.role in ('super_admin', 'pro_user', 'prime_admin'):
+            return {'success': False, 'message': 'Cannot impersonate another administrator.'}
 
         # Cannot chain impersonations
         if cls.is_impersonating(request):
-            return {'success': False, 'message': 'Already impersonating. Stop first.'}
+            return {'success': False, 'message': 'Already in an impersonation session. Stop the current session first.'}
 
         if not target_user.is_active:
             return {'success': False, 'message': 'Cannot impersonate an inactive user.'}
 
-        # Save original user info before login() flushes the session
+        # Save original admin info before login() flushes the session
         original_user_id = current_user.pk
         original_user_name = current_user.get_full_name() or current_user.username
 
@@ -93,14 +100,18 @@ class ImpersonateService:
             k: request.session[k] for k in ('mobile_auth_ok', '_auth_login_surface', 'selected_role')
             if k in request.session
         }
+
         # Switch to target user — login() flushes and recreates the session
         login(request, target_user, backend='django.contrib.auth.backends.ModelBackend')
         for k, v in saved_keys.items():
             request.session[k] = v
 
-        # Set impersonation markers in the new session
+        # Set impersonation markers in the new session (both key formats for backward compatibility)
         request.session[cls.SESSION_KEY] = original_user_id
         request.session[cls.SESSION_NAME_KEY] = original_user_name
+        request.session['_impersonator_id'] = original_user_id
+        request.session['_impersonator_name'] = original_user_name
+        request.session['selected_role'] = target_user.role
         request.session.modified = True
         request.session.save()
 
@@ -115,21 +126,30 @@ class ImpersonateService:
         redirect_url = DASHBOARD_URLS.get(target_user.role, '/panel/')
 
         logger.info(
-            "Impersonation started: pro_user=%s (ID:%d) → target=%s (ID:%d, role=%s)",
+            "Impersonation started: admin=%s (ID:%d) → target=%s (ID:%d, role=%s)",
             original_user_name, original_user_id,
             target_user.username, target_user.pk, target_user.role,
         )
 
+        full_name = target_user.get_full_name() or target_user.username
+
         return {
             'success': True,
-            'message': f'Now impersonating {target_user.get_full_name() or target_user.username}',
+            'message': f'Now impersonating {full_name} ({target_user.role})',
             'redirect_url': redirect_url,
+            'user': {
+                'id': target_user.id,
+                'username': target_user.username,
+                'email': target_user.email,
+                'role': target_user.role,
+                'full_name': full_name,
+            }
         }
 
     @classmethod
     def stop(cls, request, next_url: str = '') -> dict:
         """
-        Stop impersonating and return to the Pro User session.
+        Stop impersonating and return to the Administrator session.
 
         Args:
             request: Current HttpRequest
@@ -138,7 +158,7 @@ class ImpersonateService:
         Returns:
             dict with success, message, redirect_url
         """
-        original_user_id = request.session.get(cls.SESSION_KEY)
+        original_user_id = request.session.get(cls.SESSION_KEY) or request.session.get('_impersonator_id')
         if not original_user_id:
             return {'success': False, 'message': 'Not currently impersonating.'}
 
@@ -149,15 +169,14 @@ class ImpersonateService:
             original_user = UserModel.objects.using('default').get(pk=real_orig_id)
         except UserModel.DoesNotExist:
             logger.error("Impersonate stop: Original account not found for user ID %s", real_orig_id)
-            return {'success': False, 'message': 'Original account not found.'}
+            return {'success': False, 'message': 'Original administrator account not found.'}
 
         impersonated_name = request.user.get_full_name() or request.user.username
 
-        # Remove impersonation markers so they don't persist after login()
-        if cls.SESSION_KEY in request.session:
-            del request.session[cls.SESSION_KEY]
-        if cls.SESSION_NAME_KEY in request.session:
-            del request.session[cls.SESSION_NAME_KEY]
+        # Remove all impersonation markers
+        for k in (cls.SESSION_KEY, cls.SESSION_NAME_KEY, '_impersonator_id', '_impersonator_name'):
+            if k in request.session:
+                del request.session[k]
 
         # Clear any thread-local guest sandbox routing context so login updates default DB
         try:
@@ -173,7 +192,8 @@ class ImpersonateService:
             k: request.session[k] for k in ('mobile_auth_ok', '_auth_login_surface', 'selected_role')
             if k in request.session
         }
-        # Switch back — login() flushes the session but preserves dict, so we manually deleted markers above
+
+        # Switch back to original administrator
         login(request, original_user, backend='django.contrib.auth.backends.ModelBackend')
         for k, v in saved_keys.items():
             request.session[k] = v
@@ -187,12 +207,12 @@ class ImpersonateService:
             pass
 
         logger.info(
-            "Impersonation stopped: pro_user=%s (ID:%d) was impersonating %s",
+            "Impersonation stopped: admin=%s (ID:%d) was impersonating %s",
             original_user.username, original_user.pk, impersonated_name,
         )
 
         from .services import DASHBOARD_URLS
-        redirect_url = DASHBOARD_URLS.get(getattr(original_user, 'role', 'pro_user'), '/panel/')
+        redirect_url = DASHBOARD_URLS.get(getattr(original_user, 'role', 'super_admin'), '/panel/')
         
         # If a safe next_url is provided, use it
         if next_url and next_url.startswith('/'):
@@ -200,15 +220,15 @@ class ImpersonateService:
 
         return {
             'success': True,
-            'message': 'Impersonation stopped.',
+            'message': 'Impersonation session ended. Returned to Administrator account.',
             'redirect_url': redirect_url,
         }
 
     @classmethod
     def get_impersonation_targets(cls, request) -> list:
         """
-        Get list of users the Pro User can impersonate.
-        Returns a list of dicts with id, name, email, role.
+        Get list of users the Administrator can impersonate.
+        Returns a list of dicts with id, rawId, name, email, role, role_display, client_name.
         """
         if not cls.can_impersonate(request.user):
             return []
@@ -217,9 +237,10 @@ class ImpersonateService:
         users = (
             UserModel.objects
             .filter(is_active=True)
-            .select_related('organisation_profile', 'assistant_profile__organisation', 'operator_profile')
             .exclude(pk=request.user.pk)
-            .exclude(role__in=['pro_user', 'operator', 'photographer'])
+            .exclude(is_superuser=True)
+            .exclude(role__in=['pro_user', 'super_admin', 'prime_admin'])
+            .select_related('organisation_profile', 'assistant_profile__organisation', 'operator_profile')
             .order_by('role', 'first_name', 'username')
         )
 
@@ -236,15 +257,17 @@ class ImpersonateService:
             elif u.role == 'operator':
                 client_name = ''
 
-            from core.services.compat_service import CompatibilityService
-            result.append(CompatibilityService.translate_dict({
+            result.append({
                 'id': u.id,
+                'rawId': u.id,
+                'user_id': u.id,
                 'name': name,
-                'email': u.email,
+                'username': u.username,
+                'email': u.email or '',
                 'role': u.role,
                 'role_display': dict(UserModel.ROLE_CHOICES).get(u.role, u.role),
                 'is_active': u.is_active,
                 'client_name': client_name,
-            }))
+            })
 
         return result

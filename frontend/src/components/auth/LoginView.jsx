@@ -3,11 +3,11 @@ import { User, Lock, Loader2, ArrowRight, Eye, EyeOff, ShieldCheck, HelpCircle }
 import { authApi } from '../../services/api';
 
 const DEMO_ACCOUNTS = [
-  { role: 'Super Admin', username: 'admin', label: 'Prime Admin' },
-  { role: 'Organisation', username: 'org_admin', label: 'Prime Manager' },
-  { role: 'Operator', username: 'operator', label: 'Staff Operator' },
-  { role: 'Assistant', username: 'assistant', label: 'Data Assistant' },
-  { role: 'Photographer', username: 'photographer', label: 'Studio' },
+  { role: 'Super Admin', username: 'admin', password: 'admin123', label: 'Prime Admin' },
+  { role: 'Organisation', username: 'org_admin', password: 'password123', label: 'Prime Manager' },
+  { role: 'Operator', username: 'operator', password: 'password123', label: 'Staff Operator' },
+  { role: 'Assistant', username: 'assistant', password: 'password123', label: 'Data Assistant' },
+  { role: 'Photographer', username: 'photographer', password: 'password123', label: 'Studio' },
 ];
 
 export default function LoginView({ onLoginSuccess, onSwitchTab }) {
@@ -54,7 +54,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
 
   const handleQuickFill = (acc) => {
     setUsername(acc.username);
-    setPassword('password123');
+    setPassword(acc.password || (acc.username === 'admin' ? 'admin123' : 'password123'));
     setError('');
   };
 

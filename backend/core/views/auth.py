@@ -123,8 +123,17 @@ def api_auth_me(request):
         getattr(user, 'last_name', ''),
     ])).strip() or user.username
 
+    is_impersonating = bool(request.session.get('_pro_original_user_id') or request.session.get('_impersonator_id'))
+    impersonator_id = request.session.get('_pro_original_user_id') or request.session.get('_impersonator_id')
+    impersonator_name = request.session.get('_pro_original_user_name') or request.session.get('_impersonator_name') or 'Super Admin'
+
     return JsonResponse({
         'authenticated': True,
+        'is_impersonating': is_impersonating,
+        'impersonator': {
+            'id': impersonator_id,
+            'name': impersonator_name,
+        } if is_impersonating else None,
         'user': {
             'id': user.id,
             'username': user.username,

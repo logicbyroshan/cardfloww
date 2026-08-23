@@ -807,14 +807,15 @@ class AuthMeAPIView(View):
             return JsonResponse({'authenticated': False}, status=200)
 
         role = getattr(user, 'role', 'admin') or ('admin' if user.is_superuser else 'client')
-        is_impersonating = bool(request.session.get('_impersonator_id'))
-        impersonator_name = request.session.get('_impersonator_name') or 'Super Admin'
+        is_impersonating = bool(request.session.get('_pro_original_user_id') or request.session.get('_impersonator_id'))
+        impersonator_id = request.session.get('_pro_original_user_id') or request.session.get('_impersonator_id')
+        impersonator_name = request.session.get('_pro_original_user_name') or request.session.get('_impersonator_name') or 'Super Admin'
 
         return JsonResponse({
             'authenticated': True,
             'is_impersonating': is_impersonating,
             'impersonator': {
-                'id': request.session.get('_impersonator_id'),
+                'id': impersonator_id,
                 'name': impersonator_name,
             } if is_impersonating else None,
             'user': {

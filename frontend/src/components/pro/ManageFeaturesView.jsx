@@ -91,7 +91,8 @@ export default function ManageFeaturesView({ addToast }) {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [clientsRes, staffRes, opsRes, photoRes, feedRes] = await Promise.allSettled([
+      const [impUsersRes, clientsRes, staffRes, opsRes, photoRes, feedRes] = await Promise.allSettled([
+        impersonateApi.getUsers(),
         clientApi.getActive({ page_size: 100 }),
         assistantApi.list({ page_size: 100 }),
         operatorApi.list({ page_size: 100 }),
@@ -100,66 +101,96 @@ export default function ManageFeaturesView({ addToast }) {
       ]);
 
       let list = [];
-      if (clientsRes.status === 'fulfilled' && clientsRes.value) {
-        const clientItems =
-          clientsRes.value.clients ||
-          clientsRes.value.results ||
-          (Array.isArray(clientsRes.value) ? clientsRes.value : []);
-        clientItems.forEach((c) => {
-          list.push({
-            id: `client-${c.id}`,
-            name: c.name || c.school_name || 'Client Account',
-            email: c.email || c.user?.email || 'N/A',
-            role: 'Manage Organisation',
-            rawRole: 'prime_manager',
-            status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
-          });
-        });
-      }
 
-      if (staffRes.status === 'fulfilled' && staffRes.value) {
-        const staffItems =
-          staffRes.value.staff || staffRes.value.results || (Array.isArray(staffRes.value) ? staffRes.value : []);
-        staffItems.forEach((s) => {
-          list.push({
-            id: `staff-${s.id}`,
-            name: s.name || s.user?.get_full_name || s.user?.username || 'Assistant',
-            email: s.email || s.user?.email || 'N/A',
-            role: s.role_display || 'Manage Assistant',
-            rawRole: 'assistant',
-            status: 'Active',
+      // Primary source: dedicated impersonation users API
+      if (impUsersRes.status === 'fulfilled' && impUsersRes.value?.users && Array.isArray(impUsersRes.value.users) && impUsersRes.value.users.length > 0) {
+        list = impUsersRes.value.users.map((u) => ({
+          id: u.id,
+          rawId: u.id,
+          user_id: u.id,
+          name: u.name || u.username,
+          username: u.username,
+          email: u.email || 'N/A',
+          role: u.role_display || u.role,
+          rawRole: u.role,
+          status: u.is_active ? 'Active' : 'Inactive',
+          client_name: u.client_name || '',
+        }));
+      } else {
+        // Fallback aggregation
+        if (clientsRes.status === 'fulfilled' && clientsRes.value) {
+          const clientItems =
+            clientsRes.value.clients ||
+            clientsRes.value.results ||
+            (Array.isArray(clientsRes.value) ? clientsRes.value : []);
+          clientItems.forEach((c) => {
+            const uid = c.user_id || c.user?.id || c.id;
+            list.push({
+              id: uid,
+              rawId: uid,
+              user_id: uid,
+              name: c.name || c.school_name || 'Client Account',
+              email: c.email || c.user?.email || 'N/A',
+              role: 'Manage Organisation',
+              rawRole: 'prime_manager',
+              status: c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : 'Active',
+            });
           });
-        });
-      }
+        }
 
-      if (opsRes.status === 'fulfilled' && opsRes.value) {
-        const opItems =
-          opsRes.value.operators || opsRes.value.results || (Array.isArray(opsRes.value) ? opsRes.value : []);
-        opItems.forEach((o) => {
-          list.push({
-            id: `op-${o.id}`,
-            name: o.name || o.username || 'Operator',
-            email: o.email || 'N/A',
-            role: 'Manage Operator',
-            rawRole: 'operator',
-            status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Active',
+        if (staffRes.status === 'fulfilled' && staffRes.value) {
+          const staffItems =
+            staffRes.value.staff || staffRes.value.results || (Array.isArray(staffRes.value) ? staffRes.value : []);
+          staffItems.forEach((s) => {
+            const uid = s.user_id || s.user?.id || s.id;
+            list.push({
+              id: uid,
+              rawId: uid,
+              user_id: uid,
+              name: s.name || s.user?.get_full_name || s.user?.username || 'Assistant',
+              email: s.email || s.user?.email || 'N/A',
+              role: s.role_display || 'Manage Assistant',
+              rawRole: 'assistant',
+              status: 'Active',
+            });
           });
-        });
-      }
+        }
 
-      if (photoRes.status === 'fulfilled' && photoRes.value) {
-        const photoItems =
-          photoRes.value.photographers || photoRes.value.results || (Array.isArray(photoRes.value) ? photoRes.value : []);
-        photoItems.forEach((p) => {
-          list.push({
-            id: `photo-${p.id}`,
-            name: p.name || p.username || 'Photographer',
-            email: p.email || 'N/A',
-            role: 'Manage Photographer',
-            rawRole: 'photographer',
-            status: p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : 'Active',
+        if (opsRes.status === 'fulfilled' && opsRes.value) {
+          const opItems =
+            opsRes.value.operators || opsRes.value.results || (Array.isArray(opsRes.value) ? opsRes.value : []);
+          opItems.forEach((o) => {
+            const uid = o.user_id || o.user?.id || o.id;
+            list.push({
+              id: uid,
+              rawId: uid,
+              user_id: uid,
+              name: o.name || o.username || 'Operator',
+              email: o.email || 'N/A',
+              role: 'Manage Operator',
+              rawRole: 'operator',
+              status: o.status ? o.status.charAt(0).toUpperCase() + o.status.slice(1) : 'Active',
+            });
           });
-        });
+        }
+
+        if (photoRes.status === 'fulfilled' && photoRes.value) {
+          const photoItems =
+            photoRes.value.photographers || photoRes.value.results || (Array.isArray(photoRes.value) ? photoRes.value : []);
+          photoItems.forEach((p) => {
+            const uid = p.user_id || p.user?.id || p.id;
+            list.push({
+              id: uid,
+              rawId: uid,
+              user_id: uid,
+              name: p.name || p.username || 'Photographer',
+              email: p.email || 'N/A',
+              role: 'Manage Photographer',
+              rawRole: 'photographer',
+              status: p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : 'Active',
+            });
+          });
+        }
       }
 
       setUsersList(list);
@@ -195,8 +226,12 @@ export default function ManageFeaturesView({ addToast }) {
 
   const handleImpersonate = async (user) => {
     try {
-      const res = await impersonateApi.start(user.rawId || user.id);
+      const targetId = user.rawId || user.user_id || (typeof user.id === 'number' ? user.id : parseInt(String(user.id).replace(/^[a-z]+-/, ''), 10));
+      const res = await impersonateApi.start(targetId);
       addToast?.(res?.message || `Now impersonating ${user.name} (${user.role})`, 'success');
+      if (window.__setActiveImpersonation) {
+        window.__setActiveImpersonation(user);
+      }
       if (window.__refreshAuthUser) {
         await window.__refreshAuthUser();
       }
@@ -207,8 +242,11 @@ export default function ManageFeaturesView({ addToast }) {
 
   const handleStopImpersonate = async () => {
     try {
-      await impersonateApi.stop();
-      addToast?.('Returned to Super Admin session', 'success');
+      const res = await impersonateApi.stop();
+      addToast?.(res?.message || 'Returned to Super Admin session', 'success');
+      if (window.__setActiveImpersonation) {
+        window.__setActiveImpersonation(null);
+      }
       if (window.__refreshAuthUser) {
         await window.__refreshAuthUser();
       }

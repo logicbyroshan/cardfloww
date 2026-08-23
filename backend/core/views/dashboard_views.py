@@ -190,6 +190,13 @@ def _extract_activity_status_query(activity):
     return ''
 
 
+def _safe_reverse(viewname, *args, **kwargs):
+    try:
+        return reverse(viewname, *args, **kwargs)
+    except Exception:
+        return ''
+
+
 def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, client_id_by_name, first_table_by_client):
     """Return best destination URL for clicking a recent activity chip."""
     action = str(activity.get('action') or '').strip().lower()
@@ -202,48 +209,53 @@ def _build_recent_activity_link(activity, *, staff_type_map, card_meta_map, clie
     except (TypeError, ValueError):
         target_id_int = None
 
-    if target_model == 'idcard' and target_id_int and target_id_int in card_meta_map:
-        card_meta = card_meta_map[target_id_int]
-        table_id = card_meta.get('table_id')
-        if table_id:
-            status = card_meta.get('status') or _extract_activity_status_query(activity)
-            status_query = f'?status={status}' if status else ''
-            highlight = f'&highlight={target_id_int}' if status_query else f'?highlight={target_id_int}'
-            return f'{reverse("idcard_actions", args=[table_id])}{status_query}{highlight}'
+    try:
+        if target_model == 'idcard' and target_id_int and target_id_int in card_meta_map:
+            card_meta = card_meta_map[target_id_int]
+            table_id = card_meta.get('table_id')
+            if table_id:
+                status = card_meta.get('status') or _extract_activity_status_query(activity)
+                status_query = f'?status={status}' if status else ''
+                highlight = f'&highlight={target_id_int}' if status_query else f'?highlight={target_id_int}'
+                base_url = _safe_reverse("idcard_actions", args=[table_id])
+                return f'{base_url}{status_query}{highlight}' if base_url else ''
 
-    if target_model == 'staff' and target_id_int:
-        staff_type = staff_type_map.get(target_id_int)
-        if staff_type == 'assistant':
-            return reverse('manage_client_staff')
-        if staff_type == 'operator':
-            return reverse('manage_staff')
+        if target_model == 'staff' and target_id_int:
+            staff_type = staff_type_map.get(target_id_int)
+            if staff_type == 'assistant':
+                return _safe_reverse('manage_client_staff')
+            if staff_type == 'operator':
+                return _safe_reverse('manage_staff')
 
-    if target_model == 'client':
-        return reverse('manage_clients')
+        if target_model == 'client':
+            return _safe_reverse('manage_clients')
 
-    if action.startswith('client_'):
-        return reverse('manage_clients')
-    if action.startswith('staff_'):
-        return reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'assistant' else reverse('manage_staff')
+        if action.startswith('client_'):
+            return _safe_reverse('manage_clients')
+        if action.startswith('staff_'):
+            return _safe_reverse('manage_client_staff') if target_model == 'staff' and target_id_int and staff_type_map.get(target_id_int) == 'assistant' else _safe_reverse('manage_staff')
 
-    if action in ('login', 'logout'):
-        if actor_role in ('prime_manager', 'manager', 'guest_prime_manager'):
-            return reverse('manage_clients')
-        if actor_role in ('assistant'):
-            return reverse('manage_client_staff')
-        if actor_role in ('operator', 'super_admin'):
-            return reverse('manage_staff')
+        if action in ('login', 'logout'):
+            if actor_role in ('prime_manager', 'manager', 'guest_prime_manager'):
+                return _safe_reverse('manage_clients')
+            if actor_role in ('assistant'):
+                return _safe_reverse('manage_client_staff')
+            if actor_role in ('operator', 'super_admin'):
+                return _safe_reverse('manage_staff')
 
-    if action.startswith('card_') or action.startswith('reprint_') or action in ('bulk_upgrade', 'bulk_delete', 'image_upload', 'image_reupload'):
-        client_name = _extract_activity_client_name(activity)
-        client_id = client_id_by_name.get(_normalize_activity_name(client_name)) if client_name else None
-        if client_id:
-            status = _extract_activity_status_query(activity)
-            table_id = first_table_by_client.get(client_id)
-            if table_id and status:
-                return f'{reverse("idcard_actions", args=[table_id])}?status={status}'
-            return reverse('idcard_group', args=[client_id])
-        return reverse('manage_clients')
+        if action.startswith('card_') or action.startswith('reprint_') or action in ('bulk_upgrade', 'bulk_delete', 'image_upload', 'image_reupload'):
+            client_name = _extract_activity_client_name(activity)
+            client_id = client_id_by_name.get(_normalize_activity_name(client_name)) if client_name else None
+            if client_id:
+                status = _extract_activity_status_query(activity)
+                table_id = first_table_by_client.get(client_id)
+                if table_id and status:
+                    base_url = _safe_reverse("idcard_actions", args=[table_id])
+                    return f'{base_url}?status={status}' if base_url else ''
+                return _safe_reverse('idcard_group', args=[client_id])
+            return _safe_reverse('manage_clients')
+    except Exception:
+        return ''
 
     return ''
 
