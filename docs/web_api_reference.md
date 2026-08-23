@@ -2,6 +2,8 @@
 
 This document describes the API endpoint designed to share the client list and aggregate record counts with the landing website.
 
+> 📖 **Full Guide**: For detailed client code examples in Next.js, Node.js, Python, PHP, caching strategies, and architecture diagrams, see [WEB_APP_INTEGRATION.md](WEB_APP_INTEGRATION.md).
+
 ---
 
 ## 🔐 Authentication

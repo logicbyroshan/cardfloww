@@ -53,7 +53,9 @@ graph TD
             AppTables["tables (Table Models, TableAccess Relational Delegation)"]
             AppCards["idcards (Card Data & State Machine)"]
             AppAssistants["assistants (Scoped Assistants, Manager Workloads)"]
-            AppReprint["reprintcard (Reprint Queue & Pool)"]
+            AppReprint["reprint (3-Stage Lifecycle, In-Place Updates)"]
+            AppWebApp["web_app (Server-to-Server Public API)"]
+            AppStats["stats (Server Load Snapshots & Telemetry)"]
             AppExports["exports (ReportLab PDF, Word, ZIP)"]
             AppMedia["mediafiles (OpenCV, Protected Media)"]
             AppMobile["mobile_api (Biometrics, Camera API)"]
@@ -157,7 +159,9 @@ CardFlow enforces a clean separation of responsibilities across two discrete ope
 | **`tables`** | Core schema model (`Table`), `TableAccess` relational delegation model, field definition configuration, and status counters. |
 | **`assistants`** | Assistant user profiles (`Assistant`), manager workload scoping, and table assignment. |
 | **`idcards`** | Primary student/staff card data records (`IDCard`), state-machine transition pipeline (`pending` ➔ `verified` ➔ `pool` ➔ `approved` ➔ `download`). |
-| **`reprintcard`** | Dedicated replacement/lost card request queue (`ReprintRequest`, `ReprintCardData`), print pool batching, and isolated confirmation workflows. |
+| **`reprint`** | Dedicated 3-stage reprint lifecycle (`ReprintRequest`), in-place non-duplicating card mutations, staged edit diffs, and sequential reprint counters. |
+| **`web_app`** | Server-to-server authenticated public API (`/api/web/clients/`) for landing website directory sync and live card count aggregation. |
+| **`stats`** | Real-time concurrent load telemetry, server snapshots (`ServerLoadAlert`), and threshold alerts. |
 | **`exports`** | High-precision PDF grid generation engine with Pillow C-bindings 300 DPI pre-scaling, zero-CPU lossless ZIP streaming, Word `.docx` section exporter, and fast natural hierarchical sorting (`fast_sort.py`). |
 | **`imports`** | High-speed data ingestion engine for `.xlsx`, `.xls`, `.csv`, and `.docx` Word tables, embedded cell photo extraction (`ws._images`, `w:drawing`), schema auto-detection, and multi-key photo reupload matching. |
 | **`mediafiles`** | Protected media delivery (`_protected_media_serve`), zero-trust authorization checks, OpenCV face auto-cropping, thumbnail generation. |

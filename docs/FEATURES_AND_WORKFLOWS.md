@@ -34,19 +34,30 @@ Cards pass through a strictly enforced, state-machine driven status pipeline:
 
 ---
 
-## 3. Dedicated Reprint Workflow Queue (`reprintcard/`)
+## 3. Dedicated 3-Step Reprint Lifecycle Architecture (`reprint/`)
 
-When a student or staff member loses an ID card or requires a replacement, CardFlow handles reprints via an isolated queue that prevents disruption to main production runs.
+When a student or staff member loses an ID card or requires a corrected reprint, CardFlow routes the request through a dedicated 3-stage lifecycle that prevents duplicate card records and preserves data integrity.
 
 ```text
-[ REQUESTED ] ────────► [ CONFIRMED ] ────────► [ DOWNLOADED ] ────────► [ POOL ]
-(Reprint Entry)        (Admin Approved)         (PDF Generated)          (Completed)
+[ STEP 1: REPRINT LIST ] ──────► [ STEP 2: REQUESTED LIST ] ──────► [ STEP 3: CONFIRMED LIST ]
+(Downloaded Cards Pool)          (Staged Edits & Diff Review)         (In-Place Card Update & Counter)
+         ▲                                   │
+         └────────── Reject / Cancel ────────┘
 ```
 
-1. **Reprint Request (`Requested`)**: Initiated from web, mobile app, or client portal with specified reason (Lost, Damaged, Information Update).
-2. **Confirmation (`Confirmed`)**: Verified by institution staff with payment or approval flag.
-3. **PDF Generation (`Downloaded`)**: Exported into reprint-specific PDF print grids.
-4. **Archived Pool (`Pool`)**: Marked complete and stored for historical auditing.
+1. **Step 1: Reprint List (`reprint_list`)**:
+   - Source pool consists strictly of previously downloaded cards (`status='download'`).
+   - Cards are displayed uniquely (deduplicated by `card.id`).
+   - Users can edit student fields directly in the drawer or modal before submitting.
+   - Shows active status badges and lifetime reprint counts (*e.g., 2x Reprinted*).
+2. **Step 2: Requested List (`request_list`)**:
+   - Lists active requests with reason (*Lost*, *Damaged*, *Information Update*), requester, and a visual diff comparing original vs staged values.
+   - **Admin Reject / Cancel**: Cancels the request and returns the card to available state in the Reprint List without altering the original card.
+   - **Admin Confirm**: Approves the reprint and staged changes.
+3. **Step 3: Confirmed List (`confirmed`)**:
+   - **In-Place Mutation (Zero Duplication)**: Approved edits are applied directly to the original `IDCard.field_data`—**never creating duplicate card rows**.
+   - **Sequential Reprint Badges**: Tracks and displays incremental reprint counts (*Reprint #1, Reprint #2, etc.*).
+   - Records confirmation timestamp and approving admin for full auditability.
 
 ---
 

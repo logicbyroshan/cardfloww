@@ -19,6 +19,8 @@
 
 <p align="center">
   <a href="https://panel.adarshbhopal.in">🌐 <b>Live Production Panel</b></a> •
+  <a href="docs/DESKTOP_PORTAL_GUIDE.md">🖥️ <b>Desktop Portal Guide</b></a> •
+  <a href="docs/WEB_APP_INTEGRATION.md">🔗 <b>Web App API</b></a> •
   <a href="docs/SYSTEM_ARCHITECTURE.md">🏗️ <b>Architecture</b></a> •
   <a href="docs/FEATURES_AND_WORKFLOWS.md">⚡ <b>Workflows</b></a> •
   <a href="docs/BULK_INGESTION_AND_EXPORTS.md">📥 <b>Bulk Ingestion</b></a> •
@@ -116,11 +118,15 @@ CardFlow brings together web management, real-time biometrics, dynamic template 
 
 ---
 
-### 🖨️ 3. Printing, Production Pools & Status Workflows
+### 🖨️ 3. Printing, Production Pools & Dedicated 3-Step Reprint Lifecycle
 
 **Overview & Key Capabilities:**
 - **State-Machine Status Pipeline**: Cards transition seamlessly through `pending ➔ verified ➔ pool ➔ approved ➔ download` to guarantee print quality.
-- **Dedicated Reprint Workflow**: Isolated reprint request queue (`Requested ➔ Confirmed ➔ Downloaded ➔ Pool`) processes lost or replacement cards without interrupting main production runs.
+- **Dedicated 3-Step Reprint Lifecycle (`backend/reprint/`)**:
+  - **Reprint List**: Source pool strictly populated with downloaded cards (deduplicated by `card.id`) with pre-request inline student editing.
+  - **Requested List**: Review staged edits diffs, reject/cancel back to reprint pool, or confirm.
+  - **Confirmed List**: In-place non-duplicating card mutations directly on original records with sequential `#1`, `#2` reprint count badges.
+- **Web App Public API Synchronization (`backend/web_app/`)**: Server-to-server authenticated endpoint (`/api/web/clients/` via `X-API-KEY`) providing live client directories and aggregate student card statistics to public landing websites.
 - **Batch Print Job Tracking**: Group card orders into production print pools with real-time status badges and instant QR code verification.
 
 <table width="100%">

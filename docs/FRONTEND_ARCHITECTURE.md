@@ -132,6 +132,7 @@ The unified Axios instance in `src/services/api.js` provides organized domain na
 * `authAPI`: `login()`, `logout()`, `getProfile()`, `verifyOTP()`
 * `organisationManagerApi` / `managerApi`: `list()`, `create()`, `get()`, `update()`, `delete()`
 * `schemaApi`: `getTables()`, `createTable()`, `createTableFromData()`, `getSharedManagers()`, `shareManagers()`
+* `reprintApi`: `getStepCounts()`, `getReprintList()`, `requestReprint()`, `getRequestList()`, `confirmReprint()`, `rejectReprint()`, `getConfirmedList()`, `getCardHistory()`
 * `bulkApi` / `exportApi`: `bulkUpload()`, `reuploadImages()`, `exportPdf()`, `exportXlsx()`, `exportDocx()`, `exportImages()`, `downloadAll()`
 * `tempPasswordApi`: `list()`, `reset()`, `resendEmail()`
 
@@ -152,6 +153,10 @@ The unified Axios instance in `src/services/api.js` provides organized domain na
 * Prime Managers can click **Share** on any table row to open `TableShareModal`.
 * Fetches Super Managers via `GET /api/table/<id>/shared-managers/`.
 * Allows toggling table permissions (`can_edit_cards`, `can_approve_print`) with one-click saving via `POST /api/table/<id>/share-managers/`.
+
+### 7.4 Dedicated 3-Stage Reprint Manager View (`ReprintCardsManagerView.jsx`)
+* Interactive 3-tab layout: **Reprint List** (source downloaded cards with inline edit modal) $\to$ **Requested List** (staged changes diff modal, cancel/reject, confirm) $\to$ **Confirmed List** (in-place non-duplicating card updates & sequential `#1`, `#2` badges).
+* Dynamic live badge counters fetching metrics via `GET /reprint/api/table/<id>/step-counts/`.
 
 ---
 
