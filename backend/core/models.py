@@ -85,6 +85,10 @@ class User(AbstractUser):
         except Exception:
             return None
 
+    @client_profile.setter
+    def client_profile(self, value):
+        self._organisation_profile_cache = value
+
     @property
     def organisation(self):
         return self.client_profile

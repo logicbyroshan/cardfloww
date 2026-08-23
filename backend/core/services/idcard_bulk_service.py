@@ -75,7 +75,7 @@ class IDCardBulkService(BaseService):
 
                 try:
                     CacheVersionService.bump('mob_filter', int(table.id))
-                    CacheVersionService.bump('class_section', int(table.group.client_id))
+                    CacheVersionService.bump('class_section', int(table.organisation_id))
                     CacheVersionService.bump('global_search', 'all')
                 except Exception as exc:
                     logger.debug('IDCardBulkService cache version bump failed: %s', exc)
@@ -134,7 +134,7 @@ class IDCardBulkService(BaseService):
             if deleted_count:
                 try:
                     CacheVersionService.bump('mob_filter', int(table.id))
-                    CacheVersionService.bump('class_section', int(table.group.client_id))
+                    CacheVersionService.bump('class_section', int(table.organisation_id))
                     CacheVersionService.bump('global_search', 'all')
                 except Exception as exc:
                     logger.debug('IDCardBulkService cache version bump failed: %s', exc)
@@ -385,7 +385,7 @@ class IDCardBulkService(BaseService):
                     'moved_to_pool': moved_to_pool,
                     'moved_to_pending': moved_to_pending,
                     'total': upgraded + skipped,
-                    'client_name': getattr(table.group.client, 'name', ''),
+                    'client_name': getattr(table.client, 'name', ''),
                 }
             )
         except Exception as e:

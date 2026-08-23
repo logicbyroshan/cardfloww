@@ -87,11 +87,11 @@ def api_pro_user_guest_source_clients(request):
         'success': True,
         'clients': [
             {
-                'id': Organisation.id,
-                'name': Organisation.name,
-                'username': Organisation.user.username,
-                'email': Organisation.user.email,
-                'role': Organisation.user.role,
+                'id': client.id,
+                'name': client.name,
+                'username': client.user.username if client.user else '',
+                'email': client.user.email if client.user else '',
+                'role': getattr(client.user, 'role', '') if client.user else '',
             }
             for client in clients
         ],

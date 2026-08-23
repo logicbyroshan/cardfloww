@@ -2203,8 +2203,8 @@ def api_card_add(request, table_id):
 
         try:
             CacheVersionService.bump('mob_filter', int(table.id))
-            CacheVersionService.bump('class_section', int(table.group.client_id))
-            CacheVersionService.bump('client_dash_counts', f'client:{table.group.client_id}')
+            CacheVersionService.bump('class_section', int(table.organisation_id))
+            CacheVersionService.bump('client_dash_counts', f'client:{table.organisation_id}')
             CacheVersionService.bump('global_search', 'all')
         except Exception:
             pass
@@ -2776,7 +2776,7 @@ def api_table_update_fields(request, table_id):
 
         try:
             CacheVersionService.bump('mob_filter', int(table.id))
-            CacheVersionService.bump('class_section', int(table.group.client_id))
+            CacheVersionService.bump('class_section', int(table.organisation_id))
             CacheVersionService.bump('global_search', 'all')
         except Exception:
             pass
@@ -4615,11 +4615,11 @@ def api_search(request):
         if scoped_table_id <= 0:
             return JsonResponse({'success': False, 'message': 'Invalid table scope.'}, status=400)
 
-        scoped_table = Table.objects.select_related('group').filter(id=scoped_table_id).first()
+        scoped_table = Table.objects.filter(id=scoped_table_id).first()
         if not scoped_table:
             return JsonResponse({'success': False, 'message': 'Table not found.'}, status=404)
 
-        if not PermissionService.can_access_client(user, scoped_table.group.client_id):
+        if not PermissionService.can_access_client(user, scoped_table.organisation_id):
             return JsonResponse({'success': False, 'message': 'Access denied.'}, status=403)
 
         if user.role in ('prime_manager', 'manager') and not OrganisationAccessService.can_access_table(user, scoped_table):
@@ -5661,7 +5661,7 @@ def api_photographer_upload_offline(request):
             card = IDCard.objects.get(id=card_id)
             
             # Verify permission
-            if card.table.group.client_id not in (PermissionService.get_accessible_client_ids(user) or []):
+            if card.table.organisation_id not in (PermissionService.get_accessible_client_ids(user) or []):
                 failed += 1
                 continue
                 

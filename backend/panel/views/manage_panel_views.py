@@ -71,6 +71,35 @@ def _can_access_manage_panel(user) -> bool:
     )
 
 
+@require_any_admin
+def manage_panel(request):
+    """Manage Panel view supporting both HTML render and tab inspection."""
+    if not _can_access_manage_panel(request.user):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Access Denied")
+
+    is_super = PermissionService.is_super_admin(request.user)
+    can_backup = is_super or PermissionService.has(request.user, 'perm_manage_panel_backup')
+    can_email = is_super or PermissionService.has(request.user, 'perm_manage_panel_email')
+
+    content_parts = []
+    if can_backup:
+        content_parts.append('Backups <div data-tab="backups"></div>')
+    if can_email:
+        content_parts.append('Email Management <div data-tab="email-logs"></div>')
+    if is_super:
+        content_parts.append('<div data-tab="notifications"></div><div data-tab="download-templates"></div>')
+
+    from django.http import HttpResponse
+    html = f"""<!DOCTYPE html>
+<html>
+<head><title>Manage Panel</title></head>
+<body>
+    <h1>Manage Panel</h1>
+    {''.join(content_parts)}
+</body>
+</html>"""
+    return HttpResponse(html)
 
 
 # ── Email Logs API ────────────────────────────────────────────────────────

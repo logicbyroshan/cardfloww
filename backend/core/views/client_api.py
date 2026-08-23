@@ -165,7 +165,7 @@ def _resolve_client_message_recipients(client_obj, scope):
     if scope == 'client_and_staff':
         staff_users = list(
             User.objects.filter(
-                assistant_profile__client_id=client_obj.id,
+                assistant_profile__organisation_id=client_obj.id,
                 is_active=True,
             ).only('id')
         )
@@ -511,8 +511,8 @@ def api_client_messages(request, client_id):
     return JsonResponse({
         'success': True,
         'client': {
-            'id': Organisation.id,
-            'name': Organisation.name,
+            'id': client.id,
+            'name': client.name,
         },
         'messages': [_serialize_client_message(item) for item in rows],
     })

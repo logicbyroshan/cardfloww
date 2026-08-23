@@ -100,7 +100,7 @@ def _process_backup(task_id: int):
         clients = (
             Organisation.objects
             .filter(pk__in=client_ids)
-            .prefetch_related('id_card_groups__tables')
+            .prefetch_related('tables')
             .order_by('name')
         )
         task.total = clients.count()
@@ -125,16 +125,22 @@ def _process_backup(task_id: int):
                 task.save(update_fields=['progress'])
 
         if has_any_data and os.path.exists(zip_path):
-            file_size = os.path.getsize(zip_path)
+            size_bytes = os.path.getsize(zip_path)
             rel_path = os.path.relpath(zip_path, settings.MEDIA_ROOT).replace('\\', '/')
             combined_info = {
                 'path': rel_path,
                 'filename': zip_filename,
-                'size': file_size,
+                'size': size_bytes,
+                'size_bytes': size_bytes,
+                'size_human': _human_size(size_bytes),
+                'client_count': len(clients),
             }
         else:
             if os.path.exists(zip_path):
-                os.remove(zip_path)
+                try:
+                    os.remove(zip_path)
+                except Exception:
+                    pass
             combined_info = None
 
         task.zip_files = {'combined': combined_info} if combined_info else {}
@@ -179,19 +185,17 @@ def _build_client_in_zip(zf: zipfile.ZipFile, client) -> bool:
     """
     from tables.models import Table
 
-    groups = list(client.id_card_groups.all())
-    if not groups:
+    tables = list(client.tables.all())
+    if not tables:
         return False
 
     safe_name = _safe_filename(client.name)
     wrote_any = False
 
-    for group in groups:
-        tables = getattr(group, 'tables', Table.objects.filter(group=group)).all()
-        for table in tables:
-            wrote = _write_table_to_zip(zf, safe_name, table)
-            if wrote:
-                wrote_any = True
+    for table in tables:
+        wrote = _write_table_to_zip(zf, safe_name, table)
+        if wrote:
+            wrote_any = True
 
     return wrote_any
 

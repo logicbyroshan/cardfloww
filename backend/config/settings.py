@@ -544,6 +544,11 @@ CSP_ALLOW_UNSAFE_EVAL = _env_bool('CSP_ALLOW_UNSAFE_EVAL', True)
 # camera and microphone are allowed (self) for the PWA photo capture feature.
 PERMISSIONS_POLICY = 'camera=(self), microphone=(self), geolocation=(), payment=(), usb=()'
 
+# Authentication URLs
+LOGIN_URL = '/auth/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/auth/login/'
+
 
 # =============================================================================
 # PASSWORD VALIDATION

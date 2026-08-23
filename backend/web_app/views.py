@@ -37,9 +37,9 @@ def api_public_clients_list(request):
     clients_data = []
     for client in clients_queryset:
         clients_data.append({
-            'name': Organisation.name,
-            'email': Organisation.user.email if client.user else '',
-            'total_records': Organisation.total_records_count,
+            'name': client.name,
+            'email': client.user.email if client.user else '',
+            'total_records': client.total_records_count,
         })
 
     return JsonResponse({

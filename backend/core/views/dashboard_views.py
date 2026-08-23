@@ -488,11 +488,14 @@ def api_recent_client_updates(request):
     Client results are cached for 10 seconds; live presence is always fresh.
     """
     try:
+        user = request.user
+        if PermissionService.is_client(user) or PermissionService.is_assistant(user):
+            return JsonResponse({'success': False, 'message': 'Admin access required.'}, status=403)
+
         raw_limit = request.GET.get('limit')
         limit = None
         if raw_limit not in (None, '', 'all'):
             limit = _parse_dashboard_limit(raw_limit, default=500, max_limit=500)
-        user = request.user
 
         # Cache the heavy client-results portion (raw SQL aggregation)
         is_scoped = not PermissionService.is_super_admin(user)

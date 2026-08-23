@@ -98,3 +98,20 @@ def manage_clients(request):
     }
 
     return render(request, 'manage_clients.html', context)
+
+
+def legacy_active_clients_redirect(request):
+    """Redirect legacy active-clients URL to manage_clients preserving query params."""
+    from django.urls import reverse
+    target = reverse('manage_clients')
+    query = request.META.get('QUERY_STRING', '')
+    if query:
+        target = f"{target}?{query}"
+    return redirect(target)
+
+
+def legacy_active_client_status_redirect(request, client_id, status=None):
+    """Redirect legacy active-client status URL to manage_clients with highlight."""
+    from django.urls import reverse
+    target = f"{reverse('manage_clients')}?highlight={client_id}"
+    return redirect(target)

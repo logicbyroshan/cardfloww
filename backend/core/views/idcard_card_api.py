@@ -322,7 +322,8 @@ def _build_modifier_role_map(modifier_names):
 def _client_modifier_display_name(table):
     """Display a single client label instead of internal usernames."""
     try:
-        name = (table.group.client.name or '').strip()
+        name = (getattr(table, 'organisation', None) and table.organisation.name) or (getattr(table, 'client', None) and table.client.name) or (getattr(table, 'group', None) and getattr(table.group, 'client', None) and table.group.client.name) or ''
+        name = (name or '').strip()
     except Exception:
         name = ''
     return name or 'Client'
@@ -338,7 +339,7 @@ def _sanitize_client_audit_fields(table, modifier, updated_at, updated_at_iso, m
     """
     raw_modifier = (modifier or '').strip()
     role = modifier_role_map.get(raw_modifier)
-    if role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+    if role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
         # Client-role modifier: show their display name
         return _client_modifier_display_name(table), updated_at, updated_at_iso
     # Admin/admin_staff modifier: hide name and display timestamp but keep ISO timestamp for concurrency tracking
@@ -1525,7 +1526,7 @@ def api_idcard_update(request, card_id):
                                 return JsonResponse({'success': False, 'message': f'Not authorized. You can only edit cards within assigned sections: {", ".join(allowed_secs)}'}, status=400)
 
         # Block editing if there is an active reprint request for the card (requested or confirmed status)
-        if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+        if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
             from reprintcard.models import ReprintRequest
             if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
                 return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -1677,7 +1678,7 @@ def api_idcard_update_field(request, card_id):
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     # Block editing if there is an active reprint request for the card (requested or confirmed status)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+    if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -2354,7 +2355,7 @@ def api_idcard_undo_image(request, card_id):
     if err: return err
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+    if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
@@ -2389,7 +2390,7 @@ def api_idcard_redo_image(request, card_id):
     if err: return err
     if not _is_card_in_client_staff_scope(request.user, _card):
         return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
-    if request.user.role in ('prime_manager', 'manager', 'guest_prime_manager', 'assistant'):
+    if request.user.role in ('client', 'client_staff', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager', 'assistant'):
         from reprintcard.models import ReprintRequest
         if ReprintRequest.objects.filter(card=_card, status__in=['requested', 'confirmed']).exists():
             return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)

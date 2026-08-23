@@ -1447,7 +1447,7 @@ class IDCardCardService(BaseService):
                             from django.conf import settings
                             media_root = getattr(settings, 'MEDIA_ROOT', '')
                             if media_root:
-                                client_id_str = str(table.organisation_id) if getattr(table, 'organisation_id', None) else (str(table.group.client_id) if (table and getattr(table, 'group', None) and getattr(table.group, 'client_id', None)) else '')
+                                client_id_str = str(table.organisation_id) if getattr(table, 'organisation_id', None) else ''
                                 # Check client specific paths first
                                 possible_rel_paths = []
                                 if client_id_str:

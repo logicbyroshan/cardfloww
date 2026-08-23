@@ -64,7 +64,7 @@ class MobileAppCSRFBypassMiddleware:
         # - /api/auth/* (Main panel APIs)
         # - /app/api/auth/* (Mobile/PWA specific APIs)
         # - /reprint/api/* (Reprint workflow APIs)
-        auth_patterns = ['/api/auth/', '/app/api/', '/api/mobile/', '/auth/login', '/auth/logout', '/reprint/api/']
+        auth_patterns = ['/api/auth/', '/app/api/', '/api/mobile/', '/api/desktop/', '/api/web/', '/auth/login', '/auth/logout', '/reprint/api/']
         
         if any(p in path for p in auth_patterns) or any(p in path_info for p in auth_patterns):
             # This is a Django internal flag that CsrfViewMiddleware respects.
@@ -205,6 +205,7 @@ class PermissionValidationMiddleware:
         '/__debug__/',
         # Public API endpoints that must work without auth:
         '/api/health/',       # Health check (uptime monitors)
+        '/health/',           # Health check alias
         '/api/auth/csrf/',    # CSRF token — SPA fetches on boot before login
         '/api/auth/login/',   # Login endpoint
         '/api/auth/logout/',  # Logout is idempotent — allowed unauthenticated
@@ -214,6 +215,7 @@ class PermissionValidationMiddleware:
         '/api/auth/reset-password/',  # Password reset completion
         '/api/auth/me/',      # Used by SPA on boot to check session state
         '/api/mobile/',       # Mobile app API (has its own token auth)
+        '/api/desktop/',      # Desktop app API (has its own token / bootstrap auth)
         '/api/web/',          # Desktop PWA/web API (has its own auth)
         '/app/',              # Mobile download pages (public HTML)
     ]
@@ -230,10 +232,10 @@ class PermissionValidationMiddleware:
     
     @staticmethod
     def _is_panel_path(request):
-        """Check if the current request is a panel API route (not static/media/mobile/app)."""
+        """Check if the current request is a panel API route (not static/media/mobile/app/desktop)."""
         path = request.path
-        # Always exempt: static files, media, health, mobile API, app download pages
-        exempt_prefixes = ('/static/', '/media/', '/api/health/', '/api/mobile/', '/app/', '/favicon.ico', '/robots.txt', '/sitemap.xml')
+        # Always exempt: static files, media, health, mobile/desktop/web API, app download pages
+        exempt_prefixes = ('/static/', '/media/', '/api/health/', '/health/', '/api/mobile/', '/api/desktop/', '/api/web/', '/app/', '/favicon.ico', '/robots.txt', '/sitemap.xml')
         if path.startswith(exempt_prefixes):
             return False
         # All other paths need auth (includes /api/* panel routes)

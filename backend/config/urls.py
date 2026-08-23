@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from core.views.health import health_check
 from core import views as core_views
+from accounts import views as accounts_views
 
 
 

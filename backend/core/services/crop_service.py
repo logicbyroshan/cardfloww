@@ -180,7 +180,7 @@ class CropService:
             meta = {
                 "batch_id": batch_id,
                 "table_id": int(table.id),
-                "client_id": int(table.group.client_id),
+                "client_id": int(table.organisation_id),
                 "created_at": int(time.time()),
             }
             with open(cls._meta_file(batch_dir), "w", encoding="utf-8") as fh:

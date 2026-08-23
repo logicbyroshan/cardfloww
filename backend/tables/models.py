@@ -107,6 +107,14 @@ class Table(models.Model):
         self.organisation = value
 
     @property
+    def client_id(self):
+        return self.organisation_id
+
+    @client_id.setter
+    def client_id(self, value):
+        self.organisation_id = value
+
+    @property
     def group(self):
         return self
 

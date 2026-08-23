@@ -323,12 +323,15 @@ class OrganisationAccessService:
                 if staff.manager:
                     if not OrganisationAccessService.can_access_table(staff.manager, table):
                         return False
-                # If assistant has specific assigned tables, check membership
-                if staff.assigned_groups.exists():
-                    return staff.assigned_groups.filter(id=table.id).exists()
+                # If assistant has specific assigned tables or groups, check membership
+                assigned_group_ids = OrganisationAccessService._assigned_group_ids_for_access(staff)
                 assigned_table_ids = OrganisationAccessService._assigned_table_ids_for_access(staff)
-                if assigned_table_ids:
-                    return table.id in assigned_table_ids
+                has_group_restriction = bool(assigned_group_ids or staff.assigned_groups.exists())
+                has_table_restriction = bool(assigned_table_ids)
+                if has_group_restriction or has_table_restriction:
+                    in_group = (table.id in assigned_group_ids) or staff.assigned_groups.filter(id=table.id).exists()
+                    in_table = (table.id in assigned_table_ids)
+                    return bool(in_group or in_table)
                 # If no specific table restrictions, assistant inherits manager's access
                 return True
             return False

@@ -188,6 +188,8 @@ class OrganisationService(BaseService):
             # - If phone is not given, auto-generates 8-10 char PIN from org acronym + special char + 4-digit number
             phone = str(data.get('phone') or '').strip()
             custom_pwd = str(data.get('password') or '').strip()
+            if not custom_pwd and not phone:
+                return ServiceResult(success=False, message='Phone number is required when custom password is not provided.')
             if custom_pwd:
                 password = normalize_password_input(custom_pwd)
             else:

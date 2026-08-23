@@ -14,6 +14,9 @@ from django.urls import path
 from panel import views
 
 urlpatterns = [
+    # ── Manage Panel ──────────────────────────────────────────────────
+    path('manage-panel/', views.manage_panel, name='manage_panel_app'),
+
     # ── Manage Panel API ──────────────────────────────────────────────
     path('api/email-logs/', views.api_email_logs, name='api_email_logs_app'),
     path('api/email-resend/<int:log_id>/', views.api_email_resend, name='api_email_resend_app'),

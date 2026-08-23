@@ -6,12 +6,20 @@ from imports import views as import_views
 from organisation import views_api as client_views_api
 from organisation import views_admin as organisation_views
 from accounts import views as accounts_views
+from panel import views as panel_views
 
 
 urlpatterns = [
     # Legacy web / template routes
     path('panel/manage-clients/', organisation_views.manage_clients, name='manage_clients'),
     path('manage-clients/', organisation_views.manage_clients, name='manage_clients_direct'),
+    path('panel/manage-panel/', panel_views.manage_panel, name='manage_panel'),
+    path('manage-panel/', panel_views.manage_panel, name='manage_panel_direct'),
+    path('active-clients/', organisation_views.legacy_active_clients_redirect, name='active_clients'),
+    path('panel/active-clients/', organisation_views.legacy_active_clients_redirect),
+    path('active-client/<int:client_id>/<str:status>/', organisation_views.legacy_active_client_status_redirect, name='active_client_status_redirect'),
+    path('panel/active-client/<int:client_id>/<str:status>/', organisation_views.legacy_active_client_status_redirect),
+    path('auth/login/', accounts_views.LoginAPIView.as_view(), name='login'),
     # ==================== AUTHENTICATION API ====================
     # NOTE: login/logout pages are handled by the React SPA at /auth/login, /auth/logout.
     # Django only provides JSON API endpoints here.
@@ -188,7 +196,7 @@ urlpatterns = [
     path('api/table/<int:table_id>/cards/search/', views.api_idcard_search, name='api_idcard_search'),
     path('api/table/<int:table_id>/status-counts/', views.api_table_status_counts, name='api_table_status_counts'),
     path('api/table/<int:table_id>/cards/download-images/', export_views.api_export_images, name='api_idcard_download_images'),
-    path('api/table/<int:table_id>/cards/reupload-images/', import_views.api_reupload_images, name='api_idcard_reupload_images'),
+    path('api/table/<int:table_id>/cards/reupload-images/', views.api_idcard_reupload_images, name='api_idcard_reupload_images'),
     path('api/table/<int:table_id>/cards/class-counts/', views.api_idcard_class_counts, name='api_idcard_class_counts'),
     path('api/table/<int:table_id>/modals-html/', views.api_idcard_modals_html, name='api_idcard_modals_html'),
     path('api/table/<int:table_id>/cards/download-docx/', export_views.api_export_docx, name='api_idcard_download_docx'),

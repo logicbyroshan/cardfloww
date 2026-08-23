@@ -300,7 +300,7 @@ def _build_activity_log_feed_rows(*, user, now, fetch_cap, search='', user_role=
 
     queryset = ActivityLog.objects.select_related(
         'user',
-        'user__client_profile',
+        'user__organisation_profile',
     ).order_by('-created_at')
 
     if user and user.is_authenticated:

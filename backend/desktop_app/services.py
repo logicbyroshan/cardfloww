@@ -210,7 +210,8 @@ class DesktopAppService:
 
         client_ids = list(clients.values_list('id', flat=True))
         groups = Table.objects.filter(organisation_id__in=client_ids).order_by('id')
-        tables = Table.objects.filter(organisation_id__in=client_ids).order_by('id')
+        tables_with_fields = Table.objects.filter(organisation_id__in=client_ids).exclude(fields=[]).order_by('id')
+        tables = tables_with_fields if tables_with_fields.exists() else Table.objects.filter(organisation_id__in=client_ids).order_by('id')
         table_ids = list(tables.values_list('id', flat=True))
         cards = IDCard.objects.select_related('table', 'table__organisation').filter(table_id__in=table_ids, status__in=['approved', 'download']).order_by('-id')
         return clients, groups, tables, cards
@@ -345,7 +346,7 @@ class DesktopAppService:
                 media_entries.append({
                     'source': 'legacy-field',
                     'id': None,
-                    'client_id': card.table.group.client_id,
+                    'client_id': card.table.organisation_id,
                     'group_id': card.table.group_id,
                     'card_id': card.id,
                     'table_id': card.table_id,
@@ -353,7 +354,7 @@ class DesktopAppService:
                     'field_name': field_name,
                     'original_filename': os.path.basename(normalized),
                     'file_path': normalized,
-                    'archive_path': cls._archive_path(card.table.group.client_id, card.id, field_name, os.path.basename(normalized), legacy=True),
+                    'archive_path': cls._archive_path(card.table.organisation_id, card.id, field_name, os.path.basename(normalized), legacy=True),
                     'download_url': cls._download_url(request, normalized),
                     'exists': default_storage.exists(normalized),
                 })
@@ -450,14 +451,14 @@ class DesktopAppService:
         else:
             status_list = ['approved', 'download']
 
-        cards = IDCard.objects.select_related('table', 'table__group', 'table__group__client')
+        cards = IDCard.objects.select_related('table', 'table__organisation')
         
         if client_id:
-            cards = cards.filter(table__group__client_id=client_id)
-        if group_id:
-            cards = cards.filter(table__group_id=group_id)
+            cards = cards.filter(table__organisation_id=client_id)
         if table_id:
             cards = cards.filter(table_id=table_id)
+        elif group_id:
+            cards = cards.filter(table_id=group_id)
             
         cards = cards.filter(status__in=status_list).order_by('-id')
         

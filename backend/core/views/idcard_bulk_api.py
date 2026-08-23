@@ -26,6 +26,7 @@ from mediafiles.services import ImageService
 from ..services.base import BaseService
 from ..services.cache_version_service import CacheVersionService
 from ..services.permission_service import (
+    PermissionService,
     api_require_any_authenticated,
     api_require_permission,
 )
@@ -414,7 +415,7 @@ def api_idcard_bulk_upload(request, table_id):
         if cards_created > 0:
             try:
                 CacheVersionService.bump('mob_filter', int(table.id))
-                CacheVersionService.bump('class_section', int(table.group.client_id))
+                CacheVersionService.bump('class_section', int(table.organisation_id))
                 CacheVersionService.bump('global_search', 'all')
             except Exception:
                 pass
@@ -676,7 +677,7 @@ def api_idcard_reupload_images(request, table_id):
     if folder_access_err:
         return folder_access_err
     # Client/client_staff cannot reupload images for tables with approved/download/reprint cards
-    if request.user.PermissionService.is_client_role(user):
+    if PermissionService.is_client_role(request.user):
         has_locked = IDCard.objects.filter(
             table_id=table_id, status__in=_CLIENT_READONLY_STATUSES
         ).exists()

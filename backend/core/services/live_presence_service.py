@@ -78,8 +78,12 @@ class LiveClientPresenceService:
     def resolve_client_id_for_user(cls, user):
         role = str(getattr(user, 'role', '') or '').lower()
 
-        if role == 'prime_manager':
-            return (
+        if role in ('client', 'prime_manager', 'manager', 'super_manager', 'guest_prime_manager', 'guest_manager'):
+            if hasattr(user, 'client_profile') and user.client_profile:
+                return user.client_profile.id
+            if hasattr(user, 'org_manager_profile') and user.org_manager_profile:
+                return user.org_manager_profile.organisation_id
+            org_id = (
                 Organisation.objects.filter(
                     user_id=user.id,
                     status='active',
@@ -88,15 +92,41 @@ class LiveClientPresenceService:
                 .values_list('id', flat=True)
                 .first()
             )
-
-        if role in ('assistant'):
-            from assistants.models import Assistant
+            if org_id:
+                return org_id
+            from organisation.models import OrganisationManager
             return (
+                OrganisationManager.objects.filter(
+                    user_id=user.id,
+                    is_active=True,
+                    organisation__status='active',
+                )
+                .values_list('organisation_id', flat=True)
+                .first()
+            )
+
+        if role in ('assistant', 'client_staff', 'staff'):
+            if hasattr(user, 'staff_profile') and user.staff_profile:
+                return getattr(user.staff_profile, 'client_id', None) or getattr(user.staff_profile, 'organisation_id', None)
+            from assistants.models import Assistant
+            aid = (
                 Assistant.objects.filter(
                     user_id=user.id,
                     user__is_active=True,
                     client_id__isnull=False,
                     client__status='active',
+                )
+                .values_list('client_id', flat=True)
+                .first()
+            )
+            if aid:
+                return aid
+            from staff.models import Staff
+            return (
+                Staff.objects.filter(
+                    user_id=user.id,
+                    user__is_active=True,
+                    client_id__isnull=False,
                 )
                 .values_list('client_id', flat=True)
                 .first()
@@ -114,7 +144,10 @@ class LiveClientPresenceService:
     def is_assistant_live(cls, user_id, now=None):
         if not user_id:
             return False
-        return cls._active_queryset(now=now).filter(user_id=user_id, user_role__in=['assistant']).exists()
+        return cls._active_queryset(now=now).filter(
+            user_id=user_id,
+            user_role__in=['assistant', 'client_staff', 'staff']
+        ).exists()
 
     @classmethod
     def record_event(cls, *, user, session_key, tab_id, action):
@@ -136,7 +169,7 @@ class LiveClientPresenceService:
 
         role = str(getattr(user, 'role', '') or '').lower()
         before_live = cls.is_client_live(client_id, now=now)
-        before_assistant_live = cls.is_assistant_live(user.id, now=now) if role in ('assistant') else False
+        before_assistant_live = cls.is_assistant_live(user.id, now=now) if role in ('assistant', 'client_staff', 'staff') else False
 
         with transaction.atomic():
             presence, created = ClientPresenceSession.objects.select_for_update().get_or_create(
@@ -160,7 +193,7 @@ class LiveClientPresenceService:
                 presence.save(update_fields=['user', 'client', 'user_role', 'last_seen_at', 'closed_at'])
 
         after_live = cls.is_client_live(client_id, now=now)
-        after_assistant_live = cls.is_assistant_live(user.id, now=now) if role in ('assistant') else False
+        after_assistant_live = cls.is_assistant_live(user.id, now=now) if role in ('assistant', 'client_staff', 'staff') else False
         changed = (before_live != after_live) or (before_assistant_live != after_assistant_live)
         if changed:
             cls._publish_dashboard_presence_changed(trigger='record_event', action=action)
@@ -222,7 +255,7 @@ class LiveClientPresenceService:
         now = timezone.now()
         cls.retire_stale_sessions(now=now)
 
-        qs = cls._active_queryset(now=now).filter(user_role__in=['assistant'])
+        qs = cls._active_queryset(now=now).filter(user_role__in=['assistant', 'client_staff', 'staff'])
         if PermissionService.is_operator(user):
             allowed_ids = set(PermissionService.get_accessible_client_ids(user))
             qs = qs.filter(client_id__in=allowed_ids)
@@ -235,7 +268,7 @@ class LiveClientPresenceService:
         cls.retire_stale_sessions(now=now)
 
         qs = cls._active_queryset(now=now).filter(
-            user_role__in=['assistant'],
+            user_role__in=['assistant', 'client_staff', 'staff'],
             client_id__isnull=False,
         )
         if PermissionService.is_operator(user):
@@ -275,7 +308,7 @@ class LiveClientPresenceService:
                 continue
             if client_id is not None:
                 all_client_ids.add(client_id)
-            if user_role in ('assistant'):
+            if user_role in ('assistant', 'client_staff', 'staff'):
                 assistant_user_ids.add(user_id)
                 if client_id is not None:
                     assistant_client_ids.add(client_id)

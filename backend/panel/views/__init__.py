@@ -2,6 +2,7 @@
 # Re-exports all panel views for use by panel/urls.py
 
 from .manage_panel_views import (
+    manage_panel,
     api_email_logs,
     api_email_resend,
     api_email_send_new,

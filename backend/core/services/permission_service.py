@@ -14,6 +14,7 @@ from functools import wraps
 from django.core.cache import cache as _cache
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -530,10 +531,6 @@ class PermissionService:
         if cls.is_photographer(user) and perm_key in cls.OPERATOR_AUTO_PERMS:
             return True
 
-        # --- Intrinsic permissions (no longer toggleable in UI) ---
-        if perm_key == 'perm_idcard_info':
-            return True
-
         # --- 1. Super admin always passes ---
         if cls.is_super_admin(user):
             return True
@@ -593,11 +590,16 @@ class PermissionService:
 
         # --- 3. client / organisation ---
         if cls.is_client(user):
-            from organisation.models import Organisation
+            from organisation.models import Organisation, OrganisationManager
+            org_manager = (
+                getattr(user, 'org_manager_profile', None)
+                or OrganisationManager.objects.filter(user=user).first()
+            )
             client_profile = (
                 client_obj
                 or getattr(user, 'organisation_profile', None)
                 or getattr(user, 'client_profile', None)
+                or (org_manager.organisation if org_manager else None)
                 or Organisation.objects.filter(user=user).first()
             )
 
@@ -619,9 +621,9 @@ class PermissionService:
             if perm_key == 'perm_idcard_setting_add':
                 return cls.can_create_table(user, client_profile)
 
-            # Table listing: Available to active managers (scoped in schema views)
-            if perm_key in ('perm_idcard_setting_list', 'perm_idcard_group_list'):
-                return True
+            # Check org_manager granular permission first if user is super_manager/guest_manager
+            if org_manager and hasattr(org_manager, perm_key):
+                return bool(getattr(org_manager, perm_key, False))
 
             # Map legacy permission names to Organisation model fields if needed
             field_name = perm_key
@@ -1106,7 +1108,7 @@ def _permission_denied_response(request, message='Permission denied', status=403
     )
     if is_api:
         return JsonResponse({'success': False, 'message': message}, status=status)
-    return redirect('login')
+    return redirect(getattr(settings, 'LOGIN_URL', '/auth/login/'))
 
 
 def _auth_required_response(request):
@@ -1118,7 +1120,7 @@ def _auth_required_response(request):
     )
     if is_api:
         return JsonResponse({'success': False, 'message': 'Authentication required'}, status=401)
-    return redirect('login')
+    return redirect(getattr(settings, 'LOGIN_URL', '/auth/login/'))
 
 
 # ---------- Page decorators ----------

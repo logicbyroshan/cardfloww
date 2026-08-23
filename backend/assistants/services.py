@@ -546,6 +546,11 @@ class AssistantService(BaseService):
             
             phone = str(data.get('phone') or '').strip()
             custom_pwd = str(data.get('password') or '').strip()
+            if not custom_pwd and not phone:
+                return ServiceResult(
+                    success=False,
+                    message='Phone number is required when custom password is not provided.'
+                )
             if custom_pwd:
                 password = normalize_password_input(custom_pwd)
             else:
@@ -1024,6 +1029,8 @@ class AssistantService(BaseService):
                 client = OrganisationAccessService.get_organisation_for_user(user)
                 if not client or assistant.client_id != client.id:
                     return ServiceResult(success=False, message='Access denied')
+                if not getattr(client, 'perm_set_temp_password', False):
+                    return ServiceResult(success=False, message='Permission denied: Setting temporary passwords is not enabled for this organisation')
 
             from operators.services import OperatorCreationService
             res_dict = OperatorCreationService.set_temp_password(assistant.id, new_password, is_assistant=True, request=request)
