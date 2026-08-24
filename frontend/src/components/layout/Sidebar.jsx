@@ -277,11 +277,21 @@ export default function Sidebar({
             </button>
           );
         })}
+
+        {/* Tutorial link (Placed inside sidebar-nav, above the footer divider line) */}
+        <button
+          onClick={() => setActiveTab('tutorial')}
+          className={`nav-item${activeTab === 'tutorial' ? ' active' : ''}`}
+          id="sidebar-tutorial-btn"
+        >
+          <BookOpen size={13} />
+          <span>Tutorial</span>
+        </button>
       </nav>
 
       {/* ── Footer ── */}
       <div className="sidebar-footer">
-        {/* Impersonation Indicator — compact box placed directly on top of Tutorial */}
+        {/* Impersonation Indicator — compact box placed directly in footer */}
         {impersonatedUser && (
           <div
             className="sidebar-impersonate-badge"
@@ -313,18 +323,6 @@ export default function Sidebar({
             )}
           </div>
         )}
-
-        {/* Tutorial link (Moved above the ad card) */}
-        <div className="sidebar-actions">
-          <button
-            onClick={() => setActiveTab('tutorial')}
-            className={`nav-item${activeTab === 'tutorial' ? ' active' : ''}`}
-            id="sidebar-tutorial-btn"
-          >
-            <BookOpen size={13} />
-            <span>Tutorial</span>
-          </button>
-        </div>
 
         {/* Product & VidyaMaxx Ads Carousel */}
         <SidebarAdCard />
