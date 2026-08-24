@@ -155,7 +155,7 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Transport / Bus / Route / Stop / House ────────────────────────────────
   if (/transport|bus|route|stop|house/.test(name)) {
-    return { width: '70px', minWidth: '70px', maxWidth: '70px', align: 'center' };
+    return { minWidth: '85px', align: 'center' };
   }
 
   // ── Dates (DOB, DOJ, Date of Birth) ─────────────────────────────────────
@@ -165,17 +165,17 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Phone / Contact ──────────────────────────────────────────────────────
   if (/mobi?le?|pho?ne?|cell|tel|whatsapp|contact/.test(name)) {
-    return { width: '108px', minWidth: '108px', maxWidth: '108px', align: 'center' };
+    return { minWidth: '110px', align: 'center' };
   }
 
   // ── ID Numbers (Aadhar, Scholar No, Reg No, Roll No, UID) ───────────────
   if (/a+dh?a+r|scholar|roll\s*no|admis?si?on|reg\s*no|id\s*card|uid|pan|epic|voter|dl\s*no/.test(name)) {
-    return { width: '100px', minWidth: '100px', maxWidth: '100px', align: 'center' };
+    return { minWidth: '95px', align: 'center' };
   }
 
   // ── Names (Full Name, Father Name, Mother Name, Student Name) ────────────
   if (name.includes('name') || name.includes('student') || name.includes('father') || name.includes('mother')) {
-    return { width: '160px', minWidth: '140px', maxWidth: '220px', align: 'left' };
+    return { minWidth: '150px', align: 'left' };
   }
 
   // ── Address / Location / City / State ───────────────────────────────────
@@ -186,11 +186,11 @@ function getColumnSpec(fieldName, fieldType) {
     name.includes('city') ||
     name.includes('state')
   ) {
-    return { width: '200px', minWidth: '160px', maxWidth: '280px', align: 'left' };
+    return { minWidth: '180px', align: 'left' };
   }
 
-  // ── Default fallback ─────────────────────────────────────────────────────
-  return { width: '120px', minWidth: '90px', maxWidth: '180px', align: 'left' };
+  // ── Default fallback (divides remaining table space) ──────────────────────
+  return { minWidth: '100px', align: 'left' };
 }
 
 function Spinner({ size = 16 }) {
@@ -3916,7 +3916,7 @@ export default function IDCardActionsView({
           <>
             <table
               style={{
-                width: 'max-content',
+                width: '100%',
                 minWidth: '100%',
                 borderCollapse: 'separate',
                 borderSpacing: 0,
@@ -4013,9 +4013,9 @@ export default function IDCardActionsView({
                           letterSpacing: '0.03em',
                           fontSize: '11px',
                           fontWeight: 700,
-                          width: spec.width,
-                          minWidth: spec.minWidth,
-                          maxWidth: spec.maxWidth,
+                          ...(spec.width
+                            ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
+                            : { minWidth: spec.minWidth }),
                           borderRight: '1px solid rgba(255,255,255,0.15)',
                           borderBottom: '1px solid rgba(255,255,255,0.15)',
                           whiteSpace: 'nowrap',
@@ -4310,9 +4310,9 @@ export default function IDCardActionsView({
                               style={{
                                 padding: '2px 6px',
                                 textAlign: spec.align,
-                                width: isEditing ? 'auto' : spec.width,
-                                minWidth: isEditing ? '180px' : spec.minWidth,
-                                maxWidth: isEditing ? 'none' : spec.maxWidth,
+                                ...(spec.width && !isEditing
+                                  ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
+                                  : { minWidth: isEditing ? '180px' : spec.minWidth }),
                                 background: isDuplicate && !isSelected ? '#fffbeb' : undefined,
                                 color: '#000000',
                                 fontSize: '12px',
