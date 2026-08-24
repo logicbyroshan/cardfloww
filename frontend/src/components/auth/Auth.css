@@ -367,17 +367,18 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   RIGHT COLUMN: SNUG BOXLESS FULL-HEIGHT AUTH PANEL (~380px)
+   RIGHT COLUMN: 25% VW CENTERED AUTH PANEL
    ══════════════════════════════════════════════════════════════ */
 .auth-right-column {
-  width: 380px;
-  flex: 0 0 380px;
+  width: 25vw;
+  flex: 0 0 25vw;
+  min-width: 320px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 36px 32px;
+  padding: 36px clamp(16px, 2vw, 32px);
   background: radial-gradient(ellipse at 50% 30%, #0f172a 0%, #070a12 85%);
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
@@ -385,14 +386,15 @@
   overflow-y: auto;
 }
 
-/* Clean Unboxed Flow (Snug & Comfortable) */
+/* Clean Unboxed Flow (Centered & Dynamic) */
 .auth-column-inner {
   width: 100%;
-  max-width: 330px;
+  max-width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  align-items: center;
   background: none;
   border: none;
   border-radius: 0;
@@ -409,6 +411,7 @@
   align-items: center;
   gap: 8px;
   text-align: center;
+  width: 100%;
 }
 
 .auth-masthead-logo {
@@ -424,39 +427,50 @@
   color: #94a3b8;
   font-weight: 500;
   letter-spacing: 0.02em;
+  text-align: center;
 }
 
 /* Clean Form Body */
 .auth-form-body {
   display: flex;
   flex-direction: column;
+  align-items: center;
   width: 100%;
   margin: auto 0;
 }
 
 .auth-form-header {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .auth-title {
   font-size: 24px;
   font-weight: 800;
   color: #ffffff;
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   letter-spacing: -0.02em;
+  text-align: center;
 }
 
 .auth-subtitle {
   font-size: 13px;
   color: #94a3b8;
-  margin: 0;
-  line-height: 1.4;
+  margin: 0 auto;
+  line-height: 1.45;
+  text-align: center;
+  max-width: 300px;
 }
 
 .auth-actual-form {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  width: 100%;
 }
 
 /* Form Fields */
