@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Shield,
   Sparkles,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Zap,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import './Auth.css';
 
@@ -315,13 +316,18 @@ export default function AuthLayout({ children }) {
           {/* Clean Auth Form Body (Spacious & Centered) */}
           <div className="auth-form-body">{children}</div>
 
-          {/* Footer Security Badge */}
+          {/* Mobile App Promotion Footer */}
           <div className="auth-column-footer">
-            <div className="auth-security-notice">
-              <Shield size={13} color="#34d399" />
-              <span>256-Bit SSL Encrypted Connection</span>
-            </div>
-            <div className="auth-copyright-text">CardFlow Enterprise Suite • v2.5.0</div>
+            <a
+              href="https://play.google.com/store/apps/details?id=com.adarshid.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="auth-mobile-app-link"
+            >
+              <Smartphone size={14} className="auth-app-icon" />
+              <span>Continue with our Mobile App</span>
+              <ExternalLink size={12} className="auth-app-external" />
+            </a>
           </div>
         </div>
       </main>
