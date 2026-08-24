@@ -50,6 +50,7 @@ urlpatterns = [
     path('api/recent-activity/', views.api_recent_activity, name='api_recent_activity'),
     path('api/reprint-overview/', views.api_reprint_overview, name='api_reprint_overview'),
     path('api/banners/', views.api_sidebar_banners, name='api_sidebar_banners'),
+    path('api/v1/banners/', views.api_sidebar_banners, name='api_v1_sidebar_banners'),
 
     # ==================== EMAIL & PANEL API ====================
     path('api/email-logs/', views.api_email_logs, name='api_email_logs'),

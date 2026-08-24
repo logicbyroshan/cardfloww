@@ -215,6 +215,7 @@ class PermissionValidationMiddleware:
         '/api/auth/reset-password/',  # Password reset completion
         '/api/auth/me/',      # Used by SPA on boot to check session state
         '/api/banners/',      # Public promotional banners and ads
+        '/api/v1/banners/',   # Versioned alias for promotional banners
         '/api/mobile/',       # Mobile app API (has its own token auth)
         '/api/desktop/',      # Desktop app API (has its own token / bootstrap auth)
         '/api/web/',          # Desktop PWA/web API (has its own auth)

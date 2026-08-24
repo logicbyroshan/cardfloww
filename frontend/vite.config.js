@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react'
 // Everything else is served by Vite as the React SPA.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DJANGO_PORT = 8000;
+const DJANGO_PORT = process.env.VITE_DJANGO_PORT || 8008;
 const DJANGO_ORIGIN = `http://127.0.0.1:${DJANGO_PORT}`;
 
 // Routes that MUST be proxied to Django (JSON API + media files + session CSRF)
