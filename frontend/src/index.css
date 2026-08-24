@@ -3179,26 +3179,26 @@ table th:last-child {
   align-items: center !important;
   justify-content: center !important;
   gap: 5px !important;
-  padding: 0 12px !important;
-  height: 20px !important;
-  font-size: 11.5px !important;
-  line-height: 1.2 !important;
+  padding: 0 10px !important;
+  height: 22px !important;
+  font-size: 11px !important;
+  line-height: 22px !important;
   font-weight: 600 !important;
-  border-radius: 4px !important;
+  border-radius: 3px !important;
   border: none !important;
   cursor: pointer !important;
-  background: transparent !important;
-  color: #cbd5e1 !important;
+  background: transparent;
+  color: #cbd5e1;
   font-family: var(--font-family) !important;
   transition: all 0.15s ease-in-out !important;
   white-space: nowrap !important;
-  box-shadow: none !important;
+  box-shadow: none;
 }
 
-.status-tab:hover,
-.idcard-status-tab:hover {
+.status-tab:not(.active):hover,
+.idcard-status-tab:not(.active):hover {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
 }
 
 .status-tab.active,
@@ -3206,7 +3206,49 @@ table th:last-child {
   border: none !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
+}
+
+.status-tab.active-pending {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-verified {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-approved {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-printed,
+.status-tab.active-download {
+  background: #64748b !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-deleted,
+.status-tab.active-pool {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-reprint {
+  background: #06b6d4 !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-request {
+  background: #a855f7 !important;
+  color: #ffffff !important;
+}
+
+.status-tab.active-confirm {
+  background: #10b981 !important;
+  color: #ffffff !important;
 }
 
 /* ── Top Bar Navigation Tabs (Notifications, System & Server, etc.) ── */

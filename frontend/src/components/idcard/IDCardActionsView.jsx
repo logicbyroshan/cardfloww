@@ -2398,21 +2398,29 @@ export default function IDCardActionsView({
     if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(initialStatus)) {
       return 'pending';
     }
-    return initialStatus;
+    return initialStatus || 'pending';
   });
   const [statusCounts, setStatusCounts] = useState({ pending: 0, verified: 0, approved: 0, download: 0, pool: 0 });
 
-  const onStatusChangeRef = useRef(onStatusChange);
+  const prevInitialStatusRef = useRef(initialStatus);
   useEffect(() => {
-    onStatusChangeRef.current = onStatusChange;
-  }, [onStatusChange]);
-
-  useEffect(() => {
-    if (initialStatus && initialStatus !== status) {
+    if (initialStatus && initialStatus !== prevInitialStatusRef.current) {
+      prevInitialStatusRef.current = initialStatus;
       setStatus(initialStatus);
     }
-  }, [initialStatus, status]);
+  }, [initialStatus]);
 
+  const handleStatusTabSwitch = useCallback((newStatus) => {
+    setStatus(newStatus);
+    prevInitialStatusRef.current = newStatus;
+    if (tableId && newStatus) {
+      const targetRoute = `/table/${tableId}/${newStatus}`;
+      if (typeof window !== 'undefined' && window.location.pathname !== targetRoute) {
+        window.history.replaceState({}, document.title, targetRoute);
+      }
+    }
+    onStatusChange?.(newStatus);
+  }, [tableId, onStatusChange]);
 
   useEffect(() => {
     if (tableId && status) {
@@ -2420,7 +2428,6 @@ export default function IDCardActionsView({
       if (typeof window !== 'undefined' && window.location.pathname !== targetRoute) {
         window.history.replaceState({}, document.title, targetRoute);
       }
-      onStatusChangeRef.current?.(status);
     }
   }, [tableId, status]);
 
@@ -3196,8 +3203,9 @@ export default function IDCardActionsView({
             return (
               <button
                 key={s.key}
-                onClick={() => setStatus(s.key)}
-                className={`status-tab${isActive ? ' active' : ''}`}
+                type="button"
+                onClick={() => handleStatusTabSwitch(s.key)}
+                className={`status-tab status-tab-${s.key} ${isActive ? `active active-${s.key}` : ''}`}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -3210,12 +3218,12 @@ export default function IDCardActionsView({
                   lineHeight: '22px',
                   fontWeight: isActive ? 700 : 600,
                   border: 'none',
-                  background: isActive ? s.bg || '#2563eb' : 'transparent',
+                  background: isActive ? (s.bg || '#2563eb') : 'transparent',
                   color: isActive ? '#ffffff' : '#cbd5e1',
                   cursor: 'pointer',
                   fontFamily: 'var(--font-family)',
                   transition: 'all 0.15s ease',
-                  boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.3)' : 'none',
+                  boxShadow: isActive ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
                 }}
                 title={`Switch to ${s.label}`}
               >
@@ -3231,7 +3239,7 @@ export default function IDCardActionsView({
                     borderRadius: '3px',
                     fontSize: '10px',
                     fontWeight: 700,
-                    background: isActive ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.12)',
+                    background: isActive ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.12)',
                     color: isActive ? '#ffffff' : '#cbd5e1',
                   }}
                 >
