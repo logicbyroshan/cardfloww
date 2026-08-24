@@ -52,7 +52,10 @@ def _protected_media_serve(request, path, document_root=None):
         if not request.user.is_authenticated:
             # Redirect to login, preserving the original URL in ?next=
             # so the user is returned here after successful authentication.
-            login_url = reverse('accounts:login')
+            try:
+                login_url = reverse('accounts_root:api_login')
+            except Exception:
+                login_url = '/auth/login'
             return redirect_to_login(request.get_full_path(), login_url=login_url)
 
         from core.models import BackgroundTask

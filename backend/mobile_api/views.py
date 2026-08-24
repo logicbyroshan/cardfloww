@@ -1157,8 +1157,8 @@ def pwa_service_worker(request):
         '/csrf/',
     ])
 
-    sw_template = """\
-/* Adarsh ID Cards â€” PWA Service Worker (Phase 5) */
+    sw_template = r"""\
+/* Adarsh ID Cards — PWA Service Worker (Phase 5) */
 const CACHE_GROUP = '__CACHE_GROUP__';
 const CACHE_NAMESPACE = '__CACHE_NAMESPACE__';
 const CACHE_GENERATION = __CACHE_GENERATION__;

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Pen,
-  Eye,
   Trash2,
   ToggleRight,
   Link,
@@ -11,28 +10,19 @@ import {
   Camera,
   Search,
   X,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  RefreshCw,
-  Loader2,
-  AlertCircle,
-  Info,
-  ListCheck,
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
 import { SkeletonTableRows } from '../common/Skeleton';
-import { staffApi, operatorApi, assistantApi, photographerApi } from '../../services/api';
+import { operatorApi, assistantApi, photographerApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
-import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
+import { STATUS_TABS } from '../../utils/constants';
 
 export default function StaffManagementView({
   addToast,
   staffType = 'operator',
   onOpenActionDrawer,
-  onNavigate,
+  _onNavigate,
   onOpenDeleteModal,
 }) {
   const [staffList, setStaffList] = useState([]);
@@ -194,23 +184,6 @@ export default function StaffManagementView({
   }, [staffList, search, statusTab]);
 
   const selStaff = staffList.find((s) => s.id === selected);
-
-  const formatDate = (d) => {
-    if (!d) return '-';
-    try {
-      return new Date(d).toLocaleString('en-IN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return d;
-    }
-  };
-
-  const title = isAssistant ? 'Manage Assistant' : isPhotographer ? 'Manage Photographer' : 'Manage Operator';
 
   return (
     <div

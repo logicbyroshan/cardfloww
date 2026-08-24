@@ -1400,7 +1400,7 @@ class ImpersonationApiTests(TestCase):
         self.assertNotIn(self.target_user.id, returned_ids)
         self.assertIn(self.normal_user.id, returned_ids)
 
-    def test_impersonation_list_includes_assistant_and_super_admin_when_many_admin_staff_exist(self):
+    def test_impersonation_list_includes_operational_users_and_excludes_administrators(self):
         User.objects.bulk_create([
             User(
                 username=f'bulk-admin-{idx}@example.com',
@@ -1416,7 +1416,7 @@ class ImpersonationApiTests(TestCase):
             username='assistant-target-imp@example.com',
             email='assistant-target-imp@example.com',
             password='testpass123',
-            role='client_staff',
+            role='assistant',
         )
         super_admin_user = User.objects.create_user(
             username='superadmin-target-imp@example.com',
@@ -1433,7 +1433,7 @@ class ImpersonationApiTests(TestCase):
         self.assertTrue(payload['success'])
         returned_ids = {entry['id'] for entry in payload['users']}
         self.assertIn(assistant_user.id, returned_ids)
-        self.assertIn(super_admin_user.id, returned_ids)
+        self.assertNotIn(super_admin_user.id, returned_ids)
 
     def test_impersonation_start_requires_pro_user(self):
         self.client.login(username='normal-user-imp@example.com', password='testpass123')

@@ -197,6 +197,8 @@ class ImpersonateService:
         login(request, original_user, backend='django.contrib.auth.backends.ModelBackend')
         for k, v in saved_keys.items():
             request.session[k] = v
+        # Ensure selected_role is restored to the administrator's genuine role
+        request.session['selected_role'] = getattr(original_user, 'role', 'super_admin')
         request.session.modified = True
         request.session.save()
 

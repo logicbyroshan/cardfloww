@@ -126,7 +126,7 @@ from .settings_api import (
     api_remove_profile_image,
 )
 
-# NOTE: Reprint API views moved to 'reprintcard' app
+# NOTE: Reprint API views moved to 'reprint' app
 
 from .task_api import (
     api_task_status,

@@ -1076,6 +1076,11 @@ export const auditApi = {
 export const organisationApi = clientApi;
 export const managerApi = organisationManagerApi;
 export const tableGroupApi = schemaApi;
+export const tableApi = {
+  ...schemaApi,
+  list: async (clientId) => clientApi.getClientTables(clientId),
+  getTables: async (clientId) => clientApi.getClientTables(clientId),
+};
 
 export { apiClient };
 export default apiClient;
