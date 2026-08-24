@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Building,
 } from 'lucide-react';
+import SidebarAdCard from './SidebarAdCard';
 
 /*
   Exact replica of templates/partials/sidebar.html
@@ -312,6 +313,9 @@ export default function Sidebar({
             )}
           </div>
         )}
+
+        {/* Product & VidyaMaxx Ads Carousel (Above Tutorial) */}
+        <SidebarAdCard />
 
         {/* Tutorial link */}
         <div className="sidebar-actions">
