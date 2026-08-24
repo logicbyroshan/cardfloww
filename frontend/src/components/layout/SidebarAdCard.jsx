@@ -7,7 +7,7 @@ import {
   Wifi,
   ExternalLink,
   ChevronRight,
-  Info,
+  CheckCircle2,
 } from 'lucide-react';
 import { bannersApi } from '../../services/api';
 
@@ -16,18 +16,24 @@ const DEFAULT_BANNERS = [
     id: 'banner-pvc-lanyard',
     type: 'product',
     tag: 'SUPPLIES & ACCESSORIES',
-    title: 'Smart PVC Cards & Lanyards',
-    subtitle: 'HD Sublimation Blank Cards & Satin Neckbands',
-    desc: 'HD thermal-printable blank PVC cards, multi-color satin lanyards, reels & ID clips.',
+    title: 'PVC Cards & Lanyards',
+    subtitle: 'Premium ID Supplies',
+    bullets: [
+      'Blank PVC CR80 Cards',
+      'Custom Satin Lanyards',
+      'Retractable Badge Reels',
+      'Bulk Wholesale Pricing',
+    ],
+    desc: 'HD thermal-printable blank PVC cards, multi-color satin lanyards, reels & ID clips for high-volume printing.',
     cta: 'View Catalog',
     accent: '#3b82f6',
-    ratio: '3:1',
-    bg: 'linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%)',
+    ratio: '1:1.6',
+    bg: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 60%, #0f172a 100%)',
     border: '#3b82f6',
-    tagBg: 'rgba(59, 130, 246, 0.25)',
+    tagBg: 'rgba(59, 130, 246, 0.3)',
     tagColor: '#93c5fd',
     btnBg: '#2563eb',
-    image_url: '/banners/banner_pvc_cards_3x1.svg',
+    image_url: '/banners/banner_pvc_cards_tall.svg',
     target_url: 'https://cardflow.in/supplies',
     Icon: CreditCard,
     is_vidyamaxx: false,
@@ -37,17 +43,23 @@ const DEFAULT_BANNERS = [
     type: 'product',
     tag: 'PRINTING HARDWARE',
     title: 'Dual-Sided Card Printers',
-    subtitle: 'High-speed 300DPI Direct-to-Card Printing',
-    desc: 'Industrial 300DPI direct-to-card printers with automatic duplex badge printing.',
-    cta: 'Explore Printers',
+    subtitle: 'High-Speed 300 DPI',
+    bullets: [
+      'Auto Duplex Dual-Sided',
+      '140+ Cards / Hour Speed',
+      'Direct USB & LAN Network',
+      '2-Year Official Warranty',
+    ],
+    desc: 'Industrial 300DPI direct-to-card printers with automatic duplex badge printing and rapid card output.',
+    cta: 'Explore Models',
     accent: '#06b6d4',
-    ratio: '3:1',
-    bg: 'linear-gradient(135deg, #083344 0%, #0f172a 100%)',
+    ratio: '1:1.6',
+    bg: 'linear-gradient(135deg, #0e7490 0%, #083344 60%, #020617 100%)',
     border: '#06b6d4',
-    tagBg: 'rgba(6, 182, 212, 0.25)',
+    tagBg: 'rgba(6, 182, 212, 0.3)',
     tagColor: '#67e8f9',
     btnBg: '#0891b2',
-    image_url: '/banners/banner_printers_3x1.svg',
+    image_url: '/banners/banner_printers_tall.svg',
     target_url: 'https://cardflow.in/printers',
     Icon: Printer,
     is_vidyamaxx: false,
@@ -56,19 +68,25 @@ const DEFAULT_BANNERS = [
     id: 'banner-vidyamaxx-1',
     type: 'vidyamaxx',
     tag: '⭐ OUR SCHOOL SOFTWARE',
-    title: 'VidyaMaxx ERP Software',
-    subtitle: 'Our Complete School Management Software',
-    desc: 'All-in-one School & Campus Management System: Student Admissions, Fees Collection, Live Attendance, Report Cards & Parent App.',
+    title: 'VidyaMaxx ERP',
+    subtitle: 'School Management Suite',
+    bullets: [
+      'Fees & Live Attendance',
+      'Auto Student ID Sync',
+      'Bus GPS & Parent App',
+      'Exams & Report Cards',
+    ],
+    desc: 'Complete School & Campus ERP: Admissions, Student Biometrics, Automated Fees Collection, Bus GPS Tracking & Parent Mobile App.',
     cta: 'Open VidyaMaxx',
     accent: '#f97316',
-    ratio: '3:1',
+    ratio: '1:1.6',
     bg: 'linear-gradient(135deg, #ea580c 0%, #9a3412 50%, #1e1b4b 100%)',
     border: '#f97316',
-    tagBg: 'rgba(249, 115, 22, 0.35)',
+    tagBg: 'rgba(249, 115, 22, 0.4)',
     tagColor: '#fed7aa',
     btnBg: '#ea580c',
-    glow: '0 0 14px rgba(249, 115, 22, 0.45)',
-    image_url: '/banners/banner_vidyamaxx_orange_3x1.svg',
+    glow: '0 0 16px rgba(249, 115, 22, 0.45)',
+    image_url: '/banners/banner_vidyamaxx_orange_tall.svg',
     target_url: 'https://vidyamaxx.com',
     Icon: GraduationCap,
     is_vidyamaxx: true,
@@ -77,18 +95,24 @@ const DEFAULT_BANNERS = [
     id: 'banner-ai-studio',
     type: 'product',
     tag: 'AI SMART SUITE',
-    title: 'AI Face & Photo Studio',
-    subtitle: '1-Click Auto Background Remover & Crop',
-    desc: 'Automated AI face detection, photo alignment, background removal & ultra-sharp upscaling.',
+    title: 'AI Photo Studio',
+    subtitle: 'Auto BG & Face Crop',
+    bullets: [
+      '1-Click BG Remover',
+      'Face Alignment & Center',
+      '4K Ultra HD AI Upscaling',
+      'Batch 1,000+ Photos/Min',
+    ],
+    desc: 'Automated AI face detection, photo alignment, background removal & ultra-sharp upscaling for student identity cards.',
     cta: 'Try AI Suite',
     accent: '#a855f7',
-    ratio: '3:1',
-    bg: 'linear-gradient(135deg, #4c1d95 0%, #0f172a 100%)',
+    ratio: '1:1.6',
+    bg: 'linear-gradient(135deg, #6b21a8 0%, #4c1d95 60%, #0f172a 100%)',
     border: '#a855f7',
-    tagBg: 'rgba(168, 85, 247, 0.25)',
+    tagBg: 'rgba(168, 85, 247, 0.3)',
     tagColor: '#d8b4fe',
     btnBg: '#9333ea',
-    image_url: '/banners/banner_ai_studio_3x1.svg',
+    image_url: '/banners/banner_ai_studio_tall.svg',
     target_url: 'https://cardflow.in/ai-studio',
     Icon: Sparkles,
     is_vidyamaxx: false,
@@ -97,18 +121,24 @@ const DEFAULT_BANNERS = [
     id: 'banner-rfid-scanner',
     type: 'product',
     tag: 'IOT HARDWARE',
-    title: 'RFID & NFC Gate Readers',
-    subtitle: 'Automated Student Tap Attendance',
-    desc: 'Contactless smart attendance gate readers with instant cloud database sync.',
+    title: 'RFID Gate Readers',
+    subtitle: 'Tap Gate Attendance',
+    bullets: [
+      'Instant RFID & NFC Tap',
+      'Real-Time Cloud Logging',
+      'Instant Parent SMS Alerts',
+      'Plug & Play USB / WiFi',
+    ],
+    desc: 'Contactless smart attendance gate readers with instant cloud database sync and real-time student tap logging.',
     cta: 'Get Hardware',
     accent: '#10b981',
-    ratio: '3:1',
-    bg: 'linear-gradient(135deg, #064e3b 0%, #0f172a 100%)',
+    ratio: '1:1.6',
+    bg: 'linear-gradient(135deg, #047857 0%, #064e3b 60%, #022c22 100%)',
     border: '#10b981',
-    tagBg: 'rgba(16, 185, 129, 0.25)',
+    tagBg: 'rgba(16, 185, 129, 0.3)',
     tagColor: '#6ee7b7',
     btnBg: '#059669',
-    image_url: '/banners/banner_rfid_3x1.svg',
+    image_url: '/banners/banner_rfid_tall.svg',
     target_url: 'https://cardflow.in/rfid',
     Icon: Wifi,
     is_vidyamaxx: false,
@@ -117,19 +147,25 @@ const DEFAULT_BANNERS = [
     id: 'banner-vidyamaxx-2',
     type: 'vidyamaxx',
     tag: '⭐ VIDYAMAXX ERP',
-    title: 'VidyaMaxx ERP Software',
-    subtitle: 'Next-Gen School & Campus Solution',
-    desc: 'Automate School Administration, Automated Bus GPS Tracking, Timetable Scheduling & Fee Installments.',
+    title: 'VidyaMaxx ERP',
+    subtitle: 'Next-Gen School Solution',
+    bullets: [
+      'Fees & Live Attendance',
+      'Auto Student ID Sync',
+      'Bus GPS & Parent App',
+      'Exams & Report Cards',
+    ],
+    desc: 'All-in-one Campus Solution: Student Admissions, Online Fees, Live Bus Tracking, Timetables & Parent Notifications.',
     cta: 'Free School Demo',
     accent: '#f97316',
-    ratio: '3:1',
+    ratio: '1:1.6',
     bg: 'linear-gradient(135deg, #ea580c 0%, #9a3412 50%, #1e1b4b 100%)',
     border: '#f97316',
-    tagBg: 'rgba(249, 115, 22, 0.35)',
+    tagBg: 'rgba(249, 115, 22, 0.4)',
     tagColor: '#fed7aa',
     btnBg: '#ea580c',
-    glow: '0 0 14px rgba(249, 115, 22, 0.45)',
-    image_url: '/banners/banner_vidyamaxx_orange_3x1.svg',
+    glow: '0 0 16px rgba(249, 115, 22, 0.45)',
+    image_url: '/banners/banner_vidyamaxx_orange_tall.svg',
     target_url: 'https://vidyamaxx.com',
     Icon: GraduationCap,
     is_vidyamaxx: true,
@@ -149,13 +185,13 @@ export default function SidebarAdCard() {
     let mounted = true;
     bannersApi.getBanners().then((res) => {
       if (mounted && res && res.success && Array.isArray(res.banners) && res.banners.length > 0) {
-        // Merge API banner items with default icons/styling
         const merged = res.banners.map((b, idx) => {
           const fallback = DEFAULT_BANNERS[idx % DEFAULT_BANNERS.length] || DEFAULT_BANNERS[0];
           return {
             ...fallback,
             ...b,
             Icon: fallback.Icon,
+            bullets: fallback.bullets,
           };
         });
         setBanners(merged);
@@ -182,11 +218,7 @@ export default function SidebarAdCard() {
   }, [isPaused, total]);
 
   const handleBannerClick = () => {
-    if (currentAd.is_vidyamaxx) {
-      setShowModal(true);
-    } else {
-      setShowModal(true);
-    }
+    setShowModal(true);
   };
 
   const handleImageError = (id) => {
@@ -200,8 +232,8 @@ export default function SidebarAdCard() {
       <div
         className="sidebar-ad-card-container"
         style={{
-          padding: '0 6px',
-          marginBottom: '6px',
+          padding: '0 4px',
+          marginBottom: '8px',
           boxSizing: 'border-box',
           width: '100%',
         }}
@@ -214,23 +246,23 @@ export default function SidebarAdCard() {
             position: 'relative',
             width: '100%',
             cursor: 'pointer',
-            borderRadius: '6px',
+            borderRadius: '8px',
             overflow: 'hidden',
             boxSizing: 'border-box',
-            border: `1px solid ${currentAd.is_vidyamaxx ? 'rgba(249, 115, 22, 0.7)' : 'rgba(255, 255, 255, 0.14)'}`,
-            boxShadow: currentAd.glow || '0 2px 8px rgba(0,0,0,0.3)',
+            border: `1.5px solid ${currentAd.is_vidyamaxx ? '#f97316' : currentAd.accent || 'rgba(255, 255, 255, 0.18)'}`,
+            boxShadow: currentAd.glow || '0 4px 14px rgba(0,0,0,0.4)',
             transition: 'all 0.25s ease',
             background: currentAd.bg || '#1e1e2e',
           }}
           title={`${currentAd.title} — Click to view`}
         >
-          {/* Long Web Banner Image (3:1 Aspect Ratio) */}
+          {/* Tall Vertical Skyscraper Banner (Aspect ratio ~1:1.6, height ~230px) */}
           {hasImage ? (
             <div
               style={{
                 width: '100%',
-                aspectRatio: '3 / 1',
-                maxHeight: '86px',
+                aspectRatio: '160 / 250',
+                maxHeight: '250px',
                 overflow: 'hidden',
                 position: 'relative',
                 display: 'flex',
@@ -245,105 +277,149 @@ export default function SidebarAdCard() {
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                   display: 'block',
-                  borderRadius: '5px',
-                  transition: 'transform 0.3s ease',
+                  borderRadius: '7px',
                 }}
               />
             </div>
           ) : (
-            /* Fallback Vector Banner Graphic in 3:1 Ratio */
+            /* Fallback Vector Vertical Poster Card */
             <div
               style={{
                 width: '100%',
-                aspectRatio: '3 / 1',
-                padding: '8px 10px',
+                aspectRatio: '160 / 250',
+                padding: '12px 10px',
                 boxSizing: 'border-box',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Top Badge */}
+              <div style={{ textAlign: 'center' }}>
                 <span
                   style={{
-                    fontSize: '8.5px',
+                    fontSize: '8px',
                     fontWeight: 800,
-                    padding: '2px 5px',
-                    borderRadius: '3px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
                     background: currentAd.tagBg,
                     color: currentAd.tagColor,
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
+                    display: 'inline-block',
                   }}
                 >
                   {currentAd.tag}
                 </span>
-                <Icon size={12} color={currentAd.accent} />
               </div>
 
-              <div style={{ margin: '2px 0' }}>
+              {/* Icon Box & Titles */}
+              <div style={{ textAlign: 'center', margin: '6px 0 4px 0' }}>
                 <div
                   style={{
-                    fontSize: '11.5px',
-                    fontWeight: 700,
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.18)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '6px',
+                  }}
+                >
+                  <Icon size={18} color="#ffffff" />
+                </div>
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 800,
                     color: '#ffffff',
                     lineHeight: 1.2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
                   }}
                 >
                   {currentAd.title}
                 </div>
                 <div
                   style={{
-                    fontSize: '9.5px',
-                    fontWeight: 500,
+                    fontSize: '8.5px',
+                    fontWeight: 600,
                     color: currentAd.is_vidyamaxx ? '#fed7aa' : '#94a3b8',
-                    lineHeight: 1.2,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    marginTop: '2px',
                   }}
                 >
                   {currentAd.subtitle}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Bullet Features */}
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  borderRadius: '6px',
+                  padding: '6px 8px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                {(currentAd.bullets || []).map((b, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      fontSize: '8px',
+                      color: currentAd.is_vidyamaxx ? '#ffedd5' : '#e2e8f0',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    <span style={{ color: currentAd.accent, fontSize: '9px' }}>•</span>
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom CTA Button */}
+              <div style={{ marginTop: '6px' }}>
                 <span
                   style={{
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    padding: '1px 6px',
-                    borderRadius: '3px',
-                    background: currentAd.btnBg,
-                    color: '#ffffff',
-                    display: 'inline-flex',
+                    width: '100%',
+                    padding: '6px 0',
+                    borderRadius: '5px',
+                    background: currentAd.is_vidyamaxx ? '#ffffff' : currentAd.btnBg,
+                    color: currentAd.is_vidyamaxx ? '#c2410c' : '#ffffff',
+                    fontSize: '9.5px',
+                    fontWeight: 800,
+                    display: 'flex',
                     alignItems: 'center',
-                    gap: '2px',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                   }}
                 >
                   <span>{currentAd.cta}</span>
-                  <ChevronRight size={9} />
+                  <ChevronRight size={11} />
                 </span>
               </div>
             </div>
           )}
 
-          {/* Dots Indicator Overlay at Bottom Right */}
+          {/* Dots Indicator Overlay at Bottom Center */}
           <div
             style={{
               position: 'absolute',
               bottom: '4px',
-              right: '6px',
+              left: '50%',
+              transform: 'translateX(-50%)',
               display: 'flex',
               alignItems: 'center',
-              gap: '3px',
-              background: 'rgba(0, 0, 0, 0.45)',
-              padding: '2px 4px',
+              gap: '4px',
+              background: 'rgba(0, 0, 0, 0.55)',
+              padding: '2px 6px',
               borderRadius: '8px',
               backdropFilter: 'blur(4px)',
             }}
@@ -355,8 +431,8 @@ export default function SidebarAdCard() {
                 type="button"
                 onClick={() => setCurrentIndex(idx)}
                 style={{
-                  width: idx === currentIndex ? '10px' : '3.5px',
-                  height: '3.5px',
+                  width: idx === currentIndex ? '12px' : '4px',
+                  height: '4px',
                   borderRadius: '2px',
                   background:
                     idx === currentIndex
@@ -392,71 +468,91 @@ export default function SidebarAdCard() {
         >
           <div
             style={{
-              maxWidth: '460px',
+              maxWidth: '440px',
               width: '100%',
               background: '#181824',
-              border: `1px solid ${currentAd.is_vidyamaxx ? '#f97316' : currentAd.accent}`,
+              border: `1.5px solid ${currentAd.is_vidyamaxx ? '#f97316' : currentAd.accent}`,
               borderRadius: '12px',
-              padding: '24px',
+              padding: '22px',
               color: '#ffffff',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.75)',
               position: 'relative',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Banner Preview inside Modal */}
-            <div
-              style={{
-                width: '100%',
-                aspectRatio: '3 / 1',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                marginBottom: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              <img
-                src={currentAd.image_url}
-                alt={currentAd.title}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <span
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div
                 style={{
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  padding: '2px 8px',
-                  borderRadius: '4px',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
                   background: currentAd.tagBg,
-                  color: currentAd.tagColor,
-                  letterSpacing: '0.04em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                {currentAd.tag}
-              </span>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>{currentAd.title}</h3>
+                <Icon size={22} color={currentAd.accent} />
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: currentAd.tagBg,
+                    color: currentAd.tagColor,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {currentAd.tag}
+                </span>
+                <h3 style={{ margin: '3px 0 0 0', fontSize: '15px', fontWeight: 800 }}>{currentAd.title}</h3>
+              </div>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+            <p style={{ fontSize: '12.5px', color: '#cbd5e1', lineHeight: 1.5, margin: '0 0 14px 0' }}>
               {currentAd.desc}
             </p>
+
+            {/* Feature Highlights in Modal */}
+            <div
+              style={{
+                background: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                marginBottom: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase' }}>
+                Key Highlights
+              </div>
+              {(currentAd.bullets || []).map((bullet, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#e2e8f0', marginBottom: '4px' }}>
+                  <CheckCircle2 size={13} color={currentAd.accent} />
+                  <span>{bullet}</span>
+                </div>
+              ))}
+            </div>
 
             {currentAd.is_vidyamaxx && (
               <div
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
                   background: 'rgba(249, 115, 22, 0.12)',
                   border: '1px solid rgba(249, 115, 22, 0.35)',
-                  marginBottom: '18px',
-                  fontSize: '12px',
+                  marginBottom: '16px',
+                  fontSize: '11.5px',
                   color: '#fed7aa',
                   lineHeight: 1.4,
                 }}
               >
-                <strong>VidyaMaxx School ERP</strong>: Connects directly with CardFlow for automatic student ID generation, timetable management, exam grading, and bus GPS tracking.
+                <strong>VidyaMaxx ERP</strong> links seamlessly with CardFlow to automate student identity badge production with zero manual data entry.
               </div>
             )}
 
@@ -465,8 +561,8 @@ export default function SidebarAdCard() {
                 type="button"
                 onClick={() => setShowModal(false)}
                 style={{
-                  padding: '7px 16px',
-                  borderRadius: '4px',
+                  padding: '7px 15px',
+                  borderRadius: '5px',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
                   background: 'transparent',
                   color: '#cbd5e1',
@@ -487,7 +583,7 @@ export default function SidebarAdCard() {
                 }}
                 style={{
                   padding: '7px 18px',
-                  borderRadius: '4px',
+                  borderRadius: '5px',
                   border: 'none',
                   background: currentAd.btnBg || '#ea580c',
                   color: '#ffffff',

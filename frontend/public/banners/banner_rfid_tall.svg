@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rfidTallGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="60%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <filter id="rfidShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="160" height="260" rx="10" fill="url(#rfidTallGrad)" stroke="#10b981" stroke-width="1.5"/>
+  <circle cx="140" cy="25" r="45" fill="#10b981" opacity="0.15"/>
+  <circle cx="15" cy="240" r="35" fill="#34d399" opacity="0.08"/>
+
+  <!-- Top Badge -->
+  <rect x="10" y="12" width="140" height="18" rx="4" fill="rgba(16, 185, 129, 0.3)"/>
+  <text x="80" y="24" font-family="'Inter', sans-serif" font-size="8" font-weight="800" fill="#6ee7b7" text-anchor="middle" letter-spacing="0.4">IOT HARDWARE</text>
+
+  <!-- Central Icon Box -->
+  <g transform="translate(56, 38)">
+    <rect width="48" height="48" rx="12" fill="rgba(16, 185, 129, 0.25)" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.2" filter="url(#rfidShadow)"/>
+    <!-- Wifi / RFID waves Icon -->
+    <path d="M14 20 A 14 14 0 0 1 34 20" stroke="#ffffff" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M18 24 A 8 8 0 0 1 30 24" stroke="#6ee7b7" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <circle cx="24" cy="30" r="2.5" fill="#34d399"/>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="80" y="103" font-family="'Inter', sans-serif" font-size="12" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#rfidShadow)">RFID Gate Readers</text>
+  <text x="80" y="117" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" fill="#a7f3d0" text-anchor="middle">Tap Gate Attendance</text>
+
+  <!-- Features Box -->
+  <rect x="10" y="128" width="140" height="78" rx="6" fill="rgba(0, 0, 0, 0.25)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="0.8"/>
+  
+  <g transform="translate(16, 144)">
+    <circle cx="4" cy="0" r="2.5" fill="#34d399"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#d1fae5">Instant RFID &amp; NFC Tap</text>
+  </g>
+  <g transform="translate(16, 162)">
+    <circle cx="4" cy="0" r="2.5" fill="#34d399"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#d1fae5">Real-Time Cloud Logging</text>
+  </g>
+  <g transform="translate(16, 180)">
+    <circle cx="4" cy="0" r="2.5" fill="#34d399"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#d1fae5">Instant Parent SMS Alerts</text>
+  </g>
+  <g transform="translate(16, 198)">
+    <circle cx="4" cy="0" r="2.5" fill="#34d399"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#d1fae5">Plug &amp; Play USB / WiFi</text>
+  </g>
+
+  <!-- CTA Button -->
+  <g transform="translate(10, 214)">
+    <rect width="140" height="28" rx="6" fill="#059669" filter="url(#rfidShadow)"/>
+    <text x="62" y="18" font-family="'Inter', sans-serif" font-size="9.5" font-weight="800" fill="#ffffff" text-anchor="middle">Get Hardware</text>
+    <path d="M116 11 L122 14 L116 17" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

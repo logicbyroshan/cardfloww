@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="aiTallGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6b21a8"/>
+      <stop offset="60%" stop-color="#4c1d95"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="aiShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="160" height="260" rx="10" fill="url(#aiTallGrad)" stroke="#a855f7" stroke-width="1.5"/>
+  <circle cx="140" cy="25" r="45" fill="#a855f7" opacity="0.15"/>
+  <circle cx="15" cy="240" r="35" fill="#c084fc" opacity="0.08"/>
+
+  <!-- Top Badge -->
+  <rect x="10" y="12" width="140" height="18" rx="4" fill="rgba(168, 85, 247, 0.3)"/>
+  <text x="80" y="24" font-family="'Inter', sans-serif" font-size="8" font-weight="800" fill="#d8b4fe" text-anchor="middle" letter-spacing="0.4">AI SMART SUITE</text>
+
+  <!-- Central Icon Box -->
+  <g transform="translate(56, 38)">
+    <rect width="48" height="48" rx="12" fill="rgba(168, 85, 247, 0.25)" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1.2" filter="url(#aiShadow)"/>
+    <!-- Sparkles / AI Icon -->
+    <path d="M24 10 L26 19 L35 22 L26 25 L24 34 L22 25 L13 22 L22 19 Z" fill="#ffffff"/>
+    <circle cx="14" cy="13" r="2" fill="#e9d5ff"/>
+    <circle cx="34" cy="31" r="1.8" fill="#e9d5ff"/>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="80" y="103" font-family="'Inter', sans-serif" font-size="12" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#aiShadow)">AI Photo Studio</text>
+  <text x="80" y="117" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" fill="#d8b4fe" text-anchor="middle">Auto Background &amp; Crop</text>
+
+  <!-- Features Box -->
+  <rect x="10" y="128" width="140" height="78" rx="6" fill="rgba(0, 0, 0, 0.25)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="0.8"/>
+  
+  <g transform="translate(16, 144)">
+    <circle cx="4" cy="0" r="2.5" fill="#c084fc"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#f3e8ff">1-Click BG Remover</text>
+  </g>
+  <g transform="translate(16, 162)">
+    <circle cx="4" cy="0" r="2.5" fill="#c084fc"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#f3e8ff">Face Alignment &amp; Center</text>
+  </g>
+  <g transform="translate(16, 180)">
+    <circle cx="4" cy="0" r="2.5" fill="#c084fc"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#f3e8ff">4K Ultra HD AI Upscaling</text>
+  </g>
+  <g transform="translate(16, 198)">
+    <circle cx="4" cy="0" r="2.5" fill="#c084fc"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#f3e8ff">Batch 1,000+ Photos/Min</text>
+  </g>
+
+  <!-- CTA Button -->
+  <g transform="translate(10, 214)">
+    <rect width="140" height="28" rx="6" fill="#9333ea" filter="url(#aiShadow)"/>
+    <text x="62" y="18" font-family="'Inter', sans-serif" font-size="9.5" font-weight="800" fill="#ffffff" text-anchor="middle">Try AI Suite</text>
+    <path d="M116 11 L122 14 L116 17" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

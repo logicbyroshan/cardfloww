@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="vmTallGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ea580c"/>
+      <stop offset="50%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#7c2d12"/>
+    </linearGradient>
+    <linearGradient id="vmBtnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <filter id="vmShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="160" height="260" rx="10" fill="url(#vmTallGrad)" stroke="#f97316" stroke-width="1.5"/>
+  
+  <!-- Decorative Ambient Circles -->
+  <circle cx="140" cy="30" r="50" fill="#ffffff" opacity="0.07"/>
+  <circle cx="20" cy="230" r="40" fill="#ffffff" opacity="0.05"/>
+  <circle cx="130" cy="180" r="30" fill="#fb923c" opacity="0.15"/>
+
+  <!-- Top Badge -->
+  <rect x="10" y="12" width="140" height="18" rx="4" fill="rgba(0, 0, 0, 0.35)"/>
+  <text x="80" y="24" font-family="'Inter', sans-serif" font-size="8" font-weight="800" fill="#fed7aa" text-anchor="middle" letter-spacing="0.4">⭐ OUR SCHOOL SOFTWARE</text>
+
+  <!-- Central Icon Emblem Box -->
+  <g transform="translate(56, 38)">
+    <rect width="48" height="48" rx="12" fill="rgba(255, 255, 255, 0.2)" stroke="rgba(255, 255, 255, 0.35)" stroke-width="1.2" filter="url(#vmShadow)"/>
+    <!-- Graduation Cap -->
+    <path d="M24 13 L8 21 L24 29 L40 21 Z" fill="#ffffff"/>
+    <path d="M14 24.5 V33 C14 37 34 37 34 33 V24.5" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M37 22 V32" stroke="#fed7aa" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="37" cy="33" r="2" fill="#fed7aa"/>
+  </g>
+
+  <!-- Title & Subtitle -->
+  <text x="80" y="103" font-family="'Inter', sans-serif" font-size="14" font-weight="900" fill="#ffffff" text-anchor="middle" filter="url(#vmShadow)">VidyaMaxx ERP</text>
+  <text x="80" y="117" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" fill="#fed7aa" text-anchor="middle">School Management Suite</text>
+
+  <!-- Feature Highlights Box -->
+  <rect x="10" y="128" width="140" height="78" rx="6" fill="rgba(0, 0, 0, 0.25)" stroke="rgba(255, 255, 255, 0.1)" stroke-width="0.8"/>
+  
+  <g transform="translate(16, 144)">
+    <circle cx="4" cy="0" r="2.5" fill="#fed7aa"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#ffedd5">Fees &amp; Live Attendance</text>
+  </g>
+  <g transform="translate(16, 162)">
+    <circle cx="4" cy="0" r="2.5" fill="#fed7aa"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#ffedd5">Auto Student ID Sync</text>
+  </g>
+  <g transform="translate(16, 180)">
+    <circle cx="4" cy="0" r="2.5" fill="#fed7aa"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#ffedd5">Bus GPS &amp; Parent App</text>
+  </g>
+  <g transform="translate(16, 198)">
+    <circle cx="4" cy="0" r="2.5" fill="#fed7aa"/>
+    <text x="12" y="3" font-family="'Inter', sans-serif" font-size="8" font-weight="600" fill="#ffedd5">Exams &amp; Report Cards</text>
+  </g>
+
+  <!-- CTA Button -->
+  <g transform="translate(10, 214)">
+    <rect width="140" height="28" rx="6" fill="url(#vmBtnGrad)" filter="url(#vmShadow)"/>
+    <text x="62" y="18" font-family="'Inter', sans-serif" font-size="9.5" font-weight="900" fill="#c2410c" text-anchor="middle">Open VidyaMaxx</text>
+    <path d="M118 11 L124 14 L118 17" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
