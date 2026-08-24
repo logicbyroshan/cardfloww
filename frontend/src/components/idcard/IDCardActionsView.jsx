@@ -2441,6 +2441,9 @@ export default function IDCardActionsView({
   const [cards, setCards] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(false);
   const [logCard, setLogCard] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalCards, setTotalCards] = useState(0);
 
   /* ── Filters ── */
 
@@ -2661,6 +2664,8 @@ export default function IDCardActionsView({
   }, [
     tableId,
     status,
+    page,
+    pageSize,
     debouncedSearch,
     classFilter,
     sectionFilter,
