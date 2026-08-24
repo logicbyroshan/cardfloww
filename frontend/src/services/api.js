@@ -249,6 +249,12 @@ export const cardApi = {
     return res.data;
   },
 
+  /** GET /api/global-search/ */
+  globalSearch: async (query, filter = 'all') => {
+    const res = await apiClient.get('/api/global-search/', { params: { q: query, filter } });
+    return res.data;
+  },
+
   // Backwards-compat aliases
   getDashboardStats: async () => dashboardApi.getStats(),
   getRecentActivity: async () => dashboardApi.getRecentActivity(),

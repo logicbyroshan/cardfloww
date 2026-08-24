@@ -785,7 +785,22 @@ export default function App() {
         addToast={addToast}
       />
 
-      <GlobalSearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
+      <GlobalSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onNavigate={(tab, params) => {
+          if (tab === 'idcard-actions' && params) {
+            setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
+            setActiveTab('idcard-actions');
+          } else if (tab === 'cards' && params?.clientId) {
+            setScopedClientId(params.clientId);
+            setScopedClientOrg(params.org || { id: params.clientId, name: params.clientName });
+            setActiveTab('cards');
+          } else if (tab) {
+            setActiveTab(tab);
+          }
+        }}
+      />
       <ConfirmDeleteModal
         isOpen={!!deleteModalConfig}
         onClose={() => setDeleteModalConfig(null)}

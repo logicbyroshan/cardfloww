@@ -16,6 +16,17 @@ const DJANGO_ORIGIN = `http://127.0.0.1:${DJANGO_PORT}`;
 const djangoRoutes = [
   '/api',        // All REST API endpoints
   '/media',      // User-uploaded media files (photos, exports)
+  '/operators',  // Operator management endpoints
+  '/assistants', // Assistant management endpoints
+  '/organisations', // Organisation endpoints
+  '/exports',    // Export endpoints
+  '/imports',    // Import endpoints
+  '/images',     // Media endpoints
+  '/operations', // Operation endpoints
+  '/staff',      // Staff endpoints
+  '/tables',     // Table endpoints
+  '/reprint',    // Reprint endpoints
+  '/stats',      // Stats endpoints
 ];
 
 export default defineConfig({

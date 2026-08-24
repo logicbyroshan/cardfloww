@@ -271,9 +271,26 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
   const [sortDir, setSortDir] = useState('desc');
 
   const displayList = clients || [];
-  const rows = displayList.filter(
-    (c) => !search || (c.name || c.school_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const rows = displayList.filter((c) => {
+    if (!search || !search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    const nameMatch = (
+      c.name ||
+      c.school_name ||
+      c.org_name ||
+      c.organization_name ||
+      c.client_name ||
+      c.username ||
+      c.email ||
+      ''
+    )
+      .toLowerCase()
+      .includes(q);
+    const subTableMatch =
+      Array.isArray(c.tables || c.sub_tables) &&
+      (c.tables || c.sub_tables).some((t) => (t.name || t.table_name || '').toLowerCase().includes(q));
+    return nameMatch || subTableMatch;
+  });
 
   const toggleExpand = (id, e) => {
     e.stopPropagation();
@@ -377,7 +394,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       width: '100%',
                       height: '26px',
                       paddingLeft: '24px',
-                      paddingRight: '6px',
+                      paddingRight: search ? '22px' : '6px',
                       fontSize: '11px',
                       fontWeight: 500,
                       borderRadius: '4px',
@@ -388,6 +405,29 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       boxSizing: 'border-box',
                     }}
                   />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearch('');
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '6px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Clear search"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
             </th>
@@ -846,9 +886,16 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
 
-  const rows = (tables || []).filter(
-    (t) => !search || (t.name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const rows = (tables || []).filter((t) => {
+    if (!search || !search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      (t.name || '').toLowerCase().includes(q) ||
+      (t.table_name || '').toLowerCase().includes(q) ||
+      (t.client_name || '').toLowerCase().includes(q) ||
+      (t.organisation_name || '').toLowerCase().includes(q)
+    );
+  });
 
   const handleSort = (key) => {
     if (sortKey !== key) {
@@ -925,7 +972,7 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
                       width: '100%',
                       height: '26px',
                       paddingLeft: '24px',
-                      paddingRight: '6px',
+                      paddingRight: search ? '22px' : '6px',
                       fontSize: '11px',
                       fontWeight: 500,
                       borderRadius: '4px',
@@ -936,6 +983,29 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
                       boxSizing: 'border-box',
                     }}
                   />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearch('');
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '6px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                      title="Clear search"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
             </th>

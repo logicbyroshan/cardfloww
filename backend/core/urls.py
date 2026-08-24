@@ -70,6 +70,7 @@ urlpatterns = [
     path('api/backup/download/<int:task_id>/', views.api_backup_download, name='api_backup_download'),
 
     # ==================== NOTIFICATION API ====================
+    path('api/notifications/', views.api_notifications_list, name='api_notifications_list_root'),
     path('api/notifications/list/', views.api_notifications_list, name='api_notifications_list'),
     path('api/notifications/unread-count/', views.api_notifications_unread_count, name='api_notifications_unread_count'),
     path('api/notifications/<int:notification_id>/read/', views.api_notification_mark_read, name='api_notification_mark_read'),
@@ -136,6 +137,10 @@ urlpatterns = [
     path('api/client-staff/<int:staff_id>/login-history/', views.api_client_staff_login_history, name='api_client_staff_login_history'),
     path('api/client-staff/<int:staff_id>/assignment-timeline/', views.api_client_staff_assignment_timeline, name='api_client_staff_assignment_timeline'),
     # NOTE: Admin-side Manage Assistant pages and APIs removed — client-side assistant features remain.
+    
+    # Operators & Assistants APIs
+    path('api/operators/', include('operators.urls')),
+    path('api/assistants/', include('assistants.urls')),
     
     # Staff APIs
     path('api/staff/create/', views.api_staff_create, name='api_staff_create'),

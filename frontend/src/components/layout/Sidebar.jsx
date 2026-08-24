@@ -277,17 +277,26 @@ export default function Sidebar({
             </button>
           );
         })}
+      </nav>
 
-        {/* Tutorial link (Placed inside sidebar-nav, above the footer divider line) */}
+      {/* ── Sticky Tutorial Button (Permanently docked right above the footer divider line) ── */}
+      <div
+        className="sidebar-tutorial-pinned"
+        style={{
+          padding: '0 8px 6px 8px',
+          flexShrink: 0,
+        }}
+      >
         <button
           onClick={() => setActiveTab('tutorial')}
           className={`nav-item${activeTab === 'tutorial' ? ' active' : ''}`}
           id="sidebar-tutorial-btn"
+          style={{ width: '100%', boxSizing: 'border-box' }}
         >
           <BookOpen size={13} />
           <span>Tutorial</span>
         </button>
-      </nav>
+      </div>
 
       {/* ── Footer ── */}
       <div className="sidebar-footer">

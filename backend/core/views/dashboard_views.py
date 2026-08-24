@@ -1133,10 +1133,7 @@ def api_global_search(request):
                 except Exception:
                     pass
 
-            if card.table_id not in route_prefix_by_table:
-                route_prefix_by_table[card.table_id] = reverse(route_name, args=[card.table_id])
-
-            detail_url = f'{route_prefix_by_table[card.table_id]}?status={card.status}&highlight={card.id}'
+            detail_url = f'/tables/{card.table_id}/actions/?status={card.status}&highlight={card.id}'
             
             results.append({
                 'type': 'idcard',
