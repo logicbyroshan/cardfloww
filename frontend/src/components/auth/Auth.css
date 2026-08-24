@@ -502,18 +502,41 @@
 }
 
 .auth-input {
+  color-scheme: dark;
   width: 100%;
   height: 46px;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  background: #0f172a !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
   border-radius: 10px;
   padding: 0 14px 0 42px;
   font-size: 14px;
-  color: #ffffff;
+  color: #ffffff !important;
   box-sizing: border-box;
   outline: none;
   font-family: inherit;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Prevent Chrome / Edge Autofill from turning inputs white */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0f172a inset !important;
+  box-shadow: 0 0 0 1000px #0f172a inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  border-color: #6366f1 !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+.auth-input:disabled {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  -webkit-text-fill-color: #cbd5e1 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  opacity: 0.85;
+  cursor: not-allowed;
 }
 
 .auth-input::placeholder {
@@ -522,7 +545,7 @@
 
 .auth-input:focus {
   border-color: #6366f1;
-  background: #0f172a;
+  background: #0f172a !important;
   box-shadow:
     0 0 0 3.5px rgba(99, 102, 241, 0.35),
     0 6px 20px rgba(0, 0, 0, 0.5);
@@ -623,8 +646,11 @@
 }
 
 .auth-btn-primary:disabled {
-  opacity: 0.7;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  opacity: 0.85;
   cursor: not-allowed;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
 }
 
 .auth-btn-spinner {
