@@ -1448,7 +1448,7 @@ function RightSidePanels({
   if (isAdmin) {
     quickActions = [
       { label: 'Add New Organisation', action: () => onOpenActionDrawer('add-client'), Icon: Plus },
-      { label: 'Add New Operator', action: () => onNavigate('operators'), Icon: Shield },
+      { label: 'Add New Operator', action: () => onOpenActionDrawer('add-operator'), Icon: Shield },
       { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-assistant'), Icon: Users },
     ];
   } else if (isOrg) {

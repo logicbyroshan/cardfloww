@@ -11,6 +11,7 @@ export default function CustomSelect({
   className = '',
   id,
   height = '28px',
+  dark = false,
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -50,12 +51,28 @@ export default function CustomSelect({
           width: '100%',
           height: style.height || height,
           padding: '0 10px',
-          border: open ? '1px solid #2563eb' : '1px solid #cbd5e1',
-          borderRadius: '6px',
-          background: disabled ? '#f1f5f9' : '#ffffff',
-          fontSize: '12px',
-          fontWeight: 500,
-          color: selectedOpt ? '#0f172a' : '#64748b',
+          border: open
+            ? '1px solid #3b82f6'
+            : dark
+            ? '1px solid rgba(255, 255, 255, 0.18)'
+            : '1px solid #cbd5e1',
+          borderRadius: dark ? '5px' : '6px',
+          background: disabled
+            ? dark
+              ? 'rgba(255, 255, 255, 0.04)'
+              : '#f1f5f9'
+            : dark
+            ? 'rgba(255, 255, 255, 0.08)'
+            : '#ffffff',
+          fontSize: '11px',
+          fontWeight: 600,
+          color: selectedOpt
+            ? dark
+              ? '#ffffff'
+              : '#0f172a'
+            : dark
+            ? '#94a3b8'
+            : '#64748b',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -63,19 +80,22 @@ export default function CustomSelect({
           cursor: disabled ? 'not-allowed' : 'pointer',
           outline: 'none',
           boxShadow: open
-            ? '0 0 0 3px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(0,0,0,0.05)'
-            : '0 1px 2px rgba(0,0,0,0.04)',
+            ? dark
+              ? '0 0 0 2px rgba(59, 130, 246, 0.3)'
+              : '0 0 0 3px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(0,0,0,0.05)'
+            : 'none',
           transition: 'all 0.15s ease',
           boxSizing: 'border-box',
+          fontFamily: 'var(--font-family, inherit)',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selectedOpt ? selectedOpt.label : placeholder}
         </span>
         <ChevronDown
-          size={14}
+          size={13}
           style={{
-            color: '#64748b',
+            color: dark ? '#94a3b8' : '#64748b',
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.15s ease',
             flexShrink: 0,
@@ -87,25 +107,27 @@ export default function CustomSelect({
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 5px)',
+            top: 'calc(100% + 4px)',
             left: 0,
             right: 0,
             zIndex: 99999,
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)',
+            background: dark ? '#181825' : '#ffffff',
+            border: dark ? '1px solid rgba(255, 255, 255, 0.18)' : '1px solid #e2e8f0',
+            borderRadius: '6px',
+            boxShadow: dark
+              ? '0 12px 28px rgba(0,0,0,0.7), 0 4px 10px rgba(0,0,0,0.4)'
+              : '0 10px 25px -5px rgba(0,0,0,0.15), 0 8px 10px -6px rgba(0,0,0,0.1)',
             maxHeight: '230px',
             overflowY: 'auto',
-            padding: '5px',
+            padding: '4px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '3px',
+            gap: '2px',
             boxSizing: 'border-box',
           }}
         >
           {normalizedOptions.length === 0 ? (
-            <div style={{ padding: '8px 12px', fontSize: '12px', color: '#94a3b8', textAlign: 'center' }}>
+            <div style={{ padding: '8px 12px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>
               No options available
             </div>
           ) : (
@@ -121,12 +143,18 @@ export default function CustomSelect({
                   }}
                   style={{
                     width: '100%',
-                    padding: '7px 10px',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: isSelected ? 600 : 400,
-                    color: isSelected ? '#1d4ed8' : '#334155',
-                    background: isSelected ? '#eff6ff' : 'transparent',
+                    padding: '6px 9px',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: isSelected ? 700 : 500,
+                    color: isSelected
+                      ? '#ffffff'
+                      : dark
+                      ? '#cbd5e1'
+                      : '#334155',
+                    background: isSelected
+                      ? '#2563eb'
+                      : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -136,18 +164,25 @@ export default function CustomSelect({
                     cursor: 'pointer',
                     transition: 'all 0.12s ease',
                     boxSizing: 'border-box',
+                    fontFamily: 'var(--font-family, inherit)',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSelected) e.currentTarget.style.background = '#f8fafc';
+                    if (!isSelected) {
+                      e.currentTarget.style.background = dark ? 'rgba(255, 255, 255, 0.08)' : '#f8fafc';
+                      if (dark) e.currentTarget.style.color = '#ffffff';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected) e.currentTarget.style.background = 'transparent';
+                    if (!isSelected) {
+                      e.currentTarget.style.background = 'transparent';
+                      if (dark) e.currentTarget.style.color = '#cbd5e1';
+                    }
                   }}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {opt.label}
                   </span>
-                  {isSelected && <Check size={13} style={{ color: '#2563eb', flexShrink: 0 }} />}
+                  {isSelected && <Check size={12} style={{ color: '#ffffff', flexShrink: 0 }} />}
                 </button>
               );
             })

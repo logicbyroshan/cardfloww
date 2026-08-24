@@ -565,7 +565,7 @@ export default function App() {
                     }
                   }}
                   currentUser={currentUser}
-                  onOpenActionDrawer={(actionType) => setDrawerAction(actionType)}
+                  onOpenActionDrawer={handleOpenActionDrawer}
                 />
               )}
 

@@ -26,6 +26,7 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
   const [loading, setLoading] = useState(true);
   const [allOrganisations, setAllOrganisations] = useState([]);
   const [selectedOrgId, setSelectedOrgId] = useState('all');
+  const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({
     max_super_managers: 4,
     super_manager_count: 0,
@@ -243,41 +244,46 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
 
           <div
             className="action-divider"
-            style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }}
+            style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 2px' }}
           />
 
           {/* Organisation Scope Selector */}
           {allOrganisations.length > 0 && (
             <>
               <CustomSelect
+                dark={true}
                 value={selectedOrgId}
                 onChange={(val) => setSelectedOrgId(val)}
-                options={allOrganisations.map((org) => ({
-                  value: String(org.id),
-                  label: org.name || org.school_name || `Org #${org.id}`,
-                }))}
+                options={[
+                  { value: 'all', label: 'All Organisations' },
+                  ...allOrganisations.map((org) => ({
+                    value: String(org.id),
+                    label: org.name || org.school_name || `Org #${org.id}`,
+                  })),
+                ]}
                 height="28px"
-                style={{ width: '220px' }}
+                style={{ width: '210px' }}
               />
               <div
                 className="action-divider"
-                style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }}
+                style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 2px' }}
               />
             </>
           )}
 
           {/* Type Filter */}
           <CustomSelect
+            dark={true}
             value={typeTab}
             onChange={(val) => setTypeTab(val)}
-            options={TYPE_TABS.map((t) => ({ value: t, label: t }))}
+            options={TYPE_TABS.map((t) => ({ value: t, label: t === 'All' ? 'All Roles' : t }))}
             height="28px"
-            style={{ width: '170px' }}
+            style={{ width: '150px' }}
           />
 
           <div
             className="action-divider"
-            style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 4px' }}
+            style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)', margin: '0 2px' }}
           />
 
           {/* Search Box */}
@@ -334,24 +340,26 @@ export default function ClientAccountsView({ addToast, onOpenActionDrawer, onNav
         </div>
 
         {/* Right */}
-        <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Super Manager limit badge */}
+        <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Super Manager limit badge matching exact 28px control height */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '3px 10px',
-              borderRadius: '20px',
+              padding: '0 10px',
+              height: '28px',
+              borderRadius: '5px',
               fontSize: '11px',
-              fontWeight: 700,
+              fontWeight: 600,
               background: meta.available_super_manager_slots <= 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-              border: meta.available_super_manager_slots <= 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(59, 130, 246, 0.4)',
+              border: meta.available_super_manager_slots <= 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(59, 130, 246, 0.35)',
               color: meta.available_super_manager_slots <= 0 ? '#fca5a5' : '#93c5fd',
+              boxSizing: 'border-box',
             }}
           >
-            <Users size={12} />
-            <span>Super Managers: {meta.super_manager_count} / {meta.max_super_managers} max</span>
+            <Users size={12} style={{ color: meta.available_super_manager_slots <= 0 ? '#ef4444' : '#60a5fa', flexShrink: 0 }} />
+            <span>Super Managers: <strong style={{ color: '#ffffff' }}>{meta.super_manager_count}</strong> / {meta.max_super_managers} max</span>
           </div>
 
           <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
