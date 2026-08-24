@@ -244,8 +244,8 @@ export default function SidebarAdCard() {
       <div
         className="sidebar-ad-card-container"
         style={{
-          padding: '0 4px',
-          marginBottom: '6px',
+          padding: 0,
+          margin: 0,
           boxSizing: 'border-box',
           width: '100%',
         }}
@@ -259,10 +259,10 @@ export default function SidebarAdCard() {
             position: 'relative',
             width: '100%',
             cursor: 'pointer',
-            borderRadius: '10px',
+            borderRadius: '6px',
             overflow: 'hidden',
             boxSizing: 'border-box',
-            border: `1.5px solid ${currentAd.is_vidyamaxx ? '#f97316' : currentAd.accent || 'rgba(255, 255, 255, 0.18)'}`,
+            border: `1px solid ${currentAd.is_vidyamaxx ? '#f97316' : currentAd.accent || 'rgba(255, 255, 255, 0.18)'}`,
             boxShadow: currentAd.glow || '0 4px 16px rgba(0,0,0,0.45)',
             transition: 'all 0.25s ease',
             background: currentAd.bg || '#1e1e2e',

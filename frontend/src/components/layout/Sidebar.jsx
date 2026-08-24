@@ -314,10 +314,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {/* Product & VidyaMaxx Ads Carousel (Above Tutorial) */}
-        <SidebarAdCard />
-
-        {/* Tutorial link */}
+        {/* Tutorial link (Moved above the ad card) */}
         <div className="sidebar-actions">
           <button
             onClick={() => setActiveTab('tutorial')}
@@ -328,6 +325,9 @@ export default function Sidebar({
             <span>Tutorial</span>
           </button>
         </div>
+
+        {/* Product & VidyaMaxx Ads Carousel */}
+        <SidebarAdCard />
 
         {/* User tile — clicking goes to Profile / Settings */}
         <div
