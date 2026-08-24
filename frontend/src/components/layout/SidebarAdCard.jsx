@@ -255,12 +255,15 @@ export default function SidebarAdCard() {
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
-        {/* Clickable Skyscraper Banner Card (Aspect Ratio ~1:1.75, height ~280px) */}
+        {/* Clickable Skyscraper Banner Card (Fixed Height 280px) */}
         <div
           onClick={handleBannerClick}
           style={{
             position: 'relative',
             width: '100%',
+            height: '280px',
+            minHeight: '280px',
+            maxHeight: '280px',
             cursor: 'pointer',
             borderRadius: '6px',
             overflow: 'hidden',
@@ -276,8 +279,7 @@ export default function SidebarAdCard() {
             <div
               style={{
                 width: '100%',
-                aspectRatio: '160 / 280',
-                maxHeight: '280px',
+                height: '100%',
                 overflow: 'hidden',
                 position: 'relative',
                 display: 'flex',
@@ -303,7 +305,7 @@ export default function SidebarAdCard() {
             <div
               style={{
                 width: '100%',
-                aspectRatio: '160 / 280',
+                height: '100%',
                 padding: '10px 8px',
                 boxSizing: 'border-box',
                 display: 'flex',

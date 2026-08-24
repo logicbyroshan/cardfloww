@@ -597,7 +597,7 @@ export default function App() {
               )}
 
               {/* ── ID Cards / Tables ── */}
-              {activeTab === 'cards' && (
+              {(activeTab === 'cards' || activeTab === 'schema') && (
                 <CardTableView
                   addToast={addToast}
                   currentUser={currentUser}
@@ -613,7 +613,7 @@ export default function App() {
                       setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
                       setActiveTab('idcard-actions');
                     } else if (typeof tabOrObj === 'string') {
-                      if (tabOrObj !== 'cards') {
+                      if (tabOrObj !== 'cards' && tabOrObj !== 'schema') {
                         setScopedClientId(null);
                         setScopedClientOrg(null);
                       }
@@ -624,10 +624,10 @@ export default function App() {
               )}
 
               {/* ── ID Card Actions (full card list view per table/status) ── */}
-              {activeTab === 'idcard-actions' && idcardActionsState && (
+              {activeTab === 'idcard-actions' && (
                 <IDCardActionsView
-                  tableId={idcardActionsState.tableId}
-                  initialStatus={idcardActionsState.status || 'pending'}
+                  tableId={idcardActionsState?.tableId || 1}
+                  initialStatus={idcardActionsState?.status || 'pending'}
                   onStatusChange={handleStatusChange}
                   addToast={addToast}
                   currentUser={currentUser}
@@ -722,9 +722,6 @@ export default function App() {
               ) : (
                 <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
               ))}
-
-              {/* ── Table Settings (Merged into CardTableView) ── */}
-              {activeTab === 'schema' && <CardTableView addToast={addToast} onNavigate={setActiveTab} />}
 
               {/* ── System/Control Panel ── */}
               {activeTab === 'panel' && ((isAdminRole || isOperatorRole) ? (
