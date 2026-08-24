@@ -179,7 +179,8 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
             onClick={() => onNavigate('cards', { statusFilter: statusNav })}
             className="stat-card-glass"
             style={{
-              padding: '8px 6px',
+              padding: '8px 10px',
+              height: '48px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -190,6 +191,7 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
               textAlign: 'left',
               boxSizing: 'border-box',
               minWidth: 0,
+              gap: '6px',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
             onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
@@ -336,17 +338,18 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
         }}
       >
         <thead style={{ position: 'sticky', top: 0, background: '#1e293b', color: '#ffffff', zIndex: 2 }}>
-          <tr style={{ height: '38px' }}>
+          <tr style={{ height: '42px', minHeight: '42px' }}>
             <th
               style={{
-                padding: '0 12px',
+                padding: '8px 14px',
                 textAlign: 'left',
                 fontWeight: 700,
                 width: '45%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
               }}
             >
               <div
@@ -359,10 +362,10 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 }}
               >
                 <span style={{ color: '#ffffff', fontWeight: 700 }}>ORGANISATION</span>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '180px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '200px' }}>
                   <Search
-                    size={11}
-                    style={{ position: 'absolute', left: '7px', color: '#94a3b8', pointerEvents: 'none' }}
+                    size={12}
+                    style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }}
                   />
                   <input
                     type="text"
@@ -372,10 +375,10 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       width: '100%',
-                      height: '24px',
-                      paddingLeft: '24px',
-                      paddingRight: '8px',
-                      fontSize: '10px',
+                      height: '28px',
+                      paddingLeft: '28px',
+                      paddingRight: '10px',
+                      fontSize: '11px',
                       fontWeight: 500,
                       borderRadius: '4px',
                       border: '1px solid #475569',
@@ -391,7 +394,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             <th
               onClick={() => handleSort('pending')}
               style={{
-                padding: '0 6px',
+                padding: '8px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '11%',
@@ -400,7 +403,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -409,7 +413,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             <th
               onClick={() => handleSort('verified')}
               style={{
-                padding: '0 6px',
+                padding: '8px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '11%',
@@ -418,7 +422,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -427,7 +432,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             <th
               onClick={() => handleSort('approved')}
               style={{
-                padding: '0 6px',
+                padding: '8px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '11%',
@@ -436,7 +441,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -445,7 +451,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             <th
               onClick={() => handleSort('printed')}
               style={{
-                padding: '0 6px',
+                padding: '8px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '11%',
@@ -454,7 +460,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -463,7 +470,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
             <th
               onClick={() => handleSort('deleted')}
               style={{
-                padding: '0 6px',
+                padding: '8px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '11%',
@@ -471,7 +478,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                 letterSpacing: '0.04em',
                 cursor: 'pointer',
                 userSelect: 'none',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
                 whiteSpace: 'nowrap',
               }}
             >
@@ -889,23 +897,24 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
         }}
       >
         <thead style={{ position: 'sticky', top: 0, background: '#1e293b', color: '#ffffff', zIndex: 2 }}>
-          <tr style={{ height: '38px' }}>
+          <tr style={{ height: '42px', minHeight: '42px' }}>
             <th
               style={{
-                padding: '0 12px',
+                padding: '8px 14px',
                 textAlign: 'left',
                 fontWeight: 700,
                 width: isAssistant ? '40%' : '30%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
                 borderRight: '1px solid #334155',
-                height: '38px',
+                height: '42px',
+                boxSizing: 'border-box',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
                 <span style={{ color: '#ffffff', fontWeight: 700 }}>TABLE NAME</span>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '180px' }}>
-                  <Search size={11} style={{ position: 'absolute', left: '7px', color: '#94a3b8', pointerEvents: 'none' }} />
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '200px' }}>
+                  <Search size={12} style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     value={search}
@@ -914,10 +923,10 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       width: '100%',
-                      height: '24px',
-                      paddingLeft: '24px',
-                      paddingRight: '8px',
-                      fontSize: '10px',
+                      height: '28px',
+                      paddingLeft: '28px',
+                      paddingRight: '10px',
+                      fontSize: '11px',
                       fontWeight: 500,
                       borderRadius: '4px',
                       border: '1px solid #475569',
@@ -930,26 +939,26 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
                 </div>
               </div>
             </th>
-            <th onClick={() => handleSort('pending')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+            <th onClick={() => handleSort('pending')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
               PENDING{renderSortIcon('pending')}
             </th>
-            <th onClick={() => handleSort('verified')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+            <th onClick={() => handleSort('verified')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
               VERIFIED{renderSortIcon('verified')}
             </th>
             {!isAssistant && (
               <>
-                <th onClick={() => handleSort('approved')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                <th onClick={() => handleSort('approved')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
                   APPROVED{renderSortIcon('approved')}
                 </th>
-                <th onClick={() => handleSort('download')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                <th onClick={() => handleSort('download')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
                   PRINTED{renderSortIcon('download')}
                 </th>
-                <th onClick={() => handleSort('request')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+                <th onClick={() => handleSort('request')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: '10%', fontSize: '11px', letterSpacing: '0.04em', borderRight: '1px solid #334155', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
                   REQUESTED{renderSortIcon('request')}
                 </th>
               </>
             )}
-            <th onClick={() => handleSort('pool')} style={{ padding: '0 6px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer', userSelect: 'none', height: '38px', whiteSpace: 'nowrap' }}>
+            <th onClick={() => handleSort('pool')} style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 700, width: isAssistant ? '20%' : '10%', fontSize: '11px', letterSpacing: '0.04em', cursor: 'pointer', userSelect: 'none', height: '42px', boxSizing: 'border-box', whiteSpace: 'nowrap' }}>
               DELETED{renderSortIcon('pool')}
             </th>
           </tr>
@@ -1585,14 +1594,14 @@ function RightSidePanels({
           style={{
             background: '#1e293b',
             color: '#ffffff',
-            height: '38px',
-            minHeight: '38px',
-            padding: '0 12px',
+            height: '42px',
+            minHeight: '42px',
+            padding: '8px 14px',
             fontSize: '12px',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
             boxSizing: 'border-box',
             borderBottom: '1px solid #334155',
             flexShrink: 0,
@@ -1600,7 +1609,7 @@ function RightSidePanels({
         >
           <Layers size={13} /> Dashboard Sections
         </div>
-        <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             {
               id: 'clients',
@@ -1623,11 +1632,13 @@ function RightSidePanels({
                 onClick={() => setActiveSection(id)}
                 style={{
                   width: '100%',
-                  padding: '6px 10px',
+                  padding: '8px 12px',
+                  height: '34px',
+                  boxSizing: 'border-box',
                   background: isActive ? '#eff6ff' : '#ffffff',
                   border: isActive ? '1px solid #93c5fd' : '1px solid #e2e8f0',
                   borderLeft: isActive ? '3px solid #2563eb' : '1px solid #e2e8f0',
-                  borderRadius: '4px',
+                  borderRadius: '5px',
                   color: isActive ? '#1d4ed8' : '#475569',
                   fontSize: '12px',
                   fontWeight: isActive ? 700 : 500,
@@ -1689,14 +1700,14 @@ function RightSidePanels({
           style={{
             background: '#1e293b',
             color: '#ffffff',
-            height: '38px',
-            minHeight: '38px',
-            padding: '0 12px',
+            height: '42px',
+            minHeight: '42px',
+            padding: '8px 14px',
             fontSize: '12px',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
             boxSizing: 'border-box',
             borderBottom: '1px solid #334155',
             flexShrink: 0,
@@ -1704,17 +1715,19 @@ function RightSidePanels({
         >
           <Plus size={13} /> Quick Actions
         </div>
-        <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {quickActions.map(({ label, action, Icon }) => (
             <button
               key={label}
               onClick={action}
               style={{
                 width: '100%',
-                padding: '6px 10px',
+                padding: '8px 12px',
+                height: '34px',
+                boxSizing: 'border-box',
                 background: '#eff6ff',
                 border: '1px solid #bfdbfe',
-                borderRadius: '4px',
+                borderRadius: '5px',
                 color: '#1d4ed8',
                 fontSize: '12px',
                 fontWeight: 600,
@@ -1740,14 +1753,14 @@ function RightSidePanels({
           style={{
             background: '#1e293b',
             color: '#ffffff',
-            height: '38px',
-            minHeight: '38px',
-            padding: '0 12px',
+            height: '42px',
+            minHeight: '42px',
+            padding: '8px 14px',
             fontSize: '12px',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
             boxSizing: 'border-box',
             borderBottom: '1px solid #334155',
             flexShrink: 0,
@@ -1759,7 +1772,7 @@ function RightSidePanels({
         <div
           style={{
             flex: 1,
-            padding: '8px',
+            padding: '10px 12px',
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
             gap: '8px',
@@ -1774,7 +1787,7 @@ function RightSidePanels({
                 background: '#f8fafc',
                 border: '1px solid #e2e8f0',
                 borderRadius: '6px',
-                padding: '10px 6px',
+                padding: '10px 8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -1783,6 +1796,7 @@ function RightSidePanels({
                 fontFamily: 'var(--font-family)',
                 transition: 'all 0.15s ease-in-out',
                 textAlign: 'center',
+                boxSizing: 'border-box',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = '#ffffff';
