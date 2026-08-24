@@ -2464,6 +2464,7 @@ export default function IDCardActionsView({
   const [table, setTable] = useState(null);
   const [tableLoading, setTableLoading] = useState(true);
   const [undoLoading, setUndoLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [undoStatus, setUndoStatus] = useState({
     canUndo: false,
     canRedo: false,

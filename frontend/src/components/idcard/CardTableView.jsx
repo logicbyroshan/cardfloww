@@ -114,6 +114,7 @@ export default function CardTableView({
   onClearSelectedClient = null,
 }) {
   const role = String(currentUser?.role || userRole || '').toLowerCase();
+  const isAssistant = role === 'assistant';
   const isAdminOrOperator = ['prime_admin', 'super_admin', 'pro_user', 'operator'].includes(role);
   const isPrimeManager = ['prime_manager', 'client', 'guest_prime_manager'].includes(role);
   const canCreateTable = isAdminOrOperator || isPrimeManager;
