@@ -175,7 +175,7 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Names (Full Name, Father Name, Mother Name, Student Name) ────────────
   if (name.includes('name') || name.includes('student') || name.includes('father') || name.includes('mother')) {
-    return { minWidth: '110px', maxWidth: '160px', align: 'left' };
+    return { width: '160px', minWidth: '140px', maxWidth: '220px', align: 'left' };
   }
 
   // ── Address / Location / City / State ───────────────────────────────────
@@ -186,11 +186,11 @@ function getColumnSpec(fieldName, fieldType) {
     name.includes('city') ||
     name.includes('state')
   ) {
-    return { minWidth: '130px', maxWidth: '200px', align: 'left' };
+    return { width: '200px', minWidth: '160px', maxWidth: '280px', align: 'left' };
   }
 
   // ── Default fallback ─────────────────────────────────────────────────────
-  return { minWidth: '80px', maxWidth: '130px', align: 'left' };
+  return { width: '120px', minWidth: '90px', maxWidth: '180px', align: 'left' };
 }
 
 function Spinner({ size = 16 }) {
@@ -3908,7 +3908,8 @@ export default function IDCardActionsView({
           <>
             <table
               style={{
-                width: '100%',
+                width: 'max-content',
+                minWidth: '100%',
                 borderCollapse: 'separate',
                 borderSpacing: 0,
                 fontSize: '12px',
@@ -3994,22 +3995,19 @@ export default function IDCardActionsView({
 
                   {tableFields.map((f) => {
                     const spec = getColumnSpec(f.name, f.type);
-                    // Flexible columns (names, address) get no explicit width — they stretch to fill remaining space
-                    const isFlexible = !spec.width;
                     return (
                       <th
                         key={f.name}
                         style={{
-                          padding: '4px 4px',
+                          padding: '4px 6px',
                           textAlign: spec.align,
                           textTransform: 'uppercase',
                           letterSpacing: '0.03em',
                           fontSize: '11px',
                           fontWeight: 700,
-                          // Fixed columns get an explicit width; flexible ones only get minWidth
-                          ...(isFlexible
-                            ? { minWidth: spec.minWidth }
-                            : { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }),
+                          width: spec.width,
+                          minWidth: spec.minWidth,
+                          maxWidth: spec.maxWidth,
                           borderRight: '1px solid rgba(255,255,255,0.15)',
                           borderBottom: '1px solid rgba(255,255,255,0.15)',
                           whiteSpace: 'nowrap',
@@ -4302,16 +4300,11 @@ export default function IDCardActionsView({
                             <td
                               key={f.name}
                               style={{
-                                padding: '2px 4px',
+                                padding: '2px 6px',
                                 textAlign: spec.align,
-                                // Flexible columns have no maxWidth — they fill remaining space
-                                ...(isFlexible
-                                  ? { minWidth: isEditing ? '180px' : spec.minWidth }
-                                  : {
-                                      width: isEditing ? 'auto' : spec.width,
-                                      minWidth: isEditing ? '180px' : spec.minWidth,
-                                      maxWidth: isEditing ? 'none' : spec.maxWidth,
-                                    }),
+                                width: isEditing ? 'auto' : spec.width,
+                                minWidth: isEditing ? '180px' : spec.minWidth,
+                                maxWidth: isEditing ? 'none' : spec.maxWidth,
                                 background: isDuplicate && !isSelected ? '#fffbeb' : undefined,
                                 color: '#000000',
                                 fontSize: '12px',

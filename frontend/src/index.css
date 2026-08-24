@@ -3203,11 +3203,10 @@ table th:last-child {
 
 .status-tab.active,
 .idcard-status-tab.active {
-  background: #2563eb !important;
   border: none !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* ── Top Bar Navigation Tabs (Notifications, System & Server, etc.) ── */
