@@ -2604,32 +2604,6 @@ export default function IDCardActionsView({
     }
   }, [effectiveTableId, status]);
 
-  /* ── Listen for Undo/Redo triggers from Footer and emit state ── */
-  useEffect(() => {
-    const onTriggerUndo = () => handleUndo();
-    const onTriggerRedo = () => handleRedo();
-    window.addEventListener('cardflow:trigger-undo', onTriggerUndo);
-    window.addEventListener('cardflow:trigger-redo', onTriggerRedo);
-    return () => {
-      window.removeEventListener('cardflow:trigger-undo', onTriggerUndo);
-      window.removeEventListener('cardflow:trigger-redo', onTriggerRedo);
-    };
-  }, [handleUndo, handleRedo]);
-
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('cardflow:undo-redo-state', {
-        detail: {
-          canUndo: undoStatus.canUndo,
-          canRedo: undoStatus.canRedo,
-          undoCount: undoStatus.undoCount,
-          redoCount: undoStatus.redoCount,
-          undoLoading,
-        },
-      })
-    );
-  }, [undoStatus, undoLoading]);
-
   /* ── Load Operations Stack & Undo/Redo availability ── */
   const fetchUndoStatus = useCallback(async () => {
     if (!effectiveTableId) return;
@@ -2648,29 +2622,6 @@ export default function IDCardActionsView({
     }
   }, [effectiveTableId]);
 
-  const sectionOptions = useMemo(() => {
-    const fromApi = filterOptions.sections || [];
-    const fromCards = cards
-      .map((c) => c.field_data?.SECTION || c.field_data?.Section || c.field_data?.['section'])
-      .filter(Boolean);
-    const combined = Array.from(new Set([...fromApi, ...fromCards]));
-    return combined.length > 0 ? combined : ['A', 'B', 'C', 'D'];
-  }, [filterOptions.sections, cards]);
-
-  const courseOptions = useMemo(() => {
-    const fromApi = filterOptions.courses || [];
-    const fromCards = cards.map((c) => c.field_data?.COURSE || c.field_data?.Course).filter(Boolean);
-    return Array.from(new Set([...fromApi, ...fromCards]));
-  }, [filterOptions.courses, cards]);
-
-  const branchOptions = useMemo(() => {
-    const fromApi = filterOptions.branches || [];
-    const fromCards = cards.map((c) => c.field_data?.BRANCH || c.field_data?.Branch).filter(Boolean);
-    return Array.from(new Set([...fromApi, ...fromCards]));
-  }, [filterOptions.branches, cards]);
-
-  /* ── Modals / Drawers ── */
-  const [drawer, setDrawer] = useState(null); // { mode: 'add'|'edit'|'view', card  /* ── LocalStorage helper for offline/custom tables ── */
   /* ── Load Table Metadata ── */
   const loadTable = useCallback(async () => {
     if (!effectiveTableId) return;
@@ -2809,6 +2760,56 @@ export default function IDCardActionsView({
       setUndoLoading(false);
     }
   }, [effectiveTableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
+
+  /* ── Listen for Undo/Redo triggers from Footer and emit state ── */
+  useEffect(() => {
+    const onTriggerUndo = () => handleUndo();
+    const onTriggerRedo = () => handleRedo();
+    window.addEventListener('cardflow:trigger-undo', onTriggerUndo);
+    window.addEventListener('cardflow:trigger-redo', onTriggerRedo);
+    return () => {
+      window.removeEventListener('cardflow:trigger-undo', onTriggerUndo);
+      window.removeEventListener('cardflow:trigger-redo', onTriggerRedo);
+    };
+  }, [handleUndo, handleRedo]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('cardflow:undo-redo-state', {
+        detail: {
+          canUndo: undoStatus.canUndo,
+          canRedo: undoStatus.canRedo,
+          undoCount: undoStatus.undoCount,
+          redoCount: undoStatus.redoCount,
+          undoLoading,
+        },
+      })
+    );
+  }, [undoStatus, undoLoading]);
+
+  const sectionOptions = useMemo(() => {
+    const fromApi = filterOptions.sections || [];
+    const fromCards = cards
+      .map((c) => c.field_data?.SECTION || c.field_data?.Section || c.field_data?.['section'])
+      .filter(Boolean);
+    const combined = Array.from(new Set([...fromApi, ...fromCards]));
+    return combined.length > 0 ? combined : ['A', 'B', 'C', 'D'];
+  }, [filterOptions.sections, cards]);
+
+  const courseOptions = useMemo(() => {
+    const fromApi = filterOptions.courses || [];
+    const fromCards = cards.map((c) => c.field_data?.COURSE || c.field_data?.Course).filter(Boolean);
+    return Array.from(new Set([...fromApi, ...fromCards]));
+  }, [filterOptions.courses, cards]);
+
+  const branchOptions = useMemo(() => {
+    const fromApi = filterOptions.branches || [];
+    const fromCards = cards.map((c) => c.field_data?.BRANCH || c.field_data?.Branch).filter(Boolean);
+    return Array.from(new Set([...fromApi, ...fromCards]));
+  }, [filterOptions.branches, cards]);
+
+  /* ── Modals / Drawers ── */
+  const [drawer, setDrawer] = useState(null);
 
   /* ── Effects ── */
   useEffect(() => {

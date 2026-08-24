@@ -230,7 +230,10 @@ export default function SidebarAdCard() {
   }, [isPaused, total]);
 
   const handleBannerClick = () => {
-    setShowModal(true);
+    const target = currentAd.target_url || (currentAd.is_vidyamaxx ? 'https://vidyamaxx.com' : 'https://cardflow.in');
+    if (typeof window !== 'undefined' && target) {
+      window.open(target, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleImageError = (id) => {
