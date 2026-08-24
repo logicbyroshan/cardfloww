@@ -17,7 +17,7 @@ from typing import List, Optional, Dict, Any
 
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 
@@ -93,13 +93,15 @@ def _get_json_body(request) -> Optional[Dict[str, Any]]:
 
 
 def _get_status_from_request(request) -> str:
-    """Extract status label from POST body (JSON or form data)."""
+    """Extract status label from POST body (JSON or form data) or GET query params."""
     status = ''
     if _is_json_request(request):
         data = _get_json_body(request) or {}
         status = data.get('status', '')
     if not status:
-        status = request.POST.get('status', '')
+        status = request.POST.get('status', '') or request.GET.get('status', '')
+    if status == 'printed':
+        status = 'download'
     return status if status in _VALID_STATUSES else ''
 
 
@@ -128,18 +130,11 @@ def _normalize_positive_int_ids(values, max_items: Optional[int] = MAX_EXPORT_CA
 
 def _get_card_ids_from_request(request, table_id: int = None) -> Optional[List[int]]:
     """
-    Extract card IDs from POST request body.
+    Extract card IDs from POST request body or GET query parameters.
     
-    Handles both form data and JSON body.
+    Handles both form data, GET query params, and JSON body.
     When no explicit card_ids are provided but table_id is given,
     falls back to ALL card IDs for the requested status from the database.
-    
-    Args:
-        request: Django HttpRequest
-        table_id: Optional table ID to fall back to full status query
-        
-    Returns:
-        List of card IDs or None if no valid IDs found
     """
     card_ids = None
     user = getattr(request, 'user', None)
@@ -150,9 +145,9 @@ def _get_card_ids_from_request(request, table_id: int = None) -> Optional[List[i
         data = _get_json_body(request) or {}
         card_ids = data.get('card_ids', [])
     
-    # Fall back to POST data
+    # Fall back to POST data or GET parameters
     if not card_ids:
-        card_ids_str = request.POST.get('card_ids', '')
+        card_ids_str = request.POST.get('card_ids', '') or request.GET.get('card_ids', '')
         if card_ids_str:
             try:
                 card_ids = json.loads(card_ids_str)
@@ -749,7 +744,7 @@ def _write_http_response_to_file(response, file_path: str) -> int:
 # =============================================================================
 
 @api_require_any_authenticated
-@require_POST
+@require_http_methods(["GET", "POST"])
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_xlsx(request, table_id: int) -> HttpResponse:
     """
@@ -852,7 +847,7 @@ def api_export_xlsx(request, table_id: int) -> HttpResponse:
 # =============================================================================
 
 @api_require_any_authenticated
-@require_POST
+@require_http_methods(["GET", "POST"])
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_docx(request, table_id: int) -> HttpResponse:
     """
@@ -898,22 +893,30 @@ def api_export_docx(request, table_id: int) -> HttpResponse:
 
     if _is_json_request(request):
         data = _get_json_body(request) or {}
-        tpl_val = data.get('template_id', '')
-        if tpl_val:
-            try:
-                template_id = int(tpl_val)
-            except (ValueError, TypeError):
-                pass
-        class_filter_enabled = bool(data.get('class_filter_enabled'))
-        selected_classes = data.get('selected_classes') or []
-        break_enabled = bool(data.get('break_enabled'))
+    else:
+        data = request.POST or request.GET or {}
+
+    tpl_val = data.get('template_id') or data.get('template') or ''
+    if tpl_val:
         try:
-            break_pages = int(data.get('break_pages') or 0)
+            template_id = int(tpl_val)
         except (ValueError, TypeError):
-            break_pages = 0
-        requested_break_mode = str(data.get('break_mode') or '').strip().lower()
-        if requested_break_mode in ('class_only', 'class_section', 'none'):
-            break_mode = requested_break_mode
+            pass
+    class_filter_enabled = bool(data.get('class_filter_enabled') or data.get('breakClassOnly'))
+    selected_classes = data.get('selected_classes') or []
+    break_enabled = bool(data.get('break_enabled') or data.get('breakClassSection') or data.get('customBreak'))
+    try:
+        break_pages = int(data.get('break_pages') or data.get('customBreakPages') or 0)
+    except (ValueError, TypeError):
+        break_pages = 0
+    requested_break_mode = str(data.get('break_mode') or '').strip().lower()
+    if not requested_break_mode:
+        if str(data.get('breakClassSection')).lower() == 'true':
+            requested_break_mode = 'class_section'
+        elif str(data.get('breakClassOnly')).lower() == 'true':
+            requested_break_mode = 'class_only'
+    if requested_break_mode in ('class_only', 'class_section', 'none'):
+        break_mode = requested_break_mode
 
     card_ids = _get_card_ids_from_request(request, table_id=table_id)
     if not card_ids:
@@ -1032,7 +1035,7 @@ def api_export_docx(request, table_id: int) -> HttpResponse:
 # =============================================================================
 
 @api_require_any_authenticated
-@require_POST
+@require_http_methods(["GET", "POST"])
 @rate_limit(max_requests=10, window_seconds=60, key_prefix='export')
 def api_export_pdf(request, table_id: int) -> HttpResponse:
     """

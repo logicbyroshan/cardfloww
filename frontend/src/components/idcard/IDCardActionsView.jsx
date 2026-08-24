@@ -1866,7 +1866,7 @@ function ImageSortModal({ tableFields, activeSort, onClose, onApply, onClear }) 
 }
 
 /* ─── Print Data Modal (Word .docx & Excel .xlsx with Print Options & Status Transition) ─── */
-function PrintDataModal({ table, status, cardCount, onClose, addToast, onStatusTransition }) {
+function PrintDataModal({ table, tableId, status, cardCount, onClose, addToast, onStatusTransition }) {
   const [format, setFormat] = useState('docx'); // 'docx' | 'xlsx'
   const [template, setTemplate] = useState('');
   const [breakClassSection, setBreakClassSection] = useState(true);
@@ -1877,26 +1877,66 @@ function PrintDataModal({ table, status, cardCount, onClose, addToast, onStatusT
   const [progress, setProgress] = useState(0);
 
   const handlePrintDownload = async () => {
+    const tid = table?.id || tableId;
+    if (!tid) {
+      addToast?.('Table ID not found', 'error');
+      return;
+    }
     setIsProcessing(true);
     setProgress(30);
 
     try {
-      const endpoint = format === 'docx' ? 'download-docx' : 'download-xlsx';
-      const url = `/api/table/${table?.id}/cards/${endpoint}/?status=${status || 'approved'}&template=${encodeURIComponent(template)}&breakClassSection=${breakClassSection}&breakClassOnly=${breakClassOnly}&customBreak=${customBreak}&customBreakPages=${customBreakPages}`;
+      const endpoint = format === 'docx' ? `/api/table/${tid}/cards/download-docx/` : `/api/table/${tid}/cards/download-xlsx/`;
+      const response = await apiClient.post(
+        endpoint,
+        {
+          status: status || 'approved',
+          template: template || undefined,
+          breakClassSection,
+          breakClassOnly,
+          customBreak,
+          customBreakPages,
+          break_mode: breakClassSection ? 'class_section' : breakClassOnly ? 'class_only' : 'none',
+          break_enabled: breakClassSection || breakClassOnly || customBreak,
+          break_pages: customBreak ? customBreakPages : 0,
+        },
+        { responseType: 'blob' }
+      );
 
-      window.open(url, '_blank');
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `table_${tid}_cards.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
       setProgress(100);
-
       addToast?.(`Generated ${format.toUpperCase()} print file (${cardCount} cards)`, 'success');
 
       if (status === 'approved' && onStatusTransition) {
         onStatusTransition('download');
-        addToast?.('Cards moved to Download list for printing', 'info');
+        addToast?.('Cards moved to Printed list', 'info');
       }
 
       onClose();
-    } catch {
-      addToast?.('Failed to generate print file', 'error');
+    } catch (err) {
+      console.error('Print download error:', err);
+      try {
+        const directUrl = `/api/table/${tid}/cards/${format === 'docx' ? 'download-docx' : 'download-xlsx'}/?status=${status || 'approved'}&template=${encodeURIComponent(template)}&breakClassSection=${breakClassSection}&breakClassOnly=${breakClassOnly}&customBreak=${customBreak}&customBreakPages=${customBreakPages}`;
+        window.location.href = directUrl;
+        setProgress(100);
+        addToast?.(`Generated ${format.toUpperCase()} print file (${cardCount} cards)`, 'success');
+        if (status === 'approved' && onStatusTransition) {
+          onStatusTransition('download');
+        }
+        onClose();
+      } catch (fallbackErr) {
+        console.error('Fallback export error:', fallbackErr);
+        addToast?.('Failed to generate print file. Please try again.', 'error');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -2147,7 +2187,7 @@ function PrintDataModal({ table, status, cardCount, onClose, addToast, onStatusT
 }
 
 /* ─── Download Data Modal (Images ZIP & PDF Document) ─── */
-function DownloadDataModal({ table, status, cardCount, onClose, addToast }) {
+function DownloadDataModal({ table, tableId, status, cardCount, onClose, addToast }) {
   const [type, setType] = useState('images'); // 'images' | 'pdf'
   const [includeImagesZip, setIncludeImagesZip] = useState(true);
   const [shortenTitles, setShortenTitles] = useState(true);
@@ -2155,20 +2195,51 @@ function DownloadDataModal({ table, status, cardCount, onClose, addToast }) {
   const [progress, setProgress] = useState(0);
 
   const handleDownloadData = async () => {
+    const tid = table?.id || tableId;
+    if (!tid) {
+      addToast?.('Table ID not found', 'error');
+      return;
+    }
     setIsProcessing(true);
     setProgress(30);
 
     try {
-      const endpoint = type === 'images' ? 'download-images' : 'download-pdf';
-      const url = `/api/table/${table?.id}/cards/${endpoint}/?status=${status || 'pending'}&include_images=${includeImagesZip}&shorten=${shortenTitles}`;
+      const endpoint = type === 'images' ? `/api/table/${tid}/cards/download-images/` : `/api/table/${tid}/cards/download-pdf/`;
+      const response = await apiClient.post(
+        endpoint,
+        {
+          status: status || 'pending',
+          include_images: includeImagesZip,
+          shorten: shortenTitles,
+        },
+        { responseType: 'blob' }
+      );
 
-      window.open(url, '_blank');
+      const blob = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = type === 'images' ? `table_${tid}_images.zip` : `table_${tid}_cards.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
       setProgress(100);
-
       addToast?.(`Exported ${type.toUpperCase()} data file (${cardCount} cards)`, 'success');
       onClose();
-    } catch {
-      addToast?.('Failed to export data file', 'error');
+    } catch (err) {
+      console.error('Data export error:', err);
+      try {
+        const directUrl = `/api/table/${tid}/cards/${type === 'images' ? 'download-images' : 'download-pdf'}/?status=${status || 'pending'}&include_images=${includeImagesZip}&shorten=${shortenTitles}`;
+        window.location.href = directUrl;
+        setProgress(100);
+        addToast?.(`Exported ${type.toUpperCase()} data file (${cardCount} cards)`, 'success');
+        onClose();
+      } catch (fallbackErr) {
+        console.error('Fallback export error:', fallbackErr);
+        addToast?.('Failed to export data file. Please try again.', 'error');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -4646,30 +4717,58 @@ export default function IDCardActionsView({
                               </>
                             )}
 
-                            {status === 'download' && (
-                              <button
-                                onClick={() => applyStatusSingle(card, 'request')}
-                                style={{
-                                  padding: '2px 6px',
-                                  fontSize: '10px',
-                                  height: '20px',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  background: '#8b5cf6',
-                                  color: '#fff',
-                                  fontWeight: 700,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '3px',
-                                  whiteSpace: 'nowrap',
-                                  width: '100%',
-                                }}
-                                title="Request Reprint"
-                              >
-                                Request
-                              </button>
+                            {/* ── PRINTED / DOWNLOAD: Retrieve + Reprint ── */}
+                            {(status === 'printed' || status === 'download') && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => applyStatusSingle(card, 'approved')}
+                                  style={{
+                                    padding: '2px 6px',
+                                    fontSize: '10px',
+                                    height: '20px',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    background: '#f59e0b',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '3px',
+                                    whiteSpace: 'nowrap',
+                                    width: '100%',
+                                  }}
+                                  title="Retrieve back to Approved"
+                                >
+                                  <RotateCcw size={10} /> Retrieve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => applyStatusSingle(card, 'reprint')}
+                                  style={{
+                                    padding: '2px 6px',
+                                    fontSize: '10px',
+                                    height: '20px',
+                                    border: 'none',
+                                    borderRadius: '3px',
+                                    background: '#06b6d4',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '3px',
+                                    whiteSpace: 'nowrap',
+                                    width: '100%',
+                                  }}
+                                  title="Request Reprint"
+                                >
+                                  <Printer size={10} /> Reprint
+                                </button>
+                              </>
                             )}
 
                             {(status === 'pool' || status === 'request') && (
@@ -4902,6 +5001,7 @@ export default function IDCardActionsView({
       {showPrintDataModal && (
         <PrintDataModal
           table={table}
+          tableId={tableId || table?.id}
           status={status}
           cardCount={cards.length}
           onClose={() => setShowPrintDataModal(false)}
@@ -4919,6 +5019,7 @@ export default function IDCardActionsView({
       {showDownloadDataModal && (
         <DownloadDataModal
           table={table}
+          tableId={tableId || table?.id}
           status={status}
           cardCount={cards.length}
           onClose={() => setShowDownloadDataModal(false)}
