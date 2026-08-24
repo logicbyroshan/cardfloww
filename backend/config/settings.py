@@ -232,22 +232,37 @@ MIDDLEWARE += [
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes')
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,https://cardflow.in,https://www.cardflow.in,https://privatexyz.cardflow.in'
-    ).split(',')
-    if origin.strip()
+_DEV_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'http://localhost:5175',
+    'http://127.0.0.1:5175',
+    'http://localhost:5176',
+    'http://127.0.0.1:5176',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:8001',
+    'http://127.0.0.1:8001',
+    'https://cardflow.in',
+    'https://www.cardflow.in',
+    'https://privatexyz.cardflow.in',
 ]
-CSRF_TRUSTED_ORIGINS = [
+
+CORS_ALLOWED_ORIGINS = list(set(_DEV_ORIGINS + [
     origin.strip()
-    for origin in os.getenv(
-        'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000,https://cardflow.in,https://www.cardflow.in,https://privatexyz.cardflow.in'
-    ).split(',')
+    for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
     if origin.strip()
-]
+]))
+
+CSRF_TRUSTED_ORIGINS = list(set(_DEV_ORIGINS + [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]))
 
 ROOT_URLCONF = 'config.urls'
 

@@ -5,9 +5,9 @@ import { authApi } from '../../services/api';
 const DEMO_ACCOUNTS = [
   { role: 'Super Admin', username: 'admin', password: 'admin123', label: 'Prime Admin' },
   { role: 'Organisation', username: 'org_admin', password: 'password123', label: 'Prime Manager' },
-  { role: 'Operator', username: 'operator', password: 'password123', label: 'Staff Operator' },
-  { role: 'Assistant', username: 'assistant', password: 'password123', label: 'Data Assistant' },
-  { role: 'Photographer', username: 'photographer', password: 'password123', label: 'Studio' },
+  { role: 'Operator', username: 'operator_demo', password: 'password123', label: 'Staff Operator' },
+  { role: 'Assistant', username: 'stxavier_assistant', password: 'password123', label: 'Data Assistant' },
+  { role: 'Photographer', username: 'photo_demo', password: 'password123', label: 'Studio' },
 ];
 
 export default function LoginView({ onLoginSuccess, onSwitchTab }) {
@@ -31,22 +31,10 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         setError(res.message || 'Invalid credentials. Please check and try again.');
       }
     } catch (err) {
-      if (err?.response?.status === 403 || err?.response?.status === 401) {
-        setError('Invalid username or password. Please try again.');
+      if (err?.response?.status === 403 || err?.response?.status === 401 || err?.response?.status === 400) {
+        setError(err.response?.data?.message || 'Invalid username or password. Please try again.');
       } else {
-        // Fallback for dev / offline preview mode: auto-detect role from username
-        const lowerU = (username || '').toLowerCase();
-        const role =
-          lowerU.includes('org') || lowerU.includes('prime')
-            ? 'prime_manager'
-            : lowerU.includes('photographer') || lowerU.includes('photo')
-              ? 'photographer'
-              : lowerU.includes('operator')
-                ? 'operator'
-                : lowerU.includes('assistant')
-                  ? 'assistant'
-                  : 'super_admin';
-        onLoginSuccess?.({ username: username || 'admin', role });
+        setError(err?.response?.data?.message || 'Unable to connect to authentication server. Please check your network connection.');
       }
     } finally {
       setLoading(false);
