@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="pvcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="60%" stop-color="#1e40af"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="300" height="100" rx="8" fill="url(#pvcGrad)" stroke="#3b82f6" stroke-width="1.5"/>
+  
+  <circle cx="275" cy="20" r="45" fill="#3b82f6" opacity="0.12"/>
+  <circle cx="35" cy="85" r="30" fill="#60a5fa" opacity="0.08"/>
+
+  <!-- Left Icon Box -->
+  <rect x="12" y="16" width="36" height="36" rx="8" fill="rgba(59, 130, 246, 0.25)" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1"/>
+  <!-- Card & Lanyard Icon -->
+  <rect x="20" y="24" width="20" height="15" rx="2" fill="none" stroke="#ffffff" stroke-width="1.8"/>
+  <line x1="20" y1="28" x2="40" y2="28" stroke="#60a5fa" stroke-width="1.5"/>
+  <circle cx="30" cy="21" r="2" fill="#93c5fd"/>
+
+  <!-- Header Badge -->
+  <rect x="56" y="14" width="85" height="15" rx="3" fill="rgba(59, 130, 246, 0.3)"/>
+  <text x="62" y="25" font-family="'Inter', -apple-system, sans-serif" font-size="8.5" font-weight="800" fill="#93c5fd" letter-spacing="0.5">SUPPLIES &amp; ACCESSORIES</text>
+
+  <!-- Brand Title -->
+  <text x="56" y="44" font-family="'Inter', -apple-system, sans-serif" font-size="14" font-weight="900" fill="#ffffff" filter="url(#glow)">Smart PVC Cards &amp; Lanyards</text>
+
+  <!-- Subtitle -->
+  <text x="14" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="9" font-weight="600" fill="#bfdbfe">HD Thermal PVC Blank Cards, Multi-Color Clips &amp; Reels</text>
+
+  <!-- Bottom CTA -->
+  <g transform="translate(14, 73)">
+    <rect width="96" height="19" rx="4" fill="#2563eb" filter="url(#glow)"/>
+    <text x="10" y="13" font-family="'Inter', -apple-system, sans-serif" font-size="9" font-weight="800" fill="#ffffff">View Supplies</text>
+    <path d="M82 7 L87 10 L82 13" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Right Pill -->
+  <rect x="215" y="73" width="71" height="19" rx="4" fill="rgba(0, 0, 0, 0.3)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="0.8"/>
+  <text x="223" y="86" font-family="'Inter', -apple-system, sans-serif" font-size="8.5" font-weight="700" fill="#93c5fd">Bulk Order ➔</text>
+</svg>

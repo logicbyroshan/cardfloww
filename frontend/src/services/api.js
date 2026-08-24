@@ -132,6 +132,18 @@ export const impersonateApi = {
 };
 
 // ─── Group 2: Dashboard Analytics ──────────────────────────────────────────
+export const bannersApi = {
+  /** GET /api/banners/ — returns promotional web banners with 3:1 / 2:1 ratio */
+  getBanners: async () => {
+    try {
+      const res = await apiClient.get('/api/banners/');
+      return res.data;
+    } catch (_) {
+      return { success: false, banners: [] };
+    }
+  },
+};
+
 export const dashboardApi = {
   /** GET /api/dashboard-card-stats/ — role-scoped card statistics */
   getStats: async () => {

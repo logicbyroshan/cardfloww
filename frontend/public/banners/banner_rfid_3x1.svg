@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rfidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="60%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <rect width="300" height="100" rx="8" fill="url(#rfidGrad)" stroke="#10b981" stroke-width="1.5"/>
+  <circle cx="275" cy="20" r="40" fill="#10b981" opacity="0.15"/>
+  <circle cx="30" cy="85" r="30" fill="#34d399" opacity="0.08"/>
+
+  <!-- Left Icon Box -->
+  <rect x="12" y="16" width="36" height="36" rx="8" fill="rgba(16, 185, 129, 0.25)" stroke="rgba(255, 255, 255, 0.25)" stroke-width="1"/>
+  <!-- Wifi / RFID waves Icon -->
+  <path d="M22 24 A 12 12 0 0 1 38 24" stroke="#ffffff" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M25 28 A 7 7 0 0 1 35 28" stroke="#6ee7b7" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="30" cy="33" r="2" fill="#34d399"/>
+
+  <!-- Header Badge -->
+  <rect x="56" y="14" width="70" height="15" rx="3" fill="rgba(16, 185, 129, 0.3)"/>
+  <text x="62" y="25" font-family="'Inter', -apple-system, sans-serif" font-size="8.5" font-weight="800" fill="#6ee7b7" letter-spacing="0.5">IOT HARDWARE</text>
+
+  <!-- Brand Title -->
+  <text x="56" y="44" font-family="'Inter', -apple-system, sans-serif" font-size="14" font-weight="900" fill="#ffffff" filter="url(#glow)">RFID &amp; NFC Gate Readers</text>
+
+  <!-- Subtitle -->
+  <text x="14" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="9" font-weight="600" fill="#a7f3d0">Contactless Student Tap Attendance &amp; Live Cloud Logging</text>
+
+  <!-- Bottom CTA -->
+  <g transform="translate(14, 73)">
+    <rect width="92" height="19" rx="4" fill="#059669" filter="url(#glow)"/>
+    <text x="10" y="13" font-family="'Inter', -apple-system, sans-serif" font-size="9" font-weight="800" fill="#ffffff">Get Hardware</text>
+    <path d="M78 7 L83 10 L78 13" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Right Pill -->
+  <rect x="215" y="73" width="71" height="19" rx="4" fill="rgba(0, 0, 0, 0.3)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="0.8"/>
+  <text x="225" y="86" font-family="'Inter', -apple-system, sans-serif" font-size="8.5" font-weight="700" fill="#6ee7b7">IoT Sync ➔</text>
+</svg>
