@@ -316,8 +316,14 @@ export default function AuthLayout({ children }) {
           {/* Clean Auth Form Body (Spacious & Centered) */}
           <div className="auth-form-body">{children}</div>
 
-          {/* Google Play Store Badge Footer */}
+          {/* Mobile App Promotion Footer */}
           <div className="auth-column-footer">
+            <div className="auth-mobile-divider">
+              <span className="auth-divider-line" />
+              <span className="auth-divider-text">Continue with our Mobile App</span>
+              <span className="auth-divider-line" />
+            </div>
+
             <a
               href="https://play.google.com/store/apps/details?id=com.adarshid.app"
               target="_blank"
@@ -325,7 +331,7 @@ export default function AuthLayout({ children }) {
               className="google-play-badge"
               title="Get CardFlow on Google Play"
             >
-              <svg viewBox="0 0 512 512" width="22" height="22" className="play-store-svg" aria-hidden="true">
+              <svg viewBox="0 0 512 512" width="24" height="24" className="play-store-svg" aria-hidden="true">
                 <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 59.9z" fill="#00e676" />
                 <path d="M47 38.1c-2.3 5.4-3.5 11.4-3.5 17.9v400c0 6.5 1.2 12.5 3.5 17.9l219.1-218.4L47 38.1z" fill="#00b0ff" />
                 <path d="M325.3 277.7l60.1 59.9L104.6 499l220.7-221.3z" fill="#ff3d00" />
