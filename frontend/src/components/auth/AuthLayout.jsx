@@ -316,17 +316,25 @@ export default function AuthLayout({ children }) {
           {/* Clean Auth Form Body (Spacious & Centered) */}
           <div className="auth-form-body">{children}</div>
 
-          {/* Mobile App Promotion Footer */}
+          {/* Google Play Store Badge Footer */}
           <div className="auth-column-footer">
             <a
               href="https://play.google.com/store/apps/details?id=com.adarshid.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="auth-mobile-app-link"
+              className="google-play-badge"
+              title="Get CardFlow on Google Play"
             >
-              <Smartphone size={14} className="auth-app-icon" />
-              <span>Continue with our Mobile App</span>
-              <ExternalLink size={12} className="auth-app-external" />
+              <svg viewBox="0 0 512 512" width="22" height="22" className="play-store-svg" aria-hidden="true">
+                <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 59.9z" fill="#00e676" />
+                <path d="M47 38.1c-2.3 5.4-3.5 11.4-3.5 17.9v400c0 6.5 1.2 12.5 3.5 17.9l219.1-218.4L47 38.1z" fill="#00b0ff" />
+                <path d="M325.3 277.7l60.1 59.9L104.6 499l220.7-221.3z" fill="#ff3d00" />
+                <path d="M465.1 234.3l-79.7-45.8-60.1 67.5 60.1 67.5 80.1-46.1c16.3-9.4 16.3-33.7-.4-43.1z" fill="#ffd600" />
+              </svg>
+              <div className="play-badge-text">
+                <span className="play-badge-lead">GET IT ON</span>
+                <span className="play-badge-title">Google Play</span>
+              </div>
             </a>
           </div>
         </div>
