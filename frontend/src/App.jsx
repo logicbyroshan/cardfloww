@@ -6,7 +6,6 @@ import DashboardView from './components/dashboard/DashboardView';
 import Footer from './components/layout/Footer';
 
 import OrganisationDirectoryView from './components/client/ClientDirectoryView';
-import OrganisationAccountsView from './components/client/ClientAccountsView';
 import OperatorManagementView, {
   AssistantManagementView,
   PhotographerManagementView,
@@ -204,10 +203,10 @@ function parsePathToRoute(pathname) {
     '/reprints': { tab: 'reprints', idcardActionsState: null },
     '/organisations': { tab: 'organisations', idcardActionsState: null },
     '/organisation': { tab: 'organisations', idcardActionsState: null },
-    '/managers': { tab: 'clients', idcardActionsState: null },
-    '/accounts': { tab: 'clients', idcardActionsState: null },
-    '/client-accounts': { tab: 'clients', idcardActionsState: null },
-    '/clients': { tab: 'clients', idcardActionsState: null },
+    '/managers': { tab: 'organisations', idcardActionsState: null },
+    '/accounts': { tab: 'organisations', idcardActionsState: null },
+    '/client-accounts': { tab: 'organisations', idcardActionsState: null },
+    '/clients': { tab: 'organisations', idcardActionsState: null },
     '/operators': { tab: 'operators', idcardActionsState: null },
     '/operator': { tab: 'operators', idcardActionsState: null },
     '/staff': { tab: 'operators', idcardActionsState: null },
@@ -650,19 +649,6 @@ export default function App() {
                 <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
               ))}
 
-              {/* ── Manage Organisation Accounts / Managers ── */}
-              {activeTab === 'clients' && ((isAdminRole || isOperatorRole) ? (
-                <OrganisationAccountsView
-                  addToast={addToast}
-                  onOpenActionDrawer={handleOpenActionDrawer}
-                  onNavigate={(tab) => setActiveTab(tab)}
-                  onOpenDeleteModal={(cfg) =>
-                    setDeleteModalConfig(cfg || { title: 'Confirm Permanent Delete', itemDescription: 'this item' })
-                  }
-                />
-              ) : (
-                <DashboardView currentUser={currentUser} onNavigate={(d) => setActiveTab(d)} />
-              ))}
 
               {/* ── Manage Operator ── */}
               {(activeTab === 'operators' || activeTab === 'staff') && (isAdminRole ? (

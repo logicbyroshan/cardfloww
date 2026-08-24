@@ -13,7 +13,6 @@ const PAGE_LABELS = {
   cards: 'Tables',
   reprints: 'Reprint Queue',
   organisations: 'Manage Organisation',
-  clients: 'Manage Manager',
   staff: 'Manage Operator',
   assistants: 'Manage Assistant',
   photographers: 'Manage Photographer',

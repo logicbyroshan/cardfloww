@@ -34,7 +34,6 @@ const NAV_CONFIG = {
       section: 'Client Management',
       items: [
         { id: 'organisations', label: 'Manage Organisation', Icon: Building },
-        { id: 'clients', label: 'Manager Accounts', Icon: Users },
       ],
     },
     {
@@ -59,7 +58,6 @@ const NAV_CONFIG = {
       section: 'Client Management',
       items: [
         { id: 'organisations', label: 'Manage Organisation', Icon: Building },
-        { id: 'clients', label: 'Manager Accounts', Icon: Users },
       ],
     },
     {
@@ -92,7 +90,6 @@ const NAV_CONFIG = {
     {
       section: 'Organisation Management',
       items: [
-        { id: 'clients', label: 'Manager Accounts', Icon: Users },
         { id: 'assistants', label: 'Manage Assistant', Icon: UsersRound },
         { id: 'cards', label: 'Manage Tables', Icon: ShieldCheck },
       ],

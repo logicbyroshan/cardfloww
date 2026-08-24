@@ -87,7 +87,6 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
           { label: 'Table Settings', isCurrent: true, icon: Settings },
         ];
       case 'organisations':
-      case 'clients':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
           { label: 'Client Management' },
