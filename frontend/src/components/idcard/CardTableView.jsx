@@ -300,8 +300,8 @@ export default function CardTableView({
         style={{
           background: '#1e1e2e',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          height: '50px',
-          padding: '0 16px',
+          height: '44px',
+          padding: '6px 6px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',

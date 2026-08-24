@@ -3169,14 +3169,15 @@ export default function IDCardActionsView({
         className="topbar"
         style={{
           flexShrink: 0,
-          padding: '8px 14px',
+          padding: '6px 6px',
           background: '#1e1e2e',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          height: '44px',
           minHeight: '44px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '10px',
+          gap: '8px',
           boxSizing: 'border-box',
           color: '#ffffff',
         }}
@@ -3343,14 +3344,14 @@ export default function IDCardActionsView({
       <div
         style={{
           flexShrink: 0,
-          padding: '8px 14px',
+          padding: '6px 6px',
           background: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
-          minHeight: '46px',
+          minHeight: '44px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '10px',
+          gap: '8px',
           position: 'relative',
           zIndex: 100,
           boxSizing: 'border-box',

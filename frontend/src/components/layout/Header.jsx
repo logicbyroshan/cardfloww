@@ -99,12 +99,12 @@ export default function Header({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 14px',
+        padding: '6px 6px',
         boxSizing: 'border-box',
       }}
     >
       {/* Left: Chat Button + Live Time & Date Badge + Animated Blue Heart + Welcome + Name */}
-      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {/* 0. Chat Button placed before the Date & Time Badge */}
         <button
           type="button"
@@ -112,9 +112,9 @@ export default function Header({
           className="nav-chat-btn"
           title="Open Messenger / Broadcast Chat"
           style={{
-            padding: '0 12px',
-            height: '28px',
-            borderRadius: '5px',
+            padding: '4px 8px',
+            height: '32px',
+            borderRadius: '4px',
             border: '1px solid rgba(99, 102, 241, 0.5)',
             background: 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)',
             color: '#e0e7ff',
@@ -147,10 +147,10 @@ export default function Header({
         {/* 1. Live Date & Time Button Badge */}
         <div
           style={{
-            padding: '0 12px',
-            height: '28px',
+            padding: '4px 8px',
+            height: '32px',
             minWidth: '175px',
-            borderRadius: '5px',
+            borderRadius: '4px',
             border: '1px solid rgba(59, 130, 246, 0.35)',
             background: 'linear-gradient(135deg, #1e3a8a 0%, #1e293b 100%)',
             color: '#ffffff',
@@ -206,9 +206,9 @@ export default function Header({
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600 }}>
           <span
             style={{
-              padding: '0 10px',
-              height: '28px',
-              borderRadius: '5px',
+              padding: '4px 8px',
+              height: '32px',
+              borderRadius: '4px',
               border: '1px solid #10b981',
               background: '#064e3b',
               color: '#a7f3d0',
@@ -231,9 +231,9 @@ export default function Header({
           </span>
           <span
             style={{
-              padding: '0 10px',
-              height: '28px',
-              borderRadius: '5px',
+              padding: '4px 8px',
+              height: '32px',
+              borderRadius: '4px',
               border: '1px solid #2563eb',
               background: '#1e3a8a',
               color: '#93c5fd',
@@ -247,9 +247,9 @@ export default function Header({
           </span>
           <span
             style={{
-              padding: '0 10px',
-              height: '28px',
-              borderRadius: '5px',
+              padding: '4px 8px',
+              height: '32px',
+              borderRadius: '4px',
               border: '1px solid #ea580c',
               background: '#7c2d12',
               color: '#fdba74',
@@ -263,9 +263,9 @@ export default function Header({
           </span>
           <span
             style={{
-              padding: '0 10px',
-              height: '28px',
-              borderRadius: '5px',
+              padding: '4px 8px',
+              height: '32px',
+              borderRadius: '4px',
               border: '1px solid #475569',
               background: '#1e293b',
               color: '#cbd5e1',

@@ -203,9 +203,9 @@ export default function Sidebar({
       <div
         className="sidebar-header"
         style={{
-          padding: '8px 12px',
-          height: '50px',
-          minHeight: '50px',
+          padding: '6px 6px',
+          height: '48px',
+          minHeight: '48px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
