@@ -2586,6 +2586,68 @@ export default function IDCardActionsView({
     return combined.length > 0 ? combined : ['10th', '9th', '8th', '11th', '12th'];
   }, [filterOptions.classes, cards]);
 
+  const effectiveTableId = useMemo(() => {
+    if (tableId && tableId !== '??' && !isNaN(Number(tableId))) {
+      return Number(tableId);
+    }
+    if (table?.id) return table.id;
+    return 1;
+  }, [tableId, table?.id]);
+
+  /* ── Sync URL with effectiveTableId and active status ── */
+  useEffect(() => {
+    if (effectiveTableId && status) {
+      const targetRoute = `/table/${effectiveTableId}/${status}`;
+      if (typeof window !== 'undefined' && window.location.pathname !== targetRoute && window.location.pathname.includes('/table/')) {
+        window.history.replaceState({}, document.title, targetRoute);
+      }
+    }
+  }, [effectiveTableId, status]);
+
+  /* ── Listen for Undo/Redo triggers from Footer and emit state ── */
+  useEffect(() => {
+    const onTriggerUndo = () => handleUndo();
+    const onTriggerRedo = () => handleRedo();
+    window.addEventListener('cardflow:trigger-undo', onTriggerUndo);
+    window.addEventListener('cardflow:trigger-redo', onTriggerRedo);
+    return () => {
+      window.removeEventListener('cardflow:trigger-undo', onTriggerUndo);
+      window.removeEventListener('cardflow:trigger-redo', onTriggerRedo);
+    };
+  }, [handleUndo, handleRedo]);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('cardflow:undo-redo-state', {
+        detail: {
+          canUndo: undoStatus.canUndo,
+          canRedo: undoStatus.canRedo,
+          undoCount: undoStatus.undoCount,
+          redoCount: undoStatus.redoCount,
+          undoLoading,
+        },
+      })
+    );
+  }, [undoStatus, undoLoading]);
+
+  /* ── Load Operations Stack & Undo/Redo availability ── */
+  const fetchUndoStatus = useCallback(async () => {
+    if (!effectiveTableId) return;
+    try {
+      const data = await operationsApi.getStack(effectiveTableId);
+      setUndoStatus({
+        canUndo: !!data?.can_undo,
+        canRedo: !!data?.can_redo,
+        undoCount: data?.undo_count ?? (data?.undo_stack?.length || 0),
+        redoCount: data?.redo_count ?? (data?.redo_stack?.length || 0),
+        undoTooltip: data?.undo_tooltip || (data?.can_undo ? 'Undo last operation (Ctrl+Z)' : 'Nothing to undo'),
+        redoTooltip: data?.redo_tooltip || (data?.can_redo ? 'Redo operation (Ctrl+Y)' : 'Nothing to redo'),
+      });
+    } catch {
+      /* non-critical */
+    }
+  }, [effectiveTableId]);
+
   const sectionOptions = useMemo(() => {
     const fromApi = filterOptions.sections || [];
     const fromCards = cards
@@ -2608,71 +2670,26 @@ export default function IDCardActionsView({
   }, [filterOptions.branches, cards]);
 
   /* ── Modals / Drawers ── */
-  const [drawer, setDrawer] = useState(null); // { mode: 'add'|'edit'|'view', card }
-  const [showUploadXlsx, setShowUploadXlsx] = useState(false);
-  const [showReuploadImageModal, setShowReuploadImageModal] = useState(false);
-  const [showClearPendingPathModal, setShowClearPendingPathModal] = useState(false);
-  const [showPrintDataModal, setShowPrintDataModal] = useState(false);
-  const [showDownloadDataModal, setShowDownloadDataModal] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  /* ── Reversible Operations & Undo/Redo Engine State ── */
-  const [undoStatus, setUndoStatus] = useState({
-    canUndo: false,
-    canRedo: false,
-    undoTooltip: 'Nothing to undo',
-    redoTooltip: 'Nothing to redo',
-    undoCount: 0,
-    redoCount: 0,
-  });
-  const [undoLoading, setUndoLoading] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [showBulkTxModal, setShowBulkTxModal] = useState(false);
-  const [focusTxId, setFocusTxId] = useState(null);
-
-  const searchTimerRef = useRef(null);
-
-  /* ── Load Undo / Redo Stack Status ── */
-  const fetchUndoStatus = useCallback(async () => {
-    if (!tableId) return;
-    try {
-      const res = await operationsApi.getStack(tableId);
-      if (res && res.success) {
-        setUndoStatus({
-          canUndo: Boolean(res.can_undo),
-          canRedo: Boolean(res.can_redo),
-          undoTooltip: res.undo_tooltip || (res.can_undo ? 'Undo (Ctrl+Z)' : 'Nothing to undo'),
-          redoTooltip: res.redo_tooltip || (res.can_redo ? 'Redo (Ctrl+Y)' : 'Nothing to redo'),
-          undoCount: res.undo_count || 0,
-          redoCount: res.redo_count || 0,
-        });
-      }
-    } catch {
-      /* non-critical */
-    }
-  }, [tableId]);
-
-
-  /* ── LocalStorage helper for offline/custom tables ── */
+  const [drawer, setDrawer] = useState(null); // { mode: 'add'|'edit'|'view', card  /* ── LocalStorage helper for offline/custom tables ── */
   /* ── Load Table Metadata ── */
   const loadTable = useCallback(async () => {
-    if (!tableId) return;
+    if (!effectiveTableId) return;
     setTableLoading(true);
     try {
-      const data = await schemaApi.getTable(tableId);
+      const data = await schemaApi.getTable(effectiveTableId);
       setTable(data?.table || data);
     } catch (err) {
       console.error('Failed to load table metadata:', err);
     } finally {
       setTableLoading(false);
     }
-  }, [tableId]);
+  }, [effectiveTableId]);
 
   /* ── Load Status Counts ── */
   const loadStatusCounts = useCallback(async () => {
-    if (!tableId) return;
+    if (!effectiveTableId) return;
     try {
-      const data = await cardApi.getStatusCounts(tableId);
+      const data = await cardApi.getStatusCounts(effectiveTableId);
       const c = data?.counts || data?.status_counts || data || {};
       setStatusCounts({
         pending: c.pending ?? c.pending_count ?? 0,
@@ -2687,13 +2704,13 @@ export default function IDCardActionsView({
     } catch (err) {
       console.warn('Failed to load status counts:', err);
     }
-  }, [tableId]);
+  }, [effectiveTableId]);
 
   /* ── Load Filter Options ── */
   const loadFilterOptions = useCallback(async () => {
-    if (!tableId) return;
+    if (!effectiveTableId) return;
     try {
-      const res = await apiClient.get(`/api/table/${tableId}/filter-options/`);
+      const res = await apiClient.get(`/api/table/${effectiveTableId}/filter-options/`);
       const d = res.data;
       setFilterOptions({
         classes: d?.classes || d?.class_values || [],
@@ -2704,11 +2721,11 @@ export default function IDCardActionsView({
     } catch {
       /* non-critical */
     }
-  }, [tableId]);
+  }, [effectiveTableId]);
 
   /* ── Load Cards List ── */
   const loadCards = useCallback(async () => {
-    if (!tableId) return;
+    if (!effectiveTableId) return;
     setCardsLoading(true);
     setSelectedIds(new Set());
     try {
@@ -2726,7 +2743,7 @@ export default function IDCardActionsView({
       };
       Object.keys(params).forEach((k) => params[k] === undefined && delete params[k]);
 
-      const data = await cardApi.getCards(tableId, params);
+      const data = await cardApi.getCards(effectiveTableId, params);
       const list = data?.cards || data?.results || (Array.isArray(data) ? data : []);
 
       setCards(list);
@@ -2740,7 +2757,7 @@ export default function IDCardActionsView({
       setCardsLoading(false);
     }
   }, [
-    tableId,
+    effectiveTableId,
     status,
     page,
     pageSize,
@@ -2753,15 +2770,12 @@ export default function IDCardActionsView({
     sort,
   ]);
 
-
-
   /* ── Handle Undo Operation ── */
   const handleUndo = useCallback(async () => {
-
-    if (!tableId || undoLoading) return;
+    if (!effectiveTableId || undoLoading) return;
     setUndoLoading(true);
     try {
-      const res = await operationsApi.undo({ table_id: tableId });
+      const res = await operationsApi.undo({ table_id: effectiveTableId });
       if (res && res.success) {
         addToast?.(res.message || 'Operation undone successfully.', 'success');
         await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
@@ -2774,14 +2788,14 @@ export default function IDCardActionsView({
     } finally {
       setUndoLoading(false);
     }
-  }, [tableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
+  }, [effectiveTableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
 
   /* ── Handle Redo Operation ── */
   const handleRedo = useCallback(async () => {
-    if (!tableId || undoLoading) return;
+    if (!effectiveTableId || undoLoading) return;
     setUndoLoading(true);
     try {
-      const res = await operationsApi.redo({ table_id: tableId });
+      const res = await operationsApi.redo({ table_id: effectiveTableId });
       if (res && res.success) {
         addToast?.(res.message || 'Operation redone successfully.', 'success');
         await Promise.all([loadCards(), loadStatusCounts(), fetchUndoStatus()]);
@@ -2794,7 +2808,7 @@ export default function IDCardActionsView({
     } finally {
       setUndoLoading(false);
     }
-  }, [tableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
+  }, [effectiveTableId, undoLoading, addToast, loadCards, loadStatusCounts, fetchUndoStatus]);
 
   /* ── Effects ── */
   useEffect(() => {
@@ -3342,81 +3356,6 @@ export default function IDCardActionsView({
       >
         {/* Left Side: All Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'nowrap', flexShrink: 0 }}>
-          {/* ── Global Reversible Operations Controls (Undo, Redo, History) ── */}
-          <button
-            disabled={!undoStatus.canUndo || undoLoading}
-            onClick={handleUndo}
-            style={buttonStyle('#475569', !undoStatus.canUndo || undoLoading)}
-            title={undoStatus.undoTooltip || 'Undo (Ctrl+Z)'}
-          >
-            {undoLoading ? <Loader2 size={13} className="spin" /> : <Undo2 size={13} />}
-            <span>Undo</span>
-            {undoStatus.undoCount > 0 && (
-              <span
-                style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  background: undoStatus.canUndo ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
-                  color: undoStatus.canUndo ? '#2563eb' : 'inherit',
-                  padding: '0 3px',
-                  borderRadius: '2px',
-                  lineHeight: '12px',
-                }}
-              >
-                {undoStatus.undoCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            disabled={!undoStatus.canRedo || undoLoading}
-            onClick={handleRedo}
-            style={buttonStyle('#475569', !undoStatus.canRedo || undoLoading)}
-            title={undoStatus.redoTooltip || 'Redo (Ctrl+Y)'}
-          >
-            {undoLoading ? <Loader2 size={13} className="spin" /> : <Redo2 size={13} />}
-            <span>Redo</span>
-            {undoStatus.redoCount > 0 && (
-              <span
-                style={{
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  background: undoStatus.canRedo ? 'rgba(37, 99, 235, 0.15)' : 'transparent',
-                  color: undoStatus.canRedo ? '#2563eb' : 'inherit',
-                  padding: '0 3px',
-                  borderRadius: '2px',
-                  lineHeight: '12px',
-                }}
-              >
-                {undoStatus.redoCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setShowHistoryModal(true)}
-            style={buttonStyle('#475569')}
-            title="View Operations History & Reversible Audit Trail"
-          >
-            <History size={13} />
-            <span>History</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setFocusTxId(null);
-              setShowBulkTxModal(true);
-            }}
-            style={buttonStyle('#4f46e5')}
-            title="View Mass Bulk Transactions & Batch History"
-          >
-            <Layers size={13} />
-            <span>Transactions</span>
-          </button>
-
-          <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 4px', flexShrink: 0 }} />
-
-
           {/* Action Divider Component */}
           {/* Pending List buttons */}
           {status === 'pending' && (

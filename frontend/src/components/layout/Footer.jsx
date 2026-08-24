@@ -19,11 +19,20 @@ import {
   Sliders,
   HelpCircle,
   Sparkles,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 
 export default function Footer({ activeTab, onNavigate, idcardActionsState, scopedOrgName }) {
   const [dataCountText, setDataCountText] = useState('');
   const [selectedText, setSelectedText] = useState('');
+  const [undoState, setUndoState] = useState({
+    canUndo: false,
+    canRedo: false,
+    undoCount: 0,
+    redoCount: 0,
+    undoLoading: false,
+  });
 
   // Clear selection and count on tab switch
   useEffect(() => {
@@ -37,8 +46,15 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
       if (e.detail?.text !== undefined) setDataCountText(e.detail.text || '');
       if (e.detail?.selectedText !== undefined) setSelectedText(e.detail.selectedText || '');
     };
+    const handleUndoRedoState = (e) => {
+      if (e.detail) setUndoState((prev) => ({ ...prev, ...e.detail }));
+    };
     window.addEventListener('cardflow:data-count', handleCountUpdate);
-    return () => window.removeEventListener('cardflow:data-count', handleCountUpdate);
+    window.addEventListener('cardflow:undo-redo-state', handleUndoRedoState);
+    return () => {
+      window.removeEventListener('cardflow:data-count', handleCountUpdate);
+      window.removeEventListener('cardflow:undo-redo-state', handleUndoRedoState);
+    };
   }, []);
 
   // Compute breadcrumb segments based on active tab
@@ -217,8 +233,69 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
         })}
       </nav>
 
-      {/* Right: Modern Data Count / System & Selection Badges */}
+      {/* Right: Modern Data Count / System & Selection Badges & Undo/Redo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Undo & Redo Controls */}
+        {activeTab === 'idcard-actions' && (
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <button
+              type="button"
+              disabled={!undoState.canUndo || undoState.undoLoading}
+              onClick={() => window.dispatchEvent(new CustomEvent('cardflow:trigger-undo'))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                height: '24px',
+                borderRadius: '4px',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                background: undoState.canUndo ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                color: undoState.canUndo ? '#ffffff' : '#64748b',
+                cursor: undoState.canUndo ? 'pointer' : 'not-allowed',
+                fontSize: '11px',
+                fontWeight: 600,
+                transition: 'all 0.15s ease',
+              }}
+              title="Undo Operation (Ctrl+Z)"
+            >
+              <Undo2 size={12} />
+              <span>Undo</span>
+              {undoState.undoCount > 0 && (
+                <span style={{ fontSize: '9px', fontWeight: 700, color: '#38bdf8' }}>{undoState.undoCount}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={!undoState.canRedo || undoState.undoLoading}
+              onClick={() => window.dispatchEvent(new CustomEvent('cardflow:trigger-redo'))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 8px',
+                height: '24px',
+                borderRadius: '4px',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                background: undoState.canRedo ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                color: undoState.canRedo ? '#ffffff' : '#64748b',
+                cursor: undoState.canRedo ? 'pointer' : 'not-allowed',
+                fontSize: '11px',
+                fontWeight: 600,
+                transition: 'all 0.15s ease',
+              }}
+              title="Redo Operation (Ctrl+Y)"
+            >
+              <Redo2 size={12} />
+              <span>Redo</span>
+              {undoState.redoCount > 0 && (
+                <span style={{ fontSize: '9px', fontWeight: 700, color: '#38bdf8' }}>{undoState.redoCount}</span>
+              )}
+            </button>
+          </div>
+        )}
+
         {selectedText ? (
           <span
             className="footer-selected-badge"

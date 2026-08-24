@@ -187,7 +187,8 @@ function parsePathToRoute(pathname) {
   // Match /table/:tableId/:status or /tables/:tableId/:status or /cards/:tableId/:status or /table/:tableId
   const tableMatch = path.match(/^\/(?:table|tables|cards)\/([^/]+)(?:\/([^/]+))?\/?$/);
   if (tableMatch) {
-    const tableId = tableMatch[1];
+    const rawTid = tableMatch[1];
+    const tableId = (rawTid && rawTid !== '??' && !isNaN(Number(rawTid))) ? Number(rawTid) : 1;
     const status = tableMatch[2] || 'pending';
     return {
       tab: 'idcard-actions',
