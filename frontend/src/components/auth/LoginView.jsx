@@ -14,6 +14,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDemoPills, setShowDemoPills] = useState(false);
@@ -23,7 +24,7 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
     setLoading(true);
     setError('');
     try {
-      const res = await authApi.login(username, password);
+      const res = await authApi.login(username, password, rememberMe);
       if (res.success || res.authenticated) {
         onLoginSuccess?.(res.user || { username, role: res.role });
       } else {
@@ -120,7 +121,12 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
         {/* Remember me & Forgot Password */}
         <div className="auth-flex-row">
           <label className="auth-remember-label">
-            <input type="checkbox" defaultChecked className="auth-checkbox" />
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="auth-checkbox"
+            />
             <span>Keep me signed in</span>
           </label>
           <button type="button" className="auth-link" onClick={() => onSwitchTab?.('forgot')}>

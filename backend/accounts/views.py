@@ -168,6 +168,7 @@ class LoginAPIView(View):
             data = json.loads(request.body)
             identifier = data.get('email', '').strip()
             password = data.get('password', '')
+            remember_me = _truthy(data.get('remember_me', True))
             force_logout_other = _truthy(data.get('force_logout_other'))
             
             if not identifier or not password:
@@ -204,6 +205,12 @@ class LoginAPIView(View):
 
                 # Log the user in
                 login(request, user)
+                
+                # Configure session expiry based on Remember Me
+                if remember_me:
+                    request.session.set_expiry(60 * 60 * 24 * 30)  # 30 days
+                else:
+                    request.session.set_expiry(0)  # Expires on browser close
                 
                 # Seed session fingerprint immediately so the very next
                 # request doesn't see a mismatch and force-logout the user.

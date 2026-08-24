@@ -37,12 +37,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const isLoginPage = window.location.pathname === '/auth/login' || window.location.pathname === '/login';
-      if (!isRedirectingToLogin && !isLoginPage) {
+      // Don't auto-redirect on auth state checks (/api/auth/me/) to prevent flashing
+      const reqUrl = error.config?.url || '';
+      const isAuthCheck = reqUrl.includes('/api/auth/me/') || reqUrl.includes('/api/auth/csrf/');
+      const isLoginPage = typeof window !== 'undefined' && (window.location.pathname === '/auth/login' || window.location.pathname === '/login');
+      
+      if (!isAuthCheck && !isRedirectingToLogin && !isLoginPage) {
         isRedirectingToLogin = true;
-        // Reset flag after 2s so future navigation works if user logs back in
         setTimeout(() => { isRedirectingToLogin = false; }, 2000);
-        window.location.href = '/auth/login';
+        window.dispatchEvent(new CustomEvent('cardflow:auth-unauthorized'));
       }
     }
     return Promise.reject(error);
@@ -52,19 +55,51 @@ apiClient.interceptors.response.use(
 // ─── Group 1: Authentication & Session ─────────────────────────────────────
 export const authApi = {
   /** POST /api/auth/login/ — returns { success, user, role, … } */
-  login: async (email, password) => {
-    const res = await apiClient.post('/api/auth/login/', { email, password });
+  login: async (email, password, rememberMe = true) => {
+    const res = await apiClient.post('/api/auth/login/', {
+      email,
+      password,
+      remember_me: rememberMe,
+    });
+    if (res.data && (res.data.success || res.data.authenticated)) {
+      const userData = res.data.user || res.data;
+      try {
+        if (rememberMe) {
+          localStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.setItem('cf_remember_me', 'true');
+        } else {
+          sessionStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.removeItem('cf_auth_user');
+          localStorage.removeItem('cf_remember_me');
+        }
+      } catch (_) {}
+    }
     return res.data;
   },
 
   /** GET /api/auth/me/ — returns { authenticated, user } */
   getCurrentUser: async () => {
     const res = await apiClient.get('/api/auth/me/');
+    if (res.data && (res.data.authenticated || res.data.user)) {
+      const userData = res.data.user || res.data;
+      try {
+        if (localStorage.getItem('cf_remember_me') === 'true') {
+          localStorage.setItem('cf_auth_user', JSON.stringify(userData));
+        } else {
+          sessionStorage.setItem('cf_auth_user', JSON.stringify(userData));
+        }
+      } catch (_) {}
+    }
     return res.data;
   },
 
   /** POST /api/auth/logout/ — Django session logout via JSON API */
   logout: async () => {
+    try {
+      localStorage.removeItem('cf_auth_user');
+      localStorage.removeItem('cf_remember_me');
+      sessionStorage.removeItem('cf_auth_user');
+    } catch (_) {}
     try {
       const res = await apiClient.post('/api/auth/logout/');
       return res.data;

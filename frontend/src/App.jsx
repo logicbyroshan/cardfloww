@@ -226,9 +226,32 @@ function parsePathToRoute(pathname) {
 }
 
 export default function App() {
-  const [bootState, setBootState] = useState(BOOT.LOADING);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState('super_admin');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cf_auth_user') || sessionStorage.getItem('cf_auth_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+  const [userRole, setUserRole] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cf_auth_user') || sessionStorage.getItem('cf_auth_user');
+      if (cached) {
+        const u = JSON.parse(cached);
+        return u.role || 'super_admin';
+      }
+    } catch (_) {}
+    return 'super_admin';
+  });
+  const [bootState, setBootState] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cf_auth_user') || sessionStorage.getItem('cf_auth_user');
+      return cached ? BOOT.AUTH : BOOT.LOADING;
+    } catch (_) {
+      return BOOT.LOADING;
+    }
+  });
   const [impersonatedUser, setImpersonatedUser] = useState(null);
   const [activeTab, setActiveTab] = useState(() => parsePathToRoute().tab);
   const [activeTableId, setActiveTableId] = useState(null); // set when navigating from cardflow → cards
@@ -384,16 +407,38 @@ export default function App() {
         }
         setBootState(BOOT.AUTH);
       } else {
+        // Only set UNAUTH if server definitively responded that user is not authenticated
+        try {
+          localStorage.removeItem('cf_auth_user');
+          sessionStorage.removeItem('cf_auth_user');
+        } catch (_) {}
         setCurrentUser(null);
         setImpersonatedUser(null);
         setBootState(BOOT.UNAUTH);
       }
     } catch (err) {
       console.warn('Auth refresh error:', err);
-      setCurrentUser(null);
-      setImpersonatedUser(null);
-      setBootState(BOOT.UNAUTH);
+      // If network error, don't immediately kick user out if they have a cached user
+      const hasCached = localStorage.getItem('cf_auth_user') || sessionStorage.getItem('cf_auth_user');
+      if (!hasCached) {
+        setCurrentUser(null);
+        setImpersonatedUser(null);
+        setBootState(BOOT.UNAUTH);
+      }
     }
+  }, []);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      try {
+        localStorage.removeItem('cf_auth_user');
+        sessionStorage.removeItem('cf_auth_user');
+      } catch (_) {}
+      setCurrentUser(null);
+      setBootState(BOOT.UNAUTH);
+    };
+    window.addEventListener('cardflow:auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('cardflow:auth-unauthorized', handleUnauthorized);
   }, []);
 
   useEffect(() => {
@@ -408,10 +453,16 @@ export default function App() {
       }
     };
 
-    // Immediate fallback so app NEVER gets stuck loading
+    // Safe 8s fallback timeout so app never gets stuck indefinitely
     const timer = setTimeout(() => {
-      setBootState((prev) => (prev === BOOT.LOADING ? BOOT.UNAUTH : prev));
-    }, 1200);
+      setBootState((prev) => {
+        if (prev === BOOT.LOADING) {
+          const hasCached = localStorage.getItem('cf_auth_user') || sessionStorage.getItem('cf_auth_user');
+          return hasCached ? BOOT.AUTH : BOOT.UNAUTH;
+        }
+        return prev;
+      });
+    }, 8000);
 
     // Prefetch CSRF cookie before auth check, then check auth state.
     fetch('/api/auth/csrf/', { credentials: 'include' })
@@ -438,6 +489,11 @@ export default function App() {
     try {
       await authApi.logout();
     } catch (_) {}
+    try {
+      localStorage.removeItem('cf_auth_user');
+      localStorage.removeItem('cf_remember_me');
+      sessionStorage.removeItem('cf_auth_user');
+    } catch (_) {}
     setBootState(BOOT.UNAUTH);
     setCurrentUser(null);
     setImpersonatedUser(null);
@@ -447,33 +503,7 @@ export default function App() {
 
   // ── Loading splash ──────────────────────────────────────────────────────────
   if (bootState === BOOT.LOADING) {
-    return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f4f4f4',
-          flexDirection: 'column',
-          gap: '12px',
-        }}
-      >
-        <div
-          style={{
-            width: '30px',
-            height: '30px',
-            border: '3px solid #667eea',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }}
-        />
-        <span style={{ color: '#6b7280', fontSize: '13px', fontFamily: '"Saira Semi Condensed", sans-serif' }}>
-          Loading CardFlow…
-        </span>
-      </div>
-    );
+    return <Preloader onFinished={() => {}} />;
   }
 
   // ── Mobile Screen Boundary Gate (< 1000px) ──────────────────────────────
@@ -488,7 +518,7 @@ export default function App() {
         onLoginSuccess={async (user) => {
           if (user) {
             setCurrentUser(user);
-            if (user.role) setUserRole(user.role);
+            setUserRole(user.role || 'super_admin');
           }
           await refreshUser();
           setBootState(BOOT.AUTH);
@@ -505,9 +535,6 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {/* Premium Ambient Preloader */}
-      <Preloader currentUser={currentUser} />
-
       {/* Dark sidebar */}
       <Sidebar
         activeTab={activeTab}
