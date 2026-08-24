@@ -2907,8 +2907,19 @@ export default function IDCardActionsView({
 
   /* ── Schema Fields ── */
   const tableFields = useMemo(() => {
-    const raw = table?.fields ||
-      table?.schema?.fields || [
+    let raw = [];
+    if (Array.isArray(table?.fields) && table.fields.length > 0) {
+      raw = table.fields;
+    } else if (Array.isArray(table?.schema?.fields) && table.schema.fields.length > 0) {
+      raw = table.schema.fields;
+    } else if (cards.length > 0 && cards[0]?.field_data && Object.keys(cards[0].field_data).length > 0) {
+      const sample = cards[0].field_data;
+      raw = Object.keys(sample).map((key) => ({
+        name: key,
+        type: isImageField('text', key) ? 'photo' : 'text',
+      }));
+    } else {
+      raw = [
         { name: 'PHOTO', type: 'photo' },
         { name: 'NAME', type: 'text' },
         { name: 'FATHER NAME', type: 'text' },
@@ -2918,6 +2929,7 @@ export default function IDCardActionsView({
         { name: 'CLASS', type: 'text' },
         { name: 'SECTION', type: 'text' },
       ];
+    }
     return [...raw].sort((a, b) => {
       const aImg = isImageField(a.type, a.name);
       const bImg = isImageField(b.type, b.name);
@@ -2925,7 +2937,7 @@ export default function IDCardActionsView({
       if (!aImg && bImg) return 1;
       return 0;
     });
-  }, [table]);
+  }, [table, cards]);
 
   /* ── Inline Field Edit ── */
   const [editingCell, setEditingCell] = useState(null);
@@ -4017,8 +4029,9 @@ export default function IDCardActionsView({
                       position: 'sticky',
                       right: '65px',
                       zIndex: 30,
-                      width: '1px',
-                      minWidth: '1px',
+                      width: '88px',
+                      minWidth: '88px',
+                      maxWidth: '88px',
                       padding: '4px 6px',
                       textAlign: 'center',
                       background: '#1e293b',
@@ -4464,8 +4477,9 @@ export default function IDCardActionsView({
                             right: '65px',
                             zIndex: 10,
                             background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
-                            width: '1px',
-                            minWidth: '1px',
+                            width: '88px',
+                            minWidth: '88px',
+                            maxWidth: '88px',
                             padding: '3px 4px',
                             textAlign: 'center',
                             borderRight: '1px solid #cbd5e1',
@@ -4527,7 +4541,7 @@ export default function IDCardActionsView({
                               </>
                             )}
 
-                            {/* ── VERIFIED: Approve + Unverify + Delete ── */}
+                            {/* ── VERIFIED: Approve + Unverify (No Delete Button) ── */}
                             {status === 'verified' && (
                               <>
                                 <button
@@ -4575,29 +4589,6 @@ export default function IDCardActionsView({
                                   title="Unverify"
                                 >
                                   <RotateCcw size={10} /> Unverify
-                                </button>
-                                <button
-                                  onClick={() => deleteSingle(card)}
-                                  style={{
-                                    padding: '2px 6px',
-                                    fontSize: '10px',
-                                    height: '20px',
-                                    border: 'none',
-                                    borderRadius: '3px',
-                                    background: '#ef4444',
-                                    color: '#fff',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '3px',
-                                    whiteSpace: 'nowrap',
-                                    width: '100%',
-                                  }}
-                                  title="Delete"
-                                >
-                                  <Trash2 size={10} /> Delete
                                 </button>
                               </>
                             )}
@@ -4766,7 +4757,7 @@ export default function IDCardActionsView({
               )}
             </table>
 
-            {cardsLoading && (
+            {cardsLoading && filteredCards.length === 0 && (
               <div
                 style={{
                   flex: 1,
