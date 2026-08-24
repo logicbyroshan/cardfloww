@@ -164,10 +164,11 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
     <footer
       style={{
         flexShrink: 0,
-        height: '36px',
+        height: '38px',
+        minHeight: '38px',
         background: '#1e1e2e',
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        padding: '0 16px',
+        padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -175,6 +176,7 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
         fontSize: '12px',
         boxSizing: 'border-box',
         zIndex: 100,
+        gap: '10px',
       }}
     >
       {/* Left: Interactive Breadcrumbs */}

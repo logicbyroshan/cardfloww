@@ -91,14 +91,15 @@ export default function Header({
       className="topbar"
       id="topbar"
       style={{
-        height: '50px',
+        height: '48px',
+        minHeight: '48px',
         background: '#1e1e2e',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         color: '#ffffff',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 16px',
+        padding: '8px 14px',
         boxSizing: 'border-box',
       }}
     >

@@ -3092,14 +3092,14 @@ export default function IDCardActionsView({
     color: disabled ? '#94a3b8' : '#ffffff',
     border: disabled ? '1px solid #cbd5e1' : 'none',
     borderRadius: '4px',
-    padding: '0 10px',
-    height: '28px',
+    padding: '0 12px',
+    height: '30px',
     fontSize: '12px',
     fontWeight: 600,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '5px',
+    gap: '6px',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: 1,
     whiteSpace: 'nowrap',
@@ -3115,10 +3115,10 @@ export default function IDCardActionsView({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '4px',
-          padding: '0 10px',
-          height: '26px',
-          fontSize: '11px',
+          gap: '6px',
+          padding: '0 12px',
+          height: '28px',
+          fontSize: '12px',
           fontWeight: 600,
           border: '1px solid #4338ca',
           background: '#4f46e5',
@@ -3138,10 +3138,10 @@ export default function IDCardActionsView({
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '4px',
-          padding: '0 10px',
-          height: '26px',
-          fontSize: '11px',
+          gap: '6px',
+          padding: '0 12px',
+          height: '28px',
+          fontSize: '12px',
           fontWeight: 600,
           border: '1px solid #6d28d9',
           background: '#7c3aed',
@@ -3169,29 +3169,30 @@ export default function IDCardActionsView({
         className="topbar"
         style={{
           flexShrink: 0,
-          padding: '0 16px',
+          padding: '8px 14px',
           background: '#1e1e2e',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          height: '44px',
+          minHeight: '44px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '10px',
           boxSizing: 'border-box',
           color: '#ffffff',
         }}
       >
         {/* Left: Tables, Table Setting, Divider, Download Buttons, Divider, Image Sort, Clear Pending Path */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
             type="button"
             onClick={onBack}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '0 10px',
-              height: '26px',
-              fontSize: '11px',
+              gap: '6px',
+              padding: '0 12px',
+              height: '28px',
+              fontSize: '12px',
               fontWeight: 600,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               background: 'rgba(255, 255, 255, 0.1)',
@@ -3206,11 +3207,11 @@ export default function IDCardActionsView({
             <span>Tables</span>
           </button>
 
-          <span style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 3px' }} />
+          <span style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 2px' }} />
 
           {renderDownloadButtons()}
 
-          <span style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 3px' }} />
+          <span style={{ width: '1px', height: '18px', background: 'rgba(255, 255, 255, 0.2)', margin: '0 2px' }} />
 
           {/* Image Sort Modal Trigger Button */}
           <button
@@ -3219,10 +3220,10 @@ export default function IDCardActionsView({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: '0 10px',
-              height: '26px',
-              fontSize: '11px',
+              gap: '6px',
+              padding: '0 12px',
+              height: '28px',
+              fontSize: '12px',
               fontWeight: 600,
               border: activeImageSort ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.2)',
               background: activeImageSort ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.1)',
@@ -3245,10 +3246,10 @@ export default function IDCardActionsView({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
-                padding: '0 10px',
-                height: '26px',
-                fontSize: '11px',
+                gap: '6px',
+                padding: '0 12px',
+                height: '28px',
+                fontSize: '12px',
                 fontWeight: 600,
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 background: 'rgba(255, 255, 255, 0.1)',
@@ -3274,9 +3275,9 @@ export default function IDCardActionsView({
             background: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid rgba(255, 255, 255, 0.18)',
             borderRadius: '5px',
-            padding: '2px',
-            gap: '2px',
-            height: '28px',
+            padding: '3px',
+            gap: '4px',
+            height: '30px',
             boxSizing: 'border-box',
             marginLeft: 'auto',
           }}
@@ -3295,12 +3296,12 @@ export default function IDCardActionsView({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '5px',
+                  gap: '6px',
                   padding: '0 10px',
-                  height: '22px',
+                  height: '24px',
                   borderRadius: '3px',
-                  fontSize: '11px',
-                  lineHeight: '22px',
+                  fontSize: '11.5px',
+                  lineHeight: '24px',
                   fontWeight: isActive ? 700 : 600,
                   border: 'none',
                   background: isActive ? (s.bg || '#2563eb') : 'transparent',
@@ -3319,8 +3320,8 @@ export default function IDCardActionsView({
                     alignItems: 'center',
                     justifyContent: 'center',
                     minWidth: '18px',
-                    height: '15px',
-                    padding: '0 4px',
+                    height: '16px',
+                    padding: '0 5px',
                     borderRadius: '3px',
                     fontSize: '10px',
                     fontWeight: 700,
@@ -3342,20 +3343,21 @@ export default function IDCardActionsView({
       <div
         style={{
           flexShrink: 0,
-          padding: '6px 16px',
+          padding: '8px 14px',
           background: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
-          minHeight: '44px',
+          minHeight: '46px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '10px',
           position: 'relative',
           zIndex: 100,
+          boxSizing: 'border-box',
         }}
       >
         {/* Left Side: All Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'nowrap', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap', flexShrink: 0 }}>
           {/* Action Divider Component */}
           {/* Pending List buttons */}
           {status === 'pending' && (
@@ -3659,24 +3661,24 @@ export default function IDCardActionsView({
           )}
         </div>
 
-        {/* Right Side: Search Box, Sort, and Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto', flexShrink: 0 }}>
+        {/* Right Side: Filters, Sort & Search */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap' }}>
           {/* Search Box */}
           <div
-            className="search-box"
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              height: '28px',
+              height: '30px',
               width: '200px',
               background: '#ffffff',
               border: '1px solid #cbd5e1',
               borderRadius: '4px',
-              padding: '0 8px',
+              padding: '0 10px',
               boxSizing: 'border-box',
+              gap: '6px',
             }}
           >
-            <Search size={14} style={{ color: '#64748b', flexShrink: 0, marginRight: '4px' }} />
+            <Search size={14} style={{ color: '#64748b', flexShrink: 0 }} />
             <input
               type="text"
               value={search}
@@ -3712,6 +3714,8 @@ export default function IDCardActionsView({
 
           {/* Sort */}
           <CustomSelect
+            height="30px"
+            style={{ minWidth: '130px', width: 'auto' }}
             value={sort}
             onChange={(val) => {
               setSort(val);
@@ -3727,6 +3731,8 @@ export default function IDCardActionsView({
 
           {/* Class Filter */}
           <CustomSelect
+            height="30px"
+            style={{ minWidth: '115px', width: 'auto' }}
             value={classFilter}
             onChange={(val) => {
               setClassFilter(val);
@@ -3737,6 +3743,8 @@ export default function IDCardActionsView({
 
           {/* Section Filter */}
           <CustomSelect
+            height="30px"
+            style={{ minWidth: '115px', width: 'auto' }}
             value={sectionFilter}
             onChange={(val) => {
               setSectionFilter(val);
@@ -3748,6 +3756,8 @@ export default function IDCardActionsView({
           {/* Course Filter */}
           {courseOptions.length > 0 && (
             <CustomSelect
+              height="30px"
+              style={{ minWidth: '115px', width: 'auto' }}
               value={courseFilter}
               onChange={(val) => {
                 setCourseFilter(val);
@@ -3760,6 +3770,8 @@ export default function IDCardActionsView({
           {/* Branch Filter */}
           {branchOptions.length > 0 && (
             <CustomSelect
+              height="30px"
+              style={{ minWidth: '115px', width: 'auto' }}
               value={branchFilter}
               onChange={(val) => {
                 setBranchFilter(val);
@@ -3778,23 +3790,23 @@ export default function IDCardActionsView({
                 setPage(1);
               }}
               style={{
-                height: '28px',
-                padding: '0 10px',
+                height: '30px',
+                padding: '0 12px',
                 border: duplicatesFilter ? '1px solid #d97706' : '1px solid #cbd5e1',
                 borderRadius: '4px',
                 background: duplicatesFilter ? '#fef3c7' : '#ffffff',
                 color: duplicatesFilter ? '#b45309' : '#475569',
                 cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: 700,
+                fontSize: '12px',
+                fontWeight: 600,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '6px',
                 transition: 'all 0.15s ease',
               }}
               title="Filter table to only show cards with repeating duplicate values"
             >
-              <AlertCircle size={13} style={{ color: '#d97706' }} />
+              <Layers size={13} style={{ color: duplicatesFilter ? '#d97706' : '#64748b' }} />
               <span>Duplicates ({totalDuplicates})</span>
             </button>
           )}
