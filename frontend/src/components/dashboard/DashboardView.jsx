@@ -1450,18 +1450,15 @@ function RightSidePanels({
       { label: 'Add New Organisation', action: () => onOpenActionDrawer('add-client'), Icon: Plus },
       { label: 'Add New Operator', action: () => onNavigate('operators'), Icon: Shield },
       { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-assistant'), Icon: Users },
-      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   } else if (isOrg) {
     quickActions = [
       { label: 'Manage Tables', action: () => onNavigate('cards'), Icon: CreditCard },
       { label: 'Add New Assistant', action: () => onOpenActionDrawer('add-assistant'), Icon: Plus },
-      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   } else {
     quickActions = [
       { label: 'Manage Tables', action: () => onNavigate('cards'), Icon: CreditCard },
-      { label: 'Adarsh Messenger', action: () => onOpenActionDrawer('message'), Icon: Mail },
     ];
   }
 

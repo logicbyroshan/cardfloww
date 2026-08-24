@@ -536,6 +536,7 @@ export default function App() {
             userRole={userRole}
             currentUser={currentUser}
             onLogout={handleLogout}
+            onOpenActionDrawer={handleOpenActionDrawer}
           />
         )}
 

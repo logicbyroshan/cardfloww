@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Bell, ChevronDown, Home, LogOut, Heart, Clock } from 'lucide-react';
+import { Search, Bell, ChevronDown, Home, LogOut, Heart, Clock, MessageSquare } from 'lucide-react';
 import { dashboardApi } from '../../services/api';
 
 /*
@@ -32,6 +32,7 @@ export default function Header({
   currentUser,
   userRole,
   onLogout,
+  onOpenActionDrawer,
 }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -102,8 +103,47 @@ export default function Header({
         boxSizing: 'border-box',
       }}
     >
-      {/* Left: Live Time & Date Badge + Animated Blue Heart + Welcome + Name */}
-      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      {/* Left: Chat Button + Live Time & Date Badge + Animated Blue Heart + Welcome + Name */}
+      <div className="nav-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* 0. Chat Button placed before the Date & Time Badge */}
+        <button
+          type="button"
+          onClick={() => onOpenActionDrawer?.('message')}
+          className="nav-chat-btn"
+          title="Open Messenger / Broadcast Chat"
+          style={{
+            padding: '0 12px',
+            height: '28px',
+            borderRadius: '5px',
+            border: '1px solid rgba(99, 102, 241, 0.5)',
+            background: 'linear-gradient(135deg, #312e81 0%, #1e1b4b 100%)',
+            color: '#e0e7ff',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            fontSize: '11.5px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxSizing: 'border-box',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.9)';
+            e.currentTarget.style.boxShadow = '0 0 10px rgba(99, 102, 241, 0.4)';
+            e.currentTarget.style.color = '#ffffff';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.5)';
+            e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)';
+            e.currentTarget.style.color = '#e0e7ff';
+          }}
+        >
+          <MessageSquare size={13} style={{ color: '#818cf8', flexShrink: 0 }} />
+          <span>Chat</span>
+        </button>
+
         {/* 1. Live Date & Time Button Badge */}
         <div
           style={{

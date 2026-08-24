@@ -214,11 +214,12 @@ export default function Sidebar({
           justifyContent: 'center',
           width: '100%',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-          background: '#1e1e2e',
+          background: 'transparent',
+          boxShadow: 'none',
           boxSizing: 'border-box',
         }}
       >
-        <div className="logo-flare-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="logo-flare-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent' }}>
           <img
             src="/cardflow_logo_brand.png"
             onError={(e) => {
@@ -228,7 +229,7 @@ export default function Sidebar({
             }}
             alt="CardFlow"
             style={{
-              maxHeight: '36px',
+              maxHeight: '34px',
               maxWidth: '160px',
               width: 'auto',
               objectFit: 'contain',
