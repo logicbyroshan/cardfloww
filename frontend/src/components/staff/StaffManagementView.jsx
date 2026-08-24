@@ -10,6 +10,7 @@ import {
   Camera,
   Search,
   X,
+  Info,
 } from 'lucide-react';
 
 import WatermarkLogo from '../common/WatermarkLogo';
