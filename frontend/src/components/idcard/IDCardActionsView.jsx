@@ -2463,6 +2463,15 @@ export default function IDCardActionsView({
   /* ── Table metadata ── */
   const [table, setTable] = useState(null);
   const [tableLoading, setTableLoading] = useState(true);
+  const [undoLoading, setUndoLoading] = useState(false);
+  const [undoStatus, setUndoStatus] = useState({
+    canUndo: false,
+    canRedo: false,
+    undoCount: 0,
+    redoCount: 0,
+    undoTooltip: '',
+    redoTooltip: '',
+  });
 
   /* ── Status & status counts ── */
   const [status, setStatus] = useState(() => {
