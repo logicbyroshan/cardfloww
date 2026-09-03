@@ -643,7 +643,8 @@ class PermissionService:
             # Standard operational permissions default to True for active managers
             if perm_key in (
                 'perm_idcard_pending_list', 'perm_idcard_verified_list', 'perm_idcard_approved_list',
-                'perm_idcard_download_list', 'perm_idcard_pool_list', 'perm_idcard_add',
+                'perm_idcard_download_list', 'perm_idcard_pool_list', 'perm_idcard_reprint_list',
+                'perm_reprint_request_list', 'perm_confirmed_list', 'perm_idcard_add',
                 'perm_idcard_edit', 'perm_idcard_verify', 'perm_idcard_approve', 'perm_idcard_retrieve',
                 'perm_idcard_info'
             ):

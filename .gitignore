@@ -296,3 +296,7 @@ backend/guest_sandboxes/
 *.sqlite3-journal
 *.sqlite3-shm
 *.sqlite3-wal
+
+# Cookie and session jar files
+cookies.txt
+

@@ -1456,17 +1456,6 @@ def api_idcard_update(request, card_id):
     _card, err = _check_client_scope_by_card(request.user, card_id)
     if err: return err
 
-    has_edit_perm = PermissionService.has(request.user, 'perm_idcard_edit')
-    is_assistant_pool_retrieve = (
-        PermissionService.is_client_staff(request.user)
-        and _card.status == 'pool'
-        and PermissionService.has(request.user, 'perm_idcard_retrieve')
-    )
-    if not (has_edit_perm or is_assistant_pool_retrieve):
-        return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
-
-    if not is_assistant_pool_retrieve and not _is_card_in_client_staff_scope(request.user, _card):
-        return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
     try:
         # Parse request into service-friendly args
         if request.content_type and 'multipart/form-data' in request.content_type:
@@ -1485,7 +1474,10 @@ def api_idcard_update(request, card_id):
                 if key != 'photo'  # handled separately via legacy_photo_file
             }
         else:
-            data = json.loads(request.body)
+            try:
+                data = json.loads(request.body) if request.body else {}
+            except Exception:
+                data = {}
             field_data = data.get('field_data')
             expected_updated_at = data.get('expected_updated_at', None)
             base_field_data = data.get('base_field_data', None)
@@ -1493,6 +1485,24 @@ def api_idcard_update(request, card_id):
             force = _as_bool(data.get('force'))
             image_files = None
             legacy_photo_file = None
+
+        has_edit_perm = (
+            PermissionService.has(request.user, 'perm_idcard_edit')
+            or (
+                reprint_modal_edit
+                and str(_card.status or '').strip().lower() in ('pool', 'approved', 'download', 'reprint')
+            )
+        )
+        is_assistant_pool_retrieve = (
+            PermissionService.is_client_staff(request.user)
+            and _card.status == 'pool'
+            and PermissionService.has(request.user, 'perm_idcard_retrieve')
+        )
+        if not (has_edit_perm or is_assistant_pool_retrieve):
+            return JsonResponse({'success': False, 'message': 'Permission denied'}, status=403)
+
+        if not is_assistant_pool_retrieve and not _is_card_in_client_staff_scope(request.user, _card):
+            return JsonResponse({'success': False, 'message': 'Access denied'}, status=403)
 
         if PermissionService.is_client_staff(request.user) and field_data is not None:
             staff = getattr(request.user, 'staff_profile', None)
@@ -1532,13 +1542,9 @@ def api_idcard_update(request, card_id):
                 return JsonResponse({'success': False, 'message': 'Cards with active reprint requests cannot be edited.'}, status=403)
 
         # Default lock remains in place. Bypass is only for reprint-modal edits
-        # when caller has reprint permission.
+        # on eligible card statuses when the caller has verified table access.
         can_bypass_edit_lock = (
             reprint_modal_edit
-            and (
-                PermissionService.has(request.user, 'perm_idcard_reprint_list')
-                or PermissionService.has(request.user, 'perm_reprint_request_list')
-            )
             and str(_card.status or '').strip().lower() in ('pool', 'approved', 'download', 'reprint')
         )
         if _is_client_edit_locked(request.user, _card.status) and not can_bypass_edit_lock:

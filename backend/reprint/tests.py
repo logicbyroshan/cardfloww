@@ -252,3 +252,53 @@ class ReprintWorkflowTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = json.loads(resp.content)
         self.assertEqual(data['total_reprints'], 1)
+
+    def test_client_reprint_modal_edit_and_request(self):
+        """Client users can safely edit card and create reprint requests from download status."""
+        client_user = User.objects.create_user(
+            username='client_test_user',
+            password='pass',
+            role='client',
+        )
+        self.org.user = client_user
+        self.org.save()
+
+        from core.views.idcard_card_api import api_idcard_update
+
+        # Normal edit on download status card is blocked for client
+        req_blocked = self.rf.post(
+            f'/api/card/{self.card.id}/update/',
+            data=json.dumps({'field_data': {'NAME': 'Unauthorized Change'}}),
+            content_type='application/json',
+        )
+        req_blocked.user = client_user
+        resp_blocked = api_idcard_update(req_blocked, self.card.id)
+        self.assertEqual(resp_blocked.status_code, 403)
+
+        # Reprint modal edit on download status card is allowed
+        req_allowed = self.rf.post(
+            f'/api/card/{self.card.id}/update/',
+            data=json.dumps({
+                'field_data': {'NAME': 'Client Modal Edit'},
+                'reprint_modal_edit': True,
+            }),
+            content_type='application/json',
+        )
+        req_allowed.user = client_user
+        resp_allowed = api_idcard_update(req_allowed, self.card.id)
+        self.assertEqual(resp_allowed.status_code, 200)
+
+        # Create reprint request as client
+        req_create = self.rf.post(
+            f'/reprint/api/table/{self.table.id}/request/',
+            data=json.dumps({
+                'card_ids': [self.card.id],
+                'reason': 'Damaged in transit',
+            }),
+            content_type='application/json',
+        )
+        req_create.user = client_user
+        resp_create = api_reprint_request_create(req_create, self.table.id)
+        self.assertEqual(resp_create.status_code, 200)
+        data = json.loads(resp_create.content)
+        self.assertEqual(data['status'], 'ok')
