@@ -110,6 +110,37 @@ class UserModelTests(TestCase):
         user.refresh_from_db()
         self.assertEqual(user.role, 'super_admin')
 
+    def test_prime_admin_role_preservation(self):
+        user = User.objects.create_user(
+            username='primeadmin@test.com',
+            email='primeadmin@test.com',
+            password='primepassword123',
+            role='prime_admin',
+        )
+        self.assertTrue(user.is_superuser)
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_prime_admin)
+        self.assertEqual(user.role, 'prime_admin')
+        user.save()
+        user.refresh_from_db()
+        self.assertEqual(user.role, 'prime_admin')
+
+    def test_prime_admin_singleton_limit(self):
+        from django.core.exceptions import ValidationError
+        User.objects.create_user(
+            username='prime1@test.com',
+            email='prime1@test.com',
+            password='pass',
+            role='prime_admin',
+        )
+        with self.assertRaises(ValidationError):
+            User.objects.create_user(
+                username='prime2@test.com',
+                email='prime2@test.com',
+                password='pass',
+                role='prime_admin',
+            )
+
 
 class TutorialRoleScopeTests(TestCase):
     def setUp(self):
@@ -790,6 +821,129 @@ class LegacyStaffApiJsonShapeTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(response.json().get('success'))
+
+
+class TempPasswordsApiTests(TestCase):
+    def setUp(self):
+        from organisation.models import Organisation, OrganisationManager
+        from assistants.models import Assistant
+        from operators.models import Operator
+
+        self.super_admin = _create_super_admin('admin-tp@test.com', 'adminpass1')
+
+        # 1. Prime manager & Organisation
+        self.prime_user = User.objects.create_user(
+            username='pm-tp@test.com',
+            email='pm-tp@test.com',
+            password='pass',
+            role='prime_manager',
+            first_name='Prime',
+            last_name='Manager',
+        )
+        self.org = Organisation.objects.create(
+            user=self.prime_user,
+            name='Test Public Academy',
+            status='active',
+        )
+
+        # 2. Super manager
+        self.sm_user = User.objects.create_user(
+            username='sm-tp@test.com',
+            email='sm-tp@test.com',
+            password='pass',
+            role='super_manager',
+            first_name='Super',
+            last_name='Manager',
+        )
+        self.sm_mgr = OrganisationManager.objects.create(
+            user=self.sm_user,
+            organisation=self.org,
+            manager_type='super_manager',
+            is_active=True,
+        )
+
+        # 3. Assistant
+        self.asst_user = User.objects.create_user(
+            username='asst-tp@test.com',
+            email='asst-tp@test.com',
+            password='pass',
+            role='assistant',
+            first_name='Test',
+            last_name='Assistant',
+        )
+        self.asst_profile = Assistant.objects.create(
+            user=self.asst_user,
+            organisation=self.org,
+        )
+
+        # 4. Operator
+        self.op_user = User.objects.create_user(
+            username='op-tp@test.com',
+            email='op-tp@test.com',
+            password='pass',
+            role='operator',
+            first_name='Test',
+            last_name='Operator',
+        )
+        self.op_profile = Operator.objects.create(
+            user=self.op_user,
+        )
+        self.op_profile.assigned_organisations.add(self.org)
+
+    def test_permission_guard_rejects_non_admin(self):
+        self.client.login(username='sm-tp@test.com', password='pass')
+        response = self.client.get('/api/panel/temp-passwords/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_list_returns_all_and_maps_org_names(self):
+        self.client.login(username='admin-tp@test.com', password='adminpass1')
+        response = self.client.get('/api/panel/temp-passwords/')
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get('success'))
+        users = {u['username']: u for u in data.get('users', [])}
+
+        # Check organization mapping for super_manager
+        sm_entry = users.get('sm-tp@test.com')
+        self.assertIsNotNone(sm_entry)
+        self.assertEqual(sm_entry['org_name'], 'Test Public Academy')
+        self.assertEqual(sm_entry['role_display'], 'Super Manager')
+
+        # Check organization mapping for assistant
+        asst_entry = users.get('asst-tp@test.com')
+        self.assertIsNotNone(asst_entry)
+        self.assertEqual(asst_entry['org_name'], 'Test Public Academy')
+
+        # Check operator assignment count
+        op_entry = users.get('op-tp@test.com')
+        self.assertIsNotNone(op_entry)
+        self.assertEqual(op_entry['org_name'], '1 Assigned Org(s)')
+
+    def test_role_filtering(self):
+        self.client.login(username='admin-tp@test.com', password='adminpass1')
+
+        # Filter super_manager
+        response = self.client.get('/api/panel/temp-passwords/?role=super_manager')
+        self.assertEqual(response.status_code, 200)
+        usernames = [u['username'] for u in response.json().get('users', [])]
+        self.assertIn('sm-tp@test.com', usernames)
+        self.assertNotIn('op-tp@test.com', usernames)
+        self.assertNotIn('asst-tp@test.com', usernames)
+
+        # Filter operator
+        response = self.client.get('/api/panel/temp-passwords/?role=operator')
+        self.assertEqual(response.status_code, 200)
+        usernames = [u['username'] for u in response.json().get('users', [])]
+        self.assertIn('op-tp@test.com', usernames)
+        self.assertNotIn('sm-tp@test.com', usernames)
+
+    def test_search_filtering(self):
+        self.client.login(username='admin-tp@test.com', password='adminpass1')
+        response = self.client.get('/api/panel/temp-passwords/?search=Academy')
+        self.assertEqual(response.status_code, 200)
+        usernames = [u['username'] for u in response.json().get('users', [])]
+        self.assertIn('pm-tp@test.com', usernames)
+
 
 
 class ThreadedEmailCallbackRetryTests(TestCase):

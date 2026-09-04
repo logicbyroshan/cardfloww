@@ -127,13 +127,25 @@ class IDCardTableService(BaseService):
         l_cnt = counts['pool_count'] or 0
         r_cnt = counts['reprint_count'] or 0
 
-        client_name = ''
-        if hasattr(table, 'group') and table.group and hasattr(table.group, 'client') and table.group.client:
-            client_name = table.group.client.name
+        org = getattr(table, 'organisation', None)
+        if org:
+            org_id = org.id
+            org_name = org.name
+        elif hasattr(table, 'group') and table.group and hasattr(table.group, 'client') and table.group.client:
+            org_id = table.group.client.id
+            org_name = table.group.client.name
+        else:
+            org_id = getattr(table, 'organisation_id', None)
+            org_name = ''
+
+        client_name = org_name
 
         return {
             'id': table.id,
             'name': table.name,
+            'organisation_id': org_id,
+            'organisation_name': org_name,
+            'client_id': org_id,
             'client_name': client_name,
             'table_type': getattr(table, 'table_type', 'custom') or 'custom',
             'table_type_display': dict([

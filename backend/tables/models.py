@@ -366,6 +366,6 @@ def clear_idcard_distinct_values_cache(sender, instance, **kwargs):
 
 
 # ── Legacy compatibility aliases ────────────────────────────────────────
-# Old code importing Table / Table will use Table instead
-Table = Table
-Table = Table   # single-level now; group = table
+# Old code importing IDCardTable / IDCardGroup will use Table instead
+IDCardTable = Table
+IDCardGroup = Table

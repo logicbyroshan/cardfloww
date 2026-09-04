@@ -30,6 +30,13 @@ logger = logging.getLogger(__name__)
 
 def _get_request_org(request, table_id=None):
     """Resolve organisation from request user or table_id with fallback."""
+    org_id = request.GET.get('org_id') or request.GET.get('client_id')
+    if org_id:
+        try:
+            return Organisation.objects.get(id=int(org_id))
+        except (Organisation.DoesNotExist, ValueError):
+            pass
+
     user = getattr(request, 'user', None)
     if user and getattr(user, 'is_authenticated', False):
         org = (

@@ -426,17 +426,6 @@ def api_dashboard_card_stats(request):
             total_assistants = 0
             total_photographers = 0
 
-        today = timezone.now().date()
-        today_agg = card_qs.filter(created_at__date=today).aggregate(
-            pending_today=Count('id', filter=Q(status='pending')),
-            verified_today=Count('id', filter=Q(status='verified')),
-            approved_today=Count('id', filter=Q(status='approved')),
-            printed_today=Count('id', filter=Q(status='download')),
-            pool_today=Count('id', filter=Q(status='pool')),
-            reprint_today=Count('id', filter=Q(status='reprint')),
-            total_today=Count('id'),
-        )
-
         p_cnt = agg.get('pending', 0) or 0
         v_cnt = agg.get('verified', 0) or 0
         a_cnt = agg.get('approved', 0) or 0
@@ -464,17 +453,6 @@ def api_dashboard_card_stats(request):
             'deleted': pool_cnt,
             'reprint': r_cnt,
             'reprint_cards': r_cnt,
-            # Daily Growth metrics
-            'growth': {
-                'pending': today_agg.get('pending_today', 0) or 0,
-                'verified': today_agg.get('verified_today', 0) or 0,
-                'approved': today_agg.get('approved_today', 0) or 0,
-                'printed': today_agg.get('printed_today', 0) or 0,
-                'requested': 0,
-                'deleted': today_agg.get('pool_today', 0) or 0,
-                'reprint': today_agg.get('reprint_today', 0) or 0,
-                'total': today_agg.get('total_today', 0) or 0,
-            },
             # Users Overview counts
             'total_organizations': total_orgs,
             'total_clients': total_orgs,
@@ -484,6 +462,44 @@ def api_dashboard_card_stats(request):
             'total_photographers': total_photographers,
             'guest_users': total_operators,
         }
+
+        # Live presence and surface metrics
+        try:
+            surface_counts = _dashboard_live_surface_counts(
+                user=user,
+                is_scoped=is_scoped,
+                accessible_ids=accessible_ids,
+            )
+        except Exception:
+            surface_counts = {'desktop': 0, 'mobile': 0, 'never_active': 0}
+
+        live_working_users = 0
+        live_working_desktop = 0
+        live_working_phone = 0
+        try:
+            from accounts.models import UserDeviceSession
+            live_cutoff = timezone.now() - timezone.timedelta(seconds=300)
+            ds_qs = UserDeviceSession.objects.filter(last_active__gte=live_cutoff)
+            live_working_desktop = ds_qs.filter(device_type='web').values('user_id').distinct().count()
+            live_working_phone = ds_qs.filter(device_type='mobile').values('user_id').distinct().count()
+            live_working_users = ds_qs.values('user_id').distinct().count()
+
+            presence_payload = LiveClientPresenceService.get_live_payload_for_user(user)
+            live_working_users = max(live_working_users, presence_payload.get('active_users_now', 0))
+        except Exception:
+            pass
+
+        stats.update({
+            'live_working_users': live_working_users,
+            'live_working_phone': live_working_phone,
+            'live_working_desktop': live_working_desktop,
+            'desktop_active_users': surface_counts.get('desktop', 0),
+            'desktop_active': surface_counts.get('desktop', 0),
+            'mobile_active_users': surface_counts.get('mobile', 0),
+            'mobile_active': surface_counts.get('mobile', 0),
+            'never_active_users': surface_counts.get('never_active', 0),
+            'never_active': surface_counts.get('never_active', 0),
+        })
 
         cache.set(cache_key, stats, 10)
         return JsonResponse({'success': True, 'stats': stats})

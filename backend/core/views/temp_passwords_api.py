@@ -10,12 +10,13 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 from django.utils.timezone import localtime
+from django.db.models import Count
 
 from core.models import User, EmailLog
 from core.services.auto_password_service import AutoPasswordService
 from core.services.permission_service import PermissionService
 from core.utils.email_utils import send_welcome_email
-from organisation.models import Organisation
+from organisation.models import Organisation, OrganisationManager
 from assistants.models import Assistant
 from operators.models import Operator
 
@@ -49,6 +50,10 @@ def api_manage_temp_passwords_list(request):
     if role_filter and role_filter != 'all':
         if role_filter in ('client', 'prime_manager', 'organisation'):
             qs = qs.filter(role__in=['client', 'prime_manager', 'guest_prime_manager'])
+        elif role_filter in ('super_manager', 'manager'):
+            qs = qs.filter(role__in=['super_manager', 'manager'])
+        elif role_filter == 'guest_manager':
+            qs = qs.filter(role='guest_manager')
         elif role_filter in ('operator', 'admin_staff'):
             qs = qs.filter(role='operator')
         elif role_filter in ('assistant', 'client_staff'):
@@ -56,28 +61,44 @@ def api_manage_temp_passwords_list(request):
         else:
             qs = qs.filter(role=role_filter)
 
+    user_list = list(qs)
+    user_ids = [u.id for u in user_list]
+
+    # Pre-fetch associations in bulk to prevent N+1 queries
+    org_by_user = {org.user_id: org.name for org in Organisation.objects.filter(user_id__in=user_ids)}
+    org_mgr_by_user = {
+        mgr.user_id: mgr.organisation.name
+        for mgr in OrganisationManager.objects.filter(user_id__in=user_ids).select_related('organisation')
+    }
+    ast_by_user = {
+        ast.user_id: ast.organisation.name
+        for ast in Assistant.objects.filter(user_id__in=user_ids).select_related('organisation')
+    }
+    op_counts = {
+        row['operator__user_id']: row['cnt']
+        for row in Operator.assigned_organisations.through.objects.filter(
+            operator__user_id__in=user_ids
+        ).values('operator__user_id').annotate(cnt=Count('organisation_id'))
+    }
+    op_user_ids = set(Operator.objects.filter(user_id__in=user_ids).values_list('user_id', flat=True))
+
     users_data = []
-    for user in qs.iterator(chunk_size=200):
+    for user in user_list:
         # Determine full display name and organisation association
         full_name = user.get_full_name() or user.username
         org_name = ''
         
         if user.role in ('client', 'prime_manager', 'guest_prime_manager'):
-            org = Organisation.objects.filter(user=user).first()
-            if org:
-                org_name = org.name
-                if not user.get_full_name():
-                    full_name = org.name
+            org_name = org_by_user.get(user.id, '')
+            if org_name and not user.get_full_name():
+                full_name = org_name
+        elif user.role in ('super_manager', 'guest_manager', 'manager'):
+            org_name = org_mgr_by_user.get(user.id, '')
         elif user.role == 'assistant':
-            assistant_profile = Assistant.objects.select_related('organisation').filter(user=user).first()
-            if assistant_profile:
-                client_obj = assistant_profile.organisation
-                if client_obj:
-                    org_name = client_obj.name
+            org_name = ast_by_user.get(user.id, '')
         elif user.role == 'operator':
-            operator_profile = Operator.objects.prefetch_related('assigned_organisations').filter(user=user).first()
-            if operator_profile:
-                assigned_count = operator_profile.assigned_organisations.count()
+            if user.id in op_user_ids:
+                assigned_count = op_counts.get(user.id, 0)
                 org_name = f"{assigned_count} Assigned Org(s)" if assigned_count else 'All Orgs'
 
         # Match search filter
@@ -103,11 +124,15 @@ def api_manage_temp_passwords_list(request):
             role_display = 'Organisation Admin'
         elif user.role == 'guest_prime_manager':
             role_display = 'Guest Prime Manager'
+        elif user.role in ('super_manager', 'manager'):
+            role_display = 'Super Manager'
+        elif user.role == 'guest_manager':
+            role_display = 'Guest Manager'
         elif user.role == 'operator':
             role_display = 'Operator'
         elif user.role == 'assistant':
             role_display = 'Assistant'
-        elif user.role in ('super_admin', 'pro_user'):
+        elif user.role in ('super_admin', 'pro_user', 'prime_admin'):
             role_display = 'Prime Admin'
 
         temp_created = ''

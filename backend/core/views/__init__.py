@@ -83,6 +83,7 @@ from .idcard_table_api import (
     api_generate_table_delete_code,
     api_idcard_table_toggle_status,
     api_idcard_table_list,
+    api_organisation_tables,
     api_create_table_from_xlsx,
     api_table_shared_managers_get,
     api_table_share_managers,

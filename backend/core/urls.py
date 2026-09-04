@@ -138,9 +138,6 @@ urlpatterns = [
     path('api/client-staff/<int:staff_id>/assignment-timeline/', views.api_client_staff_assignment_timeline, name='api_client_staff_assignment_timeline'),
     # NOTE: Admin-side Manage Assistant pages and APIs removed — client-side assistant features remain.
     
-    # Operators & Assistants APIs
-    path('api/operators/', include('operators.urls')),
-    path('api/assistants/', include('assistants.urls')),
     
     # Staff APIs
     path('api/staff/create/', views.api_staff_create, name='api_staff_create'),
@@ -166,6 +163,18 @@ urlpatterns = [
     path('api/photographer/client/<int:client_id>/tables/', views.api_photographer_client_tables, name='api_photographer_client_tables'),
     path('api/photographer/<int:staff_id>/set-temp-password/', views.api_photographer_set_temp_password, name='api_photographer_set_temp_password'),
     
+    # Hierarchical Organisation -> Table -> Card Routes
+    path('api/organisations/<int:org_id>/tables/', views.api_organisation_tables, name='api_org_table_list'),
+    path('api/organisation/<int:org_id>/tables/', views.api_organisation_tables, name='api_organisation_table_list'),
+    path('api/organisations/<int:org_id>/table/<int:table_id>/', views.api_idcard_table_get, name='api_org_table_get'),
+    path('api/organisation/<int:org_id>/table/<int:table_id>/', views.api_idcard_table_get, name='api_organisation_table_get'),
+    path('api/organisations/<int:org_id>/table/<int:table_id>/cards/', views.api_idcard_list, name='api_org_table_cards'),
+    path('api/organisation/<int:org_id>/table/<int:table_id>/cards/', views.api_idcard_list, name='api_organisation_table_cards'),
+    path('api/organisations/<int:org_id>/table/<int:table_id>/cards-json/', views.api_idcard_cards_json, name='api_org_table_cards_json'),
+    path('api/organisation/<int:org_id>/table/<int:table_id>/cards-json/', views.api_idcard_cards_json, name='api_organisation_table_cards_json'),
+    path('api/organisations/<int:org_id>/table/<int:table_id>/status-counts/', views.api_table_status_counts, name='api_org_table_status_counts'),
+    path('api/organisation/<int:org_id>/table/<int:table_id>/status-counts/', views.api_table_status_counts, name='api_organisation_table_status_counts'),
+
     # ID Card Table APIs
     path('api/schemas/', views.api_schema_list, name='api_schema_list'),
     path('api/schemas/create/', views.api_schema_create, name='api_schema_create'),

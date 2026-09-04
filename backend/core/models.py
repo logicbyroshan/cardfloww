@@ -122,18 +122,18 @@ class User(AbstractUser):
         - role='super_admin'/'pro_user'  →  is_superuser=True, is_staff=True
         - role != 'super_admin'/'pro_user'  →  clear is_superuser
         """
-        if self.role == 'pro_user':
-            # Pro user always gets superuser + staff
+        if self.role in ('pro_user', 'prime_admin'):
+            # Pro user / Prime Admin always gets superuser + staff
             self.is_superuser = True
             self.is_staff = True
-        elif self.is_superuser and self.role != 'pro_user':
+        elif self.is_superuser and self.role not in ('pro_user', 'prime_admin'):
             self.role = 'super_admin'
             self.is_staff = True
         elif self.role == 'super_admin':
             self.is_superuser = True
             self.is_staff = True
         else:
-            # Role is not super_admin/pro_user — make sure is_superuser is cleared
+            # Role is not super_admin/pro_user/prime_admin — make sure is_superuser is cleared
             self.is_superuser = False
 
         # Enforce max limits
@@ -142,14 +142,14 @@ class User(AbstractUser):
         super().save(*args, **kwargs)
 
     def _enforce_role_limits(self):
-        """Enforce max 1 pro_user and max 3 super_admin accounts."""
+        """Enforce max 1 pro_user / prime_admin and max 3 super_admin accounts."""
         from django.core.exceptions import ValidationError
-        if self.role == 'pro_user':
-            qs = User.objects.filter(role='pro_user')
+        if self.role in ('pro_user', 'prime_admin'):
+            qs = User.objects.filter(role__in=['pro_user', 'prime_admin'])
             if self.pk:
                 qs = qs.exclude(pk=self.pk)
             if qs.exists():
-                raise ValidationError('Only one Pro User account is allowed.')
+                raise ValidationError('Only one Pro User / Prime Admin account is allowed.')
         elif self.role == 'super_admin':
             qs = User.objects.filter(role='super_admin')
             if self.pk:

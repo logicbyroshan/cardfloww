@@ -412,6 +412,17 @@ def api_schema_list(request):
         return JsonResponse({'success': False, 'message': _safe_error(e)}, status=500)
 
 
+@require_http_methods(["GET"])
+@api_require_permission('perm_idcard_setting_list')
+def api_organisation_tables(request, org_id):
+    """Hierarchical endpoint to list all tables belonging to an organisation: /api/organisations/<org_id>/tables/"""
+    get_params = request.GET.copy()
+    get_params['organisation_id'] = str(org_id)
+    request.GET = get_params
+    return api_schema_list(request)
+
+
+
 @require_http_methods(["POST"])
 @api_require_permission('perm_idcard_setting_add')
 def api_schema_create(request):
