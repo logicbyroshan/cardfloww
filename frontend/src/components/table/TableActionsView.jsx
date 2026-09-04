@@ -4346,15 +4346,26 @@ export default function IDCardActionsView({
                           const isUniqueCol = Boolean(f.is_unique || f.unique);
                           const isDuplicate = card.duplicate_fields?.includes(f.name) || (isUniqueCol && card.is_duplicate);
 
+                          // Semantic width rule: small columns (< 100px) expand to fixed 125px on edit; wide columns (>= 100px) keep natural width
+                          const baseWidthVal = parseInt(spec.width || spec.minWidth || '100', 10);
+                          const isSmallCol = baseWidthVal < 100;
+                          const cellWidthStyle = isEditing
+                            ? isSmallCol
+                              ? { width: '125px', minWidth: '125px', maxWidth: '125px' }
+                              : spec.width
+                                ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
+                                : { minWidth: spec.minWidth }
+                            : spec.width
+                              ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
+                              : { minWidth: spec.minWidth };
+
                           return (
                             <td
                               key={f.name}
                               style={{
                                 padding: '2px 6px',
                                 textAlign: spec.align,
-                                ...(spec.width && !isEditing
-                                  ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
-                                  : { minWidth: isEditing ? '180px' : spec.minWidth }),
+                                ...cellWidthStyle,
                                 background: isDuplicate && !isSelected ? '#fffbeb' : undefined,
                                 color: '#000000',
                                 fontSize: '12px',
@@ -4366,8 +4377,14 @@ export default function IDCardActionsView({
                                 borderBottom: isDuplicate ? '1px solid #fde68a' : '1px solid #cbd5e1',
                                 verticalAlign: 'middle',
                                 position: 'relative',
+                                cursor: isEditing ? 'default' : 'pointer',
                               }}
-                              onDoubleClick={() => startCellEdit(card.id, f.name, val)}
+                              onClick={() => {
+                                if (!isEditing) startCellEdit(card.id, f.name, val);
+                              }}
+                              onDoubleClick={() => {
+                                if (!isEditing) startCellEdit(card.id, f.name, val);
+                              }}
                             >
                               {isEditing ? (
                                 <div
