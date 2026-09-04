@@ -36,7 +36,7 @@ import CustomSelect from '../common/CustomSelect';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import OrgActivityDrawer from './OrgActivityDrawer';
-import { clientApi, managerApi, staffApi } from '../../services/api';
+import { clientApi, managerApi, assistantApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS, DEFAULT_PAGE_SIZE_OPTIONS as PAGE_SIZE_OPTIONS } from '../../utils/constants';
 
@@ -173,8 +173,9 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
     setDrawerLoading(true);
     try {
       const data = await managerApi.list({ organisation_id: org.id });
-      setOrgManagers(data?.managers || []);
-    } catch {
+      setOrgManagers(data?.managers || data?.data?.managers || (Array.isArray(data) ? data : []));
+    } catch (err) {
+      console.error('Load managers error:', err);
       setOrgManagers([]);
     } finally {
       setDrawerLoading(false);
@@ -185,30 +186,46 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
     if (!org?.id) return;
     setDrawerLoading(true);
     try {
-      const data = await staffApi.list({ client_id: org.id, role: 'assistant' });
-      setOrgAssistants(data?.staff || data?.results || (Array.isArray(data) ? data : []));
-    } catch {
+      const data = await assistantApi.list({ client_id: org.id });
+      const list = data?.data?.staff || data?.staff || data?.results || (Array.isArray(data) ? data : []);
+      setOrgAssistants(list);
+    } catch (err) {
+      console.error('Load assistants error:', err);
       setOrgAssistants([]);
     } finally {
       setDrawerLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    if (showManagersDrawer && selClient) {
+      loadOrgManagers(selClient);
+    }
+  }, [showManagersDrawer, selClient, loadOrgManagers]);
+
+  useEffect(() => {
+    if (showAssistantsDrawer && selClient) {
+      loadOrgAssistants(selClient);
+    }
+  }, [showAssistantsDrawer, selClient, loadOrgAssistants]);
+
   const handleOpenManagersDrawer = (client) => {
     setSelected(client.id);
     loadOrgManagers(client);
     setShowManagersDrawer(true);
+    setShowAssistantsDrawer(false);
   };
 
   const handleOpenAssistantsDrawer = (client) => {
     setSelected(client.id);
     loadOrgAssistants(client);
     setShowAssistantsDrawer(true);
+    setShowManagersDrawer(false);
   };
 
   const handleSaveManagerInline = async (mgrData) => {
     try {
-      if (mgrData.id && !String(mgrData.id).startsWith('mgr_')) {
+      if (mgrData.id && !String(mgrData.id).startsWith('mgr_') && !String(mgrData.id).startsWith('prime_')) {
         await managerApi.update(mgrData.id, mgrData);
       } else {
         await managerApi.create({
@@ -228,9 +245,9 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
   const handleSaveAssistantInline = async (astData) => {
     try {
       if (astData.id) {
-        await staffApi.update(astData.id, astData);
+        await assistantApi.update(astData.id, astData);
       } else {
-        await staffApi.create({
+        await assistantApi.create({
           ...astData,
           client: selClient?.id,
           role: 'assistant',
@@ -400,7 +417,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                 disabled={!selected}
                 icon={<Users size={13} />}
                 onClick={() => {
-                  setShowManagersDrawer(!showManagersDrawer);
+                  const nextState = !showManagersDrawer;
+                  if (nextState && selClient) {
+                    loadOrgManagers(selClient);
+                  }
+                  setShowManagersDrawer(nextState);
                   setShowAssistantsDrawer(false);
                 }}
                 title="Manage Managers"
@@ -414,7 +435,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                 disabled={!selected}
                 icon={<UsersRound size={13} />}
                 onClick={() => {
-                  setShowAssistantsDrawer(!showAssistantsDrawer);
+                  const nextState = !showAssistantsDrawer;
+                  if (nextState && selClient) {
+                    loadOrgAssistants(selClient);
+                  }
+                  setShowAssistantsDrawer(nextState);
                   setShowManagersDrawer(false);
                 }}
                 title="Manage Assistants"
@@ -554,6 +579,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                     </td>
                     <td className="text-center" style={{ width: '80px', textAlign: 'center', padding: '9px 8px' }}>
                       <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenManagersDrawer(c);
+                        }}
+                        title={`Click to view/manage ${getManagerCount(c)} Manager(s) for ${c.name || 'Organisation'}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -565,6 +595,16 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                           fontSize: '12px',
                           fontWeight: 600,
                           border: '1px solid #d8b4fe',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#e9d5ff';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#f3e8ff';
+                          e.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
                         <Users size={12} /> {getManagerCount(c)}
@@ -572,6 +612,11 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                     </td>
                     <td className="text-center" style={{ width: '80px', textAlign: 'center', padding: '9px 8px' }}>
                       <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAssistantsDrawer(c);
+                        }}
+                        title={`Click to view/manage ${getAssistantCount(c)} Assistant(s) for ${c.name || 'Organisation'}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -583,6 +628,16 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                           fontSize: '12px',
                           fontWeight: 600,
                           border: '1px solid #86efac',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#bbf7d0';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#dcfce7';
+                          e.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
                         <UsersRound size={12} /> {getAssistantCount(c)}
@@ -590,6 +645,12 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                     </td>
                     <td className="text-center" style={{ width: '75px', textAlign: 'center', padding: '9px 8px' }}>
                       <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(c.id);
+                          onNavigate?.('cards', { clientId: c.id, clientName: c.name || c.school_name, org: c });
+                        }}
+                        title={`Click to view Tables for ${c.name || 'Organisation'}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -601,6 +662,16 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                           fontSize: '12px',
                           fontWeight: 600,
                           border: '1px solid #93c5fd',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#bfdbfe';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#dbeafe';
+                          e.currentTarget.style.transform = 'scale(1)';
                         }}
                       >
                         <CreditCard size={12} /> {c.table_count || c.tables_count || 0}
@@ -831,8 +902,25 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                   background: '#f8fafc',
                 }}
               >
-                {orgManagers.map((m, idx) => {
-                  const isPrimary = m.is_default || m.client_type === 'primary';
+                {drawerLoading ? (
+                  <div style={{ textAlign: 'center', padding: '50px 20px', color: '#64748b' }}>
+                    <div style={{ width: '28px', height: '28px', border: '3px solid #e2e8f0', borderTopColor: '#2563eb', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                    <p style={{ fontSize: '12px', marginTop: '12px', color: '#64748b' }}>Loading managers...</p>
+                  </div>
+                ) : orgManagers.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                    <Users size={36} style={{ opacity: 0.3, marginBottom: '10px' }} />
+                    <h4 style={{ margin: 0, fontSize: '14px', color: '#334155' }}>No Managers Found</h4>
+                    <p style={{ fontSize: '12px', margin: '4px 0 14px 0' }}>
+                      There are no managers created for this organisation yet.
+                    </p>
+                    <button className="btn btn-sm btn-primary" onClick={() => setEditingManager('new')}>
+                      <Plus size={12} /> Add Manager Account
+                    </button>
+                  </div>
+                ) : (
+                  orgManagers.map((m, idx) => {
+                    const isPrimary = m.is_default || m.client_type === 'primary' || m.manager_type === 'prime_manager' || m.is_owner;
                   const isActive = m.status !== 'inactive' && m.is_active !== false;
 
                   return (
@@ -1052,7 +1140,7 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                       </div>
                     </div>
                   );
-                })}
+                }))}
               </div>
             </>
           )}
@@ -1153,7 +1241,12 @@ export default function ClientDirectoryView({ addToast, onOpenActionDrawer, onNa
                   background: '#f8fafc',
                 }}
               >
-                {orgAssistants.length === 0 ? (
+                {drawerLoading ? (
+                  <div style={{ textAlign: 'center', padding: '50px 20px', color: '#64748b' }}>
+                    <div style={{ width: '28px', height: '28px', border: '3px solid #e2e8f0', borderTopColor: '#16a34a', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+                    <p style={{ fontSize: '12px', marginTop: '12px', color: '#64748b' }}>Loading assistants...</p>
+                  </div>
+                ) : orgAssistants.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
                     <UsersRound size={36} style={{ opacity: 0.3, marginBottom: '10px' }} />
                     <h4 style={{ margin: 0, fontSize: '14px', color: '#334155' }}>No Assistants Found</h4>
