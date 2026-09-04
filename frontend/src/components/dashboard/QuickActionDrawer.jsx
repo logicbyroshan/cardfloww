@@ -22,7 +22,7 @@ import {
   Download,
   Smartphone,
 } from 'lucide-react';
-import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, organisationManagerApi } from '../../services/api';
+import { clientApi, operatorApi, assistantApi, photographerApi, staffApi, organisationManagerApi, schemaApi } from '../../services/api';
 import CustomSelect from '../common/CustomSelect';
 
 
@@ -3221,6 +3221,7 @@ function OriginalPhotographerDrawerForm({ onClose, addToast, initialData }) {
   const [photographerName, setPhotographerName] = useState(initialData?.name || initialData?.full_name || '');
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
+  const [password, setPassword] = useState('');
   const [status, setStatus] = useState(
     initialData
       ? initialData.is_active || initialData.status === 'active' || initialData.status === true

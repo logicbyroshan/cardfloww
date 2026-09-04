@@ -172,7 +172,6 @@ export default function TableSettingsView({ addToast, onNavigate }) {
   const [statusTab, setStatusTab] = useState('All');
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
 
   const [showAddEditDrawer, setShowAddEditDrawer] = useState(false);
   const [showExcelDrawer, setShowExcelDrawer] = useState(false);
@@ -272,7 +271,7 @@ export default function TableSettingsView({ addToast, onNavigate }) {
         },
       })
     );
-  }, [tables.length, selected]);
+  }, [tables, selected]);
 
   const filtered = tables.filter((t) => {
     if (!t) return false;
@@ -1725,7 +1724,7 @@ export function TableDrawerForm({ editingTable, groupId, orgName, onClose, onSav
 /* ═══════════════════════════════════════════════════════════════════════════
    CREATE WITH XLSX DRAWER
    ═══════════════════════════════════════════════════════════════════════════ */
-function CreateWithXlsxDrawer({ groupId, orgName, onClose, onSave, addToast }) {
+export function CreateWithXlsxDrawer({ groupId, orgName, onClose, onSave, addToast }) {
   const [tableName, setTableName] = useState('');
   const [tableType, setTableType] = useState('custom');
   const [typeAuto, setTypeAuto] = useState(false);

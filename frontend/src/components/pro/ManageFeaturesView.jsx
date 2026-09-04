@@ -42,6 +42,8 @@ import {
 
 import { clientApi, assistantApi, panelApi, impersonateApi, tempPasswordApi, operatorApi, photographerApi } from '../../services/api';
 import CustomSelect from '../common/CustomSelect';
+import Button from '../common/Button';
+import Input from '../common/Input';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -639,32 +641,17 @@ export default function ManageFeaturesView({ addToast }) {
           <div className="action-bar-light" id="impersonate-action-bar">
             <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Search Input Box */}
-              <div className="notif-search-box" style={{ width: '240px' }}>
-                <Search size={13} color="#60a5fa" style={{ flexShrink: 0, marginRight: '6px' }} />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email or role..."
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: '#94a3b8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 2px',
-                    }}
-                    title="Clear search"
-                  >
-                    <X size={12} color="#94a3b8" />
-                  </button>
-                )}
-              </div>
+              <Input
+                size="sm"
+                variant="light"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onClear={() => setSearch('')}
+                placeholder="Search by name, email or role..."
+                icon={<Search size={13} color="#60a5fa" />}
+                clearable
+                style={{ width: '240px' }}
+              />
 
               {/* Separator */}
               <div style={{ width: '1px', height: '16px', background: '#e2e8f0', flexShrink: 0 }} />
@@ -822,32 +809,17 @@ export default function ManageFeaturesView({ addToast }) {
           <div className="action-bar-light" id="passwords-action-bar">
             <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               {/* Search Input Box */}
-              <div className="notif-search-box" style={{ width: '250px' }}>
-                <Search size={13} color="#60a5fa" style={{ flexShrink: 0, marginRight: '6px' }} />
-                <input
-                  type="text"
-                  value={pwdSearch}
-                  onChange={(e) => setPwdSearch(e.target.value)}
-                  placeholder="Search name, username, email or phone..."
-                />
-                {pwdSearch && (
-                  <button
-                    onClick={() => setPwdSearch('')}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: '#94a3b8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 2px',
-                    }}
-                    title="Clear search"
-                  >
-                    <X size={12} color="#94a3b8" />
-                  </button>
-                )}
-              </div>
+              <Input
+                size="sm"
+                variant="light"
+                value={pwdSearch}
+                onChange={(e) => setPwdSearch(e.target.value)}
+                onClear={() => setPwdSearch('')}
+                placeholder="Search name, username, email or phone..."
+                icon={<Search size={13} color="#60a5fa" />}
+                clearable
+                style={{ width: '250px' }}
+              />
 
               {/* Separator */}
               <div style={{ width: '1px', height: '16px', background: '#e2e8f0', flexShrink: 0 }} />
@@ -910,28 +882,6 @@ export default function ManageFeaturesView({ addToast }) {
                 <RefreshCw size={12} className={pwdLoading ? 'spin-anim' : ''} />
                 <span>Refresh</span>
               </button>
-            </div>
-          </div>
-
-          {/* Info Banner */}
-          <div
-            style={{
-              background: '#eff6ff',
-              borderBottom: '1px solid #dbeafe',
-              padding: '7px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '11.5px',
-              color: '#1e40af',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <KeyRound size={14} color="#2563eb" style={{ flexShrink: 0 }} />
-              <span>
-                <strong>Auto-Generated Temporary Password (PIN) Manager:</strong> Initial PIN passwords are auto-generated from phone or organization name upon creation and emailed directly to users. Once an account sets their permanent password, their temporary PIN is securely cleared.
-              </span>
             </div>
           </div>
 
@@ -1772,32 +1722,17 @@ export default function ManageFeaturesView({ addToast }) {
           {/* Action Bar Header */}
           <div className="action-bar-light">
             <div className="action-bar-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div className="notif-search-box" style={{ width: '240px' }}>
-                <Search size={13} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
-                <input
-                  type="text"
-                  value={batchSearch}
-                  onChange={(e) => setBatchSearch(e.target.value)}
-                  placeholder="Search Job ID, task, operator, type..."
-                />
-                {batchSearch && (
-                  <button
-                    onClick={() => setBatchSearch('')}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: '#9ca3af',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 2px',
-                    }}
-                    title="Clear search"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
+              <Input
+                size="sm"
+                variant="light"
+                value={batchSearch}
+                onChange={(e) => setBatchSearch(e.target.value)}
+                onClear={() => setBatchSearch('')}
+                placeholder="Search Job ID, task, operator, type..."
+                icon={<Search size={13} />}
+                clearable
+                style={{ width: '240px' }}
+              />
 
               {/* Status Filter */}
               <CustomSelect

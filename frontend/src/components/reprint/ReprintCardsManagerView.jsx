@@ -24,6 +24,9 @@ import {
   Table as TableIcon,
 } from 'lucide-react';
 import WatermarkLogo from '../common/WatermarkLogo';
+import Button from '../common/Button';
+import Input from '../common/Input';
+import CustomSelect from '../common/CustomSelect';
 import { reprintApi, tableApi, clientApi } from '../../services/api';
 
 const STEPS = [
@@ -346,60 +349,39 @@ export default function ReprintCardsManagerView({ addToast }) {
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '13px', fontWeight: 600 }}>
             <Building2 size={16} style={{ color: '#2563eb' }} />
             <span>Client:</span>
-            <select
-              value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#1e293b',
-                background: '#f8fafc',
-                cursor: 'pointer',
-                outline: 'none',
-                minWidth: '180px',
-              }}
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name || c.school_name || c.username}
-                </option>
-              ))}
-            </select>
+            <div style={{ width: '200px' }}>
+              <CustomSelect
+                size="sm"
+                value={selectedClientId}
+                onChange={(val) => setSelectedClientId(val)}
+                options={clients.map((c) => ({
+                  value: c.id,
+                  label: c.name || c.school_name || c.username,
+                }))}
+              />
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '13px', fontWeight: 600 }}>
             <TableIcon size={16} style={{ color: '#0d9488' }} />
             <span>Table:</span>
-            <select
-              value={selectedTableId}
-              onChange={(e) => setSelectedTableId(e.target.value)}
-              disabled={tables.length === 0}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                border: '1px solid #cbd5e1',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#1e293b',
-                background: '#f8fafc',
-                cursor: 'pointer',
-                outline: 'none',
-                minWidth: '180px',
-              }}
-            >
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ width: '200px' }}>
+              <CustomSelect
+                size="sm"
+                value={selectedTableId}
+                onChange={(val) => setSelectedTableId(val)}
+                disabled={tables.length === 0}
+                placeholder={tables.length === 0 ? 'No Tables' : 'Select Table'}
+                options={tables.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                }))}
+              />
+            </div>
           </div>
         </div>
 
@@ -479,85 +461,68 @@ export default function ReprintCardsManagerView({ addToast }) {
           <div className="action-divider" />
 
           {/* Search Box */}
-          <div className="notif-search-box" style={{ width: '220px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={`Search ${currentStep.replace('_', ' ')}...`}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          <Input
+            size="sm"
+            variant="dark"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder={`Search ${currentStep.replace('_', ' ')}...`}
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '220px' }}
+          />
         </div>
 
         {/* Action Buttons Right */}
         <div className="action-bar-right">
           <div className="actions" style={{ display: 'flex', gap: '8px' }}>
             {currentStep === 'reprint_list' && (
-              <button
-                className="btn btn-md btn-primary"
+              <Button
+                size="sm"
+                variant="primary"
                 disabled={selectedIds.size === 0 || actionLoading}
+                loading={actionLoading}
                 onClick={handleBulkRequest}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: selectedIds.size > 0 ? '#0891b2' : undefined,
-                }}
+                icon={<RotateCcw size={13} />}
               >
-                {actionLoading ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
-                <span>Request Selected ({selectedIds.size})</span>
-              </button>
+                Request Selected ({selectedIds.size})
+              </Button>
             )}
 
             {currentStep === 'request_list' && (
               <>
-                <button
-                  className="btn btn-md btn-success"
+                <Button
+                  size="sm"
+                  variant="success"
                   disabled={selectedIds.size === 0 || actionLoading}
+                  loading={actionLoading}
                   onClick={handleConfirmSelected}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  icon={<CheckCircle2 size={13} />}
                 >
-                  {actionLoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-                  <span>Confirm Selected ({selectedIds.size})</span>
-                </button>
-                <button
-                  className="btn btn-md btn-danger"
+                  Confirm Selected ({selectedIds.size})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
                   disabled={selectedIds.size === 0 || actionLoading}
+                  loading={actionLoading}
                   onClick={handleRejectSelected}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  icon={<XCircle size={13} />}
                 >
-                  {actionLoading ? <Loader2 size={13} className="animate-spin" /> : <XCircle size={13} />}
-                  <span>Reject to Reprint ({selectedIds.size})</span>
-                </button>
+                  Reject to Reprint ({selectedIds.size})
+                </Button>
               </>
             )}
 
-            <button
-              className="btn btn-md btn-neutral"
+            <Button
+              size="icon-sm"
+              variant="neutral"
               onClick={loadItems}
               disabled={loading}
               title="Refresh list"
-              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
+              icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
+            />
           </div>
         </div>
       </div>

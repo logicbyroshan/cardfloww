@@ -24,6 +24,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Smartphone,
+  Monitor,
+  UserX,
 } from 'lucide-react';
 import WatermarkLogo from '../common/WatermarkLogo';
 import StatusChangeBadge from '../common/StatusChangeBadge';
@@ -94,127 +97,190 @@ function WelcomeBanner({ currentUser }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   9 Stat Cards Row (Pending, Verified, Approved, Printed, Deleted, Reprinting, Requested, Confirmed, Total ID Cards)
+   Dynamic Stat Cards per Dashboard Section
+   1. 'clients' (Recent Approved): 6 cards (Pending, Verified, Approved, Printed, Deleted, Total ID Cards)
+   2. 'reprints' (Recent Requested): 4 cards (Reprinting, Requested, Confirmed, Total Requests)
+   3. 'updates' (Recent Updates): 6 cards (Live Working Users, Live Working Phone, Live Working Desktop,
+      Total Desktop Active, Total Mobile Active, Total Never Active)
 ───────────────────────────────────────────────────────────────────────── */
-const STAT_CARDS_DEF = [
+const APPROVED_SECTION_CARDS = [
   { key: 'pending_cards', statusNav: 'pending', label: 'Pending Cards', defaultVal: 0, bg: '#f59e0b', Icon: Clock },
   { key: 'verified_cards', statusNav: 'verified', label: 'Verified Cards', defaultVal: 0, bg: '#10b981', Icon: CheckCircle2 },
   { key: 'approved_cards', statusNav: 'approved', label: 'Approved Cards', defaultVal: 0, bg: '#3b82f6', Icon: ThumbsUp },
-  { key: 'printed_cards', statusNav: 'printed', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
-  { key: 'deleted_cards', statusNav: 'deleted', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
-  { key: 'reprinting_cards', statusNav: 'reprint', label: 'Reprinting Cards', defaultVal: 0, bg: '#d97706', Icon: RotateCcw },
-  { key: 'requested_cards', statusNav: 'request', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
-  { key: 'confirmed_cards', statusNav: 'confirm', label: 'Confirmed Cards', defaultVal: 0, bg: '#059669', Icon: CheckCircle2 },
+  { key: 'printed_cards', statusNav: 'download', label: 'Printed Cards', defaultVal: 0, bg: '#64748b', Icon: Printer },
+  { key: 'deleted_cards', statusNav: 'pool', label: 'Deleted Cards', defaultVal: 0, bg: '#ef4444', Icon: Trash2 },
   { key: 'total_id_cards', statusNav: 'all', label: 'Total ID Cards', defaultVal: 0, bg: '#06b6d4', Icon: CreditCard },
 ];
 
-function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'super_admin' }) {
-  const isAdminOrOperator = [
-    'prime_admin',
-    'super_admin',
-    'pro_user',
-    'operator',
-  ].includes(String(userRole || '').toLowerCase());
+const REQUESTS_SECTION_CARDS = [
+  { key: 'reprinting_cards', statusNav: 'reprint', label: 'Reprinting Cards', defaultVal: 0, bg: '#d97706', Icon: RotateCcw },
+  { key: 'requested_cards', statusNav: 'request', label: 'Requested Cards', defaultVal: 0, bg: '#8b5cf6', Icon: Send },
+  { key: 'confirmed_cards', statusNav: 'confirm', label: 'Confirmed Cards', defaultVal: 0, bg: '#059669', Icon: CheckCircle2 },
+  { key: 'total_requests', statusNav: 'reprint', label: 'Total Requests', defaultVal: 0, bg: '#0284c7', Icon: RotateCcw },
+];
+
+const UPDATES_SECTION_CARDS = [
+  { key: 'live_working_users', statusNav: null, label: 'Live Working Users', defaultVal: 0, bg: '#10b981', Icon: Users },
+  { key: 'live_working_phone', statusNav: null, label: 'Live Working Phone', defaultVal: 0, bg: '#ea580c', Icon: Smartphone },
+  { key: 'live_working_desktop', statusNav: null, label: 'Live Working Desktop', defaultVal: 0, bg: '#2563eb', Icon: Monitor },
+  { key: 'total_desktop_active', statusNav: null, label: 'Total Desktop Active', defaultVal: 0, bg: '#3b82f6', Icon: Monitor },
+  { key: 'total_mobile_active', statusNav: null, label: 'Total Mobile Active', defaultVal: 0, bg: '#f97316', Icon: Smartphone },
+  { key: 'total_never_active', statusNav: null, label: 'Total Never Active', defaultVal: 0, bg: '#64748b', Icon: UserX },
+];
+
+function StatCardsRow({
+  stats,
+  clients = [],
+  reprintClients = [],
+  loading,
+  onNavigate,
+  userRole = 'super_admin',
+  activeSection = 'clients',
+}) {
+  let cardsDef = APPROVED_SECTION_CARDS;
+  let gridColumns = 'repeat(6, 1fr)';
+
+  if (activeSection === 'reprints') {
+    cardsDef = REQUESTS_SECTION_CARDS;
+    gridColumns = 'repeat(4, 1fr)';
+  } else if (activeSection === 'updates') {
+    cardsDef = UPDATES_SECTION_CARDS;
+    gridColumns = 'repeat(6, 1fr)';
+  }
+
+  // Pre-calculate aggregated values for clients
+  const clientPending = Array.isArray(clients) ? clients.reduce((acc, c) => acc + (c.pending || 0), 0) : 0;
+  const clientVerified = Array.isArray(clients) ? clients.reduce((acc, c) => acc + (c.verified || 0), 0) : 0;
+  const clientApproved = Array.isArray(clients) ? clients.reduce((acc, c) => acc + (c.approved || 0), 0) : 0;
+  const clientPrinted = Array.isArray(clients) ? clients.reduce((acc, c) => acc + (c.downloaded || c.download || 0), 0) : 0;
+  const clientDeleted = Array.isArray(clients) ? clients.reduce((acc, c) => acc + (c.pool || c.deleted || 0), 0) : 0;
+
+  // Pre-calculate reprint requests
+  const repList = reprintClients.length ? reprintClients : clients;
+  const repReprint = Array.isArray(repList) ? repList.reduce((acc, c) => acc + (c.reprint || c.reprinting || 0), 0) : 0;
+  const repRequested = Array.isArray(repList) ? repList.reduce((acc, c) => acc + (c.request || c.requested || c.reprint_pending || 0), 0) : 0;
+  const repConfirmed = Array.isArray(repList) ? repList.reduce((acc, c) => acc + (c.confirm || c.confirmed || 0), 0) : 0;
+  const repTotal = repReprint + repRequested + repConfirmed;
 
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(9, 1fr)',
+        gridTemplateColumns: gridColumns,
         gap: 0,
         background: '#fff',
         borderBottom: '1px solid #cbd5e1',
         flexShrink: 0,
       }}
     >
-      {STAT_CARDS_DEF.map(({ key, statusNav, label, defaultVal, bg, Icon }, idx) => {
-        let clientSum = null;
-        if (Array.isArray(clients) && clients.length > 0) {
-          if (key === 'pending_cards') clientSum = clients.reduce((acc, c) => acc + (c.pending || 0), 0);
-          else if (key === 'verified_cards') clientSum = clients.reduce((acc, c) => acc + (c.verified || 0), 0);
-          else if (key === 'approved_cards') clientSum = clients.reduce((acc, c) => acc + (c.approved || 0), 0);
-          else if (key === 'printed_cards') clientSum = clients.reduce((acc, c) => acc + (c.downloaded || c.download || 0), 0);
-          else if (key === 'deleted_cards') clientSum = clients.reduce((acc, c) => acc + (c.pool || c.deleted || 0), 0);
-          else if (key === 'reprinting_cards') clientSum = clients.reduce((acc, c) => acc + (c.reprint || c.reprinting || 0), 0);
-          else if (key === 'requested_cards') clientSum = clients.reduce((acc, c) => acc + (c.request || c.requested || 0), 0);
-          else if (key === 'confirmed_cards') clientSum = clients.reduce((acc, c) => acc + (c.confirm || c.confirmed || 0), 0);
-          else if (key === 'total_id_cards') {
-            clientSum = clients.reduce(
-              (acc, c) =>
-                acc +
-                (c.pending || 0) +
-                (c.verified || 0) +
-                (c.approved || 0) +
-                (c.downloaded || c.download || 0) +
-                (c.pool || c.deleted || 0) +
-                (c.reprint || c.reprinting || 0) +
-                (c.request || c.requested || 0) +
-                (c.confirm || c.confirmed || 0),
-              0
-            );
+      {cardsDef.map(({ key, statusNav, label, defaultVal, bg, Icon }, idx) => {
+        let val = defaultVal;
+
+        if (activeSection === 'reprints') {
+          if (key === 'reprinting_cards') {
+            const apiVal = stats?.reprinting_cards ?? stats?.reprint_cards ?? stats?.reprint ?? stats?.reprinting;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (repReprint || apiVal || defaultVal);
+          } else if (key === 'requested_cards') {
+            const apiVal = stats?.requested_cards ?? stats?.request_cards ?? stats?.requested ?? stats?.request;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (repRequested || apiVal || defaultVal);
+          } else if (key === 'confirmed_cards') {
+            const apiVal = stats?.confirmed_cards ?? stats?.confirm_cards ?? stats?.confirmed ?? stats?.confirm;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (repConfirmed || apiVal || defaultVal);
+          } else if (key === 'total_requests') {
+            val = repTotal;
+          }
+        } else if (activeSection === 'updates') {
+          if (key === 'live_working_users') {
+            val = stats?.live_working_users ?? stats?.live_users_count ?? defaultVal;
+          } else if (key === 'live_working_phone') {
+            val = stats?.live_working_phone ?? defaultVal;
+          } else if (key === 'live_working_desktop') {
+            val = stats?.live_working_desktop ?? defaultVal;
+          } else if (key === 'total_desktop_active') {
+            val = stats?.desktop_active_users ?? stats?.desktop_active ?? stats?.desktop ?? defaultVal;
+          } else if (key === 'total_mobile_active') {
+            val = stats?.mobile_active_users ?? stats?.mobile_active ?? stats?.mobile ?? defaultVal;
+          } else if (key === 'total_never_active') {
+            val = stats?.never_active_users ?? stats?.never_active ?? defaultVal;
+          }
+        } else {
+          // 'clients' / Recent Approved
+          if (key === 'pending_cards') {
+            const apiVal = stats?.pending_cards ?? stats?.pending;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientPending || apiVal || defaultVal);
+          } else if (key === 'verified_cards') {
+            const apiVal = stats?.verified_cards ?? stats?.verified;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientVerified || apiVal || defaultVal);
+          } else if (key === 'approved_cards') {
+            const apiVal = stats?.approved_cards ?? stats?.approved;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientApproved || apiVal || defaultVal);
+          } else if (key === 'printed_cards') {
+            const apiVal = stats?.download_cards ?? stats?.downloaded ?? stats?.download ?? stats?.printed;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientPrinted || apiVal || defaultVal);
+          } else if (key === 'deleted_cards') {
+            const apiVal = stats?.pool_cards ?? stats?.pool ?? stats?.deleted;
+            val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientDeleted || apiVal || defaultVal);
+          } else if (key === 'total_id_cards') {
+            const sumCards = clientPending + clientVerified + clientApproved + clientPrinted + clientDeleted;
+            const apiVal = stats?.total_id_cards ?? stats?.total;
+            val = sumCards > 0 ? sumCards : (apiVal ?? defaultVal);
           }
         }
 
-        const apiVal =
-          stats?.[key] ??
-          stats?.[key.replace('_cards', '')] ??
-          (key === 'printed_cards'
-            ? (stats?.download_cards ?? stats?.downloaded ?? stats?.download)
-            : key === 'deleted_cards'
-              ? (stats?.pool_cards ?? stats?.pool)
-              : key === 'reprinting_cards'
-                ? (stats?.reprinting_cards ?? stats?.reprint_cards ?? stats?.reprint ?? stats?.reprinting)
-                : key === 'requested_cards'
-                  ? (stats?.requested_cards ?? stats?.request_cards ?? stats?.requested ?? stats?.request)
-                  : key === 'confirmed_cards'
-                    ? (stats?.confirmed_cards ?? stats?.confirm_cards ?? stats?.confirmed ?? stats?.confirm)
-                    : undefined);
-
-        const val = apiVal !== undefined && apiVal > 0 ? apiVal : (clientSum !== null ? clientSum : (apiVal ?? defaultVal));
-        const isLast = idx === STAT_CARDS_DEF.length - 1;
+        const isLast = idx === cardsDef.length - 1;
+        const isClickable = Boolean(statusNav);
 
         return (
           <button
             key={key}
-            onClick={() => onNavigate('cards', { statusFilter: statusNav })}
+            onClick={() => {
+              if (isClickable) {
+                onNavigate('cards', { statusFilter: statusNav });
+              }
+            }}
             className="stat-card-glass"
             style={{
-              padding: '6px 6px',
-              height: '44px',
+              padding: '6px 12px',
+              height: '56px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               background: '#fff',
               border: 'none',
               borderRight: isLast ? 'none' : '1px solid #cbd5e1',
-              cursor: 'pointer',
+              cursor: isClickable ? 'pointer' : 'default',
               textAlign: 'left',
               boxSizing: 'border-box',
               minWidth: 0,
-              gap: '6px',
+              gap: '8px',
+              transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
+            onMouseEnter={(e) => {
+              if (isClickable) e.currentTarget.style.background = '#f8fafc';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#fff';
+            }}
           >
             <div style={{ minWidth: 0, overflow: 'hidden' }}>
               <div
                 style={{
-                  fontSize: '16px',
+                  fontSize: '18px',
                   fontWeight: 700,
                   color: '#0f172a',
-                  lineHeight: 1.1,
+                  lineHeight: 1.15,
                   fontFamily: 'var(--font-family)',
                   whiteSpace: 'nowrap',
                 }}
               >
-                {loading && !stats ? '—' : val.toLocaleString()}
+                {loading && !stats ? '—' : (typeof val === 'number' ? val.toLocaleString() : val)}
               </div>
               <div
                 style={{
-                  fontSize: '9.5px',
+                  fontSize: '10.5px',
                   fontWeight: 600,
                   color: '#64748b',
-                  marginTop: '2px',
+                  marginTop: '3px',
                   fontFamily: 'var(--font-family)',
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
@@ -228,9 +294,9 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
 
             <div
               style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
+                width: '34px',
+                height: '34px',
+                borderRadius: '7px',
                 background: bg,
                 color: '#fff',
                 display: 'flex',
@@ -240,7 +306,7 @@ function StatCardsRow({ stats, clients = [], loading, onNavigate, userRole = 'su
                 marginLeft: '4px',
               }}
             >
-              <Icon size={14} />
+              <Icon size={16} />
             </div>
           </button>
         );
@@ -336,8 +402,8 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
   });
 
   const renderSortIcon = (key) => {
-    if (sortKey !== key) return ' ⇕';
-    return sortDir === 'desc' ? ' ⬇' : ' ⬆';
+    if (sortKey !== key) return ' ⇅';
+    return sortDir === 'desc' ? ' ↓' : ' ↑';
   };
 
   return (
@@ -378,11 +444,11 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                   gap: '6px',
                 }}
               >
-                <span style={{ color: '#ffffff', fontWeight: 700 }}>ORGANISATION</span>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '190px' }}>
+                <span style={{ color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap' }}>ORGANISATION</span>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '280px', maxWidth: '320px' }}>
                   <Search
                     size={12}
-                    style={{ position: 'absolute', left: '6px', color: '#94a3b8', pointerEvents: 'none' }}
+                    style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }}
                   />
                   <input
                     type="text"
@@ -959,9 +1025,9 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '6px' }}>
-                <span style={{ color: '#ffffff', fontWeight: 700 }}>TABLE NAME</span>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '190px' }}>
-                  <Search size={12} style={{ position: 'absolute', left: '6px', color: '#94a3b8', pointerEvents: 'none' }} />
+                <span style={{ color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap' }}>TABLE NAME</span>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '280px', maxWidth: '320px' }}>
+                  <Search size={12} style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }} />
                   <input
                     type="text"
                     value={search}
@@ -1097,14 +1163,17 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
 /* ─────────────────────────────────────────────────────────────────────────
    Recent Reprints Table Sub-Component (Matches original recent-reprints.html)
 ───────────────────────────────────────────────────────────────────────── */
-function RecentReprintsTable({ clients, onNavigate, search }) {
+function RecentReprintsTable({ clients, onNavigate, search, setSearch }) {
   const [expandedRows, setExpandedRows] = useState({});
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
+  const [localSearch, setLocalSearch] = useState('');
+  const searchTerm = search !== undefined ? search : localSearch;
+  const setSearchTerm = setSearch || setLocalSearch;
 
   const displayList = clients || [];
   const rows = displayList.filter(
-    (c) => !search || (c.name || c.school_name || '').toLowerCase().includes(search.toLowerCase())
+    (c) => !searchTerm || (c.name || c.school_name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSort = (key) => {
@@ -1140,69 +1209,122 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
   };
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-        <thead style={{ position: 'sticky', top: 0, background: '#2d3748', color: '#fff', zIndex: 2 }}>
-          <tr>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+      <WatermarkLogo />
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', position: 'relative', zIndex: 1 }}>
+        <thead style={{ position: 'sticky', top: 0, background: '#1e293b', color: '#ffffff', zIndex: 2 }}>
+          <tr style={{ height: '38px', minHeight: '38px' }}>
             <th
               style={{
-                padding: '7px 10px',
+                padding: '6px 10px',
                 textAlign: 'left',
                 fontWeight: 700,
                 width: '46%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
-                borderRight: '1px solid #4a5568',
+                borderRight: '1px solid #334155',
+                height: '38px',
+                boxSizing: 'border-box',
               }}
             >
-              CLIENT
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '10px' }}>
+                <span style={{ color: '#ffffff', fontWeight: 700, whiteSpace: 'nowrap' }}>ORGANISATION</span>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '280px', maxWidth: '320px' }}>
+                  <Search size={12} style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search organisation..."
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      width: '100%',
+                      height: '26px',
+                      paddingLeft: '26px',
+                      paddingRight: searchTerm ? '22px' : '6px',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      borderRadius: '4px',
+                      border: '1px solid #475569',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchTerm('');
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: '6px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#94a3b8',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title="Clear search"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </th>
             <th
               onClick={() => handleSort('reprint')}
               style={{
-                padding: '7px 8px',
+                padding: '6px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '18%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
-                borderRight: '1px solid #4a5568',
+                borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
               }}
             >
-              REPRINTING LIST{renderSortIcon('reprint')}
+              REPRINTING{renderSortIcon('reprint')}
             </th>
             <th
               onClick={() => handleSort('reprint_pending')}
               style={{
-                padding: '7px 8px',
+                padding: '6px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '18%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
-                borderRight: '1px solid #4a5568',
+                borderRight: '1px solid #334155',
                 cursor: 'pointer',
                 userSelect: 'none',
               }}
             >
-              REQUESTED LIST{renderSortIcon('reprint_pending')}
+              REQUESTED{renderSortIcon('reprint_pending')}
             </th>
             <th
               onClick={() => handleSort('reprint_confirmed')}
               style={{
-                padding: '7px 8px',
+                padding: '6px 8px',
                 textAlign: 'center',
                 fontWeight: 700,
                 width: '18%',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 letterSpacing: '0.04em',
                 cursor: 'pointer',
                 userSelect: 'none',
               }}
             >
-              CONFIRMED LIST{renderSortIcon('reprint_confirmed')}
+              CONFIRMED{renderSortIcon('reprint_confirmed')}
             </th>
           </tr>
         </thead>
@@ -1390,36 +1512,155 @@ function RecentReprintsTable({ clients, onNavigate, search }) {
 /* ─────────────────────────────────────────────────────────────────────────
    Recent Activity Updates List Sub-Component (Matches original recent-activity.html)
 ───────────────────────────────────────────────────────────────────────── */
-function RecentActivityUpdatesTable({ activities = [], search, loading }) {
+function RecentActivityUpdatesTable({ activities = [], search, setSearch, loading }) {
+  const [localSearch, setLocalSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const searchTerm = search !== undefined ? search : localSearch;
+  const setSearchTerm = setSearch || setLocalSearch;
+
   const items = (activities || []).filter((a) => {
     const userStr = a.user || a.username || a.performed_by || '';
     const actStr = a.action || a.description || a.message || a.details || '';
-    return (
-      !search ||
-      userStr.toLowerCase().includes(search.toLowerCase()) ||
-      actStr.toLowerCase().includes(search.toLowerCase())
-    );
+    const searchMatch =
+      !searchTerm ||
+      userStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      actStr.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!searchMatch) return false;
+
+    if (activeFilter === 'all') return true;
+    const actLower = actStr.toLowerCase();
+    if (activeFilter === 'approved') return actLower.includes('approve');
+    if (activeFilter === 'verified') return actLower.includes('verify');
+    if (activeFilter === 'download') return actLower.includes('download') || actLower.includes('print');
+    if (activeFilter === 'reprint') return actLower.includes('reprint');
+    if (activeFilter === 'user') return actLower.includes('user') || actLower.includes('login') || actLower.includes('role') || actLower.includes('auth') || actLower.includes('password');
+    return true;
   });
 
-  if (loading && items.length === 0) {
-    return (
-      <div style={{ flex: 1, padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
-        Loading recent activities...
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div style={{ flex: 1, padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
-        No recent activities recorded.
-      </div>
-    );
-  }
-
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px', background: '#fff' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative' }}>
+      <WatermarkLogo />
+      {/* Sticky Header with Search Bar and Filter Buttons */}
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          background: '#1e293b',
+          color: '#ffffff',
+          height: '38px',
+          minHeight: '38px',
+          padding: '0 10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #334155',
+          boxSizing: 'border-box',
+          zIndex: 3,
+          flexShrink: 0,
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: '11.5px', fontWeight: 700, letterSpacing: '0.04em', color: '#ffffff', whiteSpace: 'nowrap' }}>
+            RECENT UPDATES
+          </span>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '280px', maxWidth: '320px' }}>
+            <Search size={12} style={{ position: 'absolute', left: '8px', color: '#94a3b8', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search user, action, or event..."
+              style={{
+                width: '100%',
+                height: '26px',
+                paddingLeft: '26px',
+                paddingRight: searchTerm ? '22px' : '6px',
+                fontSize: '11px',
+                fontWeight: 500,
+                borderRadius: '4px',
+                border: '1px solid #475569',
+                background: '#0f172a',
+                color: '#ffffff',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                style={{
+                  position: 'absolute',
+                  right: '6px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Clear search"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Filter Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'approved', label: 'Approved' },
+            { id: 'verified', label: 'Verified' },
+            { id: 'download', label: 'Printed' },
+            { id: 'reprint', label: 'Reprints' },
+            { id: 'user', label: 'Users' },
+          ].map(({ id, label }) => {
+            const isActive = activeFilter === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveFilter(id)}
+                style={{
+                  height: '24px',
+                  padding: '0 8px',
+                  borderRadius: '4px',
+                  border: isActive ? '1px solid #2563eb' : '1px solid rgba(255, 255, 255, 0.12)',
+                  background: isActive ? '#2563eb' : 'rgba(255, 255, 255, 0.06)',
+                  color: isActive ? '#ffffff' : '#cbd5e1',
+                  fontSize: '11px',
+                  fontWeight: isActive ? 700 : 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  transition: 'all 0.15s',
+                  boxShadow: isActive ? '0 1px 3px rgba(37, 99, 235, 0.4)' : 'none',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px 12px' }}>
+        {loading && items.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+            Loading recent activities...
+          </div>
+        ) : items.length === 0 ? (
+          <div style={{ padding: '30px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>
+            No recent activities recorded.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.map((a, idx) => {
           const user = a.user || a.username || a.performed_by || 'System';
           const actionText = a.action || a.description || a.message || a.details || 'Activity log';
@@ -1492,9 +1733,11 @@ function RecentActivityUpdatesTable({ activities = [], search, loading }) {
             </div>
           );
         })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -2029,8 +2272,16 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
 
       style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#f8fafc' }}
     >
-      {/* 1. 7 Stat Cards Row with Daily Growth Indicators */}
-      <StatCardsRow stats={stats} clients={clients} loading={loading} onNavigate={onNavigate} userRole={currentUser?.role || userRole} />
+      {/* 1. Dynamic Stat Cards Row synchronized with active section */}
+      <StatCardsRow
+        stats={stats}
+        clients={clients}
+        reprintClients={reprintClients}
+        loading={loading}
+        onNavigate={onNavigate}
+        userRole={currentUser?.role || userRole}
+        activeSection={activeSection}
+      />
 
       {/* 3. Main Dashboard Body: Dynamic Left Section + Right Stacked Panels */}
       <div
@@ -2082,11 +2333,12 @@ export default function DashboardView({ onNavigate, currentUser, onOpenActionDra
               clients={reprintClients.length ? reprintClients : clients}
               onNavigate={onNavigate}
               search={search}
+              setSearch={setSearch}
             />
           )}
 
           {activeSection === 'updates' && (
-            <RecentActivityUpdatesTable activities={activities} search={search} loading={loading} />
+            <RecentActivityUpdatesTable activities={activities} search={search} setSearch={setSearch} loading={loading} />
           )}
         </div>
 

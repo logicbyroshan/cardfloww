@@ -39,6 +39,8 @@ import {
 import { BarChart, Bar, Cell, ResponsiveContainer } from 'recharts';
 import WatermarkLogo from '../common/WatermarkLogo';
 import CustomSelect from '../common/CustomSelect';
+import Button from '../common/Button';
+import Input from '../common/Input';
 import BulkTransactionsModal from '../idcard/BulkTransactionsModal';
 import { panelApi, auditApi } from '../../services/api';
 
@@ -124,6 +126,18 @@ function NotificationsTab({ addToast }) {
     }
   };
 
+  const handleDeleteNotif = async (notifId) => {
+    try {
+      if (panelApi.deleteNotification) {
+        await panelApi.deleteNotification(notifId);
+      }
+      setNotifs((prev) => prev.filter((n) => n.id !== notifId));
+      addToast?.('Notification removed', 'success');
+    } catch {
+      addToast?.('Failed to delete notification', 'error');
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -180,39 +194,25 @@ function NotificationsTab({ addToast }) {
           className="notif-actions-left"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}
         >
-          <div className="notif-search-box" style={{ width: '220px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notifications..." />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <button
-            className="btn btn-sm btn-danger"
-            onClick={() => addToast?.('Maintenance mode modal opened', 'warning')}
-          >
-            <AlertCircle size={12} color="#ffffff" /> Enable Maintenance
-          </button>
-          <button
-            className="btn btn-sm btn-primary"
+          <Input
+            size="sm"
+            variant="light"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search notifications..."
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '220px' }}
+          />
+          <Button
+            size="sm"
+            variant="primary"
             onClick={() => setShowCreateModal(true)}
+            icon={<Plus size={12} />}
           >
-            <Plus size={12} color="#ffffff" /> New Notification
-          </button>
+            New Notification
+          </Button>
         </div>
         <div
           className="notif-actions-right"
@@ -845,31 +845,17 @@ function EmailLogsTab({ addToast }) {
           className="notif-actions-left"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}
         >
-          <div className="notif-search-box" style={{ width: '220px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search recipient, email, subject..."
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          <Input
+            size="sm"
+            variant="light"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search recipient, email, subject..."
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '240px' }}
+          />
           <CustomSelect
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
@@ -1507,31 +1493,17 @@ function LogHistoryTab({ addToast }) {
             </button>
           </div>
 
-          <div className="notif-search-box" style={{ width: '240px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={viewMode === 'transactions' ? "Search batch code, actor..." : "Search users, updates, logs..."}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          <Input
+            size="sm"
+            variant="light"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder={viewMode === 'transactions' ? "Search batch code, actor..." : "Search users, updates, logs..."}
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '240px' }}
+          />
 
           {viewMode === 'system' && (
             <>
@@ -1895,31 +1867,17 @@ function BackupsTab({ addToast }) {
           className="notif-actions-left"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}
         >
-          <div className="notif-search-box" style={{ width: '220px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search backup ID, school, file, status..."
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          <Input
+            size="sm"
+            variant="light"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search backup ID, school, file, status..."
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '240px' }}
+          />
           <CustomSelect
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
@@ -2206,31 +2164,17 @@ function DownloadTemplatesTab({ addToast }) {
           className="notif-actions-left"
           style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}
         >
-          <div className="notif-search-box" style={{ width: '280px' }}>
-            <Search size={13} style={{ color: '#9ca3af', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search template name, footer text, or style..."
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
+          <Input
+            size="sm"
+            variant="light"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search template name, footer text, or style..."
+            icon={<Search size={13} />}
+            clearable
+            style={{ width: '280px' }}
+          />
         </div>
         <div className="notif-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button className="btn btn-sm btn-primary" onClick={() => addToast?.('Create template modal opened', 'info')}>
@@ -3183,17 +3127,48 @@ export default function ManagePanelView({ addToast }) {
           flexShrink: 0,
         }}
       >
-        <div className="status-tabs">
-          {PANEL_TABS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              className={`status-tab${activeTab === id ? ' active' : ''}`}
-              data-tab={id}
-              onClick={() => setActiveTab(id)}
-            >
-              <Icon size={13} /> {label}
-            </button>
-          ))}
+        <div
+          className="status-tabs"
+          style={{
+            height: '34px',
+            background: 'rgba(255, 255, 255, 0.06)',
+            borderRadius: '6px',
+            padding: '3px',
+            gap: '4px',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}
+        >
+          {PANEL_TABS.map(({ id, label, Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                className={`status-tab${isActive ? ' active' : ''}`}
+                data-tab={id}
+                onClick={() => setActiveTab(id)}
+                style={{
+                  background: isActive ? '#2563eb' : 'transparent',
+                  color: isActive ? '#ffffff' : '#cbd5e1',
+                  fontWeight: isActive ? 700 : 600,
+                  boxShadow: isActive ? '0 1px 4px rgba(37, 99, 235, 0.4)' : 'none',
+                  height: '28px',
+                  padding: '0 14px',
+                  borderRadius: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  border: 'none',
+                  transition: 'all 0.15s ease-in-out',
+                }}
+              >
+                <Icon size={13} color={isActive ? '#ffffff' : '#cbd5e1'} /> {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

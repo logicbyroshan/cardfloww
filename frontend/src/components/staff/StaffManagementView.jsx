@@ -15,6 +15,8 @@ import {
 
 import WatermarkLogo from '../common/WatermarkLogo';
 import { SkeletonTableRows } from '../common/Skeleton';
+import Button from '../common/Button';
+import Input from '../common/Input';
 import { operatorApi, assistantApi, photographerApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS } from '../../utils/constants';
@@ -109,7 +111,7 @@ export default function StaffManagementView({
         },
       })
     );
-  }, [staffList.length, selected, isAssistant, isPhotographer]);
+  }, [staffList, selected, isAssistant, isPhotographer]);
 
   const handleToggleStatus = async () => {
     if (!selected) return;
@@ -228,88 +230,46 @@ export default function StaffManagementView({
             style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.15)' }}
           />
 
-          <div
-            className="notif-search-box"
-            style={{
-              width: '200px',
-              height: '28px',
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              borderRadius: '5px',
-              padding: '0 8px',
-              display: 'flex',
-              alignItems: 'center',
-              boxSizing: 'border-box',
+          <Input
+            size="sm"
+            variant="dark"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
             }}
-          >
-            <Search size={12} style={{ color: '#94a3b8', flexShrink: 0, marginRight: '6px' }} />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder={`Search ${isAssistant ? 'assistants' : isPhotographer ? 'photographers' : 'operators'}...`}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#ffffff',
-                outline: 'none',
-                fontSize: '12px',
-                width: '100%',
-              }}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 2px',
-                }}
-                title="Clear search"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+            onClear={() => {
+              setSearch('');
+              setPage(1);
+            }}
+            placeholder={`Search ${isAssistant ? 'assistants' : isPhotographer ? 'photographers' : 'operators'}...`}
+            icon={<Search size={12} />}
+            clearable
+            style={{ width: '220px' }}
+          />
         </div>
 
         {/* Right */}
         <div className="action-bar-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="actions" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div className="btn-group" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                className="btn"
+              <Button
+                size="sm"
+                variant="primary"
+                icon={<Plus size={13} />}
                 onClick={() =>
                   onOpenActionDrawer?.(
                     isAssistant ? 'add-assistant' : isPhotographer ? 'add-photographer' : 'add-operator'
                   )
                 }
-                style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  height: '28px',
-                  padding: '0 10px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  borderRadius: '4px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                }}
               >
-                <Plus size={13} /> Add
-              </button>
-              <button
-                className="btn"
+                Add
+              </Button>
+              <Button
+                size="sm"
+                variant={selected ? 'primary' : 'neutral'}
                 disabled={!selected}
+                icon={<Pen size={13} />}
                 onClick={() =>
                   selStaff &&
                   onOpenActionDrawer?.(
@@ -317,93 +277,39 @@ export default function StaffManagementView({
                     selStaff
                   )
                 }
-                style={{
-                  background: selected ? '#2563eb' : 'rgba(255, 255, 255, 0.08)',
-                  color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
-                  border: selected ? '1px solid #2563eb' : '1px solid rgba(255, 255, 255, 0.15)',
-                  height: '28px',
-                  padding: '0 10px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  cursor: selected ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxSizing: 'border-box',
-                }}
               >
-                <Pen size={13} /> Edit
-              </button>
-              <button
-                className="btn"
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant={selected ? 'primary' : 'neutral'}
                 disabled={!selected}
+                icon={<Link size={13} />}
                 onClick={() =>
                   selStaff && onOpenActionDrawer?.(isAssistant ? 'assign-assistant' : 'assign-operator', selStaff)
                 }
                 title={isAssistant ? 'Assign Groups / Classes' : 'Assign Organisations'}
-                style={{
-                  background: selected ? '#0284c7' : 'rgba(255, 255, 255, 0.08)',
-                  color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
-                  border: selected ? '1px solid #0284c7' : '1px solid rgba(255, 255, 255, 0.15)',
-                  height: '28px',
-                  padding: '0 10px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  cursor: selected ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxSizing: 'border-box',
-                }}
               >
-                <Link size={13} /> Assign
-              </button>
-              <button
-                className="btn"
+                Assign
+              </Button>
+              <Button
+                size="sm"
+                variant={selected ? 'danger' : 'neutral'}
                 disabled={!selected}
+                icon={<Trash2 size={13} />}
                 onClick={handleDeleteStaff}
-                style={{
-                  background: selected ? '#ef4444' : 'rgba(255, 255, 255, 0.08)',
-                  color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
-                  border: selected ? '1px solid #ef4444' : '1px solid rgba(255, 255, 255, 0.15)',
-                  height: '28px',
-                  padding: '0 10px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  cursor: selected ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxSizing: 'border-box',
-                }}
               >
-                <Trash2 size={13} /> Delete
-              </button>
-              <button
-                className="btn"
+                Delete
+              </Button>
+              <Button
+                size="sm"
+                variant={selected ? 'warning' : 'neutral'}
                 disabled={!selected}
+                icon={<ToggleRight size={13} />}
                 onClick={handleToggleStatus}
-                style={{
-                  background: selected ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
-                  color: selected ? '#ffffff' : 'rgba(255, 255, 255, 0.45)',
-                  border: selected ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.15)',
-                  height: '28px',
-                  padding: '0 10px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  cursor: selected ? 'pointer' : 'not-allowed',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxSizing: 'border-box',
-                }}
               >
-                <ToggleRight size={13} /> Active
-              </button>
+                Active
+              </Button>
             </div>
           </div>
         </div>
@@ -599,25 +505,19 @@ export default function StaffManagementView({
               </p>
             </div>
             {!search && (
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={() =>
                   onOpenActionDrawer?.(
                     isAssistant ? 'add-assistant' : isPhotographer ? 'add-photographer' : 'add-operator'
                   )
                 }
-                className="btn btn-primary btn-sm"
-                style={{
-                  marginTop: '14px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11px',
-                  padding: '7px 16px',
-                  borderRadius: '5px',
-                }}
+                icon={<Plus size={14} />}
+                style={{ marginTop: '14px' }}
               >
-                <Plus size={14} /> Add First {isAssistant ? 'Assistant' : isPhotographer ? 'Photographer' : 'Operator'}
-              </button>
+                Add First {isAssistant ? 'Assistant' : isPhotographer ? 'Photographer' : 'Operator'}
+              </Button>
             )}
           </div>
         )}
