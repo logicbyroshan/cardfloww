@@ -137,22 +137,22 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Serial / Roll ────────────────────────────────────────────────────────
   if (/^sr\s*no|^s\s*no|^sl\s*no|^serial|^sno$|^slno$|^roll/.test(name)) {
-    return { width: '48px', minWidth: '48px', maxWidth: '48px', align: 'center' };
+    return { minWidth: '60px', width: '60px', align: 'center' };
   }
 
   // ── Blood Group ──────────────────────────────────────────────────────────
   if (/blo?o?d\s*gr|blo?o?d\s*gro?u?p|^bg$|^bgroup$|^bld\s*gr/.test(name)) {
-    return { width: '56px', minWidth: '56px', maxWidth: '56px', align: 'center' };
+    return { minWidth: '68px', width: '68px', align: 'center' };
   }
 
   // ── Class / Section / Div / House ───────────────────────────────────────
   if (/^class$|\bclass\b|^section$|\bsection\b|^sec$|^div$|^division$|^cls$/.test(name)) {
-    return { width: '68px', minWidth: '68px', maxWidth: '68px', align: 'center' };
+    return { minWidth: '68px', width: '68px', align: 'center' };
   }
 
   // ── Gender / Age / Short codes ────────────────────────────────────────────
   if (/^gender$|^sex$|^age$|^mode$/.test(name)) {
-    return { width: '56px', minWidth: '56px', maxWidth: '56px', align: 'center' };
+    return { minWidth: '60px', width: '60px', align: 'center' };
   }
 
   // ── Transport / Bus / Route / Stop / House ────────────────────────────────
@@ -162,7 +162,7 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Dates (DOB, DOJ, Date of Birth) ─────────────────────────────────────
   if (/d\.?\s*o\.?\s*b\.?|date\s*of\s*birth|birth\s*date|\bdate\b|\bdt\b/.test(name)) {
-    return { width: '88px', minWidth: '88px', maxWidth: '88px', align: 'center' };
+    return { minWidth: '88px', width: '88px', align: 'center' };
   }
 
   // ── Phone / Contact ──────────────────────────────────────────────────────
@@ -193,6 +193,15 @@ function getColumnSpec(fieldName, fieldType) {
 
   // ── Default fallback (divides remaining table space) ──────────────────────
   return { minWidth: '100px', align: 'left' };
+}
+
+function getHeaderMinWidth(fieldName, specMinWidth, specWidth) {
+  const baseMin = parseInt(specMinWidth || specWidth || '60', 10);
+  const words = String(fieldName || '').trim().split(/\s+/);
+  const longestWordLen = Math.max(...words.map((w) => w.length), 0);
+  // Estimate minimum pixels needed for longest single word + 16px padding so it never clips or truncates
+  const longestWordMin = Math.ceil(longestWordLen * 8.5) + 16;
+  return `${Math.max(baseMin, longestWordMin)}px`;
 }
 
 function Spinner({ size = 16 }) {
@@ -4068,6 +4077,11 @@ export default function IDCardActionsView({
 
                   {tableFields.map((f) => {
                     const spec = getColumnSpec(f.name, f.type);
+                    const effectiveMinWidth = getHeaderMinWidth(f.name, spec.minWidth, spec.width);
+                    const widthStyle = spec.isImage
+                      ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
+                      : { minWidth: effectiveMinWidth, width: spec.width || effectiveMinWidth };
+
                     return (
                       <th
                         key={f.name}
@@ -4078,15 +4092,14 @@ export default function IDCardActionsView({
                           letterSpacing: '0.03em',
                           fontSize: '11px',
                           fontWeight: 700,
-                          ...(spec.width
-                            ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
-                            : { minWidth: spec.minWidth }),
+                          ...widthStyle,
                           borderRight: '1px solid rgba(255,255,255,0.15)',
                           borderBottom: '1px solid rgba(255,255,255,0.15)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: 1.2,
+                          whiteSpace: 'normal',
+                          wordBreak: 'normal',
+                          overflowWrap: 'break-word',
+                          lineHeight: 1.15,
+                          verticalAlign: 'middle',
                         }}
                         title={f.name}
                       >
@@ -4376,18 +4389,15 @@ export default function IDCardActionsView({
                           const isUniqueCol = Boolean(f.is_unique || f.unique);
                           const isDuplicate = card.duplicate_fields?.includes(f.name) || (isUniqueCol && card.is_duplicate);
 
-                          // Semantic width rule: small columns (< 100px) expand to fixed 125px on edit; wide columns (>= 100px) keep natural width
-                          const baseWidthVal = parseInt(spec.width || spec.minWidth || '100', 10);
+                          // Semantic width rule: small columns (< 100px) expand to 125px on edit; wide columns keep natural width
+                          const effectiveMinWidth = getHeaderMinWidth(f.name, spec.minWidth, spec.width);
+                          const baseWidthVal = parseInt(effectiveMinWidth || '100', 10);
                           const isSmallCol = baseWidthVal < 100;
                           const cellWidthStyle = isEditing
                             ? isSmallCol
-                              ? { width: '125px', minWidth: '125px', maxWidth: '125px' }
-                              : spec.width
-                                ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
-                                : { minWidth: spec.minWidth }
-                            : spec.width
-                              ? { width: spec.width, minWidth: spec.minWidth, maxWidth: spec.maxWidth }
-                              : { minWidth: spec.minWidth };
+                              ? { width: '125px', minWidth: '125px' }
+                              : { minWidth: effectiveMinWidth, width: spec.width || effectiveMinWidth }
+                            : { minWidth: effectiveMinWidth, width: spec.width || effectiveMinWidth };
 
                           return (
                             <td
@@ -4427,7 +4437,9 @@ export default function IDCardActionsView({
                                     bottom: 0,
                                     zIndex: 10,
                                     display: 'flex',
-                                    alignItems: 'center',
+                                    alignItems: 'stretch',
+                                    width: '100%',
+                                    height: '100%',
                                     background: '#ffffff',
                                   }}
                                 >
@@ -4443,16 +4455,16 @@ export default function IDCardActionsView({
                                       }}
                                       style={{
                                         width: '100%',
-                                        height: '34px',
+                                        height: '100%',
                                         border: '2px solid #2563eb',
-                                        borderRadius: '2px',
-                                        padding: '2px 4px',
-                                        fontSize: '12px',
+                                        borderRadius: '0px',
+                                        padding: '4px 8px',
+                                        fontSize: '13px',
                                         fontWeight: 600,
                                         textTransform: 'uppercase',
                                         outline: 'none',
                                         background: '#ffffff',
-                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                                        boxShadow: 'inset 0 0 0 1px #2563eb',
                                         boxSizing: 'border-box',
                                         color: '#000000',
                                         fontFamily: 'inherit',
@@ -4481,16 +4493,16 @@ export default function IDCardActionsView({
                                       }}
                                       style={{
                                         width: '100%',
-                                        height: '34px',
+                                        height: '100%',
                                         border: '2px solid #2563eb',
-                                        borderRadius: '2px',
+                                        borderRadius: '0px',
                                         padding: '4px 8px',
-                                        fontSize: '12px',
+                                        fontSize: '13px',
                                         fontWeight: 500,
                                         textTransform: 'uppercase',
                                         outline: 'none',
                                         background: '#ffffff',
-                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                                        boxShadow: 'inset 0 0 0 1px #2563eb',
                                         boxSizing: 'border-box',
                                         color: '#000000',
                                         fontFamily: 'inherit',
