@@ -29,7 +29,6 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import Modal from '../common/Modal';
 import { TableDrawerForm } from '../settings/TableSettingsView';
-import BulkTransactionsModal from '../idcard/BulkTransactionsModal';
 import { cardApi, schemaApi, clientApi } from '../../services/api';
 
 
@@ -138,8 +137,6 @@ export default function CardTableView({
   const [editingTable, setEditingTable] = useState(null);
   const [settingModalTable, setSettingModalTable] = useState(null);
   const [groupId, setGroupId] = useState(1);
-  const [showBulkTxModal, setShowBulkTxModal] = useState(false);
-  const [focusTableForTx, setFocusTableForTx] = useState(null);
 
 
   /* Modal states for bulk actions */
@@ -399,22 +396,7 @@ export default function CardTableView({
                   {selectedTable && selectedTable.is_active === false ? 'Activate' : 'Active'}
                 </Button>
 
-                {/* 5. Transactions & History Button */}
-                <Button
-                  size="sm"
-                  variant={selectedTable ? 'primary' : 'neutral'}
-                  disabled={!selectedTable}
-                  onClick={() => {
-                    setFocusTableForTx(selectedTable);
-                    setShowBulkTxModal(true);
-                  }}
-                  title={!selectedTable ? 'Select a table row to view transactions' : `View Bulk Transactions & History for ${selectedTable.name}`}
-                  icon={<Layers size={13} />}
-                >
-                  Transactions
-                </Button>
-
-                {/* 6. Share / Table Delegation Button */}
+                {/* 5. Share / Table Delegation Button */}
                 {canShareTable && (
                   <Button
                     size="sm"
@@ -1068,20 +1050,6 @@ export default function CardTableView({
         <TableShareModal
           table={shareModalTable}
           onClose={() => setShareModalTable(null)}
-          addToast={addToast}
-        />
-      )}
-
-      {/* ── Bulk Transactions & History Modal ── */}
-      {showBulkTxModal && (
-        <BulkTransactionsModal
-          isOpen={showBulkTxModal}
-          onClose={() => {
-            setShowBulkTxModal(false);
-            setFocusTableForTx(null);
-          }}
-          tableId={focusTableForTx?.id}
-          tableName={focusTableForTx?.name || 'Table'}
           addToast={addToast}
         />
       )}
