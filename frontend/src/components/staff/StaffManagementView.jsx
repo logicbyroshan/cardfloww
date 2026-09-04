@@ -20,6 +20,7 @@ import Input from '../common/Input';
 import { operatorApi, assistantApi, photographerApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import { STATUS_TABS } from '../../utils/constants';
+import OrgActivityDrawer from '../organisation/OrgActivityDrawer';
 
 export default function StaffManagementView({
   addToast,
@@ -37,6 +38,7 @@ export default function StaffManagementView({
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(25);
+  const [drawerStaff, setDrawerStaff] = useState(null);
 
   const isAssistant = staffType === 'assistant';
   const isPhotographer = staffType === 'photographer';
@@ -433,9 +435,9 @@ export default function StaffManagementView({
                         className="client-history-trigger"
                         onClick={(e) => {
                           e.stopPropagation();
-                          addToast?.(`Log: ${name}`, 'info');
+                          setDrawerStaff(s);
                         }}
-                        title="View log"
+                        title="View staff activity log"
                         style={{
                           width: '22px',
                           height: '22px',
@@ -522,6 +524,14 @@ export default function StaffManagementView({
           </div>
         )}
       </div>
+
+      {/* Staff Activity & Audit Drawer */}
+      <OrgActivityDrawer
+        isOpen={Boolean(drawerStaff)}
+        onClose={() => setDrawerStaff(null)}
+        staff={drawerStaff}
+        addToast={addToast}
+      />
     </div>
   );
 }

@@ -14,12 +14,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { auditApi } from '../../services/api';
+import { auditApi, panelApi } from '../../services/api';
 import { formatDT } from '../../utils/formatters';
 import Input from '../common/Input';
 import Button from '../common/Button';
 
-export default function OrgActivityDrawer({ isOpen, onClose, org, addToast }) {
+export default function OrgActivityDrawer({ isOpen, onClose, org, staff, addToast }) {
   const [transactions, setTransactions] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -30,29 +30,61 @@ export default function OrgActivityDrawer({ isOpen, onClose, org, addToast }) {
   const [cardSearch, setCardSearch] = useState('');
   const [reversing, setReversing] = useState(false);
 
+  const isStaffMode = Boolean(staff);
   const orgId = org?.id;
   const orgName = org?.name || org?.school_name || `Org #${orgId || ''}`;
+  const staffName =
+    staff?.name ||
+    staff?.username ||
+    (staff?.first_name ? `${staff.first_name} ${staff.last_name || ''}`.trim() : '') ||
+    'Staff User';
+  const staffRole = staff?.role ? String(staff.role).replace(/_/g, ' ').toUpperCase() : 'STAFF';
 
   const fetchTransactions = useCallback(async () => {
-    if (!isOpen || !orgId) return;
+    if (!isOpen) return;
+    if (!isStaffMode && !orgId) return;
     setLoading(true);
     try {
-      const res = await auditApi.getTransactions({ client_id: orgId, org_id: orgId, limit: 100 });
-      if (res && res.success) {
-        setTransactions(res.transactions || []);
-        setTotalCount(res.total_count || 0);
+      if (isStaffMode) {
+        const queryTerm = staff?.username || staff?.name || staff?.email || '';
+        const res = await panelApi.getLogs({ search: queryTerm, limit: 100 });
+        if (res && res.logs) {
+          const mapped = (res.logs || []).map((l) => ({
+            id: l.id,
+            transaction_code: `LOG #${l.id}`,
+            action: l.action,
+            action_display: l.action_display || l.action || 'Activity',
+            user_name: l.user_name || staffName,
+            notes: l.description || l.target_name || '',
+            created_at: l.created_at,
+            status: 'completed',
+            ip_address: l.ip_address,
+            can_reverse: false,
+          }));
+          setTransactions(mapped);
+          setTotalCount(res.total ?? mapped.length);
+        } else {
+          setTransactions([]);
+          setTotalCount(0);
+        }
       } else {
-        setTransactions([]);
-        setTotalCount(0);
+        const res = await auditApi.getTransactions({ client_id: orgId, org_id: orgId, limit: 100 });
+        if (res && res.success) {
+          setTransactions(res.transactions || []);
+          setTotalCount(res.total_count || 0);
+        } else {
+          setTransactions([]);
+          setTotalCount(0);
+        }
       }
     } catch (err) {
-      console.error('Failed to load org transactions:', err);
+      console.error('Failed to load transactions/logs:', err);
       setTransactions([]);
       setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [isOpen, orgId]);
+  }, [isOpen, isStaffMode, orgId, staff, staffName]);
 
   useEffect(() => {
     fetchTransactions();
@@ -195,17 +227,40 @@ export default function OrgActivityDrawer({ isOpen, onClose, org, addToast }) {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '15px', color: '#ffffff' }}>
-                Activity & Transaction Log
+                {isStaffMode ? 'Staff Activity Log' : 'Activity & Transaction Log'}
               </div>
               <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
-                Organisation: <strong style={{ color: '#e2e8f0' }}>{orgName}</strong>
+                {isStaffMode ? (
+                  <>
+                    Staff: <strong style={{ color: '#e2e8f0' }}>{staffName}</strong>{' '}
+                    <span
+                      style={{
+                        fontSize: '9.5px',
+                        background: 'rgba(255,255,255,0.15)',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        marginLeft: '4px',
+                        fontWeight: 700,
+                        color: '#93c5fd',
+                      }}
+                    >
+                      {staffRole}
+                    </span>
+                  </>
+                ) : (
+                  <>Organisation: <strong style={{ color: '#e2e8f0' }}>{orgName}</strong></>
+                )}
               </p>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a
-              href={`${auditApi.exportAuditUrl()}?client_id=${orgId || ''}&org_id=${orgId || ''}`}
+              href={
+                isStaffMode
+                  ? `${auditApi.exportAuditUrl()}?user_id=${staff?.id || ''}&search=${encodeURIComponent(staffName)}`
+                  : `${auditApi.exportAuditUrl()}?client_id=${orgId || ''}&org_id=${orgId || ''}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -301,7 +356,7 @@ export default function OrgActivityDrawer({ isOpen, onClose, org, addToast }) {
           {loading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
               <RefreshCw size={20} className="spin-infinite" style={{ margin: '0 auto 8px', display: 'block' }} />
-              <span style={{ fontSize: '12px' }}>Loading organisation logs…</span>
+              <span style={{ fontSize: '12px' }}>Loading activity logs…</span>
             </div>
           ) : filteredTx.length === 0 ? (
             <div
@@ -318,7 +373,9 @@ export default function OrgActivityDrawer({ isOpen, onClose, org, addToast }) {
                 No Activity Records Found
               </h4>
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                {search ? `No transactions match "${search}"` : 'There are no batch transactions or audit entries recorded for this organisation yet.'}
+                {search
+                  ? `No records match "${search}"`
+                  : `There are no activity records recorded for this ${isStaffMode ? 'staff member' : 'organisation'} yet.`}
               </p>
             </div>
           ) : (
