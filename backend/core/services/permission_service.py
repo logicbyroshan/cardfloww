@@ -178,7 +178,9 @@ class PermissionService:
         'verified': 'perm_idcard_verified_list',
         'approved': 'perm_idcard_approved_list',
         'download': 'perm_idcard_download_list',
+        'printed': 'perm_idcard_download_list',
         'pool': 'perm_idcard_pool_list',
+        'deleted': 'perm_idcard_pool_list',
     }
 
     # Status → action-permission mapping (for status transitions)
@@ -187,7 +189,9 @@ class PermissionService:
         'verified': 'perm_idcard_verify',
         'approved': 'perm_idcard_approve',
         'download': 'perm_idcard_approve',
+        'printed': 'perm_idcard_approve',
         'pool': 'perm_idcard_delete',
+        'deleted': 'perm_idcard_delete',
     }
 
     # ==================== Role Checks ====================

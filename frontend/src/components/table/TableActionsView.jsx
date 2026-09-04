@@ -2697,14 +2697,17 @@ export default function IDCardActionsView({
     try {
       const data = await cardApi.getStatusCounts(effectiveTableId);
       const c = data?.counts || data?.status_counts || data || {};
+      const printedCount = (c.printed ?? c.printed_count) || (c.download ?? c.download_count) || 0;
+      const deletedCount = (c.deleted ?? c.deleted_count) || (c.pool ?? c.pool_count ?? c.pool_list) || 0;
+      const requestCount = (c.request ?? c.reprint_request ?? c.requested) || 0;
       setStatusCounts({
         pending: c.pending ?? c.pending_count ?? 0,
         verified: c.verified ?? c.verified_count ?? 0,
         approved: c.approved ?? c.approved_count ?? 0,
-        printed: c.printed ?? c.printed_count ?? c.download ?? c.download_count ?? 0,
-        deleted: c.deleted ?? c.deleted_count ?? c.pool ?? c.pool_count ?? c.pool_list ?? 0,
+        printed: printedCount,
+        deleted: deletedCount,
         reprint: c.reprint ?? c.reprint_count ?? c.reprinting ?? 0,
-        request: c.request ?? c.reprint_request ?? c.requested ?? 0,
+        request: requestCount,
         confirm: c.confirm ?? c.reprint_confirmed ?? c.confirmed ?? 0,
       });
     } catch (err) {
@@ -3863,8 +3866,8 @@ export default function IDCardActionsView({
               <X size={12} /> Clear
             </button>
           )}
-          {/* Datetime Range Filter — only for Download list */}
-          {status === 'download' && (
+          {/* Datetime Range Filter — only for Download / Printed list */}
+          {(status === 'download' || status === 'printed') && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>From</label>
               <input
@@ -4759,7 +4762,7 @@ export default function IDCardActionsView({
                               </>
                             )}
 
-                            {(status === 'pool' || status === 'request') && (
+                            {(status === 'pool' || status === 'deleted' || status === 'request') && (
                               <button
                                 onClick={() => applyStatusSingle(card, 'pending')}
                                 style={{

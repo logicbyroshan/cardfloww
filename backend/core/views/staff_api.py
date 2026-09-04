@@ -478,12 +478,14 @@ def api_staff_toggle_status(request, staff_id):
 def api_active_clients_list(request):
     """API endpoint to get list of active clients with rich details, counts, and search/status filters"""
     try:
-        from django.db.models import Count, Q
+        from django.db.models import Count, Q, F
         from django.utils.timezone import localtime
 
         qs = Organisation.objects.filter(is_guest=False).select_related('user').annotate(
             tables_cnt=Count('tables', filter=Q(tables__deleted_by_manager=False), distinct=True),
             assistants_cnt=Count('assistants', distinct=True),
+            managers_cnt=Count('managers', distinct=True),
+            owner_in_mgrs=Count('managers', filter=Q(managers__user=F('user')), distinct=True),
         )
 
         search = request.GET.get('search', '').strip()
@@ -526,6 +528,8 @@ def api_active_clients_list(request):
             username = (u.username or '').strip() if u else ''
             phone = (u.phone or '').strip() if u else ''
 
+            mgr_count = org.managers_cnt + (1 if org.user_id and getattr(org, 'owner_in_mgrs', 0) == 0 else 0)
+
             clients_data.append({
                 'id': org.id,
                 'organisation_id': org.id,
@@ -545,8 +549,8 @@ def api_active_clients_list(request):
                 'table_count': org.tables_cnt,
                 'assistants_count': org.assistants_cnt,
                 'assistant_count': org.assistants_cnt,
-                'managers_count': 1 if org.user_id else 0,
-                'manager_count': 1 if org.user_id else 0,
+                'managers_count': mgr_count,
+                'manager_count': mgr_count,
                 'created_at': localtime(org.created_at).isoformat() if org.created_at else None,
                 'updated_at': localtime(org.updated_at).isoformat() if org.updated_at else None,
             })
@@ -567,12 +571,14 @@ def api_active_clients_list(request):
 def api_all_clients_for_assignment(request):
     """API endpoint to get ALL clients (active + inactive) for staff assignment dropdown with rich info."""
     try:
-        from django.db.models import Count, Q
+        from django.db.models import Count, Q, F
         from django.utils.timezone import localtime
 
         qs = Organisation.objects.filter(is_guest=False).select_related('user').annotate(
             tables_cnt=Count('tables', filter=Q(tables__deleted_by_manager=False), distinct=True),
             assistants_cnt=Count('assistants', distinct=True),
+            managers_cnt=Count('managers', distinct=True),
+            owner_in_mgrs=Count('managers', filter=Q(managers__user=F('user')), distinct=True),
         ).order_by('name')
 
         clients_data = []
@@ -582,6 +588,8 @@ def api_all_clients_for_assignment(request):
             email = '' if raw_email.endswith('@noemail.local') else raw_email
             username = (u.username or '').strip() if u else ''
             phone = (u.phone or '').strip() if u else ''
+
+            mgr_count = org.managers_cnt + (1 if org.user_id and getattr(org, 'owner_in_mgrs', 0) == 0 else 0)
 
             clients_data.append({
                 'id': org.id,
@@ -597,8 +605,8 @@ def api_all_clients_for_assignment(request):
                 'table_count': org.tables_cnt,
                 'assistants_count': org.assistants_cnt,
                 'assistant_count': org.assistants_cnt,
-                'managers_count': 1 if org.user_id else 0,
-                'manager_count': 1 if org.user_id else 0,
+                'managers_count': mgr_count,
+                'manager_count': mgr_count,
                 'created_at': localtime(org.created_at).isoformat() if org.created_at else None,
                 'updated_at': localtime(org.updated_at).isoformat() if org.updated_at else None,
             })

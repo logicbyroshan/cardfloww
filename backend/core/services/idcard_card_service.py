@@ -496,7 +496,14 @@ class IDCardCardService(BaseService):
             )
 
             if status_filter and status_filter in cls.VALID_STATUSES:
-                cards_query = cards_query.filter(status=status_filter)
+                if status_filter in ('printed', 'download'):
+                    cards_query = cards_query.filter(status__in=['download', 'printed'])
+                elif status_filter in ('deleted', 'pool'):
+                    cards_query = cards_query.filter(status__in=['pool', 'deleted'])
+                elif status_filter in ('request', 'requested'):
+                    cards_query = cards_query.filter(status__in=['request', 'requested'])
+                else:
+                    cards_query = cards_query.filter(status=status_filter)
 
             # --- Server-side search ---
             if search:
@@ -621,9 +628,9 @@ class IDCardCardService(BaseService):
                 # Default: sr-asc — newest action first in destination list.
                 # Download/pool keep dedicated movement timestamps.
                 # Other statuses use status_changed_at with created_at fallback.
-                if status_filter == 'download':
+                if status_filter in ('download', 'printed'):
                     cards_query = cards_query.order_by('-downloaded_at', '-id')
-                elif status_filter == 'pool':
+                elif status_filter in ('pool', 'deleted'):
                     cards_query = cards_query.order_by('-deleted_at', '-id')
                 else:
                     cards_query = cards_query.annotate(
@@ -676,6 +683,18 @@ class IDCardCardService(BaseService):
             counts[item['status']] = item['count']
             counts['total'] += item['count']
 
+        printed_total = counts.get('download', 0) + counts.get('printed', 0)
+        counts['download'] = printed_total
+        counts['printed'] = printed_total
+
+        pool_total = counts.get('pool', 0) + counts.get('deleted', 0)
+        counts['pool'] = pool_total
+        counts['deleted'] = pool_total
+
+        request_total = counts.get('request', 0) + counts.get('requested', 0)
+        counts['request'] = request_total
+        counts['requested'] = request_total
+
         return counts
 
     @classmethod
@@ -691,7 +710,14 @@ class IDCardCardService(BaseService):
 
             cards_query = IDCard.objects.filter(table=table)
             if status_filter and status_filter in cls.VALID_STATUSES:
-                cards_query = cards_query.filter(status=status_filter)
+                if status_filter in ('download', 'printed'):
+                    cards_query = cards_query.filter(status__in=['download', 'printed'])
+                elif status_filter in ('pool', 'deleted'):
+                    cards_query = cards_query.filter(status__in=['pool', 'deleted'])
+                elif status_filter in ('request', 'requested'):
+                    cards_query = cards_query.filter(status__in=['request', 'requested'])
+                else:
+                    cards_query = cards_query.filter(status=status_filter)
 
             # Apply search filter
             if search:

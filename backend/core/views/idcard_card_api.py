@@ -397,8 +397,9 @@ def api_idcard_list(request, table_id):
             table,
         )
         scoped_counts = {
-            'pending': 0, 'verified': 0, 'pool': 0,
-            'approved': 0, 'download': 0, 'reprint': 0, 'total': 0,
+            'pending': 0, 'verified': 0, 'pool': 0, 'deleted': 0,
+            'approved': 0, 'download': 0, 'printed': 0, 'request': 0, 'requested': 0,
+            'reprint': 0, 'total': 0,
         }
         for row in scoped_cards_qs.order_by().values('status').annotate(count=Count('id')):
             st = row.get('status')
@@ -408,7 +409,23 @@ def api_idcard_list(request, table_id):
                 scoped_counts['total'] += ct
 
         if PermissionService.is_client_staff(request.user):
-            scoped_counts['pool'] = IDCard.objects.filter(table=table, status='pool').count()
+            scoped_counts['pool'] = IDCard.objects.filter(table=table, status__in=['pool', 'deleted']).count()
+            scoped_counts['deleted'] = scoped_counts['pool']
+
+        printed_total = scoped_counts.get('download', 0) + scoped_counts.get('printed', 0)
+        scoped_counts['download'] = printed_total
+        scoped_counts['printed'] = printed_total
+
+        pool_total = scoped_counts.get('pool', 0) + scoped_counts.get('deleted', 0)
+        # Note: if client_staff pool was set from count above, both pool and deleted have same total
+        scoped_counts['pool'] = max(scoped_counts.get('pool', 0), pool_total)
+        scoped_counts['deleted'] = scoped_counts['pool']
+
+        request_total = scoped_counts.get('request', 0) + scoped_counts.get('requested', 0)
+        scoped_counts['request'] = request_total
+        scoped_counts['requested'] = request_total
+
+        if PermissionService.is_client_staff(request.user):
             scoped_counts['total'] = (
                 scoped_counts.get('pending', 0)
                 + scoped_counts.get('verified', 0)
@@ -547,9 +564,9 @@ def api_idcard_cards_json(request, table_id):
         'created_at', 'updated_at', 'downloaded_at', 'deleted_at',
         'status_changed_at', 'modified_by',
     )
-    if status_filter == 'download':
+    if status_filter in ('download', 'printed'):
         qs = IDCard.objects.filter(table=table).only(*_only_fields).order_by('-downloaded_at', '-id')
-    elif status_filter == 'pool':
+    elif status_filter in ('pool', 'deleted'):
         qs = IDCard.objects.filter(table=table).only(*_only_fields).order_by('-deleted_at', '-id')
     else:
         qs = (
@@ -561,7 +578,14 @@ def api_idcard_cards_json(request, table_id):
         )
 
     if status_filter and status_filter in IDCardService.VALID_STATUSES:
-        qs = qs.filter(status=status_filter)
+        if status_filter in ('download', 'printed'):
+            qs = qs.filter(status__in=['download', 'printed'])
+        elif status_filter in ('pool', 'deleted'):
+            qs = qs.filter(status__in=['pool', 'deleted'])
+        elif status_filter in ('request', 'requested'):
+            qs = qs.filter(status__in=['request', 'requested'])
+        else:
+            qs = qs.filter(status=status_filter)
 
     qs = _apply_client_staff_row_scope(qs, request.user, table, status_filter=status_filter)
 
@@ -2184,8 +2208,12 @@ def api_table_status_counts(request, table_id):
                 'pending': 0,
                 'verified': 0,
                 'pool': 0,
+                'deleted': 0,
                 'approved': 0,
                 'download': 0,
+                'printed': 0,
+                'request': 0,
+                'requested': 0,
                 'reprint': 0,
                 'total': 0,
             }
@@ -2196,7 +2224,21 @@ def api_table_status_counts(request, table_id):
                     status_counts[st] = ct
                     status_counts['total'] += ct
 
-            status_counts['pool'] = IDCard.objects.filter(table=table, status='pool').count()
+            status_counts['pool'] = IDCard.objects.filter(table=table, status__in=['pool', 'deleted']).count()
+            status_counts['deleted'] = status_counts['pool']
+
+            printed_total = status_counts.get('download', 0) + status_counts.get('printed', 0)
+            status_counts['download'] = printed_total
+            status_counts['printed'] = printed_total
+
+            pool_total = status_counts.get('pool', 0) + status_counts.get('deleted', 0)
+            status_counts['pool'] = max(status_counts.get('pool', 0), pool_total)
+            status_counts['deleted'] = status_counts['pool']
+
+            request_total = status_counts.get('request', 0) + status_counts.get('requested', 0)
+            status_counts['request'] = request_total
+            status_counts['requested'] = request_total
+
             status_counts['total'] = (
                 status_counts.get('pending', 0)
                 + status_counts.get('verified', 0)
