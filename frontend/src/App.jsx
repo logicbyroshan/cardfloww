@@ -181,6 +181,17 @@ function MobileAppFallback({ onForceDesktop }) {
   );
 }
 
+function normalizeRouteStatus(status) {
+  if (!status) return 'pending';
+  const s = String(status).toLowerCase().trim();
+  if (s === 'download' || s === 'downloaded' || s === 'printed') return 'printed';
+  if (s === 'pool' || s === 'deleted') return 'deleted';
+  if (s === 'request' || s === 'requested') return 'request';
+  if (s === 'reprint' || s === 'reprinting') return 'reprint';
+  if (s === 'confirm' || s === 'confirmed') return 'confirm';
+  return s;
+}
+
 function parsePathToRoute(pathname) {
   const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
 
@@ -191,7 +202,7 @@ function parsePathToRoute(pathname) {
     const rawTid = orgTableMatch[2];
     const orgId = (rawOid && !isNaN(Number(rawOid))) ? Number(rawOid) : null;
     const tableId = (rawTid && rawTid !== '??' && !isNaN(Number(rawTid))) ? Number(rawTid) : 1;
-    const status = orgTableMatch[3] || 'pending';
+    const status = normalizeRouteStatus(orgTableMatch[3] || 'pending');
     return {
       tab: 'idcard-actions',
       idcardActionsState: { tableId, status, orgId },
@@ -216,7 +227,7 @@ function parsePathToRoute(pathname) {
   if (tableMatch) {
     const rawTid = tableMatch[1];
     const tableId = (rawTid && rawTid !== '??' && !isNaN(Number(rawTid))) ? Number(rawTid) : 1;
-    const status = tableMatch[2] || 'pending';
+    const status = normalizeRouteStatus(tableMatch[2] || 'pending');
     return {
       tab: 'idcard-actions',
       idcardActionsState: { tableId, status },
@@ -667,8 +678,9 @@ export default function App() {
                   onNavigate={(dest, params) => {
                     if (dest === 'idcard-actions' || (params && (params.tableId || params.table_id))) {
                       const tid = params?.tableId || params?.table_id || 1;
-                      const st = params?.status || params?.statusFilter || 'pending';
-                      setIdcardActionsState({ tableId: tid, status: st });
+                      const st = normalizeRouteStatus(params?.status || params?.statusFilter || 'pending');
+                      const orgId = params?.orgId || scopedClientId || scopedClientOrg?.id;
+                      setIdcardActionsState({ tableId: tid, status: st, orgId });
                       setActiveTab('idcard-actions');
                     } else if (dest === 'cards') {
                       setActiveTab('cards');
@@ -705,7 +717,8 @@ export default function App() {
                       if (orgId) setScopedClientId(orgId);
                       if (params.orgName) setScopedClientOrg({ id: orgId, name: params.orgName });
                       if (params.tableName) setActiveTableName(params.tableName);
-                      setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending', orgId });
+                      const st = normalizeRouteStatus(params.status || 'pending');
+                      setIdcardActionsState({ tableId: params.tableId, status: st, orgId });
                       setActiveTab('idcard-actions');
                     } else if (typeof tabOrObj === 'string') {
                       if (tabOrObj !== 'cards' && tabOrObj !== 'schema') {
@@ -893,7 +906,8 @@ export default function App() {
         onClose={() => setShowSearchModal(false)}
         onNavigate={(tab, params) => {
           if (tab === 'idcard-actions' && params) {
-            setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
+            const st = normalizeRouteStatus(params.status || 'pending');
+            setIdcardActionsState({ tableId: params.tableId, status: st });
             setActiveTab('idcard-actions');
           } else if (tab === 'cards' && params?.clientId) {
             setScopedClientId(params.clientId);

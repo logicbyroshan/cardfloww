@@ -564,7 +564,7 @@ def api_idcard_cards_json(request, table_id):
         'created_at', 'updated_at', 'downloaded_at', 'deleted_at',
         'status_changed_at', 'modified_by',
     )
-    if status_filter in ('download', 'printed'):
+    if status_filter in ('download', 'printed', 'downloaded'):
         qs = IDCard.objects.filter(table=table).only(*_only_fields).order_by('-downloaded_at', '-id')
     elif status_filter in ('pool', 'deleted'):
         qs = IDCard.objects.filter(table=table).only(*_only_fields).order_by('-deleted_at', '-id')
@@ -578,7 +578,7 @@ def api_idcard_cards_json(request, table_id):
         )
 
     if status_filter and status_filter in IDCardService.VALID_STATUSES:
-        if status_filter in ('download', 'printed'):
+        if status_filter in ('download', 'printed', 'downloaded'):
             qs = qs.filter(status__in=['download', 'printed'])
         elif status_filter in ('pool', 'deleted'):
             qs = qs.filter(status__in=['pool', 'deleted'])

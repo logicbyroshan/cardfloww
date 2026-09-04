@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class IDCardCardService(BaseService):
     """Service for individual ID Card operations."""
 
-    VALID_STATUSES = ['pending', 'verified', 'approved', 'printed', 'download', 'request', 'requested', 'deleted', 'pool', 'reprint']
+    VALID_STATUSES = ['pending', 'verified', 'approved', 'printed', 'download', 'downloaded', 'request', 'requested', 'deleted', 'pool', 'reprint']
 
     # Allowed status transitions: key = current status, value = list of valid target statuses
     VALID_TRANSITIONS = {
@@ -496,7 +496,7 @@ class IDCardCardService(BaseService):
             )
 
             if status_filter and status_filter in cls.VALID_STATUSES:
-                if status_filter in ('printed', 'download'):
+                if status_filter in ('printed', 'download', 'downloaded'):
                     cards_query = cards_query.filter(status__in=['download', 'printed'])
                 elif status_filter in ('deleted', 'pool'):
                     cards_query = cards_query.filter(status__in=['pool', 'deleted'])
@@ -628,7 +628,7 @@ class IDCardCardService(BaseService):
                 # Default: sr-asc — newest action first in destination list.
                 # Download/pool keep dedicated movement timestamps.
                 # Other statuses use status_changed_at with created_at fallback.
-                if status_filter in ('download', 'printed'):
+                if status_filter in ('download', 'printed', 'downloaded'):
                     cards_query = cards_query.order_by('-downloaded_at', '-id')
                 elif status_filter in ('pool', 'deleted'):
                     cards_query = cards_query.order_by('-deleted_at', '-id')
@@ -710,7 +710,7 @@ class IDCardCardService(BaseService):
 
             cards_query = IDCard.objects.filter(table=table)
             if status_filter and status_filter in cls.VALID_STATUSES:
-                if status_filter in ('download', 'printed'):
+                if status_filter in ('download', 'printed', 'downloaded'):
                     cards_query = cards_query.filter(status__in=['download', 'printed'])
                 elif status_filter in ('pool', 'deleted'):
                     cards_query = cards_query.filter(status__in=['pool', 'deleted'])

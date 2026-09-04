@@ -2449,6 +2449,19 @@ function DownloadDataModal({ table, tableId, status, cardCount, onClose, addToas
 
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 
+function normalizeCardStatus(raw) {
+  if (!raw) return 'pending';
+  const s = String(raw).toLowerCase().trim();
+  if (s === 'download' || s === 'downloaded' || s === 'printed' || s === 'print') return 'printed';
+  if (s === 'pool' || s === 'deleted' || s === 'trash') return 'deleted';
+  if (s === 'request' || s === 'requested') return 'request';
+  if (s === 'reprint' || s === 'reprinting') return 'reprint';
+  if (s === 'confirm' || s === 'confirmed') return 'confirm';
+  if (s === 'verify' || s === 'verified') return 'verified';
+  if (s === 'approve' || s === 'approved') return 'approved';
+  if (s === 'pend' || s === 'pending') return 'pending';
+  return s;
+}
 
 export default function IDCardActionsView({
   tableId,
@@ -2482,42 +2495,48 @@ export default function IDCardActionsView({
 
   /* ── Status & status counts ── */
   const [status, setStatus] = useState(() => {
-    if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(initialStatus)) {
+    const norm = normalizeCardStatus(initialStatus);
+    if (isAssistant && ['approved', 'printed', 'reprint', 'request', 'confirm'].includes(norm)) {
       return 'pending';
     }
-    return initialStatus || 'pending';
+    return norm;
   });
   const [statusCounts, setStatusCounts] = useState({ pending: 0, verified: 0, approved: 0, download: 0, pool: 0 });
 
   const prevInitialStatusRef = useRef(initialStatus);
   useEffect(() => {
-    if (initialStatus && initialStatus !== prevInitialStatusRef.current) {
-      prevInitialStatusRef.current = initialStatus;
-      setStatus(initialStatus);
+    if (initialStatus) {
+      const norm = normalizeCardStatus(initialStatus);
+      if (norm !== prevInitialStatusRef.current) {
+        prevInitialStatusRef.current = norm;
+        setStatus(norm);
+      }
     }
   }, [initialStatus]);
 
   const handleStatusTabSwitch = useCallback((newStatus) => {
-    setStatus(newStatus);
-    prevInitialStatusRef.current = newStatus;
-    if (tableId && newStatus) {
+    const norm = normalizeCardStatus(newStatus);
+    setStatus(norm);
+    prevInitialStatusRef.current = norm;
+    if (tableId && norm) {
       const orgId = table?.organisation_id || table?.client_id || scopedOrgId;
       const targetRoute = orgId
-        ? `/organisation/${orgId}/table/${tableId}/${newStatus}`
-        : `/table/${tableId}/${newStatus}`;
+        ? `/organisation/${orgId}/table/${tableId}/${norm}`
+        : `/table/${tableId}/${norm}`;
       if (typeof window !== 'undefined' && window.location.pathname !== targetRoute) {
         window.history.replaceState({}, document.title, targetRoute);
       }
     }
-    onStatusChange?.(newStatus);
+    onStatusChange?.(norm);
   }, [tableId, table?.organisation_id, table?.client_id, scopedOrgId, onStatusChange]);
 
   useEffect(() => {
     if (tableId && status) {
+      const norm = normalizeCardStatus(status);
       const orgId = table?.organisation_id || table?.client_id || scopedOrgId;
       const targetRoute = orgId
-        ? `/organisation/${orgId}/table/${tableId}/${status}`
-        : `/table/${tableId}/${status}`;
+        ? `/organisation/${orgId}/table/${tableId}/${norm}`
+        : `/table/${tableId}/${norm}`;
       if (typeof window !== 'undefined' && window.location.pathname !== targetRoute) {
         window.history.replaceState({}, document.title, targetRoute);
       }
@@ -2647,10 +2666,11 @@ export default function IDCardActionsView({
   /* ── Sync URL with effectiveTableId and active status ── */
   useEffect(() => {
     if (effectiveTableId && status) {
+      const norm = normalizeCardStatus(status);
       const orgId = table?.organisation_id || table?.client_id || scopedOrgId;
       const targetRoute = orgId
-        ? `/organisation/${orgId}/table/${effectiveTableId}/${status}`
-        : `/table/${effectiveTableId}/${status}`;
+        ? `/organisation/${orgId}/table/${effectiveTableId}/${norm}`
+        : `/table/${effectiveTableId}/${norm}`;
       if (typeof window !== 'undefined' && window.location.pathname !== targetRoute && (window.location.pathname.includes('/table/') || window.location.pathname.includes('/organisation/'))) {
         window.history.replaceState({}, document.title, targetRoute);
       }

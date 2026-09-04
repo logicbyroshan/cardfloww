@@ -365,7 +365,13 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
 
   const handleBadgeClick = (clientOrSubTable, statusKey) => {
     const tableId = clientOrSubTable.table_id || clientOrSubTable.tableId || clientOrSubTable.id || 1;
-    onNavigate('idcard-actions', { tableId: tableId, status: statusKey });
+    const targetStatus =
+      statusKey === 'deleted' || statusKey === 'pool'
+        ? 'deleted'
+        : statusKey === 'download' || statusKey === 'downloaded'
+        ? 'printed'
+        : statusKey;
+    onNavigate('idcard-actions', { tableId: tableId, status: targetStatus });
   };
 
   const handleSort = (key) => {
@@ -783,7 +789,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleBadgeClick(subTables[0] || c, 'downloaded');
+                        handleBadgeClick(subTables[0] || c, 'printed');
                       }}
                     />
                   </td>
@@ -794,7 +800,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                       entityId={`client_${clientId}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleBadgeClick(subTables[0] || c, 'pool');
+                        handleBadgeClick(subTables[0] || c, 'deleted');
                       }}
                     />
                   </td>
@@ -915,7 +921,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleBadgeClick(sub, 'downloaded');
+                              handleBadgeClick(sub, 'printed');
                             }}
                           />
                         </td>
@@ -927,7 +933,7 @@ function RecentClientUpdatesTable({ clients, allTables = [], loading, onNavigate
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleBadgeClick(sub, 'pool');
+                              handleBadgeClick(sub, 'deleted');
                             }}
                           />
                         </td>
@@ -992,7 +998,12 @@ function RecentTablesUpdatesTable({ tables = [], onNavigate, search, setSearch, 
   };
 
   const handleBadgeClick = (table, statusKey) => {
-    const targetStatus = statusKey === 'deleted' || statusKey === 'pool' ? 'deleted' : statusKey === 'download' ? 'printed' : statusKey;
+    const targetStatus =
+      statusKey === 'deleted' || statusKey === 'pool'
+        ? 'deleted'
+        : statusKey === 'download' || statusKey === 'downloaded'
+        ? 'printed'
+        : statusKey;
     onNavigate('cards', { tableId: table.id, status: targetStatus });
   };
 
