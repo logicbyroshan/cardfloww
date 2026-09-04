@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../services/api';
 import CustomSelect from './CustomSelect';
+import Button from './Button';
 
 export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addToast }) {
   const [step, setStep] = useState(1); // 1 | 2 | 3
@@ -54,7 +55,7 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
     if (!tableName) {
       const derived = selectedFile.name
         .replace(/\.[^/.]+$/, '')
-        .replace(/[_.\-]/g, ' ')
+        .replace(/[_.-]/g, ' ')
         .toUpperCase();
       setTableName(derived);
     }
@@ -212,11 +213,11 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
 
   return (
     <div className="center-modal-overlay">
-      <div className="center-modal-panel" style={{ width: '580px', height: 'auto', maxHeight: '90vh' }}>
+      <div className="center-modal-panel modal-lg" style={{ width: 'var(--modal-width-lg, 640px)', height: 'auto', maxHeight: '90vh' }}>
         {/* Header */}
         <div
           style={{
-            background: '#10b981',
+            background: '#1e293b',
             color: '#fff',
             height: '48px',
             minHeight: '48px',
@@ -622,80 +623,39 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
               <ArrowLeft size={14} /> Back
             </button>
           ) : (
-            <button
+            <Button
+              variant="secondary"
+              size="md"
               onClick={onClose}
-              style={{
-                padding: '8px 16px',
-                background: '#fff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '4px',
-                color: '#475569',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontSize: '12px',
-              }}
             >
               Cancel
-            </button>
+            </Button>
           )}
 
           <div style={{ display: 'flex', gap: '8px' }}>
             {step < 3 ? (
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={() => setStep(step + 1)}
                 disabled={!file || isAnalyzing}
-                style={{
-                  padding: '8px 18px',
-                  background: '#10b981',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
+                loading={isAnalyzing}
+                icon={<ArrowRight size={14} />}
+                iconPosition="end"
               >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Analyzing Document...
-                  </>
-                ) : (
-                  <>
-                    Next <ArrowRight size={14} />
-                  </>
-                )}
-              </button>
+                {isAnalyzing ? 'Analyzing Document...' : 'Next'}
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="success"
+                size="md"
                 onClick={handleSubmit}
                 disabled={isProcessing}
-                style={{
-                  padding: '8px 20px',
-                  background: '#10b981',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
+                loading={isProcessing}
+                icon={<Upload size={14} />}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Creating Table...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={14} /> Create Table & Import
-                  </>
-                )}
-              </button>
+                {isProcessing ? 'Creating Table...' : 'Create Table & Import'}
+              </Button>
             )}
           </div>
         </div>

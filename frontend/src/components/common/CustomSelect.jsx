@@ -10,9 +10,14 @@ export default function CustomSelect({
   style = {},
   className = '',
   id,
-  height = '28px',
+  size = 'sm',
+  height,
   dark = false,
 }) {
+  const isSmall = size === 'sm';
+  const effectiveHeight = style.height || height || (isSmall ? '28px' : '36px');
+  const fontSize = isSmall ? '11.5px' : '13px';
+  const borderRadius = isSmall ? '4px' : '6px';
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -49,14 +54,14 @@ export default function CustomSelect({
         onClick={() => setOpen((prev) => !prev)}
         style={{
           width: '100%',
-          height: style.height || height,
-          padding: '0 10px',
+          height: effectiveHeight,
+          padding: isSmall ? '0 8px' : '0 12px',
           border: open
             ? '1px solid #3b82f6'
             : dark
             ? '1px solid rgba(255, 255, 255, 0.18)'
             : '1px solid #cbd5e1',
-          borderRadius: dark ? '5px' : '6px',
+          borderRadius,
           background: disabled
             ? dark
               ? 'rgba(255, 255, 255, 0.04)'
@@ -64,7 +69,7 @@ export default function CustomSelect({
             : dark
             ? 'rgba(255, 255, 255, 0.08)'
             : '#ffffff',
-          fontSize: '11px',
+          fontSize,
           fontWeight: 600,
           color: selectedOpt
             ? dark

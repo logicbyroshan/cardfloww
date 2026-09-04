@@ -82,13 +82,14 @@ label {
 .notif-search-box input,
 .search-box input,
 .ui-search-box input,
-.action-bar input[type='text'] {
+.action-bar input[type='text'],
+.cf-input-wrapper input {
   border: none !important;
   background: transparent !important;
   outline: none !important;
   box-shadow: none !important;
   font-size: 12px !important;
-  color: #ffffff !important;
+  color: inherit !important;
   padding: 0 !important;
   margin: 0 !important;
   height: 100% !important;
@@ -99,7 +100,8 @@ label {
 .notif-search-box input::placeholder,
 .search-box input::placeholder,
 .ui-search-box input::placeholder,
-.action-bar input::placeholder {
+.action-bar input::placeholder,
+.cf-input-wrapper input::placeholder {
   color: #94a3b8 !important;
 }
 
@@ -387,6 +389,39 @@ label {
   /* Transitions */
   --transition-fast: 0.15s ease;
   --transition: 0.2s ease;
+
+  /* ── Consolidated Design Tokens ── */
+  --color-primary-brand: #2563eb;
+  --color-primary-brand-hover: #1d4ed8;
+  --color-primary-brand-active: #1e40af;
+  --color-primary-brand-subtle: #eff6ff;
+  --color-primary-brand-border: #bfdbfe;
+
+  --color-chrome-bg: #1e1e2e;
+  --color-chrome-surface: #1e293b;
+  --color-chrome-border: rgba(255, 255, 255, 0.12);
+  --color-chrome-input-bg: rgba(255, 255, 255, 0.08);
+
+  --control-height-sm: 28px;
+  --control-height-md: 36px;
+  --control-height-lg: 42px;
+
+  --control-font-size-sm: 11.5px;
+  --control-font-size-md: 13px;
+  --control-font-weight: 600;
+
+  --modal-width-sm: 440px;
+  --modal-width-md: 540px;
+  --modal-width-lg: 640px;
+  --modal-width-xl: 800px;
+
+  --table-header-bg: #1e293b;
+  --table-header-color: #ffffff;
+  --table-header-border: #334155;
+  --table-header-height: 38px;
+  --table-row-height: 38px;
+  --table-row-hover: #f8fafc;
+  --table-row-selected: #eff6ff;
 }
 
 /* ── Reset & Explicit Global Font Enforcement ── */
@@ -491,13 +526,13 @@ html {
   padding: 0 !important;
 }
 
-/* ── Standardized Center Modal Panel (600px Width x 500px Height) ── */
+/* ── Standardized Center Modal Panel System ── */
 .center-modal-panel,
 .center-modal-box {
   position: relative !important;
-  width: 600px !important;
+  width: var(--modal-width-md, 540px);
   max-width: 92vw !important;
-  height: 500px !important;
+  height: auto;
   max-height: 90vh !important;
   margin: auto !important;
   background: #ffffff !important;
@@ -510,6 +545,12 @@ html {
   overflow: hidden !important;
   animation: centerModalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
+
+.center-modal-panel.modal-sm { width: var(--modal-width-sm, 440px) !important; }
+.center-modal-panel.modal-md { width: var(--modal-width-md, 540px) !important; }
+.center-modal-panel.modal-lg { width: var(--modal-width-lg, 640px) !important; }
+.center-modal-panel.modal-xl { width: var(--modal-width-xl, 800px) !important; }
+
 
 @keyframes drawerSlideInRight {
   from {
@@ -3203,6 +3244,7 @@ table th:last-child {
 
 .status-tab.active,
 .idcard-status-tab.active {
+  background: #2563eb !important;
   border: none !important;
   color: #ffffff !important;
   font-weight: 700 !important;

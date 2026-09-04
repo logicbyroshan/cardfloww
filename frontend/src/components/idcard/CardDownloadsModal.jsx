@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import CustomSelect from '../common/CustomSelect';
+import Button from '../common/Button';
 import { exportApi } from '../../services/api';
 
 export default function CardDownloadsModal({
@@ -100,17 +101,17 @@ export default function CardDownloadsModal({
   return (
     <div className="center-modal-overlay">
       <div
-        className="center-modal-panel"
+        className="center-modal-panel modal-md"
         style={{
-          width: '580px',
+          width: 'var(--modal-width-md, 540px)',
           height: 'auto',
           maxHeight: '90vh',
           padding: '0',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: '12px',
+          borderRadius: '8px',
           overflow: 'hidden',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.45)',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.35)',
         }}
       >
         {/* Header */}
@@ -118,8 +119,8 @@ export default function CardDownloadsModal({
           style={{
             background: '#1e293b',
             color: '#fff',
-            height: '50px',
-            minHeight: '50px',
+            height: '48px',
+            minHeight: '48px',
             padding: '0 20px',
             display: 'flex',
             alignItems: 'center',
@@ -290,52 +291,24 @@ export default function CardDownloadsModal({
             gap: '10px',
           }}
         >
-          <button
+          <Button
+            variant="secondary"
+            size="md"
             onClick={onClose}
-            style={{
-              padding: '8px 16px',
-              background: '#fff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '6px',
-              color: '#475569',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '12.5px',
-            }}
             disabled={downloading}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="success"
+            size="md"
             onClick={handleDownload}
             disabled={downloading}
-            style={{
-              padding: '8px 20px',
-              background: '#10b981',
-              border: 'none',
-              borderRadius: '6px',
-              color: '#fff',
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontSize: '12.5px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-            }}
+            loading={downloading}
+            icon={<Download size={15} />}
           >
-            {downloading ? (
-              <>
-                <Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} />
-                <span>Generating Export…</span>
-              </>
-            ) : (
-              <>
-                <Download size={15} />
-                <span>Generate & Download</span>
-              </>
-            )}
-          </button>
+            Generate & Download
+          </Button>
         </div>
       </div>
     </div>

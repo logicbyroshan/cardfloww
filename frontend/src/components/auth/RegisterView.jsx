@@ -15,7 +15,11 @@ export default function RegisterView({ onSwitchTab, onLoginSuccess }) {
 
     setTimeout(() => {
       setLoading(false);
-      onLoginSuccess ? onLoginSuccess({ username: email, role: 'manager' }) : onSwitchTab?.('login');
+      if (onLoginSuccess) {
+        onLoginSuccess({ username: email, role: 'manager' });
+      } else {
+        onSwitchTab?.('login');
+      }
     }, 800);
   };
 

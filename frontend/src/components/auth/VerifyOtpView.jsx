@@ -38,7 +38,11 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
 
     setTimeout(() => {
       setLoading(false);
-      onVerifySuccess ? onVerifySuccess() : onSwitchTab?.('reset-password');
+      if (onVerifySuccess) {
+        onVerifySuccess();
+      } else {
+        onSwitchTab?.('reset-password');
+      }
     }, 800);
   };
 
