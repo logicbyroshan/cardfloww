@@ -278,6 +278,7 @@
 }
 
 .idcard-table tbody tr {
+    height: 65px;
     transition: background 0.15s ease;
 }
 
@@ -290,6 +291,7 @@
 }
 
 .idcard-table tbody td {
+    height: 65px;
     padding: 2px 4px;
     font-size: var(--ui-font-size-base, 14px);
     color: var(--color-gray-700);

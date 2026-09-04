@@ -611,6 +611,13 @@ body:has(.idcard-actions-page) {
 }
 
 /* Zebra striping + Row hover */
+.idcard-table tbody tr {
+    height: 65px;
+}
+.idcard-table tbody td {
+    height: 65px;
+    vertical-align: middle;
+}
 .idcard-table tbody tr:nth-child(odd) {
     background-color: var(--color-gray-50);
 }

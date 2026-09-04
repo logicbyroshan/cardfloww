@@ -4150,7 +4150,10 @@ export default function IDCardActionsView({
                     return (
                       <tr
                         key={card.id}
-                        style={{ background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}
+                        style={{
+                          height: '65px',
+                          background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        }}
                       >
                         {/* Checkbox */}
                         <td
@@ -4161,6 +4164,7 @@ export default function IDCardActionsView({
                             background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
                             width: '32px',
                             minWidth: '32px',
+                            height: '65px',
                             padding: '2px',
                             textAlign: 'center',
                             verticalAlign: 'middle',
@@ -4205,6 +4209,7 @@ export default function IDCardActionsView({
                             background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
                             width: '36px',
                             minWidth: '36px',
+                            height: '65px',
                             padding: '2px',
                             textAlign: 'center',
                             fontWeight: 500,
@@ -4212,6 +4217,7 @@ export default function IDCardActionsView({
                             fontSize: '12px',
                             borderRight: '1px solid #cbd5e1',
                             borderBottom: '1px solid #cbd5e1',
+                            verticalAlign: 'middle',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
@@ -4259,6 +4265,7 @@ export default function IDCardActionsView({
                                   width: spec.width,
                                   minWidth: spec.minWidth,
                                   maxWidth: spec.maxWidth,
+                                  height: '65px',
                                   borderRight: '1px solid #cbd5e1',
                                   borderBottom: '1px solid #cbd5e1',
                                   verticalAlign: 'middle',
@@ -4389,6 +4396,7 @@ export default function IDCardActionsView({
                                 padding: '2px 6px',
                                 textAlign: spec.align,
                                 ...cellWidthStyle,
+                                height: '65px',
                                 background: isDuplicate && !isSelected ? '#fffbeb' : undefined,
                                 color: '#000000',
                                 fontSize: '12px',
@@ -4435,7 +4443,7 @@ export default function IDCardActionsView({
                                       }}
                                       style={{
                                         width: '100%',
-                                        height: '100%',
+                                        height: '34px',
                                         border: '2px solid #2563eb',
                                         borderRadius: '2px',
                                         padding: '2px 4px',
@@ -4473,7 +4481,7 @@ export default function IDCardActionsView({
                                       }}
                                       style={{
                                         width: '100%',
-                                        height: '100%',
+                                        height: '34px',
                                         border: '2px solid #2563eb',
                                         borderRadius: '2px',
                                         padding: '4px 8px',
@@ -4563,6 +4571,7 @@ export default function IDCardActionsView({
                             width: '88px',
                             minWidth: '88px',
                             maxWidth: '88px',
+                            height: '65px',
                             padding: '3px 4px',
                             textAlign: 'center',
                             borderRight: '1px solid #cbd5e1',
@@ -4819,8 +4828,10 @@ export default function IDCardActionsView({
                             background: isSelected ? '#eff6ff' : idx % 2 === 0 ? '#ffffff' : '#f8fafc',
                             width: '65px',
                             minWidth: '65px',
+                            height: '65px',
                             padding: '6px',
                             textAlign: 'center',
+                            verticalAlign: 'middle',
                             borderRight: '1px solid #cbd5e1',
                             borderBottom: '1px solid #cbd5e1',
                           }}
