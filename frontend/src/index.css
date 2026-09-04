@@ -3368,11 +3368,11 @@ table th:last-child {
   color: #ffffff !important;
 }
 
-/* Master Action Bar Inputs & Search Bars on Dark Background */
-.action-bar:not(.action-bar-light) input[type='text'],
-.action-bar:not(.action-bar-light) input[type='search'],
-.action-bar:not(.action-bar-light) .search-input,
-.notif-actions-bar:not(.action-bar-light) input[type='text'] {
+/* Master Action Bar Inputs & Search Bars on Dark Background (standalone inputs only) */
+.action-bar:not(.action-bar-light) > input[type='text'],
+.action-bar:not(.action-bar-light) > input[type='search'],
+.action-bar:not(.action-bar-light) > .search-input,
+.notif-actions-bar:not(.action-bar-light) > input[type='text'] {
   height: 28px !important;
   min-height: 28px !important;
   max-height: 28px !important;
@@ -3384,6 +3384,29 @@ table th:last-child {
   box-sizing: border-box !important;
   outline: none !important;
 }
+
+/* Universal Reset: Inner input inside Input.jsx wrapper across all pages and action bars */
+.cf-input-wrapper input,
+.cf-input-wrapper input[type='text'],
+.cf-input-wrapper input[type='search'],
+.cf-input-wrapper input[type='password'],
+.action-bar .cf-input-wrapper input,
+.action-bar .cf-input-wrapper input[type='text'],
+.notif-actions-bar .cf-input-wrapper input,
+.search-filter-bar .cf-input-wrapper input {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: 12px !important;
+}
+
 .action-bar:not(.action-bar-light) input::placeholder {
   color: #94a3b8 !important;
 }
