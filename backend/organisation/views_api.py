@@ -1265,13 +1265,49 @@ def api_organisation_managers_list_create(request):
         super_count = managers.filter(manager_type='super_manager', is_active=True).count()
         
         managers_data = []
+
+        # Include primary owner (Prime Manager) if not already in OrganisationManager list
+        existing_user_ids = {m.user_id for m in managers}
+        if org.user and org.user.id not in existing_user_ids:
+            total_tables = Table.objects.filter(organisation=org, deleted_by_manager=False).count()
+            assistant_count = org.user.managed_assistants.count() if hasattr(org.user, 'managed_assistants') else 0
+            managers_data.append({
+                'id': f'prime_{org.user.id}',
+                'user_id': org.user.id,
+                'username': org.user.username,
+                'name': org.user.get_full_name() or org.user.username,
+                'email': org.user.email if (org.user.email and not org.user.email.endswith('@noemail.local')) else '',
+                'phone': getattr(org.user, 'phone', '') or '',
+                'manager_type': 'prime_manager',
+                'role_title': 'Prime Manager (Owner)',
+                'department': 'Administration',
+                'designation': 'Primary Account Owner',
+                'is_active': org.user.is_active,
+                'status': 'active' if org.user.is_active else 'inactive',
+                'shared_tables_count': total_tables,
+                'assistants_count': assistant_count,
+                'assigned_tables': ['All Tables (Owner)'],
+                'created_at': org.created_at.strftime('%Y-%m-%d %H:%M') if getattr(org, 'created_at', None) else '',
+                'is_owner': True,
+            })
+
         for m in managers:
             # Count shared tables
             table_count = 0
+            assigned_tables = ['All Tables']
             if m.manager_type in ('super_manager', 'guest_manager'):
-                table_count = TableAccess.objects.filter(manager=m.user, can_view=True).count()
+                tbl_names = list(
+                    TableAccess.objects.filter(manager=m.user, can_view=True)
+                    .values_list('table__name', flat=True)
+                )
+                table_count = len(tbl_names)
+                if tbl_names:
+                    assigned_tables = tbl_names
+                else:
+                    assigned_tables = ['None']
             elif m.manager_type == 'prime_manager':
                 table_count = Table.objects.filter(organisation=org, deleted_by_manager=False).count()
+                assigned_tables = ['All Tables (Owner)']
 
             # Count managed assistants
             assistant_count = m.user.managed_assistants.count()
@@ -1291,6 +1327,7 @@ def api_organisation_managers_list_create(request):
                 'status': 'active' if (m.is_active and m.user.is_active) else 'inactive',
                 'shared_tables_count': table_count,
                 'assistants_count': assistant_count,
+                'assigned_tables': assigned_tables,
                 'created_at': m.created_at.strftime('%Y-%m-%d %H:%M'),
             })
 
