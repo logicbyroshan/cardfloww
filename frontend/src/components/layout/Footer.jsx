@@ -23,7 +23,14 @@ import {
   Redo2,
 } from 'lucide-react';
 
-export default function Footer({ activeTab, onNavigate, idcardActionsState, scopedOrgName }) {
+export default function Footer({
+  activeTab,
+  onNavigate,
+  idcardActionsState,
+  scopedOrgName,
+  scopedOrgId,
+  activeTableName,
+}) {
   const [dataCountText, setDataCountText] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [undoState, setUndoState] = useState({
@@ -63,25 +70,21 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
       case 'dashboard':
         return [{ label: 'CardFlow', isCurrent: true, icon: Home }];
       case 'cards':
-        if (scopedOrgName) {
-          return [
-            { label: 'CardFlow', tab: 'dashboard', icon: Home },
-            { label: 'Manage Organisation', tab: 'organisations', icon: Users },
-            { label: `${scopedOrgName} Tables`, isCurrent: true, icon: Layers },
-          ];
-        }
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Tables', isCurrent: true, icon: Layers },
+          { label: 'Manage Organisation', tab: 'organisations', icon: Users },
+          { label: 'Manage Tables', isCurrent: true, icon: Layers },
         ];
-      case 'idcard-actions':
+      case 'idcard-actions': {
+        const statusLabel = (idcardActionsState?.status || 'pending').toUpperCase();
+        const tableLabel = activeTableName || `Table #${idcardActionsState?.tableId || 1}`;
         if (scopedOrgName) {
           return [
             { label: 'CardFlow', tab: 'dashboard', icon: Home },
             { label: 'Manage Organisation', tab: 'organisations', icon: Users },
-            { label: `${scopedOrgName} Tables`, tab: 'cards', icon: Layers },
+            { label: 'Manage Tables', tab: 'cards', icon: Layers, params: { orgId: scopedOrgId, orgName: scopedOrgName } },
             {
-              label: `Table Actions (${(idcardActionsState?.status || 'pending').toUpperCase()})`,
+              label: `${tableLabel} (${statusLabel})`,
               isCurrent: true,
               icon: Table,
             },
@@ -89,18 +92,19 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
         }
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Tables', tab: 'cards', icon: Layers },
+          { label: 'Manage Organisation', tab: 'organisations', icon: Users },
+          { label: 'Manage Tables', tab: 'cards', icon: Layers },
           {
-            label: `Table Actions (${(idcardActionsState?.status || 'pending').toUpperCase()})`,
+            label: `${tableLabel} (${statusLabel})`,
             isCurrent: true,
             icon: Table,
           },
         ];
+      }
       case 'schema':
         return [
           { label: 'CardFlow', tab: 'dashboard', icon: Home },
-          { label: 'Tables', tab: 'cards', icon: Layers },
-          { label: 'Table Settings', isCurrent: true, icon: Settings },
+          { label: 'Manage Tables', isCurrent: true, icon: Layers },
         ];
       case 'organisations':
         return [
@@ -207,7 +211,7 @@ export default function Footer({ activeTab, onNavigate, idcardActionsState, scop
               ) : item.tab ? (
                 <button
                   type="button"
-                  onClick={() => onNavigate?.(item.tab)}
+                  onClick={() => onNavigate?.(item.tab, item.params)}
                   style={{
                     background: 'none',
                     border: 'none',

@@ -5,15 +5,15 @@ import Header from './components/layout/Header';
 import DashboardView from './components/dashboard/DashboardView';
 import Footer from './components/layout/Footer';
 
-import OrganisationDirectoryView from './components/client/ClientDirectoryView';
+import OrganisationDirectoryView from './components/organisation/OrganisationDirectoryView';
 import OperatorManagementView, {
   AssistantManagementView,
   PhotographerManagementView,
 } from './components/staff/StaffManagementView';
 import ManagePanelView from './components/panel/ManagePanelView';
 import CardActionBar from './components/idcard/CardActionBar';
-import CardTableView from './components/idcard/CardTableView';
-import IDCardActionsView from './components/idcard/IDCardActionsView';
+import TableManagementView from './components/table/TableManagementView';
+import TableActionsView from './components/table/TableActionsView';
 import CardDownloadsModal from './components/idcard/CardDownloadsModal';
 import GlobalSearchModal from './components/common/GlobalSearchModal';
 import ConfirmDeleteModal from './components/common/ConfirmDeleteModal';
@@ -28,7 +28,7 @@ import TutorialGuideView from './components/tutorial/TutorialGuideView';
 import ManageFeaturesView from './components/pro/ManageFeaturesView';
 import AuthFlowContainer from './components/auth/AuthFlowContainer';
 import Preloader from './components/common/Preloader';
-import { authApi, impersonateApi } from './services/api';
+import { authApi, impersonateApi, clientApi } from './services/api';
 
 import QuickActionDrawer from './components/dashboard/QuickActionDrawer';
 
@@ -184,6 +184,33 @@ function MobileAppFallback({ onForceDesktop }) {
 function parsePathToRoute(pathname) {
   const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
 
+  // Match /organisation/:orgId/table/:tableId/:status or /organisations/:orgId/table/:tableId/:status
+  const orgTableMatch = path.match(/^\/(?:organisation|organisations|org)\/([^/]+)\/(?:table|tables)\/([^/]+)(?:\/([^/]+))?\/?$/);
+  if (orgTableMatch) {
+    const rawOid = orgTableMatch[1];
+    const rawTid = orgTableMatch[2];
+    const orgId = (rawOid && !isNaN(Number(rawOid))) ? Number(rawOid) : null;
+    const tableId = (rawTid && rawTid !== '??' && !isNaN(Number(rawTid))) ? Number(rawTid) : 1;
+    const status = orgTableMatch[3] || 'pending';
+    return {
+      tab: 'idcard-actions',
+      idcardActionsState: { tableId, status, orgId },
+      scopedOrgId: orgId,
+    };
+  }
+
+  // Match /organisation/:orgId/tables or /organisations/:orgId/tables
+  const orgTablesMatch = path.match(/^\/(?:organisation|organisations|org)\/([^/]+)\/(?:tables|cards)\/?$/);
+  if (orgTablesMatch) {
+    const rawOid = orgTablesMatch[1];
+    const orgId = (rawOid && !isNaN(Number(rawOid))) ? Number(rawOid) : null;
+    return {
+      tab: 'cards',
+      idcardActionsState: null,
+      scopedOrgId: orgId,
+    };
+  }
+
   // Match /table/:tableId/:status or /tables/:tableId/:status or /cards/:tableId/:status or /table/:tableId
   const tableMatch = path.match(/^\/(?:table|tables|cards)\/([^/]+)(?:\/([^/]+))?\/?$/);
   if (tableMatch) {
@@ -193,14 +220,15 @@ function parsePathToRoute(pathname) {
     return {
       tab: 'idcard-actions',
       idcardActionsState: { tableId, status },
+      scopedOrgId: null,
     };
   }
 
   const map = {
     '/': { tab: 'dashboard', idcardActionsState: null },
     '/dashboard': { tab: 'dashboard', idcardActionsState: null },
-    '/tables': { tab: 'cards', idcardActionsState: null },
-    '/cards': { tab: 'cards', idcardActionsState: null },
+    '/tables': { tab: 'organisations', idcardActionsState: null },
+    '/cards': { tab: 'organisations', idcardActionsState: null },
     '/reprints': { tab: 'reprints', idcardActionsState: null },
     '/organisations': { tab: 'organisations', idcardActionsState: null },
     '/organisation': { tab: 'organisations', idcardActionsState: null },
@@ -252,14 +280,16 @@ export default function App() {
       return BOOT.LOADING;
     }
   });
+  const initialRoute = parsePathToRoute();
   const [impersonatedUser, setImpersonatedUser] = useState(null);
-  const [activeTab, setActiveTab] = useState(() => parsePathToRoute().tab);
+  const [activeTab, setActiveTab] = useState(() => initialRoute.tab);
   const [activeTableId, setActiveTableId] = useState(null); // set when navigating from cardflow → cards
-  const [idcardActionsState, setIdcardActionsState] = useState(() => parsePathToRoute().idcardActionsState); // { tableId, status }
+  const [idcardActionsState, setIdcardActionsState] = useState(() => initialRoute.idcardActionsState); // { tableId, status, orgId }
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClient, setSelectedClient] = useState('all');
-  const [scopedClientId, setScopedClientId] = useState(null);
+  const [scopedClientId, setScopedClientId] = useState(() => initialRoute.scopedOrgId || null);
   const [scopedClientOrg, setScopedClientOrg] = useState(null);
+  const [activeTableName, setActiveTableName] = useState(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [forceDesktop, setForceDesktop] = useState(false);
 
@@ -296,15 +326,31 @@ export default function App() {
       if (path === '/auth/login' || path === '/login') {
         window.history.replaceState({}, document.title, '/');
       } else if (activeTab === 'idcard-actions' && idcardActionsState?.tableId) {
-        const targetRoute = `/table/${idcardActionsState.tableId}/${idcardActionsState.status || 'pending'}`;
+        const orgId = idcardActionsState?.orgId || scopedClientId || scopedClientOrg?.id;
+        const targetRoute = orgId
+          ? `/organisation/${orgId}/table/${idcardActionsState.tableId}/${idcardActionsState.status || 'pending'}`
+          : `/table/${idcardActionsState.tableId}/${idcardActionsState.status || 'pending'}`;
         if (path !== targetRoute) {
           window.history.pushState({}, document.title, targetRoute);
+        }
+      } else if (activeTab === 'cards') {
+        const orgId = scopedClientId || scopedClientOrg?.id;
+        if (orgId) {
+          const targetRoute = `/organisation/${orgId}/tables`;
+          if (path !== targetRoute) {
+            window.history.pushState({}, document.title, targetRoute);
+          }
+        } else {
+          setActiveTab('organisations');
+          if (path !== '/organisations') {
+            window.history.replaceState({}, document.title, '/organisations');
+          }
         }
       } else {
         const routeMap = {
           dashboard: '/',
-          cards: '/tables',
-          tables: '/tables',
+          cards: '/organisations',
+          tables: '/organisations',
           reprints: '/reprints',
           organisations: '/organisations',
           clients: '/managers',
@@ -324,7 +370,7 @@ export default function App() {
         }
       }
     }
-  }, [bootState, activeTab, idcardActionsState]);
+  }, [bootState, activeTab, idcardActionsState, scopedClientId, scopedClientOrg]);
 
   // Handle browser back/forward buttons (popstate)
   useEffect(() => {
@@ -332,9 +378,48 @@ export default function App() {
       const parsed = parsePathToRoute(window.location.pathname);
       setActiveTab(parsed.tab);
       setIdcardActionsState(parsed.idcardActionsState || null);
+      if (parsed.scopedOrgId) {
+        setScopedClientId(parsed.scopedOrgId);
+      } else if (parsed.tab !== 'idcard-actions' && parsed.tab !== 'cards') {
+        setScopedClientId(null);
+        setScopedClientOrg(null);
+        setActiveTableName(null);
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Automatically fetch organisation details when scopedClientId is set without organisation info
+  useEffect(() => {
+    if (scopedClientId && (!scopedClientOrg || scopedClientOrg.id !== scopedClientId)) {
+      (async () => {
+        try {
+          const data = await clientApi.getClient(scopedClientId);
+          const org = data?.client || data?.organisation || data;
+          if (org?.name || org?.school_name) {
+            setScopedClientOrg({ id: scopedClientId, name: org.name || org.school_name });
+          }
+        } catch (_) {}
+      })();
+    }
+  }, [scopedClientId, scopedClientOrg]);
+
+  const handleTableLoaded = useCallback((tbl) => {
+    if (tbl?.name) setActiveTableName(tbl.name);
+    const orgId = tbl?.organisation_id || tbl?.client_id;
+    const orgName = tbl?.organisation_name || tbl?.client_name;
+    if (orgId) {
+      setScopedClientId(orgId);
+      setScopedClientOrg((prev) => {
+        if (prev?.id === orgId && prev?.name) return prev;
+        return { id: orgId, name: orgName || prev?.name || `Organisation #${orgId}` };
+      });
+      setIdcardActionsState((prev) => {
+        if (!prev || prev.orgId === orgId) return prev;
+        return { ...prev, orgId };
+      });
+    }
   }, []);
 
   // Native scroll handling for nested scroll containers
@@ -598,7 +683,7 @@ export default function App() {
 
               {/* ── ID Cards / Tables ── */}
               {(activeTab === 'cards' || activeTab === 'schema') && (
-                <CardTableView
+                <TableManagementView
                   addToast={addToast}
                   currentUser={currentUser}
                   userRole={userRole}
@@ -607,15 +692,26 @@ export default function App() {
                   onClearSelectedClient={() => {
                     setScopedClientId(null);
                     setScopedClientOrg(null);
+                    setActiveTableName(null);
+                  }}
+                  onOrgResolved={(org) => {
+                    if (org && (!scopedClientOrg || scopedClientOrg.id !== org.id)) {
+                      setScopedClientOrg({ id: org.id, name: org.name || org.school_name || `Organisation #${org.id}` });
+                    }
                   }}
                   onNavigate={(tabOrObj, params) => {
                     if (typeof tabOrObj === 'string' && tabOrObj === 'idcard-actions' && params) {
-                      setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending' });
+                      const orgId = params.orgId || scopedClientId || scopedClientOrg?.id;
+                      if (orgId) setScopedClientId(orgId);
+                      if (params.orgName) setScopedClientOrg({ id: orgId, name: params.orgName });
+                      if (params.tableName) setActiveTableName(params.tableName);
+                      setIdcardActionsState({ tableId: params.tableId, status: params.status || 'pending', orgId });
                       setActiveTab('idcard-actions');
                     } else if (typeof tabOrObj === 'string') {
                       if (tabOrObj !== 'cards' && tabOrObj !== 'schema') {
                         setScopedClientId(null);
                         setScopedClientOrg(null);
+                        setActiveTableName(null);
                       }
                       setActiveTab(tabOrObj);
                     }
@@ -625,10 +721,13 @@ export default function App() {
 
               {/* ── ID Card Actions (full card list view per table/status) ── */}
               {activeTab === 'idcard-actions' && (
-                <IDCardActionsView
+                <TableActionsView
                   tableId={idcardActionsState?.tableId || 1}
                   initialStatus={idcardActionsState?.status || 'pending'}
+                  scopedOrgId={idcardActionsState?.orgId || scopedClientId || scopedClientOrg?.id}
+                  scopedOrgName={scopedClientOrg?.name || null}
                   onStatusChange={handleStatusChange}
+                  onTableLoaded={handleTableLoaded}
                   addToast={addToast}
                   currentUser={currentUser}
                   userRole={userRole}
@@ -751,15 +850,22 @@ export default function App() {
         {/* Global Black Footer */}
         <Footer
           activeTab={activeTab}
-          onNavigate={(dest) => {
+          onNavigate={(dest, params) => {
             if (dest === 'organisations') {
               setScopedClientId(null);
               setScopedClientOrg(null);
+              setActiveTableName(null);
+            } else if (dest === 'cards' && params?.orgId) {
+              setScopedClientId(params.orgId);
+              if (params.orgName) setScopedClientOrg({ id: params.orgId, name: params.orgName });
+              setIdcardActionsState(null);
             }
             setActiveTab(dest);
           }}
           idcardActionsState={idcardActionsState}
           scopedOrgName={scopedClientOrg?.name || null}
+          scopedOrgId={scopedClientId || scopedClientOrg?.id || null}
+          activeTableName={activeTableName}
         />
       </div>
 
