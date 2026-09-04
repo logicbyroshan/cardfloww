@@ -14,19 +14,11 @@ const DJANGO_ORIGIN = `http://127.0.0.1:${DJANGO_PORT}`;
 
 // Routes that MUST be proxied to Django (JSON API + media files + session CSRF)
 const djangoRoutes = [
-  '/api',        // All REST API endpoints
-  '/media',      // User-uploaded media files (photos, exports)
-  '/operators',  // Operator management endpoints
-  '/assistants', // Assistant management endpoints
-  '/organisations', // Organisation endpoints
-  '/exports',    // Export endpoints
-  '/imports',    // Import endpoints
-  '/images',     // Media endpoints
-  '/operations', // Operation endpoints
-  '/staff',      // Staff endpoints
-  '/tables',     // Table endpoints
-  '/reprint',    // Reprint endpoints
-  '/stats',      // Stats endpoints
+  '/api',            // All REST API endpoints
+  '/media',          // User-uploaded media files (photos, exports)
+  '/app',            // Mobile app landing page (HTML served by Django)
+  '/operators/api',  // Operator management endpoints
+  '/assistants/api', // Assistant management endpoints
 ];
 
 export default defineConfig({
@@ -43,6 +35,16 @@ export default defineConfig({
           changeOrigin: true,
           secure: false,
           cookieDomainRewrite: { '*': '' },   // Strip domain so session cookies work on localhost
+          bypass: (req) => {
+            if (req.headers.accept && req.headers.accept.includes('text/html')) {
+              // Only let Django serve HTML for /app mobile landing page
+              if (req.url && req.url.startsWith('/app')) {
+                return null;
+              }
+              return '/index.html';
+            }
+            return null;
+          },
           configure: (proxy) => {
             proxy.on('error', (err) => {
               console.warn(`[Vite proxy] ${err.message} — is Django running on port ${DJANGO_PORT}?`);
