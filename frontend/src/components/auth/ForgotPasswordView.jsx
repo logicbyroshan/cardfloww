@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 import { authApi } from '../../services/api';
 
 export default function ForgotPasswordView({ onSwitchTab }) {
@@ -18,7 +18,7 @@ export default function ForgotPasswordView({ onSwitchTab }) {
       if (authApi.requestPasswordReset) {
         await authApi.requestPasswordReset(email);
       }
-      setSuccessMsg(`Password reset link and OTP have been sent to ${email}`);
+      setSuccessMsg(`Password reset instructions sent to ${email}`);
     } catch (err) {
       setError('Unable to send reset email. Please verify your email address.');
     } finally {
@@ -29,75 +29,68 @@ export default function ForgotPasswordView({ onSwitchTab }) {
   return (
     <>
       <div className="auth-form-header">
-        <h2 className="auth-title">Forgot Password?</h2>
-        <p className="auth-subtitle">
-          Enter your account email address and we'll send you a password reset link & verification code.
-        </p>
+        <h1 className="auth-title">Reset Password</h1>
+        <p className="auth-subtitle">Enter your registered email to receive a recovery code</p>
       </div>
 
       {successMsg ? (
-        <div className="auth-success-box" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
+        <div className="auth-success-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle2 size={18} color="#4ade80" />
-            <strong style={{ color: '#ffffff' }}>Check your inbox</strong>
+            <strong style={{ color: '#ffffff' }}>Instructions Sent</strong>
           </div>
           <span style={{ fontSize: '12.5px', lineHeight: '1.4' }}>{successMsg}</span>
           <button
             type="button"
-            className="auth-btn-primary"
-            style={{ marginTop: '8px', height: '42px', fontSize: '13px' }}
+            className="auth-cosmic-submit-btn"
+            style={{ marginTop: '10px', height: '40px', fontSize: '13px' }}
             onClick={() => onSwitchTab?.('otp')}
           >
             Enter Verification Code
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="auth-actual-form">
+        <form onSubmit={handleSubmit} className="auth-cosmic-form">
           {error && (
             <div className="auth-error-box">
               <span>{error}</span>
             </div>
           )}
 
-          <div className="auth-field">
-            <label className="auth-label">Account Email Address</label>
-            <div className="auth-input-wrapper">
-              <Mail size={17} className="auth-input-icon" />
-              <input
-                type="email"
-                required
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@institution.edu"
-                className="auth-input"
-                autoComplete="email"
-              />
-            </div>
+          <div className="auth-input-group">
+            <input
+              type="email"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Account Email Address"
+              className="auth-cosmic-input"
+              autoComplete="email"
+            />
           </div>
 
-          <button type="submit" disabled={loading} className="auth-btn-primary">
+          <button type="submit" disabled={loading} className="auth-cosmic-submit-btn" style={{ marginTop: '6px' }}>
             {loading ? (
               <>
-                <Loader2 size={17} className="auth-btn-spinner" />
-                <span>Sending Reset Link…</span>
+                <Loader2 size={16} className="auth-btn-spinner" />
+                <span>Sending Code…</span>
               </>
             ) : (
-              <span>Send Reset Link</span>
+              <span>Send Recovery Code</span>
             )}
           </button>
         </form>
       )}
 
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+      <div className="auth-cosmic-footer">
+        <span>Remember your credentials? </span>
         <button
           type="button"
-          className="auth-link"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+          className="auth-join-btn"
           onClick={() => onSwitchTab?.('login')}
         >
-          <ArrowLeft size={14} />
-          <span>Back to Sign In</span>
+          Sign In
         </button>
       </div>
     </>
