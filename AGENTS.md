@@ -23,6 +23,9 @@ Goal: **High Context Quality + Low Unnecessary Token Consumption**.
 5. **No Speculative Dependencies**: Use existing utilities and libraries (e.g. `services/api.js`, `PermissionService`, `MediaNameService`). Do not introduce new packages without clear justification.
 6. **Zero Secrets Policy**: Never commit, create, or expose `.env` variables, API keys, passwords, or tokens in files or messages.
 7. **Review Final Diff**: Always inspect `git diff` before reporting completion to ensure zero unintended mutations.
+8. **Dedicated Feature/Fix Branch Workflow**:
+   - Every fix or feature must be created and developed on its own dedicated branch (e.g. `feat/<short-name>` or `fix/<short-name>`). Never commit or modify code directly on `main`.
+   - Never push to remote or merge into `main` autonomously. Once implementation and verification are complete, wait for explicit user approval before pushing and merging.
 
 ---
 

@@ -90,6 +90,7 @@ Auxiliary Services:                                 [OpenCV Face Cropper (Port 4
 3. **Vanilla CSS Design System**: Frontend UI styling is exclusively maintained in `frontend/src/index.css` via custom properties and HSL variables. Do not install or introduce Tailwind utility classes.
 4. **Native SVG for Mobile**: To avoid Android startup crashes (`ReferenceError: Property 'fontFamily' doesn't exist`), all mobile icons must use native SVG paths in `android_app/src/components/DynamicIcon.js`.
 5. **Database Routing**: `GuestSandboxRouter` automatically directs guest sandbox sessions to isolated ephemeral SQLite databases; default traffic routes to PostgreSQL.
+6. **Branching & Merge Approval Workflow**: Every fix or feature must be implemented on its own dedicated branch (`feat/<name>` or `fix/<name>`), never directly on `main`. Once completed and verified, agents must pause and wait for explicit user confirmation before pushing to remote and merging into `main`.
 
 ---
 
@@ -108,5 +109,5 @@ Auxiliary Services:                                 [OpenCV Face Cropper (Port 4
 ## 7. Current Status & Active Constraints
 
 - **Active State**: Production-stable codebase at `v5.7.0`.
-- **Working Tree Notice**: Unstaged changes exist in `backend/core/services/permission_service.py`, `backend/core/views/idcard_card_api.py`, and `backend/reprint/tests.py` implementing client-side reprint modal edits. **Do not overwrite or revert these changes.**
+- **Branching Policy**: Every fix or feature must be isolated on a dedicated branch (`feat/*` or `fix/*`) with push/merge awaiting user review and confirmation.
 - **Port Strategy**: Local dev uses port 8000 or 8008 for backend, 5173 for frontend Vite dev server. CORS and CSRF trusted origins accommodate both.
