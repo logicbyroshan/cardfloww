@@ -77,6 +77,59 @@ export const authApi = {
     return res.data;
   },
 
+  /** POST /api/auth/pin-status/ — check if user has a PIN configured */
+  checkPinStatus: async (identifier) => {
+    const res = await apiClient.post('/api/auth/pin-status/', { identifier });
+    return res.data;
+  },
+
+  /** POST /api/auth/login-pin/ — login using 4-6 digit PIN */
+  loginWithPin: async (identifier, pin, rememberMe = true) => {
+    const res = await apiClient.post('/api/auth/login-pin/', {
+      identifier,
+      pin,
+      remember_me: rememberMe,
+    });
+    if (res.data && (res.data.success || res.data.authenticated)) {
+      const userData = res.data.user || res.data;
+      try {
+        if (rememberMe) {
+          localStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.setItem('cf_remember_me', 'true');
+        } else {
+          sessionStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.removeItem('cf_auth_user');
+          localStorage.removeItem('cf_remember_me');
+        }
+      } catch (_) {}
+    }
+    return res.data;
+  },
+
+  /** POST /api/auth/create-pin/ — verify password and set PIN for user */
+  createPin: async (identifier, password, pin, rememberMe = true) => {
+    const res = await apiClient.post('/api/auth/create-pin/', {
+      identifier,
+      password,
+      pin,
+      remember_me: rememberMe,
+    });
+    if (res.data && (res.data.success || res.data.authenticated)) {
+      const userData = res.data.user || res.data;
+      try {
+        if (rememberMe) {
+          localStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.setItem('cf_remember_me', 'true');
+        } else {
+          sessionStorage.setItem('cf_auth_user', JSON.stringify(userData));
+          localStorage.removeItem('cf_auth_user');
+          localStorage.removeItem('cf_remember_me');
+        }
+      } catch (_) {}
+    }
+    return res.data;
+  },
+
   /** GET /api/auth/me/ — returns { authenticated, user } */
   getCurrentUser: async () => {
     const res = await apiClient.get('/api/auth/me/');

@@ -8,6 +8,9 @@ from accounts.views import (
     LogoutView,
     CheckEmailAPIView,
     LoginAPIView,
+    CheckPinStatusAPIView,
+    LoginWithPinAPIView,
+    CreatePinAPIView,
     ForgotPasswordAPIView,
     VerifyOTPAPIView,
     ResetPasswordAPIView,
@@ -23,6 +26,9 @@ from accounts.views import (
 logout_view = LogoutView.as_view()
 api_check_email = CheckEmailAPIView.as_view()
 api_login = LoginAPIView.as_view()
+api_pin_status = CheckPinStatusAPIView.as_view()
+api_login_pin = LoginWithPinAPIView.as_view()
+api_create_pin = CreatePinAPIView.as_view()
 api_forgot_password = ForgotPasswordAPIView.as_view()
 api_verify_otp = VerifyOTPAPIView.as_view()
 api_reset_password = ResetPasswordAPIView.as_view()

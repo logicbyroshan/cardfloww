@@ -25,6 +25,9 @@ urlpatterns = [
 
     path('api/auth/check-email/', views.CheckEmailAPIView.as_view(), name='api_check_email'),
     path('api/auth/login/', views.LoginAPIView.as_view(), name='api_login'),
+    path('api/auth/pin-status/', views.CheckPinStatusAPIView.as_view(), name='api_pin_status'),
+    path('api/auth/login-pin/', views.LoginWithPinAPIView.as_view(), name='api_login_pin'),
+    path('api/auth/create-pin/', views.CreatePinAPIView.as_view(), name='api_create_pin'),
     path('api/auth/me/', views.AuthMeAPIView.as_view(), name='api_auth_me'),
     path('api/auth/forgot-password/', views.ForgotPasswordAPIView.as_view(), name='api_forgot_password'),
     path('api/auth/verify-otp/', views.VerifyOTPAPIView.as_view(), name='api_verify_otp'),
