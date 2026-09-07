@@ -169,18 +169,6 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
           )}
         </div>
       </form>
-
-      {/* Bottom Footer outside/bottom of form */}
-      <div className="auth-cosmic-footer">
-        <span>New to CardFlow? </span>
-        <button
-          type="button"
-          className="auth-join-btn"
-          onClick={() => onSwitchTab?.('register')}
-        >
-          Join Now
-        </button>
-      </div>
     </>
   );
 }
