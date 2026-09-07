@@ -23,9 +23,19 @@ Goal: **High Context Quality + Low Unnecessary Token Consumption**.
 5. **No Speculative Dependencies**: Use existing utilities and libraries (e.g. `services/api.js`, `PermissionService`, `MediaNameService`). Do not introduce new packages without clear justification.
 6. **Zero Secrets Policy**: Never commit, create, or expose `.env` variables, API keys, passwords, or tokens in files or messages.
 7. **Review Final Diff**: Always inspect `git diff` before reporting completion to ensure zero unintended mutations.
-8. **Dedicated Feature/Fix Branch Workflow**:
-   - Every fix or feature must be created and developed on its own dedicated branch (e.g. `feat/<short-name>` or `fix/<short-name>`). Never commit or modify code directly on `main`.
-   - Never push to remote or merge into `main` autonomously. Once implementation and verification are complete, wait for explicit user approval before pushing and merging.
+8. **Mandatory Branch → Push → PR → Merge Workflow** *(enforced on every task without exception)*:
+   - **Step 1 — Branch**: Before writing any code, create and switch to a dedicated branch:
+     - Features: `git checkout -b feat/<short-name>`
+     - Bug fixes: `git checkout -b fix/<short-name>`
+     - Docs/config: `git checkout -b chore/<short-name>`
+     - **Never** commit directly to `main`. This rule has no exceptions.
+   - **Step 2 — Commit**: Make all commits on that branch. Keep commits scoped and descriptive (e.g. `feat(auth): add PIN login`).
+   - **Step 3 — Review diff**: Run `git diff main` before pushing. Ensure zero unintended mutations.
+   - **Step 4 — Push**: Push the branch to remote: `git push origin <branch-name>`.
+   - **Step 5 — Create PR**: Use `gh pr create --base main` with a clear title and description.
+   - **Step 6 — Wait for approval**: Stop and report the PR URL to the user. **Do not merge autonomously.** Wait for explicit user confirmation.
+   - **Step 7 — Merge**: Once user approves, merge via `gh pr merge --squash --delete-branch`.
+   - **Step 8 — Sync**: After merge, switch back to `main` and confirm it is up to date.
 
 ---
 
