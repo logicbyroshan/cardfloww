@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Loader2, ArrowLeft, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, CheckCircle2 } from 'lucide-react';
 
 export default function ResetPasswordView({ onSwitchTab }) {
   const [password, setPassword] = useState('');
@@ -32,12 +32,12 @@ export default function ResetPasswordView({ onSwitchTab }) {
   return (
     <>
       <div className="auth-form-header">
-        <h2 className="auth-title">Reset Password</h2>
-        <p className="auth-subtitle">Create a new secure password for your CardFlow account.</p>
+        <h1 className="auth-title">New Password</h1>
+        <p className="auth-subtitle">Create a new secure password for your CardFlow account</p>
       </div>
 
       {success ? (
-        <div className="auth-success-box" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
+        <div className="auth-success-box" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle2 size={18} color="#4ade80" />
             <strong style={{ color: '#ffffff' }}>Password Updated!</strong>
@@ -47,84 +47,72 @@ export default function ResetPasswordView({ onSwitchTab }) {
           </span>
           <button
             type="button"
-            className="auth-btn-primary"
-            style={{ marginTop: '8px', height: '42px', fontSize: '13px' }}
+            className="auth-cosmic-submit-btn"
+            style={{ marginTop: '10px', height: '40px', fontSize: '13px' }}
             onClick={() => onSwitchTab?.('login')}
           >
             Sign In Now
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="auth-actual-form">
+        <form onSubmit={handleSubmit} className="auth-cosmic-form">
           {error && (
             <div className="auth-error-box">
               <span>{error}</span>
             </div>
           )}
 
-          <div className="auth-field">
-            <label className="auth-label">New Password</label>
-            <div className="auth-input-wrapper">
-              <Lock size={17} className="auth-input-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoFocus
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="auth-input"
-                style={{ paddingRight: '42px' }}
-              />
-              <button
-                type="button"
-                className="auth-password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+          <div className="auth-input-group auth-password-group">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              autoFocus
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="New Password"
+              className="auth-cosmic-input"
+            />
+            <button
+              type="button"
+              className="auth-show-btn"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
           </div>
 
-          <div className="auth-field">
-            <label className="auth-label">Confirm New Password</label>
-            <div className="auth-input-wrapper">
-              <Lock size={17} className="auth-input-icon" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="auth-input"
-              />
-            </div>
+          <div className="auth-input-group">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm New Password"
+              className="auth-cosmic-input"
+            />
           </div>
 
-          <button type="submit" disabled={loading} className="auth-btn-primary">
+          <button type="submit" disabled={loading} className="auth-cosmic-submit-btn" style={{ marginTop: '6px' }}>
             {loading ? (
               <>
-                <Loader2 size={17} className="auth-btn-spinner" />
+                <Loader2 size={16} className="auth-btn-spinner" />
                 <span>Updating Password…</span>
               </>
             ) : (
-              <span>Update Password</span>
+              <span>Save New Password</span>
             )}
           </button>
         </form>
       )}
 
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+      <div className="auth-cosmic-footer">
+        <span>Ready to sign in? </span>
         <button
           type="button"
-          className="auth-link"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+          className="auth-join-btn"
           onClick={() => onSwitchTab?.('login')}
         >
-          <ArrowLeft size={14} />
-          <span>Back to Sign In</span>
+          Sign In
         </button>
       </div>
     </>

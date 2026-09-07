@@ -28,6 +28,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .services import AuthService, OTPService, RoleService, DASHBOARD_URLS
 from .rate_limit import rate_limit, _get_client_ip
+from .models import UserSecurityPin
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -289,6 +290,155 @@ class LoginAPIView(View):
                 'success': False,
                 'message': 'An unexpected error occurred. Please try again.'
             }, status=500)
+
+
+def _establish_user_login(request, user, identifier, remember_me=True):
+    client_ip = _get_client_ip(request)
+    resolved_role = getattr(user, 'role', '') or 'prime_manager'
+    login(request, user)
+    if remember_me:
+        request.session.set_expiry(60 * 60 * 24 * 30)
+    else:
+        request.session.set_expiry(0)
+    try:
+        from core.middleware import PermissionValidationMiddleware
+        PermissionValidationMiddleware.seed_session_fingerprint(request)
+    except Exception:
+        pass
+    import time as _time
+    request.session['_session_created'] = _time.time()
+    request.session['_last_activity'] = _time.time()
+    request.session['selected_role'] = resolved_role
+    AuthService.apply_session_auth_context(request, surface='desktop', ip_address=client_ip)
+    ActivityService.log_login(request, user)
+    redirect_url = DASHBOARD_URLS.get(user.role, '/panel/')
+    return {
+        'success': True,
+        'redirect_url': redirect_url,
+        'message': 'Login successful',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': getattr(user, 'email', ''),
+            'role': getattr(user, 'role', 'prime_manager') or 'prime_manager',
+            'is_superuser': user.is_superuser,
+        }
+    }
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CheckPinStatusAPIView(View):
+    """
+    Check if a given user account has a security PIN configured.
+    POST /api/auth/pin-status/
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            identifier = data.get('identifier', '') or data.get('email', '') or data.get('username', '')
+            identifier = str(identifier).strip()
+            if not identifier:
+                return JsonResponse({'success': False, 'message': 'Identifier required'}, status=400)
+            
+            user = AuthService._find_user(identifier)
+            if not user:
+                return JsonResponse({'success': True, 'exists': False, 'has_pin': False})
+            
+            has_pin = hasattr(user, 'security_pin') and bool(getattr(user.security_pin, 'pin_hash', ''))
+            return JsonResponse({
+                'success': True,
+                'exists': True,
+                'has_pin': has_pin,
+                'username': user.username,
+            })
+        except Exception as e:
+            logger.exception("PIN status check error: %s", e)
+            return JsonResponse({'success': False, 'message': 'Check failed'}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(rate_limit(max_requests=10, window_seconds=60), name='dispatch')
+class LoginWithPinAPIView(View):
+    """
+    Authenticate user using 4-6 digit security PIN.
+    POST /api/auth/login-pin/
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            identifier = str(data.get('identifier', '') or data.get('email', '')).strip()
+            pin = str(data.get('pin', '')).strip()
+            remember_me = _truthy(data.get('remember_me', True))
+
+            if not identifier or not pin:
+                return JsonResponse({'success': False, 'message': 'Identifier and PIN are required'}, status=400)
+
+            user = AuthService._find_user(identifier)
+            if not user:
+                return JsonResponse({'success': False, 'message': 'Account not found'}, status=404)
+
+            if not user.is_active:
+                return JsonResponse({'success': False, 'message': 'Account is inactive'}, status=403)
+
+            if not hasattr(user, 'security_pin') or not user.security_pin.pin_hash:
+                return JsonResponse({
+                    'success': False,
+                    'has_pin': False,
+                    'message': 'No security PIN set for this account. Please create a PIN first.'
+                }, status=400)
+
+            if not user.security_pin.check_pin(pin):
+                return JsonResponse({'success': False, 'message': 'Incorrect PIN. Please try again.'}, status=400)
+
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+            res = _establish_user_login(request, user, identifier, remember_me)
+            return JsonResponse(res)
+
+        except Exception as e:
+            logger.exception("PIN login error: %s", e)
+            return JsonResponse({'success': False, 'message': 'Authentication failed'}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(rate_limit(max_requests=5, window_seconds=60), name='dispatch')
+class CreatePinAPIView(View):
+    """
+    Verify account password and create/update a security PIN for the account.
+    POST /api/auth/create-pin/
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            identifier = str(data.get('identifier', '') or data.get('email', '')).strip()
+            password = str(data.get('password', ''))
+            pin = str(data.get('pin', '')).strip()
+
+            if not identifier or not password or not pin:
+                return JsonResponse({'success': False, 'message': 'Identifier, password, and PIN are required'}, status=400)
+
+            if len(pin) < 4 or len(pin) > 8 or not pin.isdigit():
+                return JsonResponse({'success': False, 'message': 'PIN must be between 4 and 8 digits'}, status=400)
+
+            auth_res = AuthService.authenticate_user(identifier, password)
+            if not auth_res.get('success') or not auth_res.get('user'):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid account password. Could not verify account ownership.'
+                }, status=401)
+
+            user = auth_res['user']
+            sec_pin, _ = UserSecurityPin.objects.get_or_create(user=user)
+            sec_pin.set_pin(pin)
+            sec_pin.save()
+
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+            res = _establish_user_login(request, user, identifier, remember_me=True)
+            res['message'] = 'Security PIN created successfully'
+            return JsonResponse(res)
+
+        except Exception as e:
+            logger.exception("PIN creation error: %s", e)
+            return JsonResponse({'success': False, 'message': 'Failed to create PIN'}, status=500)
 
 
 @method_decorator(csrf_exempt, name='dispatch')

@@ -208,6 +208,9 @@ class PermissionValidationMiddleware:
         '/health/',           # Health check alias
         '/api/auth/csrf/',    # CSRF token — SPA fetches on boot before login
         '/api/auth/login/',   # Login endpoint
+        '/api/auth/pin-status/',      # Check if account has PIN configured
+        '/api/auth/login-pin/',       # Authenticate with PIN
+        '/api/auth/create-pin/',      # Create or set security PIN
         '/api/auth/logout/',  # Logout is idempotent — allowed unauthenticated
         '/api/auth/check-email/',     # Email lookup for multi-step login
         '/api/auth/forgot-password/', # Password reset request

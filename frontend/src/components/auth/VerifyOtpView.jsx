@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Loader2, KeyRound } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 
 export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -54,23 +54,23 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
             width: '44px',
             height: '44px',
             borderRadius: '12px',
-            background: 'rgba(99, 102, 241, 0.15)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
+            background: 'rgba(168, 85, 247, 0.15)',
+            border: '1px solid rgba(168, 85, 247, 0.3)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '12px',
           }}
         >
-          <KeyRound size={22} color="#818cf8" />
+          <KeyRound size={22} color="#c084fc" />
         </div>
-        <h2 className="auth-title">Two-Factor Verification</h2>
+        <h1 className="auth-title">Enter Verification Code</h1>
         <p className="auth-subtitle">
-          Enter the 6-digit security code sent to your registered account email.
+          Please enter the 6-digit security code sent to your email.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="auth-actual-form">
+      <form onSubmit={handleSubmit} className="auth-cosmic-form">
         {error && (
           <div className="auth-error-box">
             <span>{error}</span>
@@ -82,7 +82,7 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
             display: 'flex',
             justifyContent: 'center',
             gap: '8px',
-            margin: '6px 0',
+            margin: '8px 0 16px 0',
           }}
         >
           {otp.map((digit, idx) => (
@@ -95,7 +95,7 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
               value={digit}
               onChange={(e) => handleChange(idx, e.target.value)}
               onKeyDown={(e) => handleKeyDown(idx, e)}
-              className="auth-input"
+              className="auth-cosmic-input"
               style={{
                 width: '44px',
                 height: '48px',
@@ -109,10 +109,10 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
           ))}
         </div>
 
-        <button type="submit" disabled={loading} className="auth-btn-primary">
+        <button type="submit" disabled={loading} className="auth-cosmic-submit-btn">
           {loading ? (
             <>
-              <Loader2 size={17} className="auth-btn-spinner" />
+              <Loader2 size={16} className="auth-btn-spinner" />
               <span>Verifying Code…</span>
             </>
           ) : (
@@ -121,15 +121,14 @@ export default function VerifyOtpView({ onSwitchTab, onVerifySuccess }) {
         </button>
       </form>
 
-      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+      <div className="auth-cosmic-footer">
+        <span>Wrong account? </span>
         <button
           type="button"
-          className="auth-link"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+          className="auth-join-btn"
           onClick={() => onSwitchTab?.('login')}
         >
-          <ArrowLeft size={14} />
-          <span>Back to Sign In</span>
+          Back to Sign In
         </button>
       </div>
     </>

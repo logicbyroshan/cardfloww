@@ -26,3 +26,25 @@ class UserDeviceSession(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.device_type} ({self.session_key[:8]})"
+
+
+class UserSecurityPin(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='security_pin')
+    pin_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "User Security PIN"
+        verbose_name_plural = "User Security PINs"
+
+    def set_pin(self, raw_pin):
+        from django.contrib.auth.hashers import make_password
+        self.pin_hash = make_password(str(raw_pin).strip())
+
+    def check_pin(self, raw_pin):
+        from django.contrib.auth.hashers import check_password
+        return check_password(str(raw_pin).strip(), self.pin_hash)
+
+    def __str__(self):
+        return f"PIN({self.user.username})"
