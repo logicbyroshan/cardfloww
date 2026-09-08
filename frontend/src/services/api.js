@@ -23,6 +23,9 @@ const apiClient = axios.create({
 
 // Attach CSRF token to all mutating requests automatically
 apiClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
   const method = (config.method || '').toLowerCase();
   if (['post', 'put', 'patch', 'delete'].includes(method)) {
     const token = getCsrfToken();
@@ -833,9 +836,7 @@ export const schemaApi = {
 
   /** POST /api/group/<group_id>/table/create-from-xlsx/ — create table from uploaded XLSX */
   createTableFromXlsx: async (groupId, formData) => {
-    const res = await apiClient.post(`/api/group/${groupId}/table/create-from-xlsx/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const res = await apiClient.post(`/api/group/${groupId}/table/create-from-xlsx/`, formData);
     return res.data;
   },
 

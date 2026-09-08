@@ -64,9 +64,7 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
       // 1. Try server-side preview first for rich docx/xlsx embedded photo detection
       const fd = new FormData();
       fd.append('file', selectedFile);
-      const res = await apiClient.post('/api/imports/preview/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await apiClient.post('/api/imports/preview/', fd);
 
       if (res.data && res.data.success) {
         const pData = res.data;
@@ -193,9 +191,7 @@ export default function CreateXlsxModal({ groupId = 1, onClose, onSuccess, addTo
 
       setProgress(60);
 
-      const res = await apiClient.post(`/api/group/${groupId}/table/create-with-data/`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await apiClient.post(`/api/group/${groupId}/table/create-with-data/`, fd);
 
       setProgress(100);
       const msg = res.data?.message || `Table "${tableName || file.name}" created successfully!`;

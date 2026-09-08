@@ -15,6 +15,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods, require_POST
 from django.views.decorators.csrf import csrf_exempt
 
+from organisation.models import Organisation
+from tables.models import Table
 from core.services.permission_service import PermissionService, api_require_any_authenticated, api_require_permission
 from core.views.idcard_helpers import _check_client_scope_by_group, _check_client_scope_by_table
 from .services import ImportService
@@ -51,16 +53,32 @@ def api_create_table_with_data(request, group_id: int) -> JsonResponse:
     POST /api/group/<group_id>/table/create-with-data/
     POST /api/group/<group_id>/table/create-from-xlsx/  (legacy alias)
     """
-    # Permission check: client/client_staff cannot create tables
-    if PermissionService.is_client_role(request.user):
+    # Resolve target organisation (group_id can be Org ID or Table ID)
+    org = Organisation.objects.filter(id=group_id).first()
+    if not org:
+        table_ref = Table.objects.filter(id=group_id).first()
+        if table_ref:
+            org = table_ref.organisation
+        else:
+            org = Organisation.objects.first()
+
+    if not org:
+        return JsonResponse({'success': False, 'message': 'Organisation not found.'}, status=404)
+
+    # Scoping check: user must have access to this organisation
+    if not PermissionService.can_access_organisation(request.user, org.id):
         return JsonResponse({
             'success': False,
-            'message': 'Create Table with Data is not available for client accounts.'
+            'message': 'Access denied. You do not have access to this organisation.'
         }, status=403)
 
-    group, err = _check_client_scope_by_group(request.user, group_id)
-    if err:
-        return err
+    # Authorization check: only Super Admin, Prime Admin, and Prime Manager can create tables
+    # Super Managers, Assistants, and Operators cannot create tables (403 Forbidden).
+    if not PermissionService.can_create_table(request.user, org):
+        return JsonResponse({
+            'success': False,
+            'message': 'Permission denied: Super Managers cannot create tables. Only Prime Managers and Admins can create tables.'
+        }, status=403)
 
     if 'file' not in request.FILES:
         return JsonResponse({'success': False, 'message': 'No file uploaded.'}, status=400)
@@ -91,7 +109,7 @@ def api_create_table_with_data(request, group_id: int) -> JsonResponse:
     try:
         file_bytes = uploaded_file.read()
         result = ImportService.create_table_with_data(
-            group_id=group_id,
+            group_id=org.id,
             file_bytes=file_bytes,
             filename=filename,
             table_name=table_name,

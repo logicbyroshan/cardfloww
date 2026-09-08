@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import { Loader2, ShieldCheck, KeyRound, Lock } from 'lucide-react';
+import { Loader2, KeyRound, Lock } from 'lucide-react';
 import { authApi } from '../../services/api';
-
-const DEMO_ACCOUNTS = [
-  { role: 'Prime Admin', username: 'admin', password: 'admin123', label: 'Platform Owner' },
-  { role: 'Prime Manager', username: 'org_admin', password: 'password123', label: 'School / Org Owner' },
-  { role: 'Staff Operator', username: 'operator_demo', password: 'password123', label: 'Print Operator' },
-  { role: 'Data Assistant', username: 'stxavier_assistant', password: 'password123', label: 'Class Assistant' },
-  { role: 'Studio Studio', username: 'photo_demo', password: 'password123', label: 'Photographer' },
-];
 
 export default function LoginView({ onLoginSuccess, onSwitchTab }) {
   // authMode: 'password' | 'pin' | 'create-pin'
@@ -22,7 +14,6 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [noPinForAccount, setNoPinForAccount] = useState(false);
-  const [showDemoPills, setShowDemoPills] = useState(false);
 
   // 1. Password Login
   const handlePasswordSubmit = async (e) => {
@@ -108,12 +99,6 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
     }
   };
 
-  const handleQuickFill = (acc) => {
-    setUsername(acc.username);
-    setPassword(acc.password || 'password123');
-    setError('');
-    setNoPinForAccount(false);
-  };
 
   return (
     <>
@@ -215,33 +200,6 @@ export default function LoginView({ onLoginSuccess, onSwitchTab }) {
             <span>Sign In with PIN</span>
           </button>
 
-          {/* Quick Demo Roles Presets */}
-          <div className="auth-demo-switcher">
-            <button
-              type="button"
-              className="auth-demo-toggle-btn"
-              onClick={() => setShowDemoPills(!showDemoPills)}
-            >
-              <ShieldCheck size={13} color="#c084fc" />
-              <span>{showDemoPills ? 'Hide Demo Role Quick Fill' : 'Quick Demo Role Presets'}</span>
-            </button>
-
-            {showDemoPills && (
-              <div className="auth-demo-pills-grid">
-                {DEMO_ACCOUNTS.map((acc, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    className="auth-demo-pill"
-                    onClick={() => handleQuickFill(acc)}
-                  >
-                    <span className="demo-pill-role">{acc.role}</span>
-                    <span className="demo-pill-user">@{acc.username}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
         </form>
       )}
 

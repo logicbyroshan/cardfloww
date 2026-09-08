@@ -981,7 +981,7 @@ export default function CardTableView({
       {/* 3-Step Create Table from XLSX Modal */}
       {showCreateXlsxModal && (
         <CreateXlsxModal
-          groupId={groupId}
+          groupId={activeScopedOrg?.id || selectedClientId || (filterOrgId && filterOrgId !== 'all' ? filterOrgId : null) || groupId || 1}
           onClose={() => setShowCreateXlsxModal(false)}
           onSuccess={() => loadTables()}
           addToast={addToast}
@@ -992,7 +992,7 @@ export default function CardTableView({
       {showAddEditDrawer && (
         <TableDrawerForm
           editingTable={editingTable}
-          groupId={groupId}
+          groupId={activeScopedOrg?.id || selectedClientId || (filterOrgId && filterOrgId !== 'all' ? filterOrgId : null) || groupId || 1}
           orgName={activeScopedOrg?.name || selectedTable?.client_name || selectedClientOrg?.name || ''}
           onClose={() => setShowAddEditDrawer(false)}
           onSave={() => {

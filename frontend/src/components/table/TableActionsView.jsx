@@ -673,9 +673,7 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
     try {
       const fd = new FormData();
       fd.append('file', selectedFile);
-      const res = await apiClient.post('/api/imports/preview/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const res = await apiClient.post('/api/imports/preview/', fd);
       if (res.data && res.data.success) {
         const pData = res.data;
         const headers = pData.headers || [];
@@ -770,9 +768,7 @@ function UploadXlsxModal({ table, onClose, onSuccess, addToast }) {
       }
 
       setProgress(70);
-      await apiClient.post(`/api/table/${table.id}/cards/bulk-upload/`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await apiClient.post(`/api/table/${table.id}/cards/bulk-upload/`, fd);
 
       setProgress(100);
       addToast?.('Excel file & data imported successfully', 'success');
