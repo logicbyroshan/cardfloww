@@ -189,6 +189,7 @@ urlpatterns = [
     path('api/table/<int:table_id>/generate-delete-code/', views.api_generate_table_delete_code, name='api_generate_table_delete_code'),
     path('api/table/<int:table_id>/shared-managers/', views.api_table_shared_managers_get, name='api_table_shared_managers_get'),
     path('api/table/<int:table_id>/share-managers/', views.api_table_share_managers, name='api_table_share_managers'),
+    path('api/imports/preview/', import_views.api_preview_import_data, name='api_imports_preview'),
     path('api/group/<int:group_id>/table/create-with-data/', import_views.api_create_table_with_data, name='api_create_table_with_data'),
     path('api/group/<int:group_id>/table/create-from-xlsx/', import_views.api_create_table_with_data, name='api_create_table_from_xlsx'),
     

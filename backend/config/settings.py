@@ -104,14 +104,14 @@ def _env_float(name: str, default: float, *, minimum: float | None = None, maxim
 # Allowed Hosts
 # In DEBUG mode, default to localhost hosts only. Override via DEBUG_ALLOWED_HOSTS.
 if DEBUG:
-    _debug_hosts = os.getenv('DEBUG_ALLOWED_HOSTS', '127.0.0.1,localhost,testserver')
+    _debug_hosts = os.getenv('DEBUG_ALLOWED_HOSTS', '*')
     ALLOWED_HOSTS = [
         host.strip()
         for host in _debug_hosts.split(',')
         if host.strip()
     ]
     if not ALLOWED_HOSTS:
-        ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
+        ALLOWED_HOSTS = ['*']
 else:
     ALLOWED_HOSTS = [
         host.strip()
@@ -229,7 +229,7 @@ MIDDLEWARE += [
 # CRITICAL: Default must be False. If .env is missing in production, CORS_ALLOW_ALL_ORIGINS=True
 # would allow any origin (including attacker.com) to make credentialed requests to the API.
 # Set CORS_ALLOW_ALL_ORIGINS=True in local .env only; never in production .env.
-CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes')
+CORS_ALLOW_ALL_ORIGINS = DEBUG or (os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes'))
 
 CORS_ALLOW_CREDENTIALS = True
 _DEV_ORIGINS = [
@@ -249,6 +249,12 @@ _DEV_ORIGINS = [
     'http://127.0.0.1:8001',
     'http://localhost:8008',
     'http://127.0.0.1:8008',
+    'http://192.168.1.9:5173',
+    'http://192.168.1.9:8008',
+    'https://*.loca.lt',
+    'https://*.trycloudflare.com',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok.io',
     'https://cardflow.in',
     'https://www.cardflow.in',
     'https://privatexyz.cardflow.in',

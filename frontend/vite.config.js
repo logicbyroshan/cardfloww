@@ -25,8 +25,10 @@ export default defineConfig({
   base: '/',
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
     port: 5173,
-    open: '/',                // Auto-open SPA root
+    allowedHosts: true,
+    open: false,
     proxy: Object.fromEntries(
       djangoRoutes.map((route) => [
         route,
