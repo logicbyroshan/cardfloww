@@ -70,6 +70,9 @@ class MobileAppCSRFBypassMiddleware:
             # This is a Django internal flag that CsrfViewMiddleware respects.
             # Setting it to True tells Django to skip CSRF validation for this request.
             request._dont_enforce_csrf_checks = True
+        elif getattr(django_settings, 'DEBUG', False) and (path.startswith('/api/') or path_info.startswith('/api/')):
+            # In DEBUG mode, bypass CSRF for API routes so multi-device LAN & tunnel previews never fail CSRF checks
+            request._dont_enforce_csrf_checks = True
         
         return self.get_response(request)
 

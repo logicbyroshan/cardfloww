@@ -423,15 +423,12 @@ DATABASE_ROUTERS = ['core.db_router.GuestSandboxRouter']
 # SECURITY SETTINGS
 # =============================================================================
 
-# CSRF Trusted Origins
-# Local: Not needed | Production: Add your domains
-# Auto-configure for Render deployment
+# CSRF Trusted Origins (extended with any custom environment origins)
 _csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip() 
-    for origin in _csrf_origins.split(',') 
-    if origin.strip()
-]
+for origin in _csrf_origins.split(','):
+    origin = origin.strip()
+    if origin and origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 # Auto-add Render domain if RENDER_EXTERNAL_HOSTNAME is set
 render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
@@ -444,14 +441,12 @@ if render_hostname:
 CSRF_FAILURE_VIEW = 'core.views.errors.csrf_failure'
 
 # ── Reverse-proxy SSL detection ──
-# MUST be set whenever Django is behind Nginx/Apache that terminates SSL,
-# REGARDLESS of DEBUG. Without this, Django thinks requests arrive over HTTP
-# and CSRF origin checks fail (Origin says https:// but Django expects http://).
-# This is configured outside the "if not DEBUG" block on purpose.
+# Always enabled so tunnels and reverse proxies (localtunnel, ngrok, Cloudflare, Nginx)
+# communicating via X-Forwarded-Proto are properly recognized as HTTPS.
 SECURE_PROXY_SSL_HEADER = (
     os.getenv('SECURE_PROXY_SSL_HEADER_NAME', 'HTTP_X_FORWARDED_PROTO'),
     os.getenv('SECURE_PROXY_SSL_HEADER_VALUE', 'https'),
-) if os.getenv('SECURE_PROXY_SSL_HEADER_NAME', 'HTTP_X_FORWARDED_PROTO') else None
+)
 
 # Production security settings (only when DEBUG=False)
 if not DEBUG:
