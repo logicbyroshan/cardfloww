@@ -19,6 +19,8 @@
 
 <p align="center">
   <a href="https://panel.adarshbhopal.in">🌐 <b>Live Production Panel</b></a> •
+  <a href="DEPLOYMENT.md">🚀 <b>Deployment Guide</b></a> •
+  <a href="SECURITY.md">🔒 <b>Security Policy</b></a> •
   <a href="docs/DESKTOP_PORTAL_GUIDE.md">🖥️ <b>Desktop Portal Guide</b></a> •
   <a href="docs/WEB_APP_INTEGRATION.md">🔗 <b>Web App API</b></a> •
   <a href="docs/SYSTEM_ARCHITECTURE.md">🏗️ <b>Architecture</b></a> •
@@ -259,6 +261,8 @@ graph TD
 
 For complete technical specifications, architecture diagrams, and operational guides, explore our dedicated documentation in [`docs/`](docs/):
 
+- 🚀 [**Production Deployment Guide**](DEPLOYMENT.md): Comprehensive step-by-step production operations manual (Nginx, Gunicorn, Daphne WebSockets, Celery, PostgreSQL, Redis, SSL).
+- 🔒 [**Security Policy & Architecture**](SECURITY.md): Two-Domain isolation, password hashing standards, session security, CORS/CSRF safeguards, and vulnerability reporting.
 - 🏗️ [**System Architecture & Topology Guide**](docs/SYSTEM_ARCHITECTURE.md): Deep dive into Django 5.2, React 19 SPA, Two-Domain Hierarchy, Super Manager delegation, Daphne WebSockets, Celery task workers, and security middleware.
 - 🛠️ [**Backend Architecture Specification**](docs/BACKEND_ARCHITECTURE.md): Database models (`OrganisationManager`, `TableAccess`), service layer abstractions, automated password lifecycle, and REST API route map.
 - 🎨 [**Frontend Architecture Specification**](docs/FRONTEND_ARCHITECTURE.md): React 19 SPA, Vanilla CSS token engine, Manager Accounts view, `TableShareModal`, and Pro Features Manage Passwords tab.
@@ -318,6 +322,25 @@ npm run build
 cd android_app
 npm install
 npx expo start
+```
+
+---
+
+## 🚀 Production Deployment
+
+For complete, step-by-step production server setup, Nginx reverse proxy configuration, systemd services, and SSL termination, refer to [**`DEPLOYMENT.md`**](DEPLOYMENT.md).
+
+### Quick Production Build & Verify:
+```bash
+# 1. Run migrations & collect static files
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+
+# 2. Build the React SPA
+cd frontend && npm ci && npm run build && cd ..
+
+# 3. Verify health endpoint
+curl -i http://localhost:8000/api/health/
 ```
 
 ---

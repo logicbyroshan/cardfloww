@@ -732,14 +732,9 @@ class AuthService:
             authenticated_user = authenticate(username=user.username, password=normalized_password)
 
             if authenticated_user is None:
-                # Fallback: direct password check
+                # Fallback: direct password check (covers hashing-algorithm migrations)
                 if user.check_password(normalized_password):
                     # Set backend attribute required by django.contrib.auth.login()
-                    user.backend = 'django.contrib.auth.backends.ModelBackend'
-                    authenticated_user = user
-                elif user.username.lower() == 'admin' and normalized_password in ('admin123', 'Admin@12345', 'Admin@123', 'admin', 'admin@123', 'Admin123', 'Admin@123456'):
-                    user.set_password(normalized_password)
-                    user.save(update_fields=['password'])
                     user.backend = 'django.contrib.auth.backends.ModelBackend'
                     authenticated_user = user
                 else:

@@ -232,6 +232,9 @@ MIDDLEWARE += [
 CORS_ALLOW_ALL_ORIGINS = DEBUG or (os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False').lower() in ('true', '1', 'yes'))
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Development-only localhost origins. These are ONLY included when DEBUG=True.
+# Never include localhost in production CORS/CSRF allowed origins.
 _DEV_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
@@ -258,19 +261,24 @@ _DEV_ORIGINS = [
     'https://cardflow.in',
     'https://www.cardflow.in',
     'https://privatexyz.cardflow.in',
-]
+] if DEBUG else []
 
-CORS_ALLOWED_ORIGINS = list(set(_DEV_ORIGINS + [
+# Production origins always come from environment — never from hardcoded lists.
+_env_origins = [
     origin.strip()
     for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
     if origin.strip()
-]))
+]
 
-CSRF_TRUSTED_ORIGINS = list(set(_DEV_ORIGINS + [
+CORS_ALLOWED_ORIGINS = list(set(_DEV_ORIGINS + _env_origins))
+
+_csrf_env_origins = [
     origin.strip()
     for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
     if origin.strip()
-]))
+]
+
+CSRF_TRUSTED_ORIGINS = list(set(_DEV_ORIGINS + _csrf_env_origins))
 
 ROOT_URLCONF = 'config.urls'
 
@@ -1128,6 +1136,19 @@ LOGGING = {
 LATEST_MOBILE_VERSION = os.getenv('LATEST_MOBILE_VERSION', '').strip() or None
 
 # Web App API Key for Landing Website Integration
-# Default fallback is provided if not set in .env
-WEB_APP_API_KEY = os.getenv('WEB_APP_API_KEY', 'adarsh_secure_fallback_key_2026_web_app').strip().strip("'\"")
+# This key is required in production. If not set, the application will refuse to
+# start in production (DEBUG=False) to prevent using an insecure default.
+_web_app_api_key = os.getenv('WEB_APP_API_KEY', '').strip().strip("'\"")
+if not _web_app_api_key:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            'WEB_APP_API_KEY is not set. This key authenticates the landing website API integration. '
+            'Generate a secure random key and set it in your .env file.'
+        )
+    else:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            'WEB_APP_API_KEY is not set — web app API integration will be disabled in dev mode.'
+        )
+WEB_APP_API_KEY = _web_app_api_key
 

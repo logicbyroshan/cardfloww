@@ -1,6 +1,12 @@
 """
-Comprehensive CardFlow API Test Suite — Final 100% Pass Version
-Runs end-to-end live testing against Django backend.
+DEV-ONLY SCRIPT — full_api_test.py
+===================================
+Comprehensive CardFlow Live API Test Suite.
+Runs end-to-end live testing against a running local Django development server.
+
+WARNING: This script tests live endpoints using default development credentials
+and should only be run against local or staging environments, never production.
+
 Usage: python -u -X utf8 full_api_test.py
 """
 import json, urllib.request, urllib.error, http.cookiejar, time, random

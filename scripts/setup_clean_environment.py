@@ -1,3 +1,20 @@
+"""
+DEV-ONLY SCRIPT — setup_clean_environment.py
+=============================================
+Seeds the development database with demo accounts and sample data.
+
+Accounts created (ALL with weak passwords for development only):
+  - admin        / admin123        (super_admin)
+  - org_admin    / password123     (prime_manager)
+  - operator     / password123     (operator)
+  - assistant    / password123     (assistant)
+  - photographer / password123     (photographer)
+
+WARNING: This script creates accounts with insecure hardcoded passwords.
+It must NEVER be run in production. It will refuse to execute if DEBUG=False.
+
+Usage: python scripts/setup_clean_environment.py
+"""
 import os
 import sys
 import django
@@ -7,6 +24,19 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE_DIR, 'backend'))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
+
+# --- Production guard ---
+from django.conf import settings as _settings
+if not getattr(_settings, 'DEBUG', False):
+    print('=' * 60)
+    print('ERROR: This script is for DEVELOPMENT use only.')
+    print('DEBUG=False detected — refusing to run in production.')
+    print('Running this in production would create insecure demo accounts.')
+    print('=' * 60)
+    sys.exit(1)
+
+print('WARNING: DEV-ONLY seed script — creating demo accounts with hardcoded passwords.')
+print('These accounts are NOT suitable for production use.\n')
 
 from django.contrib.auth import get_user_model
 from django.db import transaction

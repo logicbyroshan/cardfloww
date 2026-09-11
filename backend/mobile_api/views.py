@@ -5441,7 +5441,7 @@ def api_website_contact_submit(request):
         # Forward the submission to the landing website API securely
         landing_website_url = os.getenv('LANDING_WEBSITE_URL', 'https://www.adarshbhopal.in').strip()
         api_url = f"{landing_website_url}/api/web-share/contact/"
-        api_key = getattr(settings, 'WEB_APP_API_KEY', 'adarsh_secure_fallback_key_2026_web_app')
+        api_key = getattr(settings, 'WEB_APP_API_KEY', '')
 
         payload = {
             'name': name,
