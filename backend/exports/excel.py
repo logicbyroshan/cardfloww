@@ -90,7 +90,8 @@ class ExcelExporter:
                 message='openpyxl library not installed. Run: pip install openpyxl'
             )
         
-        if not cards.exists():
+        has_cards = cards.exists() if hasattr(cards, 'exists') else bool(cards)
+        if not has_cards:
             return ExcelExportResult(
                 success=False,
                 message='No cards to export!'

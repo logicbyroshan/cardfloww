@@ -356,13 +356,15 @@ def _get_class_section_branch_field_names(table):
 
 
 def invalidate_table_distinct_cache(table_id):
-    """Invalidate class, section, and branch distinct cache keys for a table."""
+    """Invalidate class, section, branch, duplicate, and filter options cache keys for a table."""
     if not table_id:
         return
     from django.core.cache import cache
     cache.delete(f"table_distinct_fields:{table_id}:class")
     cache.delete(f"table_distinct_fields:{table_id}:section")
     cache.delete(f"table_distinct_fields:{table_id}:branch")
+    cache.delete(f"tbl_dups:{table_id}")
+    cache.delete(f"filter_opts:{table_id}")
 
 
 def _get_distinct_field_values_cached(table, field_key, variants):

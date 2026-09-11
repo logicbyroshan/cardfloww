@@ -538,6 +538,12 @@ class IDCardTableService(BaseService):
         Returns mapping of card_id -> { 'duplicate_fields': [...], 'duplicate_values': {...} }
         and duplicate counts without deleting or altering records.
         """
+        from django.core.cache import cache as django_cache
+        cache_key = f"tbl_dups:{table_id}"
+        cached_result = django_cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
+
         try:
             table = Table.objects.get(id=table_id)
         except Table.DoesNotExist:
@@ -548,7 +554,9 @@ class IDCardTableService(BaseService):
             if bool(f.get('is_unique') or f.get('unique'))
         ]
         if not unique_fields:
-            return {'card_duplicates': {}, 'total_duplicate_cards': 0, 'unique_fields': []}
+            res = {'card_duplicates': {}, 'total_duplicate_cards': 0, 'unique_fields': []}
+            django_cache.set(cache_key, res, timeout=300)
+            return res
 
         cards = list(IDCard.objects.filter(table_id=table_id).exclude(status='pool').only('id', 'field_data'))
 
@@ -574,9 +582,11 @@ class IDCardTableService(BaseService):
                             card_duplicates[cid]['duplicate_fields'].append(fn)
                         card_duplicates[cid]['duplicate_values'][fn] = str_val
 
-        return {
+        result = {
             'card_duplicates': card_duplicates,
             'total_duplicate_cards': len(card_duplicates),
             'unique_fields': unique_fields,
         }
+        django_cache.set(cache_key, result, timeout=300)
+        return result
 
