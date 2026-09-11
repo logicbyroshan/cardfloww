@@ -733,46 +733,17 @@ def api_idcard_cards_json(request, table_id):
                 base_folder = parts[0]
                 rest = '/'.join(parts[1:])
                 name, _ext = rest.rsplit('.', 1) if '.' in rest else (rest, '')
-                rest = f"{name}.webp"
-                return f"{base_folder}/thumbs/{rest}"
-            # Just a filename
+                return f"{base_folder}/thumbs/{name}.webp"
             name, _ext = path.rsplit('.', 1) if '.' in path else (path, '')
             return f"thumbs/{name}.webp"
         except Exception:
             return path
 
-    import re
+    import functools
+    @functools.lru_cache(maxsize=1024)
     def _norm_name(name):
+        import re
         return re.sub(r'[^A-Z0-9]+', '', str(name or '').upper())
-
-    def _lookup_field_value(field_data, field_data_upper, field_name):
-        """Lookup field value by exact/case-insensitive/normalized key variants."""
-        if not field_name:
-            return ''
-        # Fast path 1: exact match
-        val = field_data.get(field_name)
-        if val is not None and str(val).strip():
-            return val
-
-        # Fast path 2: upper match
-        val = field_data_upper.get(str(field_name).upper())
-        if val is not None and str(val).strip():
-            return val
-
-        # Path 3: stripped uppercase match
-        wanted = str(field_name).strip().upper()
-        for k, v in field_data.items():
-            if str(k).strip().upper() == wanted and v is not None and str(v).strip():
-                return v
-
-        # Path 4: normalized key match (removes dots, spaces, underscores, hyphens)
-        wanted_norm = _norm_name(field_name)
-        if wanted_norm:
-            for k, v in field_data.items():
-                if _norm_name(k) == wanted_norm and v is not None and str(v).strip():
-                    return v
-
-        return ''
 
     def _looks_like_image_value(v):
         if not v:
@@ -790,13 +761,37 @@ def api_idcard_cards_json(request, table_id):
             or low.startswith('https://')
         )
 
+    # Pre-compute table field metadata once outside the row loop
+    _is_client_viewer = PermissionService.is_client_role(request.user)
+    _precomputed_fields = []
+    for field in reordered_fields:
+        fname = field['name']
+        fname_u = str(fname).upper()
+        fname_su = fname_u.strip()
+        fname_n = _norm_name(fname)
+        is_img = BaseService.is_image_field(field)
+        ftype = 'image' if is_img else field.get('type', 'text')
+        is_photo_field = (fname_su == 'PHOTO')
+        show_path = (
+            is_img and field.get('type') in ('photo', 'rel_photo', 'mother_photo', 'father_photo')
+            and BaseService.is_show_path_enabled(field)
+            and not _is_client_viewer
+        )
+        _precomputed_fields.append({
+            'field': field,
+            'name': fname,
+            'name_u': fname_u,
+            'name_su': fname_su,
+            'name_n': fname_n,
+            'type': ftype,
+            'is_img': is_img,
+            'is_photo_field': is_photo_field,
+            'show_path': show_path,
+        })
+
     results = []
-    # sr_no is based on the current offset slice.
     sr_base = offset
 
-    # For client/client_staff users, expose update metadata only when modifier
-    # is client/client_staff; admin/admin_staff updates are hidden.
-    _is_client_viewer = PermissionService.is_client_role(request.user)
     _modifier_role_map = {}
     if _is_client_viewer:
         modifier_names = {
@@ -807,33 +802,50 @@ def api_idcard_cards_json(request, table_id):
 
     for idx, card in enumerate(cards):
         fd = card.field_data or {}
-        fd_upper = {k.upper(): v for k, v in fd.items()}
+        fd_upper = {}
+        fd_norm = {}
+        for k, v in fd.items():
+            if v is not None and str(v).strip():
+                k_str = str(k)
+                k_u = k_str.upper()
+                fd_upper[k_u] = v
+                fd_upper[k_u.strip()] = v
+                k_n = _norm_name(k_str)
+                if k_n:
+                    fd_norm[k_n] = v
 
         ordered = []
-        for field in reordered_fields:
-            fname = field['name']
-            ftype = field.get('type', 'text')
-            is_img = BaseService.is_image_field(field)
-            if is_img:
-                ftype = 'image'
-            val = _lookup_field_value(fd, fd_upper, fname)
+        for pf in _precomputed_fields:
+            fname = pf['name']
+            ftype = pf['type']
+            is_img = pf['is_img']
+
+            # O(1) Fast lookup across exact -> upper -> stripped upper -> normalized
+            val = fd.get(fname)
+            if val is None or not str(val).strip():
+                val = fd_upper.get(pf['name_u'])
+                if val is None or not str(val).strip():
+                    val = fd_upper.get(pf['name_su'])
+                    if val is None or not str(val).strip():
+                        val = fd_norm.get(pf['name_n'], '')
+
             # Legacy photo fallback
-            if fname.strip().upper() == 'PHOTO' and (not val or not _looks_like_image_value(val)) and card.photo:
+            if pf['is_photo_field'] and (not val or not _looks_like_image_value(val)) and card.photo:
                 try:
                     val = card.photo.name or card.photo.url
                 except Exception:
                     pass
-            
-            # Sanitize: strip PENDING: prefix from non-image fields (internal placeholder should not be exposed)
+
+            # Sanitize: strip PENDING: prefix from non-image fields
             if not is_img and val and isinstance(val, str) and val.startswith('PENDING:'):
                 val = ''
-            
+
             entry = {'name': fname, 'type': ftype, 'value': val}
             if is_img:
                 entry['thumb'] = _thumb(val) if val else ''
             ordered.append(entry)
 
-            if is_img and field.get('type') in ('photo', 'rel_photo', 'mother_photo', 'father_photo') and BaseService.is_show_path_enabled(field) and not _is_client_viewer:
+            if pf['show_path']:
                 display_val = BaseService.extract_photo_path_display_value(card, fname, val)
                 ordered.append({
                     'name': fname + ' Path',
@@ -978,6 +990,14 @@ def api_idcard_filter_options(request, table_id):
     table, err = _check_client_scope_by_table(request.user, table_id)
     if err:
         return err
+
+    from django.core.cache import cache as django_cache
+    _is_staff_role = PermissionService.is_client_staff(request.user)
+    cache_key = f"filter_opts:{table.id}"
+    if not _is_staff_role:
+        cached_data = django_cache.get(cache_key)
+        if cached_data is not None:
+            return JsonResponse(cached_data)
 
     status_filter = request.GET.get('status', '').strip()
     
@@ -1186,6 +1206,9 @@ def api_idcard_filter_options(request, table_id):
         'branch_field': branch_field_name,
     }
     
+    if not _is_staff_role:
+        django_cache.set(cache_key, result, timeout=300)
+
     return JsonResponse(result)
 
 
